@@ -9,11 +9,13 @@
 {% endblock %}
 
 {% block content %}
+
+
 <div class="tarjeta-bienvenida">
     <div class="row align-items-center">
         <div class="col-md-8">
             <h2>Mis Negocios</h2>
-            <p class="text-muted">Administra y visualiza la información de tus negocios.</p>
+            <p class="text-muted">Administra y selecciona el negocio que deseas gestionar.</p>
         </div>
         <div class="col-md-4">
             {% if negocio_activo %}
@@ -37,24 +39,25 @@
                         <span class="insignia-estado {% if negocio_activo.estado_neg == 'activo' %}activo{% else %}inactivo{% endif %}">
                             {{ negocio_activo.estado_neg|title }}
                         </span>
+                        <small class="d-block text-success mt-1">
+                            <i class="fas fa-check-circle"></i> Actualmente seleccionado
+                        </small>
                     </div>
                 </div>
             </div>
             {% else %}
             <div class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle"></i>
-                No tienes un negocio activo
+                No tienes un negocio seleccionado
             </div>
             {% endif %}
         </div>
     </div>
     {% if messages %}
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3"
-        role="alert">
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3" role="alert">
         {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"
-            aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     {% endfor %}
     {% endif %}
@@ -63,128 +66,95 @@
 <!-- Barra de Herramientas -->
 <div class="barra-herramientas">
     <div class="grupo-botones-accion">
-        <button class="boton-accion boton-primario" id="btnAgregarNegocio"
-            data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
+        <button class="boton-accion boton-primario" id="btnAgregarNegocio" data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
             <i class="fas fa-plus"></i> Agregar Negocio
-        </button>
-        <button class="boton-accion boton-secundario" id="btnImportarExcel">
-            <i class="fas fa-file-excel"></i> Exportar Listado
         </button>
     </div>
 
     <div class="grupo-busqueda-filtros">
         <div class="contenedor-busqueda">
             <i class="fas fa-search icono-busqueda"></i>
-            <input type="text" id="inputBusqueda" class="input-busqueda"
-                placeholder="Buscar negocio...">
-        </div>
-
-        <div class="contenedor-filtros">
-            <label class="etiqueta-filtro">Filtrar por:</label>
-            <select id="selectFiltro" class="select-filtro">
-                <option value="nombre">Nombre</option>
-                <option value="estado">Estado</option>
-                <option value="tipo">Tipo</option>
-            </select>
-            <button class="boton-filtro" id="btnOrdenAsc">
-                <i class="fas fa-sort-amount-up"></i>
-            </button>
+            <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar negocio...">
         </div>
     </div>
 </div>
 
-<!-- Tabla de Negocios -->
-<div class="contenedor-tabla">
-    <table class="tabla-negocios">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Imagen</th>
-                <th>Nombre del Negocio</th>
-                <th>Dirección</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-                <th>Opciones</th>
-            </tr>
-        </thead>
-        <tbody id="cuerpoTablaNegocios">
-            {% if negocios %}
-            {% for negocio in negocios %}
-            <tr>
-                <td>{{ negocio.pkid_neg }}</td>
-                <td>
-                    <div class="imagen-tabla">
-                        {% if negocio.img_neg %}
-                        <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="img-tabla">
-                        {% else %}
-                        <div class="img-placeholder-tabla">
-                            <i class="fas fa-store"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-                </td>
-                <td>
-                    <strong>{{ negocio.nom_neg }}</strong>
-                    {% if negocio.desc_neg %}
-                    <br><small class="text-muted">{{ negocio.desc_neg|truncatewords:10 }}</small>
-                    {% endif %}
-                </td>
-                <td>{{ negocio.direcc_neg }}</td>
-                <td>{{ negocio.fktiponeg_neg.desc_tiponeg }}</td>
-                <td>
-                    {% if negocio.estado_neg == 'activo' %}
-                    <span class="insignia-estado activo">Activo</span>
+<!-- Tarjetas de Negocios -->
+<div class="row" id="contenedorNegocios">
+    {% if negocios %}
+    {% for negocio in negocios %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card negocio-card {% if negocio.pkid_neg == negocio_activo.pkid_neg %}negocio-seleccionado{% endif %}">
+            <div class="card-header position-relative">
+                {% if negocio.img_neg %}
+                <img src="{{ negocio.img_neg.url }}" class="card-img-top img-negocio-card" alt="{{ negocio.nom_neg }}">
+                {% else %}
+                <div class="img-placeholder-card">
+                    <i class="fas fa-store fa-3x"></i>
+                </div>
+                {% endif %}
+
+                {% if negocio.pkid_neg == negocio_activo.pkid_neg %}
+                <div class="badge-seleccionado">
+                    <i class="fas fa-check-circle"></i> Seleccionado
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="card-body">
+                <h5 class="card-title">{{ negocio.nom_neg }}</h5>
+                <p class="card-text text-muted small">
+                    <i class="fas fa-map-marker-alt"></i> {{ negocio.direcc_neg }}
+                </p>
+                <p class="card-text small">{{ negocio.desc_neg|truncatewords:15|default:"Sin descripción" }}</p>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-secondary">{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                    <span class="insignia-estado {% if negocio.estado_neg == 'activo' %}activo{% else %}inactivo{% endif %}">
+                        {{ negocio.estado_neg|title }}
+                    </span>
+                </div>
+
+                <div class="btn-group w-100">
+                    {% if negocio.pkid_neg != negocio_activo.pkid_neg %}
+                    <a href="{% url 'seleccionar_negocio' negocio.pkid_neg %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-check"></i> Seleccionar
+                    </a>
                     {% else %}
-                    <span class="insignia-estado inactivo">Inactivo</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="contenedor-opciones">
-                        <button class="boton-opcion gestionar" title="Gestionar"
-                            data-id="{{ negocio.pkid_neg }}"
-                            data-action="gestionar">
-                            <i class="fas fa-cog"></i> Gestionar
-                        </button>
-                        <button class="boton-opcion editar" title="Editar"
-                            data-id="{{ negocio.pkid_neg }}"
-                            data-action="editar">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="boton-opcion abrir-cerrar" title="Abrir/Cerrar"
-                            data-id="{{ negocio.pkid_neg }}"
-                            data-action="toggle-estado">
-                            <i class="fas fa-power-off"></i> Estado
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {% endfor %}
-            {% else %}
-            <tr>
-                <td colspan="7" class="text-center py-4">
-                    <i class="fas fa-store fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay negocios registrados aún.</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#modalAgregarNegocio">
-                        <i class="fas fa-plus"></i> Agregar tu primer negocio
+                    <button class="btn btn-success btn-sm" disabled>
+                        <i class="fas fa-check-double"></i> Seleccionado
                     </button>
-                </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
+                    {% endif %}
+
+                    <button class="btn btn-outline-secondary btn-sm gestionar-negocio-btn" data-negocio-id="{{ negocio.pkid_neg }}">
+                        <i class="fas fa-cog"></i> Gestionar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="col-12 text-center py-5">
+        <i class="fas fa-store fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No tienes negocios registrados</h4>
+        <p class="text-muted">Comienza agregando tu primer negocio para gestionar tus productos.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
+            <i class="fas fa-plus"></i> Agregar tu primer negocio
+        </button>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Modal Agregar Negocio -->
-<div class="modal fade" id="modalAgregarNegocio" tabindex="-1"
-    aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
+<div class="modal fade" id="modalAgregarNegocio" tabindex="-1" aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalAgregarNegocioLabel">Agregar Nuevo Negocio</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formAgregarNegocio" method="post" action="{% url 'registro_negocios' %}" enctype="multipart/form-data">
+            <form id="formAgregarNegocio" method="post" action="{% url 'registrar_negocio_vendedor' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="row">
@@ -230,45 +200,24 @@
 
                     <div class="mb-3">
                         <label for="desc_neg" class="form-label">Descripción</label>
-                        <textarea class="form-control" id="desc_neg" name="desc_neg" rows="3"
-                            placeholder="Describe tu negocio..."></textarea>
+                        <textarea class="form-control" id="desc_neg" name="desc_neg" rows="3" placeholder="Describe tu negocio..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dis-miss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar Negocio</button>
                 </div>
             </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Editar Negocio -->
-<div class="modal fade" id="modalEditarNegocio" tabindex="-1"
-    aria-labelledby="modalEditarNegocioLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarNegocioLabel">Editar Negocio</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEditarNegocio" method="post" action="" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div id="contenidoEditarNegocio">
-                        <div class="text-center py-4">
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <p class="mt-2">Cargando información del negocio...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Negocio</button>
-                </div>
-            </form>
+            <script>
+                function debugForm(form) {
+                console.log("DEBUG FORM: Enviando formulario...");
+                console.log("NIT:", form.nit_neg.value);
+                console.log("Nombre:", form.nom_neg.value);
+                console.log("Tipo:", form.fktiponeg_neg.value);
+                console.log("Dirección:", form.direcc_neg.value);
+                return true; // Permitir envío
+                }
+            </script>
         </div>
     </div>
 </div>
@@ -276,63 +225,72 @@
 
 {% block extra_js %}
 <script>
-// Funciones para los negocios
-function abrirModalEditar(negocioId) {
-    alert('Editar negocio ID: ' + negocioId + ' - Esta funcionalidad se implementará después');
-}
-
-function toggleEstadoNegocio(negocioId) {
-    const boton = document.querySelector(`[data-id="${negocioId}"][data-action="toggle-estado"]`);
-    
-    if (boton.innerHTML.includes('Abrir')) {
-        boton.innerHTML = '<i class="fas fa-power-off"></i> Cerrar';
-        boton.classList.add('activo');
-    } else {
-        boton.innerHTML = '<i class="fas fa-power-off"></i> Abrir';
-        boton.classList.remove('activo');
-    }
-}
-
-function gestionarNegocio(negocioId) {
-    // Por ahora redirige al dashboard principal
-    window.location.href = "{% url 'dash_vendedor' %}";
-}
-
 // Búsqueda en tiempo real
 document.getElementById('inputBusqueda').addEventListener('input', function(e) {
     const textoBusqueda = e.target.value.toLowerCase();
-    const filas = document.querySelectorAll('#cuerpoTablaNegocios tr');
+    const tarjetas = document.querySelectorAll('.negocio-card');
     
-    filas.forEach(fila => {
-        const textoNegocio = fila.textContent.toLowerCase();
+    tarjetas.forEach(tarjeta => {
+        const textoNegocio = tarjeta.textContent.toLowerCase();
         if (textoNegocio.includes(textoBusqueda)) {
-            fila.style.display = '';
+            tarjeta.closest('.col-md-6').style.display = '';
         } else {
-            fila.style.display = 'none';
+            tarjeta.closest('.col-md-6').style.display = 'none';
         }
     });
 });
 
+// Función para gestionar negocio
+function gestionarNegocio(negocioId) {
+    const url = "{% url 'seleccionar_negocio' 0 %}".replace('0', negocioId);
+    window.location.href = url;
+}
+
+// Event listeners para botones de gestión
 document.addEventListener('DOMContentLoaded', function() {
-    // Manejar todos los botones de opciones
-    document.querySelectorAll('.boton-opcion').forEach(button => {
+    document.querySelectorAll('.gestionar-negocio-btn').forEach(button => {
         button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const action = this.getAttribute('data-action');
-            
-            switch(action) {
-                case 'editar':
-                    abrirModalEditar(id);
-                    break;
-                case 'toggle-estado':
-                    toggleEstadoNegocio(id);
-                    break;
-                case 'gestionar':
-                    gestionarNegocio(id);
-                    break;
-            }
+            const negocioId = this.getAttribute('data-negocio-id');
+            gestionarNegocio(negocioId);
         });
     });
 });
 </script>
+
+<style>
+.negocio-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+}
+.negocio-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.negocio-seleccionado {
+    border-color: #198754;
+    background-color: #f8fff9;
+}
+.img-negocio-card {
+    height: 160px;
+    object-fit: cover;
+}
+.img-placeholder-card {
+    height: 160px;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6c757d;
+}
+.badge-seleccionado {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #198754;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+}
+</style>
 {% endblock %}

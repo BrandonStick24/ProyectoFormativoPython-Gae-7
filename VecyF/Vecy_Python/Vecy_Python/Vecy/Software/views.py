@@ -208,25 +208,6 @@ def registro_negocio(request):
         'tipo_negocios': tipo_negocios
     })
 
-
-# ==================== FUNCIONES AUXILIARES VENDEDOR ====================
-def obtener_datos_vendedor(request):
-    """Función auxiliar para obtener datos del vendedor"""
-    try:
-        from Software.models import AuthUser
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        negocio = Negocios.objects.filter(fkpropietario_neg=perfil, estado_neg='activo').first()
-        
-        return {
-            'nombre_usuario': auth_user.first_name,
-            'perfil': perfil,
-            'negocio_activo': negocio,
-        }
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
-        return {}
-
-
 # ==================== VISTAS CLIENTE ====================
 @login_required(login_url='login')
 def cliente_dash(request):
@@ -247,6 +228,157 @@ def cliente_dash(request):
     negocios = Negocios.objects.all()
     return render(request, 'Cliente/Cliente.html', contexto)
 
+
+
+# ==================== FUNCIONES AUXILIARES VENDEDOR ACTUALIZADAS ====================
+def obtener_datos_vendedor(request):
+    """Función auxiliar para obtener datos del vendedor con negocio seleccionado"""
+    try:
+        from Software.models import AuthUser
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        
+        # Obtener el negocio seleccionado de la sesión
+        negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
+        negocio_seleccionado = None
+        
+        if negocio_seleccionado_id:
+            try:
+                negocio_seleccionado = Negocios.objects.get(
+                    pkid_neg=negocio_seleccionado_id, 
+                    fkpropietario_neg=perfil
+                )
+            except Negocios.DoesNotExist:
+                # Si el negocio de la sesión no existe, limpiar la sesión
+                del request.session['negocio_seleccionado_id']
+        
+        # Si no hay negocio seleccionado, usar el primero activo
+        if not negocio_seleccionado:
+            negocio_seleccionado = Negocios.objects.filter(
+                fkpropietario_neg=perfil, 
+                estado_neg='activo'
+            ).first()
+            
+            # Guardar en sesión si encontramos uno
+            if negocio_seleccionado:
+                request.session['negocio_seleccionado_id'] = negocio_seleccionado.pkid_neg
+        
+        return {
+            'nombre_usuario': auth_user.first_name,
+            'perfil': perfil,
+            'negocio_activo': negocio_seleccionado,  # Cambiamos nombre por compatibilidad
+        }
+    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+        return {}
+
+# ==================== VISTA PARA SELECCIONAR NEGOCIO ====================
+@login_required(login_url='login')
+def seleccionar_negocio(request, negocio_id):
+    """Vista para cambiar el negocio seleccionado en sesión"""
+    try:
+        # Verificar que el negocio pertenezca al usuario
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        
+        negocio = Negocios.objects.get(
+            pkid_neg=negocio_id, 
+            fkpropietario_neg=perfil
+        )
+        
+        # Guardar en sesión
+        request.session['negocio_seleccionado_id'] = negocio.pkid_neg
+        
+        messages.success(request, f"Negocio '{negocio.nom_neg}' seleccionado correctamente.")
+        return redirect('dash_vendedor')
+        
+    except Negocios.DoesNotExist:
+        messages.error(request, "No tienes permisos para acceder a este negocio.")
+        return redirect('Negocios_V')
+    except Exception as e:
+        messages.error(request, f"Error al seleccionar negocio: {str(e)}")
+        return redirect('Negocios_V')
+
+# ==================== VISTA PARA REGISTRAR NUEVO NEGOCIO por vendedor  ====================
+@login_required(login_url='login')
+def registrar_negocio_vendedor(request):
+    """Vista para que vendedores registrados agreguen nuevos negocios"""
+    
+    print("=== DEBUG: INICIANDO REGISTRO NEGOCIO ===")
+    
+    if request.method == 'POST':
+        try:
+            print("DEBUG: Es método POST")
+            print("DEBUG: request.POST contents:", dict(request.POST))
+            print("DEBUG: request.FILES contents:", dict(request.FILES))
+            
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+            
+            # Obtener datos del formulario
+            nit = request.POST.get('nit_neg')  # ← CORREGIDO: era 'nit' pero debería ser 'nit_neg'
+            nombre = request.POST.get('nom_neg')
+            direccion = request.POST.get('direcc_neg')
+            descripcion = request.POST.get('desc_neg')
+            tipo_neg = request.POST.get('fktiponeg_neg')
+            imagen = request.FILES.get('img_neg')
+            
+            print(f"DEBUG: nit_neg value: '{nit}'")
+            print(f"DEBUG: nom_neg value: '{nombre}'")
+            print(f"DEBUG: fktiponeg_neg value: '{tipo_neg}'")
+            
+            # Validar campos requeridos
+            if not nit:
+                print("DEBUG: ERROR - nit_neg está vacío")
+                messages.error(request, "El campo NIT es obligatorio.")
+                return redirect('Negocios_V')
+                
+            if not nombre:
+                print("DEBUG: ERROR - nom_neg está vacío")
+                messages.error(request, "El campo Nombre es obligatorio.")
+                return redirect('Negocios_V')
+                
+            if not tipo_neg:
+                print("DEBUG: ERROR - fktiponeg_neg está vacío")
+                messages.error(request, "El campo Tipo de Negocio es obligatorio.")
+                return redirect('Negocios_V')
+            
+            # Validar que el NIT no exista
+            if Negocios.objects.filter(nit_neg=nit).exists():
+                print(f"DEBUG: NIT {nit} ya existe")
+                messages.error(request, "El NIT ya está registrado.")
+                return redirect('Negocios_V')
+            
+            print("DEBUG: Todos los campos válidos, creando negocio...")
+            
+            # Crear el negocio
+            nuevo_negocio = Negocios.objects.create(
+                nit_neg=nit,
+                nom_neg=nombre,
+                direcc_neg=direccion,
+                desc_neg=descripcion,
+                fktiponeg_neg_id=tipo_neg,
+                fkpropietario_neg=perfil,
+                estado_neg='activo',
+                fechacreacion_neg=timezone.now(),
+                img_neg=imagen
+            )
+            
+            print(f"DEBUG: Negocio creado exitosamente - ID: {nuevo_negocio.pkid_neg}")
+            
+            # Seleccionar automáticamente el nuevo negocio
+            request.session['negocio_seleccionado_id'] = nuevo_negocio.pkid_neg
+            
+            messages.success(request, f"Negocio '{nombre}' registrado exitosamente.")
+            return redirect('dash_vendedor')
+            
+        except Exception as e:
+            print(f"DEBUG: ERROR - {str(e)}")
+            import traceback
+            print("DEBUG: Traceback:", traceback.format_exc())
+            messages.error(request, f"Error al registrar negocio: {str(e)}")
+            return redirect('Negocios_V')
+    
+    return redirect('Negocios_V')
 
 # ==================== VISTAS VENDEDOR - DASHBOARD ====================
 @login_required(login_url='login')
@@ -373,12 +505,20 @@ def crear_producto_P(request):
     """Vista para crear nuevo producto con categorías de texto libre"""
     if request.method == 'POST':
         try:
-            # CORRECCIÓN: Obtener el AuthUser correcto
-            from Software.models import AuthUser
             auth_user = AuthUser.objects.get(username=request.user.username)
             perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
             
-            negocio = Negocios.objects.get(fkpropietario_neg=perfil, estado_neg='activo')
+            # USAR EL NEGOCIO SELECCIONADO EN SESIÓN en lugar de cualquier negocio activo
+            negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
+            if not negocio_seleccionado_id:
+                messages.error(request, "No tienes un negocio seleccionado.")
+                return redirect('Crud_V')
+            
+            negocio = Negocios.objects.get(
+                pkid_neg=negocio_seleccionado_id, 
+                fkpropietario_neg=perfil,
+                estado_neg='activo'
+            )
             
             # Obtener datos del formulario
             nom_prod = request.POST.get('nom_prod')
@@ -407,7 +547,6 @@ def crear_producto_P(request):
             # Manejar la imagen - GUARDAR SOLO EL NOMBRE
             img_prod_name = None
             if img_prod:
-                # Solo guardamos el nombre del archivo en la BD
                 img_prod_name = img_prod.name
             
             # Crear el producto
@@ -420,7 +559,7 @@ def crear_producto_P(request):
                 stock_prod=int(stock_prod) if stock_prod else 0,
                 stock_minimo=5,
                 fknegocioasociado_prod=negocio,
-                img_prod=img_prod_name,  # Solo el nombre, no el path completo
+                img_prod=img_prod_name,
                 estado_prod=estado_prod,
                 fecha_creacion=timezone.now()
             )
@@ -430,30 +569,28 @@ def crear_producto_P(request):
                 import os
                 from uuid import uuid4
                 
-                # Crear carpeta productos si no existe
                 productos_dir = 'media/productos'
                 if not os.path.exists(productos_dir):
                     os.makedirs(productos_dir)
                 
-                # Generar nombre único
                 ext = os.path.splitext(img_prod.name)[1]
                 filename = f"producto_{uuid4()}{ext}"
                 filepath = os.path.join(productos_dir, filename)
                 
-                # Guardar archivo
                 with open(filepath, 'wb+') as destination:
                     for chunk in img_prod.chunks():
                         destination.write(chunk)
                 
-                # Actualizar el producto con el nombre del archivo guardado
                 producto.img_prod = f"productos/{filename}"
                 producto.save()
             
             messages.success(request, f"Producto '{nom_prod}' creado exitosamente.")
             return redirect('Crud_V')
             
+        except Negocios.DoesNotExist:
+            messages.error(request, "El negocio seleccionado no existe o no tienes permisos.")
+            return redirect('Crud_V')
         except Exception as e:
-            # Debug detallado
             import traceback
             print("ERROR DETALLADO:")
             print(traceback.format_exc())
@@ -471,17 +608,26 @@ def editar_producto_P(request, producto_id):
             from Software.models import Productos, CategoriaProductos, AuthUser
             from Software.models import UsuarioPerfil, Negocios
             
-            # Obtener el producto
-            producto = Productos.objects.get(pkid_prod=producto_id)
-            
-            # Verificar que el producto pertenezca al negocio del usuario
+            # Verificar permisos y obtener negocio seleccionado
             auth_user = AuthUser.objects.get(username=request.user.username)
             perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-            negocio = Negocios.objects.get(fkpropietario_neg=perfil, estado_neg='activo')
             
-            if producto.fknegocioasociado_prod != negocio:
-                messages.error(request, "No tienes permisos para editar este producto.")
+            # USAR EL NEGOCIO SELECCIONADO EN SESIÓN
+            negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
+            if not negocio_seleccionado_id:
+                messages.error(request, "No tienes un negocio seleccionado.")
                 return redirect('Crud_V')
+            
+            negocio = Negocios.objects.get(
+                pkid_neg=negocio_seleccionado_id, 
+                fkpropietario_neg=perfil
+            )
+            
+            # Obtener el producto y verificar que pertenezca al negocio seleccionado
+            producto = Productos.objects.get(
+                pkid_prod=producto_id, 
+                fknegocioasociado_prod=negocio
+            )
             
             # Obtener datos del formulario
             nom_prod = request.POST.get('nom_prod')
@@ -542,7 +688,9 @@ def editar_producto_P(request, producto_id):
             return redirect('Crud_V')
             
         except Productos.DoesNotExist:
-            messages.error(request, "El producto no existe.")
+            messages.error(request, "El producto no existe o no tienes permisos para editarlo.")
+        except Negocios.DoesNotExist:
+            messages.error(request, "El negocio seleccionado no existe o no tienes permisos.")
         except Exception as e:
             messages.error(request, f"Error al actualizar producto: {str(e)}")
     
@@ -559,7 +707,16 @@ def obtener_datos_producto_P(request, producto_id):
         # Verificar permisos
         auth_user = AuthUser.objects.get(username=request.user.username)
         perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        negocio = Negocios.objects.get(fkpropietario_neg=perfil, estado_neg='activo')
+        
+        # USAR EL NEGOCIO SELECCIONADO EN SESIÓN
+        negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
+        if not negocio_seleccionado_id:
+            return JsonResponse({'error': 'No tienes un negocio seleccionado'}, status=400)
+        
+        negocio = Negocios.objects.get(
+            pkid_neg=negocio_seleccionado_id, 
+            fkpropietario_neg=perfil
+        )
         
         producto = Productos.objects.get(
             pkid_prod=producto_id, 
@@ -582,6 +739,8 @@ def obtener_datos_producto_P(request, producto_id):
         
     except Productos.DoesNotExist:
         return JsonResponse({'error': 'Producto no encontrado'}, status=404)
+    except Negocios.DoesNotExist:
+        return JsonResponse({'error': 'Negocio no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -594,12 +753,22 @@ def eliminar_producto_P(request, producto_id):
         try:
             from Software.models import Productos, AuthUser, UsuarioPerfil, Negocios
             
-            # Verificar permisos
+            # Verificar permisos y obtener negocio seleccionado
             auth_user = AuthUser.objects.get(username=request.user.username)
             perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-            negocio = Negocios.objects.get(fkpropietario_neg=perfil, estado_neg='activo')
             
-            # Obtener el producto y verificar que pertenezca al negocio del usuario
+            # USAR EL NEGOCIO SELECCIONADO EN SESIÓN
+            negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
+            if not negocio_seleccionado_id:
+                messages.error(request, "No tienes un negocio seleccionado.")
+                return redirect('Crud_V')
+            
+            negocio = Negocios.objects.get(
+                pkid_neg=negocio_seleccionado_id, 
+                fkpropietario_neg=perfil
+            )
+            
+            # Obtener el producto y verificar que pertenezca al negocio seleccionado
             producto = Productos.objects.get(
                 pkid_prod=producto_id, 
                 fknegocioasociado_prod=negocio
@@ -612,6 +781,8 @@ def eliminar_producto_P(request, producto_id):
             
         except Productos.DoesNotExist:
             messages.error(request, "El producto no existe o no tienes permisos para eliminarlo.")
+        except Negocios.DoesNotExist:
+            messages.error(request, "El negocio seleccionado no existe o no tienes permisos.")
         except Exception as e:
             messages.error(request, f"Error al eliminar producto: {str(e)}")
     
@@ -629,14 +800,14 @@ def Negocios_V(request):
         
         # Obtener todos los negocios del vendedor
         negocios = Negocios.objects.filter(fkpropietario_neg=datos['perfil'])
-        tipos_negocio = TipoNegocio.objects.all()
+        tipos_negocio = TipoNegocio.objects.all()  # ← AÑADIR ESTA LÍNEA
         
         contexto = {
             'nombre': datos['nombre_usuario'],
             'perfil': datos['perfil'],
             'negocio_activo': datos['negocio_activo'],
             'negocios': negocios,
-            'tipos_negocio': tipos_negocio,
+            'tipos_negocio': tipos_negocio,  # ← AÑADIR ESTA LÍNEA
         }
         return render(request, 'Vendedor/Negocios_V.html', contexto)
         

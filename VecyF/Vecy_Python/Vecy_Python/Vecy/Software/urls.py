@@ -20,12 +20,15 @@ urlpatterns = [
     path('vendedor/ofertas/', views.Ofertas_V, name='Ofertas_V'),
     path('vendedor/chats/', views.Chats_V, name='Chats_V'),
     path('vendedor/stock/', views.Stock_V, name='Stock_V'),
-    # ==================== URLs PARA CREAR PRODUCTOS ===============================================================================
+
+    # ==================== NUEVAS URLs PARA MÚLTIPLES NEGOCIOS ====================
+    path('vendedor/negocios/seleccionar/<int:negocio_id>/', views.seleccionar_negocio, name='seleccionar_negocio'),
+    path('vendedor/negocios/registrar/', views.registrar_negocio_vendedor, name='registrar_negocio_vendedor'),
+    
+    # ==================== URLs PARA PRODUCTOS ====================
     path('vendedor/productos/crear/', views.crear_producto_P, name='crear_producto_P'), 
-    # ==================== URLs PARA EDITAR PRODUCTOS ===============================================================================
     path('vendedor/productos/editar/<int:producto_id>/', views.editar_producto_P, name='editar_producto_P'),
     path('vendedor/productos/datos/<int:producto_id>/', views.obtener_datos_producto_P, name='obtener_datos_producto_P'),
-    # ==================== URL PARA ELIMINAR PRODUCTOS ==============================================================================
     path('vendedor/productos/eliminar/<int:producto_id>/', views.eliminar_producto_P, name='eliminar_producto_P'),
 
 ]
