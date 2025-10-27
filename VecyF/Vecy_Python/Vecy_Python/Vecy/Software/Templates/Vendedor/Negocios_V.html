@@ -1,0 +1,338 @@
+<!-- templates/Vendedor/Negocios_V.html -->
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Mis Negocios{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css_Vendedor/Negocios_V.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tarjeta-bienvenida">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h2>Mis Negocios</h2>
+            <p class="text-muted">Administra y visualiza la información de tus negocios.</p>
+        </div>
+        <div class="col-md-4">
+            {% if negocio_activo %}
+            <div class="info-negocio-activo">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="imagen-negocio-actual">
+                        {% if negocio_activo.img_neg %}
+                        <img src="{{ negocio_activo.img_neg.url }}" alt="{{ negocio_activo.nom_neg }}" class="img-negocio-actual">
+                        {% else %}
+                        <div class="img-placeholder-actual">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h5 class="mb-1">{{ negocio_activo.nom_neg }}</h5>
+                        <p class="text-muted mb-1">
+                            <i class="fas fa-map-marker-alt"></i>
+                            {{ negocio_activo.direcc_neg }}
+                        </p>
+                        <span class="insignia-estado {% if negocio_activo.estado_neg == 'activo' %}activo{% else %}inactivo{% endif %}">
+                            {{ negocio_activo.estado_neg|title }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                No tienes un negocio activo
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3"
+        role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"
+            aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Barra de Herramientas -->
+<div class="barra-herramientas">
+    <div class="grupo-botones-accion">
+        <button class="boton-accion boton-primario" id="btnAgregarNegocio"
+            data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
+            <i class="fas fa-plus"></i> Agregar Negocio
+        </button>
+        <button class="boton-accion boton-secundario" id="btnImportarExcel">
+            <i class="fas fa-file-excel"></i> Exportar Listado
+        </button>
+    </div>
+
+    <div class="grupo-busqueda-filtros">
+        <div class="contenedor-busqueda">
+            <i class="fas fa-search icono-busqueda"></i>
+            <input type="text" id="inputBusqueda" class="input-busqueda"
+                placeholder="Buscar negocio...">
+        </div>
+
+        <div class="contenedor-filtros">
+            <label class="etiqueta-filtro">Filtrar por:</label>
+            <select id="selectFiltro" class="select-filtro">
+                <option value="nombre">Nombre</option>
+                <option value="estado">Estado</option>
+                <option value="tipo">Tipo</option>
+            </select>
+            <button class="boton-filtro" id="btnOrdenAsc">
+                <i class="fas fa-sort-amount-up"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Negocios -->
+<div class="contenedor-tabla">
+    <table class="tabla-negocios">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Imagen</th>
+                <th>Nombre del Negocio</th>
+                <th>Dirección</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Opciones</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoTablaNegocios">
+            {% if negocios %}
+            {% for negocio in negocios %}
+            <tr>
+                <td>{{ negocio.pkid_neg }}</td>
+                <td>
+                    <div class="imagen-tabla">
+                        {% if negocio.img_neg %}
+                        <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="img-tabla">
+                        {% else %}
+                        <div class="img-placeholder-tabla">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                </td>
+                <td>
+                    <strong>{{ negocio.nom_neg }}</strong>
+                    {% if negocio.desc_neg %}
+                    <br><small class="text-muted">{{ negocio.desc_neg|truncatewords:10 }}</small>
+                    {% endif %}
+                </td>
+                <td>{{ negocio.direcc_neg }}</td>
+                <td>{{ negocio.fktiponeg_neg.desc_tiponeg }}</td>
+                <td>
+                    {% if negocio.estado_neg == 'activo' %}
+                    <span class="insignia-estado activo">Activo</span>
+                    {% else %}
+                    <span class="insignia-estado inactivo">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="contenedor-opciones">
+                        <button class="boton-opcion gestionar" title="Gestionar"
+                            data-id="{{ negocio.pkid_neg }}"
+                            data-action="gestionar">
+                            <i class="fas fa-cog"></i> Gestionar
+                        </button>
+                        <button class="boton-opcion editar" title="Editar"
+                            data-id="{{ negocio.pkid_neg }}"
+                            data-action="editar">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="boton-opcion abrir-cerrar" title="Abrir/Cerrar"
+                            data-id="{{ negocio.pkid_neg }}"
+                            data-action="toggle-estado">
+                            <i class="fas fa-power-off"></i> Estado
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No hay negocios registrados aún.</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal"
+                        data-bs-target="#modalAgregarNegocio">
+                        <i class="fas fa-plus"></i> Agregar tu primer negocio
+                    </button>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Agregar Negocio -->
+<div class="modal fade" id="modalAgregarNegocio" tabindex="-1"
+    aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAgregarNegocioLabel">Agregar Nuevo Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAgregarNegocio" method="post" action="{% url 'registro_negocios' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_neg" class="form-label">Nombre del Negocio *</label>
+                                <input type="text" class="form-control" id="nom_neg" name="nom_neg" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nit_neg" class="form-label">NIT *</label>
+                                <input type="text" class="form-control" id="nit_neg" name="nit_neg" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
+                                <select class="form-control" id="fktiponeg_neg" name="fktiponeg_neg" required>
+                                    <option value="">Selecciona un tipo</option>
+                                    {% for tipo in tipos_negocio %}
+                                    <option value="{{ tipo.pkid_tiponeg }}">{{ tipo.desc_tiponeg }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_neg" class="form-label">Imagen del Negocio</label>
+                                <input type="file" class="form-control" id="img_neg" name="img_neg" accept="image/*">
+                                <div class="form-text">Opcional. Formatos: JPG, PNG, GIF</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="direcc_neg" class="form-label">Dirección *</label>
+                        <input type="text" class="form-control" id="direcc_neg" name="direcc_neg" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_neg" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="desc_neg" name="desc_neg" rows="3"
+                            placeholder="Describe tu negocio..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Negocio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Negocio -->
+<div class="modal fade" id="modalEditarNegocio" tabindex="-1"
+    aria-labelledby="modalEditarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarNegocioLabel">Editar Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarNegocio" method="post" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div id="contenidoEditarNegocio">
+                        <div class="text-center py-4">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando información del negocio...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Negocio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Funciones para los negocios
+function abrirModalEditar(negocioId) {
+    alert('Editar negocio ID: ' + negocioId + ' - Esta funcionalidad se implementará después');
+}
+
+function toggleEstadoNegocio(negocioId) {
+    const boton = document.querySelector(`[data-id="${negocioId}"][data-action="toggle-estado"]`);
+    
+    if (boton.innerHTML.includes('Abrir')) {
+        boton.innerHTML = '<i class="fas fa-power-off"></i> Cerrar';
+        boton.classList.add('activo');
+    } else {
+        boton.innerHTML = '<i class="fas fa-power-off"></i> Abrir';
+        boton.classList.remove('activo');
+    }
+}
+
+function gestionarNegocio(negocioId) {
+    // Por ahora redirige al dashboard principal
+    window.location.href = "{% url 'dash_vendedor' %}";
+}
+
+// Búsqueda en tiempo real
+document.getElementById('inputBusqueda').addEventListener('input', function(e) {
+    const textoBusqueda = e.target.value.toLowerCase();
+    const filas = document.querySelectorAll('#cuerpoTablaNegocios tr');
+    
+    filas.forEach(fila => {
+        const textoNegocio = fila.textContent.toLowerCase();
+        if (textoNegocio.includes(textoBusqueda)) {
+            fila.style.display = '';
+        } else {
+            fila.style.display = 'none';
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar todos los botones de opciones
+    document.querySelectorAll('.boton-opcion').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const action = this.getAttribute('data-action');
+            
+            switch(action) {
+                case 'editar':
+                    abrirModalEditar(id);
+                    break;
+                case 'toggle-estado':
+                    toggleEstadoNegocio(id);
+                    break;
+                case 'gestionar':
+                    gestionarNegocio(id);
+                    break;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

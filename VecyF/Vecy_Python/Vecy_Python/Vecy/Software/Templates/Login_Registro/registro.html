@@ -1,0 +1,117 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Vecy</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/registro.css' %}">
+</head>
+
+<body>
+    <div class="container">
+        <img src="{% static 'img/fosca.jpg' %}" alt="Imagen">
+
+
+        <div class="contenido"></div>
+        <div class="form">
+            <div class="form-header">
+                <h2>Registrarse</h2>
+            </div>
+
+            <div class="form-body">
+                <form method="POST" action="{% url 'registro_user' %}">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <select name="tipo_doc" required>
+                            <option value="" disabled selected>Seleccione Tipo Documento</option>
+                            {% for tipo_doc in tipo_documentos %}
+                            <option value="{{ tipo_doc.pkid_doc }}">{{ tipo_doc.desc_doc }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="documento" name="documento" placeholder=" " minlength="8" maxlength="10"
+                            required>
+                        <label for="documento">Número de Documento</label>
+                        <i class="fas fa-id-card iconf"></i>
+                    </div>
+                    {% for mensaje in messages %}
+                    {% if mensaje.extra_tags == 'documento' %}
+                    <p class="error">{{ mensaje }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="input-group">
+                        <input type="text" id="nombre" name="nombre" placeholder=" " required>
+                        <label for="nombre">Nombre</label>
+                        <i class="fas fa-user iconf"></i>
+                    </div>
+                    <div class="input-group">
+                        <input type="email" id="correo" name="correo" placeholder=" " required>
+                        <label for="correo">Correo electrónico</label>
+                        <i class="fas fa-envelope iconf"></i>
+                    </div>
+                    {% for mensaje in messages %}
+                    {% if mensaje.extra_tags == 'correo' %}
+                    <p class="error">{{ mensaje }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="input-group">
+                        <input type="date" id="fechan" name="fechan" placeholder=" " required>
+                        <label for="fechan">Fecha de Nacimiento</label>
+                        <i class="fas fa-calendar iconf"></i>
+                    </div>
+                    {% for mensaje in messages %}
+                    {% if mensaje.extra_tags == 'fechan' %}
+                    <p class="error">{{ mensaje }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="contrasena">
+                        <div class="input-group c1">
+                            <input type="password" id="contrasena" name="contrasena" placeholder=" " minlength="8"
+                                required>
+                            <label for="contrasena">Contraseña</label>
+                            <i class="fas fa-lock iconf"></i>
+                        </div>
+                        <div class="input-group">
+                            <input type="password" id="confirmar_contrasena" name="confirmar_contrasena" placeholder=" "
+                                minlength="8" required>
+                            <label for="confirmar_contrasena">Confirmar Contraseña</label>
+                            <i class="fas fa-lock iconf"></i>
+                        </div>
+                    </div>
+                    {% for mensaje in messages %}
+                    {% if mensaje.extra_tags == 'confirmar_contrasena' or mensaje.extra_tags == 'contrasena' %}
+                    <p class="error">{{ mensaje }}</p>
+                    {% endif %}
+                    {% endfor %}
+                    <div class="input-group">
+                        <select name="rol" required>
+                            <option value="" disabled selected>Seleccione Rol</option>
+                            {% for rol in roles %}
+                            <option value="{{ rol.pkid_rol }}">{{ rol.desc_rol }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="register-button">
+                        <button type="submit" class="btn-submit">Registrarse</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        function previewImg(event) {
+            const image = document.getElementById('preview');
+            image.src = URL.createObjectURL(event.target.files[0]);
+            image.style.display = 'block';
+        }
+    </script>
+
+</body>
+
+</html>

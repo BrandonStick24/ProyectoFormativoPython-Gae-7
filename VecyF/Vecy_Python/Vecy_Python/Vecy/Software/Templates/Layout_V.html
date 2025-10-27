@@ -1,0 +1,200 @@
+<!-- templates/Layout_V.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>VECY - {% block title %}Dashboard{% endblock %}</title>
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+            rel="stylesheet">
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'css_Vendedor/layout_V.css' %}">
+        {% block extra_css %}{% endblock %}
+    </head>
+    <body>
+        <!-- Encabezado -->
+        <header class="encabezado-principal">
+            <div class="encabezado-izquierda">
+                <div class="contenedor-logo">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="nombre-marca">VECY</div>
+            </div>
+
+            <div class="encabezado-centro">
+                <div class="nombre-negocio">
+                    {% if negocio_activo %}
+                    {{ negocio_activo.nom_neg }}
+                    {% else %}
+                    Sin Negocio Activo
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="encabezado-derecha">
+                <button class="boton-notificacion"
+                    id="botonDesplegableNotificaciones">
+                    <i class="fas fa-bell"></i>
+                    <span class="insignia-notificacion">3</span>
+                </button>
+
+                <span class="nombre-usuario">
+                    {% if nombre %}
+                    {{ nombre }}
+                    {% else %}
+                    Usuario
+                    {% endif %}
+                </span>
+
+                <div class="desplegable-usuario">
+                    <button class="boton-usuario" id="botonDesplegableUsuario">
+                        <i class="fas fa-user-circle"></i>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="menu-desplegable-personalizado"
+                        id="menuDesplegableUsuario">
+                        <a href="{% url 'Negocios_V' %}"
+                            class="item-desplegable-personalizado">
+                            <i class="fas fa-store"></i>
+                            Mis Negocios
+                        </a>
+                        <a href="#" class="item-desplegable-personalizado">
+                            <i class="fas fa-user-edit"></i>
+                            Editar Perfil
+                        </a>
+                        <div class="divisor-desplegable-personalizado"></div>
+                        <a href="{% url 'cerrar_sesion' %}"
+                            class="item-desplegable-personalizado">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra Lateral -->
+        <aside class="barra-lateral">
+            <div class="seccion-estado-negocio">
+                <h6><i class="fas fa-store-alt"></i> Estado del Negocio</h6>
+                <div class="alternador-estado">
+                    <span id="textoEstado">Cerrado</span>
+                    <div class="interruptor-alternador" id="alternadorNegocio">
+                        <div class="deslizador-alternador"></div>
+                    </div>
+                </div>
+                <button class="boton-programar" data-bs-toggle="modal"
+                    data-bs-target="#modalProgramacion">
+                    <i class="fas fa-clock"></i> Programar Horario
+                </button>
+            </div>
+
+            <!-- Orden correcto de los enlaces -->
+            <a href="{% url 'dash_vendedor' %}" class="item-barra-lateral">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'Negocios_V' %}" class="item-barra-lateral">
+                <i class="fas fa-store"></i>
+                <span>Mis Negocios</span>
+            </a>
+            <a href="{% url 'Crud_V' %}" class="item-barra-lateral">
+                <i class="fas fa-box"></i>
+                <span>Productos</span>
+            </a>
+            <a href="{% url 'Ofertas_V' %}" class="item-barra-lateral">
+                <i class="fas fa-tag"></i>
+                <span>Ofertas</span>
+            </a>
+            <a href="{% url 'Chats_V' %}" class="item-barra-lateral">
+                <i class="fas fa-comments"></i>
+                <span>Chats</span>
+            </a>
+            <a href="{% url 'Stock_V' %}" class="item-barra-lateral">
+                <i class="fas fa-chart-line"></i>
+                <span>Stock</span>
+            </a>
+            <button class="item-barra-lateral" data-bs-toggle="modal"
+                data-bs-target="#modalReportarProblema"
+                style="border: none; background: none; width: 100%; text-align: left;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Reportar Problema</span>
+            </button>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="contenido-principal">
+            <div class="contenedor-pagina">
+                {% block content %}
+                <!-- El contenido específico de cada página irá aquí -->
+                {% endblock %}
+            </div>
+        </main>
+
+        <!-- Pie de Página -->
+        <footer class="pie-principal">
+            <p class="mb-0">© 2025 VECY - Sistema de Gestión de Negocios. Todos
+                los derechos reservados.</p>
+        </footer>
+
+        <!-- Los modales se mantienen igual -->
+        <!-- Modal para Programar Horario -->
+        <div class="modal fade" id="modalProgramacion" tabindex="-1"
+            aria-labelledby="modalProgramacionLabel" aria-hidden="true">
+            <!-- ... contenido del modal ... -->
+        </div>
+
+        <!-- Modal para Reportar Problema -->
+        <div class="modal fade" id="modalReportarProblema" tabindex="-1"
+            aria-labelledby="modalReportarProblemaLabel" aria-hidden="true">
+            <!-- ... contenido del modal ... -->
+        </div>
+
+        <!-- Bootstrap JS -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+        <!-- JavaScript personalizado -->
+        <script>
+        // Alternar menú desplegable del usuario
+        document.getElementById('botonDesplegableUsuario').addEventListener('click', function(e) {
+            e.stopPropagation();
+            document.getElementById('menuDesplegableUsuario').classList.toggle('mostrar');
+        });
+
+        // Cerrar menú desplegable al hacer clic fuera
+        document.addEventListener('click', function() {
+            document.getElementById('menuDesplegableUsuario').classList.remove('mostrar');
+        });
+
+        // Alternar estado del negocio en la barra lateral
+        const alternadorNegocio = document.getElementById('alternadorNegocio');
+        const textoEstado = document.getElementById('textoEstado');
+        let estaAbierto = false;
+
+        alternadorNegocio.addEventListener('click', function() {
+            estaAbierto = !estaAbierto;
+            this.classList.toggle('activo');
+            textoEstado.textContent = estaAbierto ? 'Abierto' : 'Cerrado';
+            textoEstado.style.color = estaAbierto ? '#10b981' : '#6b7280';
+        });
+
+        // Simular notificaciones
+        const insigniaNotificacion = document.querySelector('.insignia-notificacion');
+        const botonNotificaciones = document.getElementById('botonDesplegableNotificaciones');
+        
+        botonNotificaciones.addEventListener('click', function() {
+            // Simular leer notificaciones
+            setTimeout(function() {
+                insigniaNotificacion.style.display = 'none';
+            }, 1000);
+        });
+    </script>
+
+        {% block extra_js %}{% endblock %}
+    </body>
+</html>

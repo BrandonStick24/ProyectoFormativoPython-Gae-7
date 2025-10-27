@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Página Principal{% endblock %}
+
+{% block content %}
+<div class="containerv">
+    <img src="{% static 'img/fosca.jpg'%}" alt="">
+    <div class="contenido"></div>
+    <div class="menu">
+        <a class="item_menu" href="">Inicio</a>
+        <a class="item_menu" href="">Categorias</a>
+        <a class="item_menu" href="">Ayuda</a>
+        <a class="item_menu" href="">Favoritos</a>
+        <div class="dropdown">
+            <a href="" class="dropdown-toggle item_menu item1" data-bs-toggle="dropdown" aria-expanded="false">
+                {{ nombre }}
+                <i class="fa-solid fa-chevron-down ms-2"></i>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="">Editar Cuenta</a></li>
+                <li><a class="dropdown-item" href={% url "cerrar_sesion" %}>Salir</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="men_ini">
+        <h1>¡Bienvenido {{ nombre }}!</h1>
+        <p>Encuentra los negocios y productos cerca de ti.</p>
+        <button class="info btn1">Ver Productos</button>
+        <button class="info btn2" onclick="location.href='#negocios'">Ver Negocios</button>
+    </div>
+</div>
+
+<div class="main" id="negocios">
+    <div data-aos="fade-up">
+        <h1>Encuentra Negocios</h1>
+        <p>Descubre los negocios cerca de ti</p>
+    </div>
+    <div class="filtrarN" data-aos="fade-up">
+        <input type="search" placeholder="Buscar Negocios...">
+        <select id="fktiponeg_neg" name="fktiponeg_neg" class="select2" required>
+            <option value="" disabled selected>Filtrar por tipo de negocio</option>
+            {% for tipo in t_negocios %}
+            <option value="{{ tipo.pkid_tiponeg }}">{{ tipo.desc_tiponeg }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="row">
+        {% for negocio in negocios %}
+        <div class="cardv" data-aos="fade-up">
+            <div class="cardv-header">
+                <img src="{{ negocio.img_neg.url}}" style="height: 180px;">
+                <div class="cardv-body">
+                    <span><strong>Nombre: </strong>{{ negocio.nom_neg }}</span>
+                    <span><strong>Dirección: </strong>{{ negocio.direcc_neg }}</span>
+                    <span><strong>Tipo: </strong>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                    <span class="estado"><strong>Estado: </strong><p>{{ negocio.estado_neg }}</p></span>
+                    <br>
+                    <div class="details">
+                        <a href="#" role="button">Ver detalles</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No hay negocios disponibles.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    $('#fktiponeg_neg').select2({
+        placeholder: "Filtrar por tipo de negocio",
+        allowClear: true,
+        width: '200px'
+    });
+
+    function filtrarNegocios() {
+        let texto = $('input[type="search"]').val().toLowerCase();
+        let tipoSeleccionado = $('#fktiponeg_neg').val();
+        let textoTipo = tipoSeleccionado ? $('#fktiponeg_neg option:selected').text().toLowerCase() : '';
+
+        $('.cardv').each(function() {
+            let nombre = $(this).find('span strong:contains("Nombre:")').parent().text().toLowerCase();
+            let direccion = $(this).find('span strong:contains("Dirección:")').parent().text().toLowerCase();
+            let tipo = $(this).find('span strong:contains("Tipo:")').parent().text().toLowerCase();
+
+            let coincideTexto = nombre.includes(texto) || direccion.includes(texto);
+            let coincideTipo = !textoTipo || tipo.includes(textoTipo);
+
+            if (coincideTexto && coincideTipo) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    }
+
+    $('input[type="search"]').on('keyup', filtrarNegocios);
+    $('#fktiponeg_neg').on('change', filtrarNegocios);
+});
+</script>
+{% endblock %}

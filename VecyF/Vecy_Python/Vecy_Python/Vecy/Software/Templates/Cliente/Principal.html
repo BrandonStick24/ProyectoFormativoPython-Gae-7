@@ -1,0 +1,112 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'css/principal.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/index.css' %}" />
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <title>Principal</title>
+</head>
+
+<body>
+    <div class="containerv">
+        <img src="{% static 'img/fosca.jpg'%}" alt="" />
+        <div class="contenido"></div>
+        <div class="menu">
+            <a class="item_menu" href="">Inicio</a>
+            <a class="item_menu" href="">Categorias</a>
+            <a class="item_menu" href="">Ayuda</a>
+            <a class="item_menu" href="">Favoritos</a>
+            <a class="item_menu" href="{% url "login" %}">Iniciar Sesion</a>
+            <a class="item_menu item1" href={% url "registro_user" %}>Registrarse</a>
+        </div>
+        <div class="men_ini">
+            <h1>Te damos la Bienvenida</h1>
+            <p>Encuentra los negocios y productos cerca de ti.</p>
+            <button class="info btn1">Regístrate</button>
+            <button class="info btn2" onclick="location.href='#negocios'">Ver Negocios</button>
+        </div>
+    </div>
+    <div class="main" id="negocios">
+    <div data-aos="fade-up">
+        <h1>Encuentra Negocios</h1>
+        <p>Descubre los negocios cerca de ti</p>
+    </div>
+    
+    <div class="row">
+        {% for negocio in negocios %}
+        <div class="card" data-aos="fade-up">
+            <div class="card-header">
+                <img src="{% static "img/Hotel.jpeg" %}">
+                <div class="card-body">
+                    <span><strong>Nombre: </strong>{{ negocio.nom_neg }}</span>
+                    <span><strong>Dirección: </strong>{{ negocio.direcc_neg }}</span>
+                    <span><strong>Tipo: </strong>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                    <span><strong>Estado: </strong>{{ negocio.estado_neg }}</span>
+                    <br>
+                    <div class="details">
+                        <a href="#" role="button">Ver detalles</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No hay negocios disponibles.</p>
+        {% endfor %}
+    </div>
+</div>
+<footer class="footer">
+    <div class="footer-section">
+        <h3>Vecy Software</h3>
+        <p>Conectamos negocios con clientes para que siempre encuentres lo que necesitas.</p>
+    </div>
+
+    <div class="footer-section">
+        <h3>Enlaces</h3>
+        <ul>
+            <li><a href="#">Inicio</a></li>
+            <li><a href="#">Tiendas</a></li>
+            <li><a href="#">Productos</a></li>
+            <li><a href="#">Sobre Nosotros</a></li>
+        </ul>
+    </div>
+
+    <div class="footer-section">
+        <h3>Contacto</h3>
+        <ul>
+            <li>Bogotá, Colombia</li>
+            <li><a href="#">moderador@vecy.com</a></li>
+        </ul>
+    </div>
+
+    <div class="footer-section redes">
+        <h3>Síguenos</h3>
+        <div class="social-icons">
+            <a href="#"><i class="fab fa-facebook-f"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+        </div>
+    </div>
+</footer>
+
+<div class="footer-bottom">
+    © 2025 Vecy Software. Todos los derechos reservados.
+</div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script>
+        AOS.init({
+            duration: 1000,
+            mirror: true,
+            once: false
+        });
+    </script>
+</body>
+
+</html>

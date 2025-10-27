@@ -1,0 +1,459 @@
+/* layout_V.css - VERSIÓN MEJORADA */
+:root {
+    --primary-color: #4F46E5;
+    --secondary-color: #7C3AED;
+    --success-color: #10B981;
+    --danger-color: #EF4444;
+    --warning-color: #F59E0B;
+    --light-color: #F8FAFC;
+    --dark-color: #1E293B;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Header */
+.encabezado-principal {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    height: 70px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+}
+
+.encabezado-izquierda {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.contenedor-logo {
+    width: 50px;
+    height: 50px;
+    background: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+}
+
+.nombre-marca {
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: white;
+    margin: 0;
+}
+
+.encabezado-centro .nombre-negocio {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.encabezado-derecha {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.boton-notificacion {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    position: relative;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.boton-notificacion:hover {
+    opacity: 0.8;
+}
+
+.insignia-notificacion {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nombre-usuario {
+    color: white;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.desplegable-usuario {
+    position: relative;
+}
+
+.boton-usuario {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: opacity 0.2s;
+}
+
+.boton-usuario:hover {
+    opacity: 0.8;
+}
+
+.menu-desplegable-personalizado {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    min-width: 200px;
+    display: none;
+    z-index: 1000;
+    padding: 0.5rem 0;
+}
+
+.menu-desplegable-personalizado.mostrar {
+    display: block;
+}
+
+.item-desplegable-personalizado {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #4b5563;
+    text-decoration: none;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+}
+
+.item-desplegable-personalizado:hover {
+    background: #f3f4f6;
+    color: var(--primary-color);
+}
+
+.divisor-desplegable-personalizado {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 0.5rem 0;
+}
+
+/* Sidebar */
+.barra-lateral {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    width: 250px;
+    height: calc(100vh - 130px);
+    background: white;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+    overflow-y: auto;
+    z-index: 102;
+    padding: 1rem 0;
+}
+
+.seccion-estado-negocio {
+    margin: 1rem 1.5rem;
+    padding: 1.2rem;
+    background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+}
+
+.seccion-estado-negocio h6 {
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #374151;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.alternador-estado {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+#textoEstado {
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.interruptor-alternador {
+    position: relative;
+    width: 50px;
+    height: 25px;
+    background: #cbd5e1;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.interruptor-alternador.activo {
+    background: var(--success-color);
+}
+
+.deslizador-alternador {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 21px;
+    height: 21px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s;
+}
+
+.interruptor-alternador.activo .deslizador-alternador {
+    left: 27px;
+}
+
+.boton-programar {
+    width: 100%;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.boton-programar:hover {
+    background: var(--secondary-color);
+}
+
+.item-barra-lateral {
+    padding: 0.9rem 1.5rem;
+    color: #4b5563;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.item-barra-lateral:hover,
+.item-barra-lateral.active {
+    background: #f3f4f6;
+    color: var(--primary-color);
+    border-left-color: var(--primary-color);
+}
+
+.item-barra-lateral i {
+    font-size: 1.1rem;
+    width: 25px;
+}
+
+/* CONTENIDO PRINCIPAL - NUEVO SISTEMA */
+.contenido-principal {
+    margin-left: 250px;
+    margin-top: 70px;
+    margin-bottom: 60px;
+    min-height: calc(100vh - 130px);
+    background: #f8f9fa;
+    padding: 0;
+    width: calc(100% - 250px);
+}
+
+.contenedor-pagina {
+    max-width: 100%;
+    height: 100%;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+/* Footer */
+.pie-principal {
+    position: fixed;
+    bottom: 0;
+    left: 250px;
+    right: 0;
+    background: var(--dark-color);
+    color: white;
+    padding: 1rem 2rem;
+    text-align: center;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 101;
+    width: calc(100% - 250px);
+}
+
+.pie-principal p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* Estilos para modal */
+.modal-content {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding: 1.2rem 1.5rem;
+}
+
+.modal-body {
+    padding: 1.2rem 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem 1.5rem;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+    .barra-lateral {
+        width: 220px;
+    }
+    
+    .contenido-principal {
+        margin-left: 220px;
+        width: calc(100% - 220px);
+    }
+    
+    .pie-principal {
+        left: 220px;
+        width: calc(100% - 220px);
+    }
+    
+    .contenedor-pagina {
+        padding: 1.2rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .barra-lateral {
+        transform: translateX(-100%);
+        width: 280px;
+        z-index: 103;
+    }
+    
+    .barra-lateral.mostrar {
+        transform: translateX(0);
+    }
+    
+    .contenido-principal {
+        margin-left: 0;
+        width: 100%;
+    }
+    
+    .pie-principal {
+        left: 0;
+        width: 100%;
+    }
+    
+    .encabezado-centro {
+        display: none;
+    }
+    
+    .nombre-usuario {
+        display: none;
+    }
+    
+    .contenedor-pagina {
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .encabezado-principal {
+        padding: 0 1rem;
+    }
+    
+    .contenedor-pagina {
+        padding: 0.8rem;
+    }
+    
+    .pie-principal {
+        padding: 1rem;
+    }
+    
+    .pie-principal p {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .encabezado-principal {
+        padding: 0 0.8rem;
+    }
+    
+    .nombre-marca {
+        font-size: 1.3rem;
+    }
+    
+    .contenedor-logo {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    .contenedor-pagina {
+        padding: 0.5rem;
+    }
+    
+    .pie-principal {
+        padding: 0.8rem;
+        height: 50px;
+    }
+    
+    .contenido-principal {
+        margin-bottom: 50px;
+        min-height: calc(100vh - 120px);
+    }
+}

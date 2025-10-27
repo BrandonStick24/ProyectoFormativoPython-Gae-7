@@ -1,0 +1,101 @@
+:root {
+    --colorP: #55AD9B;
+    --colorM: #95D2B3;
+    --colorB: #D8EFD3;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.container {
+    width: 100%;
+    margin: none;
+}
+
+.cliente_header {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.cliente_header img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.efecto_vidrio {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    top: 50%;
+    left: 50%;
+    width: 60%;
+    color: white;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    transform: translate(-50%, -50%);
+    animation: fadeUp 2s ease forwards;
+}
+
+@keyframes fadeUp {
+    0% {
+        opacity: 0;
+        margin-top: 80px;
+    }
+
+    100% {
+        opacity: 1;
+        margin-top: 0;
+    }
+}
+
+.ex_neg {
+    padding: 20px;
+    border-radius: 10px;
+    background-color: var(--colorP);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+
+@media (max-width: 600px) {
+    .efecto_vidrio {
+        width: 90%;
+        padding: 15px;
+    }
+
+    .efecto_vidrio h1 {
+        font-size: 1.4rem;
+    }
+
+    .ex_neg {
+        width: 100%;
+        font-size: 18px;
+    }
+}
+
+@media (min-width: 601px) and (max-width: 1024px) {
+    .efecto_vidrio {
+        width: 75%;
+    }
+
+    .efecto_vidrio h1 {
+        font-size: 1.8rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .efecto_vidrio {
+        width: 45%;
+    }
+}
