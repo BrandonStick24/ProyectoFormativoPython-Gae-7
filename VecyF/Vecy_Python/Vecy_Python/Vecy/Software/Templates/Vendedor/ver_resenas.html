@@ -1,0 +1,497 @@
+{% extends 'Layout_V.html' %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="text-primary mb-0">
+            <i class="fas fa-star me-2"></i>Reseñas de Clientes
+        </h1>
+        <span class="badge bg-primary fs-6">{{ total_resenas }} reseñas</span>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-warning">{{ promedio_estrellas }}/5</h3>
+                    <p class="mb-0">Calificación promedio</p>
+                    <div class="mt-2">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= promedio_estrellas %}
+                                <i class="fas fa-star text-warning"></i>
+                            {% else %}
+                                <i class="far fa-star text-warning"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h3 class="text-primary">{{ total_resenas }}</h3>
+                    <p class="mb-0">Total de reseñas</p>
+                    <div class="mt-2">
+                        <i class="fas fa-comments text-primary fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros Simples -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <label class="form-label"><strong>Filtrar por:</strong></label>
+                    <select class="form-select" id="filtro-estado">
+                        <option value="todas">Todas las reseñas</option>
+                        <option value="respondidas">Respondidas</option>
+                        <option value="sin-respuesta">Sin respuesta</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><strong>Ordenar por:</strong></label>
+                    <select class="form-select" id="filtro-orden">
+                        <option value="recientes">Más recientes</option>
+                        <option value="antiguas">Más antiguas</option>
+                        <option value="mejores">Mejor calificación</option>
+                        <option value="peores">Peor calificación</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label"><strong>Buscar cliente:</strong></label>
+                    <input type="text" class="form-control" id="filtro-busqueda" placeholder="Nombre del cliente...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Layout Dividido -->
+    <div class="row">
+        <!-- Columna Izquierda: Lista de Reseñas -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Reseñas</h5>
+                    <small class="text-muted" id="contador-resenas">Mostrando {{ resenas|length }} reseñas</small>
+                </div>
+                <div class="card-body p-0">
+                    {% if resenas %}
+                        <div class="list-group list-group-flush" id="lista-resenas">
+                            {% for resena in resenas %}
+                            <div class="list-group-item resena-item {% if resena.tiene_respuesta %}resena-respondida{% endif %}" 
+                                 data-index="{{ forloop.counter0 }}"
+                                 data-estado="{% if resena.tiene_respuesta %}respondida{% else %}sin-respuesta{% endif %}"
+                                 data-calificacion="{{ resena.calificacion }}"
+                                 data-cliente="{{ resena.cliente|lower }}"
+                                 data-fecha="{{ resena.fecha }}"
+                                 onclick="mostrarResena({{ forloop.counter0 }})"
+                                 style="cursor: pointer;">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ resena.cliente }}</h6>
+                                        <p class="mb-1 text-muted small truncate-text">{{ resena.comentario|truncatewords:10 }}</p>
+                                        <small class="text-muted">
+                                            <i class="far fa-clock me-1"></i>{{ resena.fecha }}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="text-warning mb-1">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= resena.calificacion %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        {% if resena.tiene_respuesta %}
+                                            <span class="badge bg-success">Respondida</span>
+                                        {% else %}
+                                            <span class="badge bg-warning">Sin respuesta</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Paginación Simple -->
+                        <div class="card-footer bg-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" id="info-paginacion">
+                                    Página 1 de 1
+                                </small>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary me-2" id="btn-prev" disabled>
+                                        <i class="fas fa-chevron-left"></i> Anterior
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" id="btn-next">
+                                        Siguiente <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Aún no tienes reseñas</h5>
+                            <p class="text-muted">Los comentarios de tus clientes aparecerán aquí.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Detalle y Respuesta -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Detalle de Reseña</h5>
+                </div>
+                <div class="card-body">
+                    <div id="detalle-resena">
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-mouse-pointer fa-2x mb-3"></i>
+                            <p>Selecciona una reseña de la lista para ver los detalles y responder</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template para el detalle de reseña (oculto) -->
+<div id="template-resena" style="display: none;">
+    <div class="resena-detalle">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h5 class="mb-1" id="detalle-cliente"></h5>
+                <small class="text-muted">
+                    <i class="far fa-clock me-1"></i><span id="detalle-fecha"></span>
+                </small>
+            </div>
+            <div class="text-warning">
+                <span id="detalle-estrellas"></span>
+                <span class="ms-1 text-dark" id="detalle-calificacion"></span>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            <h6 class="text-primary">Comentario del cliente:</h6>
+            <p class="p-3 bg-light rounded" id="detalle-comentario"></p>
+        </div>
+
+        <!-- Respuesta Existente -->
+        <div id="respuesta-existente" style="display: none;">
+            <div class="mb-4">
+                <h6 class="text-success">
+                    <i class="fas fa-check-circle me-1"></i>Tu respuesta:
+                    <small class="text-muted ms-2" id="fecha-respuesta"></small>
+                </h6>
+                <div class="p-3 bg-success bg-opacity-10 rounded border border-success">
+                    <p class="mb-0" id="texto-respuesta"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario de Respuesta -->
+        <form method="post" action="" id="form-respuesta">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label text-primary">
+                    <i class="fas fa-edit me-1"></i>
+                    <span id="label-respuesta">Responder a esta reseña:</span>
+                </label>
+                <textarea name="respuesta" class="form-control" 
+                          placeholder="Escribe tu respuesta profesional aquí..." 
+                          rows="4" id="textarea-respuesta" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane me-1"></i> 
+                <span id="texto-boton">Publicar Respuesta</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<style>
+.resena-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid #55AD9B;
+}
+.resena-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(2px);
+}
+.resena-respondida {
+    border-left-color: #28a745;
+}
+.truncate-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.resena-detalle {
+    animation: fadeIn 0.3s ease;
+}
+.resena-item.active {
+    background-color: #007bff !important;
+    color: white !important;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+// Datos de las reseñas para JavaScript
+const resenasData = [
+    {% for resena in resenas %}
+    {
+        id: {{ resena.id }},
+        cliente: "{{ resena.cliente|escapejs }}",
+        fecha: "{{ resena.fecha }}",
+        calificacion: {{ resena.calificacion }},
+        comentario: `{{ resena.comentario|escapejs }}`,
+        respuesta: `{{ resena.respuesta|escapejs }}`,
+        tiene_respuesta: {{ resena.tiene_respuesta|yesno:"true,false" }},
+        fecha_respuesta: "{{ resena.fecha_respuesta }}",
+        url_responder: "{% url 'responder_resena' resena.id %}"
+    },
+    {% endfor %}
+];
+
+// Variables para paginación y filtros
+let resenasFiltradas = [...resenasData];
+let paginaActual = 1;
+const reseñasPorPagina = 5;
+
+// Función para mostrar reseña en el detalle
+function mostrarResena(index) {
+    if (index < 0 || index >= resenasFiltradas.length) return;
+    
+    const resena = resenasFiltradas[index];
+    const template = document.getElementById('template-resena').innerHTML;
+    const detalleDiv = document.getElementById('detalle-resena');
+    
+    detalleDiv.innerHTML = template;
+    
+    // Llenar datos
+    document.getElementById('detalle-cliente').textContent = resena.cliente;
+    document.getElementById('detalle-fecha').textContent = resena.fecha;
+    document.getElementById('detalle-comentario').textContent = resena.comentario;
+    
+    // Estrellas
+    let estrellasHtml = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= resena.calificacion) {
+            estrellasHtml += '<i class="fas fa-star"></i>';
+        } else {
+            estrellasHtml += '<i class="far fa-star"></i>';
+        }
+    }
+    document.getElementById('detalle-estrellas').innerHTML = estrellasHtml;
+    document.getElementById('detalle-calificacion').textContent = `${resena.calificacion}/5`;
+    
+    // Configurar respuesta existente
+    const respuestaDiv = document.getElementById('respuesta-existente');
+    const form = document.getElementById('form-respuesta');
+    const textarea = document.getElementById('textarea-respuesta');
+    
+    if (resena.tiene_respuesta) {
+        respuestaDiv.style.display = 'block';
+        document.getElementById('texto-respuesta').textContent = resena.respuesta;
+        document.getElementById('fecha-respuesta').textContent = resena.fecha_respuesta ? `Respondida el ${resena.fecha_respuesta}` : '';
+        
+        // Cambiar texto del formulario para edición
+        document.getElementById('label-respuesta').textContent = 'Editar tu respuesta:';
+        document.getElementById('texto-boton').textContent = 'Actualizar Respuesta';
+        textarea.value = resena.respuesta;
+    } else {
+        respuestaDiv.style.display = 'none';
+        document.getElementById('label-respuesta').textContent = 'Responder a esta reseña:';
+        document.getElementById('texto-boton').textContent = 'Publicar Respuesta';
+        textarea.value = '';
+    }
+    
+    // Actualizar action del formulario
+    form.action = resena.url_responder;
+    
+    // Resaltar item seleccionado
+    document.querySelectorAll('.resena-item').forEach(item => {
+        item.classList.remove('active', 'bg-primary', 'text-white');
+    });
+    
+    // Encontrar y resaltar el item correcto en la lista filtrada
+    const items = document.querySelectorAll('.resena-item');
+    for (let i = 0; i < items.length; i++) {
+        if (parseInt(items[i].dataset.index) === index) {
+            items[i].classList.add('active', 'bg-primary', 'text-white');
+            break;
+        }
+    }
+}
+
+// Función para aplicar filtros
+function aplicarFiltros() {
+    const filtroEstado = document.getElementById('filtro-estado').value;
+    const filtroOrden = document.getElementById('filtro-orden').value;
+    const filtroBusqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
+    
+    // Filtrar por estado
+    resenasFiltradas = resenasData.filter(resena => {
+        let cumpleEstado = true;
+        let cumpleBusqueda = true;
+        
+        // Filtro por estado (respondida/sin respuesta)
+        if (filtroEstado === 'respondidas') {
+            cumpleEstado = resena.tiene_respuesta;
+        } else if (filtroEstado === 'sin-respuesta') {
+            cumpleEstado = !resena.tiene_respuesta;
+        }
+        
+        // Filtro por búsqueda
+        if (filtroBusqueda) {
+            cumpleBusqueda = resena.cliente.toLowerCase().includes(filtroBusqueda) || 
+                            resena.comentario.toLowerCase().includes(filtroBusqueda);
+        }
+        
+        return cumpleEstado && cumpleBusqueda;
+    });
+    
+    // Ordenar
+    switch (filtroOrden) {
+        case 'antiguas':
+            resenasFiltradas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            break;
+        case 'mejores':
+            resenasFiltradas.sort((a, b) => b.calificacion - a.calificacion);
+            break;
+        case 'peores':
+            resenasFiltradas.sort((a, b) => a.calificacion - b.calificacion);
+            break;
+        default: // recientes
+            resenasFiltradas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    }
+    
+    // Resetear a página 1
+    paginaActual = 1;
+    actualizarListaResenas();
+}
+
+// Función para actualizar la lista visual
+function actualizarListaResenas() {
+    const lista = document.getElementById('lista-resenas');
+    const contador = document.getElementById('contador-resenas');
+    const infoPaginacion = document.getElementById('info-paginacion');
+    
+    if (!lista) return;
+    
+    // Calcular índices para paginación
+    const inicio = (paginaActual - 1) * reseñasPorPagina;
+    const fin = inicio + reseñasPorPagina;
+    const resenasPagina = resenasFiltradas.slice(inicio, fin);
+    
+    // Actualizar lista
+    lista.innerHTML = '';
+    resenasPagina.forEach((resena, index) => {
+        const indexGlobal = resenasFiltradas.indexOf(resena);
+        const item = document.createElement('div');
+        item.className = `list-group-item resena-item ${resena.tiene_respuesta ? 'resena-respondida' : ''}`;
+        item.setAttribute('data-index', indexGlobal);
+        item.setAttribute('data-estado', resena.tiene_respuesta ? 'respondida' : 'sin-respuesta');
+        item.setAttribute('data-calificacion', resena.calificacion);
+        item.setAttribute('data-cliente', resena.cliente.toLowerCase());
+        item.setAttribute('data-fecha', resena.fecha);
+        item.onclick = () => mostrarResena(indexGlobal);
+        item.style.cursor = 'pointer';
+        
+        let estrellasHtml = '';
+        for (let i = 1; i <= 5; i++) {
+            estrellasHtml += i <= resena.calificacion ? 
+                '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+        }
+        
+        item.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1">${resena.cliente}</h6>
+                    <p class="mb-1 text-muted small truncate-text">${resena.comentario.substring(0, 100)}${resena.comentario.length > 100 ? '...' : ''}</p>
+                    <small class="text-muted">
+                        <i class="far fa-clock me-1"></i>${resena.fecha}
+                    </small>
+                </div>
+                <div class="text-end">
+                    <div class="text-warning mb-1">${estrellasHtml}</div>
+                    ${resena.tiene_respuesta ? 
+                        '<span class="badge bg-success">Respondida</span>' : 
+                        '<span class="badge bg-warning">Sin respuesta</span>'}
+                </div>
+            </div>
+        `;
+        
+        lista.appendChild(item);
+    });
+    
+    // Actualizar contadores
+    contador.textContent = `Mostrando ${resenasFiltradas.length} reseñas`;
+    
+    const totalPaginas = Math.ceil(resenasFiltradas.length / reseñasPorPagina);
+    infoPaginacion.textContent = `Página ${paginaActual} de ${totalPaginas}`;
+    
+    // Actualizar botones de paginación
+    document.getElementById('btn-prev').disabled = paginaActual === 1;
+    document.getElementById('btn-next').disabled = paginaActual === totalPaginas || totalPaginas === 0;
+    
+    // Mostrar primera reseña si existe
+    if (resenasPagina.length > 0) {
+        mostrarResena(resenasFiltradas.indexOf(resenasPagina[0]));
+    } else {
+        document.getElementById('detalle-resena').innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-search fa-2x mb-3"></i>
+                <p>No hay reseñas que coincidan con los filtros</p>
+            </div>
+        `;
+    }
+}
+
+// Event Listeners para filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar
+    if (resenasData.length > 0) {
+        aplicarFiltros();
+    }
+    
+    // Configurar event listeners para filtros
+    document.getElementById('filtro-estado').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtro-orden').addEventListener('change', aplicarFiltros);
+    document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
+    
+    // Configurar paginación
+    document.getElementById('btn-prev').addEventListener('click', function() {
+        if (paginaActual > 1) {
+            paginaActual--;
+            actualizarListaResenas();
+        }
+    });
+    
+    document.getElementById('btn-next').addEventListener('click', function() {
+        const totalPaginas = Math.ceil(resenasFiltradas.length / reseñasPorPagina);
+        if (paginaActual < totalPaginas) {
+            paginaActual++;
+            actualizarListaResenas();
+        }
+    });
+});
+</script>
+{% endblock %}

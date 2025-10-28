@@ -21,6 +21,11 @@ def principal(request):
 
 
 def iniciar_sesion(request):
+    # LIMPIAR MENSAJES ANTIGUOS AL CARGAR LA PÁGINA DE LOGIN
+    storage = messages.get_messages(request)
+    for message in storage:
+        pass
+    
     if request.method == "POST":
         correo = request.POST.get("correo")
         password = request.POST.get("contrasena")
