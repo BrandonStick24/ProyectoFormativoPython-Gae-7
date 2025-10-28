@@ -1,4 +1,5 @@
 from django.urls import path
+from . import views, vendedor_views
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
@@ -25,6 +26,8 @@ urlpatterns = [
     path('vendedor/ofertas/', views.Ofertas_V, name='Ofertas_V'),
     path('vendedor/chats/', views.Chats_V, name='Chats_V'),
     path('vendedor/stock/', views.Stock_V, name='Stock_V'),
+    path('vendedor/resenas/', vendedor_views.ver_resenas_vendedor, name='ver_resenas_vendedor'),
+    path('vendedor/resenas/responder/<int:resena_id>/', vendedor_views.responder_resena, name='responder_resena'),
 
     # ==================== NUEVAS URLs PARA MÚLTIPLES NEGOCIOS ====================
     path('vendedor/negocios/seleccionar/<int:negocio_id>/', views.seleccionar_negocio, name='seleccionar_negocio'),
