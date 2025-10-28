@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Página Principal{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/detalle_neg.css' %}">
+{% endblock %}
+{% block content %}
+<div class="containerv">
+    <div class="menu">
+        <a class="item_menu" href="">Inicio</a>
+        <a class="item_menu" href="">Categorias</a>
+        <a class="item_menu" href="">Ayuda</a>
+        <a class="item_menu" href="">Favoritos</a>
+        <div class="dropdown">
+            <a href="" class="dropdown-toggle item_menu item1" data-bs-toggle="dropdown" aria-expanded="false">
+                {{ nombre }}
+                <i class="fa-solid fa-chevron-down ms-2"></i>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="">Editar Cuenta</a></li>
+                <li><a class="dropdown-item" href="{% url "cerrar_sesion" %}">Salir</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="negocios">
+        <img class="img_neg" src="{{ negocio.img_neg.url }}" alt="">
+        <div class="propietario">
+            <img class="img_prop" src="{% static "img/Usuario.jpg" %}" alt="">
+        </div>
+    </div>
+    <div class="detalle_neg">
+        <span>
+            <h1>{{negocio.nom_neg}}</h1>
+        </span>
+        <span class="nom_neg"><strong class="em1">Dirección: </strong>{{negocio.direcc_neg}}</span> <br>
+        <span class="nom_neg"><strong class="em1">Tipo Negocio: </strong>{{tipo_negocio.desc_tiponeg}}</span> <br>
+        <span class="nom_neg"><strong class="em1">Sobre Nosotros: </strong>{{negocio.desc_neg}}</span>
+        <span class="nom_neg"><strong class="em1">Calificación: </strong>
+            <i class="fas fa-star iconc"></i>
+            <i class="fas fa-star iconc"></i>
+            <i class="fas fa-star iconc"></i>
+            <i class="fas fa-star iconc"></i>
+            <i class="fas fa-star iconc"></i>
+        </span>
+    </div>
+</div>
+<div class="catalogo_productos" data-aos="fade-up">
+    <h2>Nuestro Catálogo de Productos</h2>
+    <p>Encuentra el helado que más te guste</p>
+
+    <div class="filtrarP" data-aos="fade-up">
+        <input type="search" id="buscarProducto" placeholder="Buscar Productos...">
+        <select id="filtroPrecio" name="filtroPrecio" class="select2" required>
+            <option value="" selected>Filtrar por precio</option>
+            <option value="0-5000">Hasta $5,000</option>
+            <option value="5001-10000">$5,001 - $10,000</option>
+            <option value="10001-20000">$10,001 - $20,000</option>
+            <option value="20001-999999">Más de $20,000</option>
+        </select>
+    </div>
+
+    <div class="productos">
+        {% for prod in productos %}
+        <div class="producto" data-nombre="{{ prod.nom_prod|lower }}" data-precio="{{ prod.precio_prod }}"
+            data-aos="fade-up">
+            <img class="prods" src="{{ prod.img_prod.url }}" alt="">
+            <div class="info_prod">
+                <h6>{{ prod.nom_prod }}</h6>
+                <span><strong>Precio:</strong> ${{ prod.precio_prod }}</span> <br>
+                <span><strong>Cantidad Disponible:</strong> {{ prod.cantidad_prod }}</span> <br>
+                <span><strong>Descripción:</strong> {{ prod.desc_prod }}</span>
+                <div class="solicitar">
+                    <button>Pedir</button>
+                    <i class="fas fa-heart icons"></i>
+                </div>
+            </div>
+        </div>
+
+
+        {% empty %}
+        <p>No hay productos registrados para este negocio.</p>
+        {% endfor %}
+    </div>
+</div>
+<div class="resenas" data-aos="fade-up">
+    <h2>Calificaciónes Y Opiniónes</h2>
+    <p>En este apartado puedes calificar tu experiencia con el Negocio</p>
+</div>
+<div class="list_resenas" data-aos="fade-up">
+    <div class="calificar">
+        <h3>Califíca tu Experiencia</h3>
+        <p>Comparte tu opinión con otros usuarios</p>
+        <div class="evaluar-negocio">
+            <form id="formResena" method="POST" action="{% url 'guardar_resena' %}">
+                {% csrf_token %}
+                <div class="estrellas">
+                    <span class="star" data-value="1">&#9734;</span>
+                    <span class="star" data-value="2">&#9734;</span>
+                    <span class="star" data-value="3">&#9734;</span>
+                    <span class="star" data-value="4">&#9734;</span>
+                    <span class="star" data-value="5">&#9734;</span>
+                </div>
+                <input type="hidden" name="estrellas" id="estrellas_input" value="5">
+                <textarea name="comentario" placeholder="Escribe tu opinión..."></textarea>
+                <input type="hidden" name="fknegocio_resena" value="{{ negocio.pkid_neg }}"> <br>
+                <button class="env_resena" type="submit">Enviar</button>
+            </form>
+        </div>
+    </div>
+    <div class="user_calificar">
+        <h3>Opiniónes de Usuarios</h3>
+        <p>Visualiza las opiniónes realizadas por otros Usuarios</p>
+        <h4>Reseñas:</h4>
+        {% for r in resenas %}
+        <div class="resena">
+            <div class="resena-header">
+                <img src="{% static "img/Usuario.jpg" %}" alt="">
+            </div>
+            <div class="resena-body">
+                <span><strong>Usuario: </strong>{{ r.fkusuario_resena.fkuser.first_name }}</span> <br>
+                <span><strong>Comentario: </strong>{{ r.comentario }}</span> <br>
+                <span><strong>Calificación: </strong>{{ r.estrellas }}</span>
+            </div>
+        </div>
+        {% empty %}
+        <p>No hay reseñas todavía.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // ==== FILTRO DE PRODUCTOS ====
+        const buscarProducto = document.getElementById('buscarProducto');
+        const filtroPrecio = document.getElementById('filtroPrecio');
+
+        function filtrarProductos() {
+            let busqueda = buscarProducto.value.toLowerCase();
+            let rango = filtroPrecio.value;
+
+            let min = 0;
+            let max = Infinity;
+            if (rango) {
+                let limites = rango.split('-');
+                min = parseFloat(limites[0]);
+                max = parseFloat(limites[1]);
+            }
+
+            document.querySelectorAll('.producto').forEach(prod => {
+                let nombre = prod.dataset.nombre;
+                let precio = parseFloat(prod.dataset.precio);
+
+                if (nombre.includes(busqueda) && precio >= min && precio <= max) {
+                    prod.style.display = '';
+                } else {
+                    prod.style.display = 'none';
+                }
+            });
+        }
+
+        buscarProducto.addEventListener('keyup', filtrarProductos);
+        filtroPrecio.addEventListener('change', filtrarProductos);
+
+        // ==== SISTEMA DE ESTRELLAS ====
+        const stars = document.querySelectorAll('.star');
+        const inputEstrellas = document.getElementById('estrellas_input');
+
+        stars.forEach((star, index) => {
+            star.addEventListener('mouseover', () => {
+                stars.forEach((s, i) => s.innerHTML = i <= index ? '&#9733;' : '&#9734;');
+            });
+
+            star.addEventListener('click', () => {
+                inputEstrellas.value = star.dataset.value;
+            });
+        });
+
+        document.querySelector('.estrellas').addEventListener('mouseleave', () => {
+            const val = inputEstrellas.value;
+            stars.forEach((s, i) => s.innerHTML = i < val ? '&#9733;' : '&#9734;');
+        });
+    });
+</script>
+{% endblock %}

@@ -41,9 +41,12 @@
                     <!-- Errores -->
                     <div class="errores">
                         {% for mensaje in messages %}
+                        {% if 'contrasena' in mensaje.tags or 'correo' in mensaje.tags %}
                         <p class="error">{{ mensaje }}</p>
+                        {% endif %}
                         {% endfor %}
                     </div>
+
 
                     <div class="login-button">
                         <button type="submit" class="btn-submit">Ingresar</button>

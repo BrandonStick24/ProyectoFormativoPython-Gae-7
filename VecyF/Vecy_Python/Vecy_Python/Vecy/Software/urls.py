@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', views.inicio, name='inicio'),
@@ -11,6 +12,10 @@ urlpatterns = [
     path('cliente/dashboard/', views.cliente_dash, name='cliente_dash'),
     path('cierre/', views.cerrar_sesion, name='cerrar_sesion'),
     path('registrar-negocio/', views.registro_negocio, name='registro_negocios'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('negocio/<int:id>/', views.detalle_negocio, name='detalle_negocio'),
+    path('guardar-resena/', views.guardar_resena, name='guardar_resena'),
+
     
 
     # ==================== URLs DEL VENDEDOR ASIDE ====================

@@ -6,8 +6,11 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from datetime import date
 from django.contrib.auth.decorators import login_required
-from Software.models import AuthUser, UsuarioPerfil, Roles, TipoDocumento, UsuariosRoles, Negocios, TipoNegocio
+from Software.models import ResenasNegocios, AuthUser, UsuarioPerfil, Roles, TipoDocumento, UsuariosRoles, Negocios, TipoNegocio, Productos, CategoriaProductos
 from django.http import JsonResponse
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+import json
 
 
 # ==================== VISTAS PÚBLICAS ====================
@@ -25,56 +28,49 @@ def iniciar_sesion(request):
         correo = request.POST.get("correo")
         password = request.POST.get("contrasena")
 
-        # Intentamos obtener el usuario AuthUser
         try:
             user_obj = AuthUser.objects.get(email=correo)
         except AuthUser.DoesNotExist:
-            messages.error(request, "Correo o contraseña incorrectos.")
+            messages.error(request, "Correo incorrecto.", extra_tags='correo')
             return render(request, "Login_Registro/login.html")
 
-        # Validamos la contraseña
         user = authenticate(request, username=user_obj.username, password=password)
         if not user:
-            messages.error(request, "Correo o contraseña incorrectos.")
+            messages.error(request, "Contraseña incorrecta.", extra_tags='contrasena')
             return render(request, "Login_Registro/login.html")
 
-        # Obtenemos el perfil asociado
         try:
             perfil = UsuarioPerfil.objects.get(fkuser=user_obj)
         except UsuarioPerfil.DoesNotExist:
-            messages.error(request, "Perfil de usuario no encontrado.")
-            return redirect('inicio')
+            messages.error(request, "Perfil de usuario no encontrado.", extra_tags='general')
+            return render(request, "Login_Registro/login.html")
 
-        # Obtenemos el rol del usuario
         rol_usuario = UsuariosRoles.objects.filter(fkperfil=perfil).first()
         if not rol_usuario:
-            messages.error(request, "Rol de usuario no definido.")
-            return redirect('inicio')
+            messages.error(request, "Rol de usuario no definido.", extra_tags='general')
+            return render(request, "Login_Registro/login.html")
 
         rol_desc = rol_usuario.fkrol.desc_rol.upper()
 
-        # Validación según rol
         if rol_desc == 'VENDEDOR':
-            # Revisamos que tenga un negocio activo
             negocio = Negocios.objects.filter(fkpropietario_neg=perfil, estado_neg='activo').first()
             if not negocio:
-                messages.error(request, "No tienes un negocio activo registrado.")
-                return redirect('registro_negocio')
+                messages.error(request, "No tienes un negocio activo registrado.", extra_tags='negocio')
+                return render(request, "Login_Registro/login.html")
             
-            login(request, user)  # Iniciamos sesión solo si todo está OK
-            messages.success(request, "¡Bienvenido, Vendedor!")
+            login(request, user)
+            messages.success(request, "¡Bienvenido, Vendedor!", extra_tags='general')
             return redirect('dash_vendedor')
 
         elif rol_desc == 'CLIENTE':
-            login(request, user)  # Solo iniciamos sesión si es cliente
-            messages.success(request, "¡Bienvenido, Cliente!")
+            login(request, user)
+            messages.success(request, "¡Bienvenido, Cliente!", extra_tags='general')
             return redirect('cliente_dash')
 
         else:
-            messages.error(request, "Rol no permitido.")
-            return redirect('inicio')
+            messages.error(request, "Rol no permitido.", extra_tags='general')
+            return render(request, "Login_Registro/login.html")
 
-    # GET
     return render(request, "Login_Registro/login.html")
 
 
@@ -208,7 +204,10 @@ def registro_negocio(request):
         'tipo_negocios': tipo_negocios
     })
 
-# ==================== VISTAS CLIENTE ====================
+#=====================================================================================================
+# ========================================== VISTAS CLIENTE ==========================================
+#=====================================================================================================
+
 @login_required(login_url='login')
 def cliente_dash(request):
     negocios = Negocios.objects.all()
@@ -225,8 +224,70 @@ def cliente_dash(request):
         'negocios': negocios,
         't_negocios': t_negocios
     }
-    negocios = Negocios.objects.all()
     return render(request, 'Cliente/Cliente.html', contexto)
+
+
+
+@login_required(login_url='login')
+def detalle_negocio(request, id):
+    # Obtener negocio y propietario
+    negocio = get_object_or_404(Negocios, pkid_neg=id)
+    propietario = negocio.fkpropietario_neg
+    tipo_negocio = negocio.fktiponeg_neg
+
+    # Productos del negocio
+    productos = Productos.objects.filter(fknegocioasociado_prod=negocio).select_related('fkcategoria_prod')
+
+    # Perfil del cliente logueado
+    try:
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+    except UsuarioPerfil.DoesNotExist:
+        perfil_cliente = None
+
+    # Reseñas del negocio directamente desde la BD
+    resenas = ResenasNegocios.objects.filter(fknegocio_resena=negocio).select_related('fkusuario_resena__fkuser')
+
+    contexto = {
+        'negocio': negocio,
+        'propietario': propietario,
+        'productos': productos,
+        'tipo_negocio': tipo_negocio,
+        'perfil_cliente': perfil_cliente,
+        'resenas': resenas,   # directamente el queryset
+        'nombre': request.user.first_name,
+    }
+
+    return render(request, 'Cliente/detalle_neg.html', contexto)
+
+@login_required
+def guardar_resena(request):
+    if request.method == 'POST':
+        estrellas = int(request.POST.get('estrellas', 5))
+        comentario = request.POST.get('comentario', '')
+        negocio_id = request.POST.get('fknegocio_resena')
+
+        # Obtener instancia de AuthUser
+        auth_user = get_object_or_404(AuthUser, username=request.user.username)
+
+        # Obtener perfil del usuario logueado
+        usuario = get_object_or_404(UsuarioPerfil, fkuser=auth_user)
+
+        # Obtener negocio
+        negocio = get_object_or_404(Negocios, pkid_neg=negocio_id)
+
+        # Crear y guardar la reseña
+        resena = ResenasNegocios(
+        fkusuario_resena=usuario,
+        fknegocio_resena=negocio,
+        estrellas=int(estrellas),  # directamente entero
+        comentario=comentario,
+        fecha_resena=timezone.now(),
+        estado_resena='activa'
+        )
+        resena.save()
+
+        return redirect('detalle_negocio', id=negocio_id)
+#=================================================================================
 
 
 
@@ -820,4 +881,4 @@ def Negocios_V(request):
 def cerrar_sesion(request):
     logout(request)
     messages.success(request, "Sesión cerrada correctamente.")
-    return redirect("inicio")
+    return redirect("principal")

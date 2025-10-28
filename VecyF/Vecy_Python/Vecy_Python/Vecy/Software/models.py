@@ -199,11 +199,11 @@ class Productos(models.Model):
     stock_prod = models.IntegerField(blank=True, null=True)
     stock_minimo = models.IntegerField(blank=True, null=True)
     fknegocioasociado_prod = models.ForeignKey(Negocios, models.DO_NOTHING, db_column='fknegocioasociado_prod')
-    img_prod = models.CharField(max_length=255, blank=True, null=True)
+    img_prod = models.ImageField(upload_to='productos/', null=True, blank=True)
     fecha_creacion = models.DateTimeField()
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'productos'
 
 
@@ -242,7 +242,7 @@ class ResenasNegocios(models.Model):
     pkid_resena = models.AutoField(primary_key=True)
     fknegocio_resena = models.ForeignKey(Negocios, models.DO_NOTHING, db_column='fknegocio_resena')
     fkusuario_resena = models.ForeignKey('UsuarioPerfil', models.DO_NOTHING, db_column='fkusuario_resena')
-    estrellas = models.JSONField()
+    estrellas = models.IntegerField()
     comentario = models.TextField(blank=True, null=True)
     fecha_resena = models.DateTimeField()
     estado_resena = models.CharField(max_length=9, blank=True, null=True)

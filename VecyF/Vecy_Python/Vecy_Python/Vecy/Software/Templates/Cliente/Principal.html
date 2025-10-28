@@ -14,7 +14,7 @@
 
 <body>
     <div class="containerv">
-        <img src="{% static 'img/fosca.jpg'%}" alt="" />
+        <img class="img_fondo" src="{% static 'img/fosca.jpg'%}" alt="" />
         <div class="contenido"></div>
         <div class="menu">
             <a class="item_menu" href="">Inicio</a>
@@ -39,10 +39,10 @@
     
     <div class="row">
         {% for negocio in negocios %}
-        <div class="card" data-aos="fade-up">
-            <div class="card-header">
-                <img src="{% static "img/Hotel.jpeg" %}">
-                <div class="card-body">
+        <div class="cardv" data-aos="fade-up">
+            <div class="cardv-header">
+                <img src="{{ negocio.img_neg.url }}" style="height: 180px;">
+                <div class="cardv-body">
                     <span><strong>Nombre: </strong>{{ negocio.nom_neg }}</span>
                     <span><strong>Dirección: </strong>{{ negocio.direcc_neg }}</span>
                     <span><strong>Tipo: </strong>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>

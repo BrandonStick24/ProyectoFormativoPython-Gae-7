@@ -1,0 +1,343 @@
+:root {
+    --colorP: #55AD9B;
+    --coloPrgba: rgba(85, 190, 156, 0.15);
+    --colorM: #95D2B3;
+    --colorB: #D8EFD3;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.negocios {
+    position: absolute;
+    top: 10%;
+    width: 100%;
+}
+
+.negocios .img_neg {
+    width: 100%;
+    height: 40vh;
+    object-fit: cover;
+}
+
+.containerv .img_neg {
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+    mask-repeat: no-repeat;
+    mask-size: cover;
+}
+
+.propietario {
+    position: absolute;
+    width: 300px;
+    height: 280px;
+    border-radius: 50%;
+    overflow: hidden;
+    left: 5%;
+    top: 50%;
+}
+
+.propietario .img_prop {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 80%, rgba(0, 0, 0, 0) 100%);
+    cursor: pointer;
+}
+
+.detalle_neg {
+    position: absolute;
+    top: 30%;
+    left: 30%;
+    background-color: rgba(255, 255, 255, 0.60);
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    width: 60%;
+    border-radius: 10px;
+}
+
+.detalle_neg .nom_neg {
+    font-size: 30px;
+
+}
+
+.detalle_neg .nom_neg .em1 {
+    font-weight: bold;
+}
+
+h1 {
+    font-weight: 900;
+    margin-bottom: 20px;
+    letter-spacing: 5px;
+}
+
+.catalogo_productos {
+    width: 100%;
+    margin-top: 20px;
+    text-align: center;
+}
+
+.catalogo_productos h2 {
+    font-weight: bold;
+}
+
+.iconc {
+    color: orange;
+}
+
+.filtrarP {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.filtrarP input {
+    width: 50%;
+    outline: none;
+    border: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.45);
+    background-color: transparent;
+}
+
+.productos {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 50px;
+    width: 100%;
+    gap: 20px;
+}
+
+.productos img {
+    width: 100%;
+    height: 40vh;
+    border-bottom-left-radius: 50px;
+    border-bottom-right-radius: 50px;
+    border-top-left-radius: 50px;
+    border-top-right-radius: 50px;
+    flex-wrap: wrap;
+    display: flex;
+    justify-content: start;
+    cursor: pointer;
+}
+
+.producto {
+    width: 20%;
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.info_prod {
+    position: absolute;
+    left: 0;
+    background-color: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    width: 100%;
+    text-align: start;
+    border-bottom-left-radius: 50px;
+    border-bottom-right-radius: 50px;
+    padding: 20px;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    cursor: pointer;
+    bottom: 0;
+}
+
+.producto:hover .info_prod {
+    opacity: 1;
+}
+
+.solicitar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.solicitar button {
+    background-color: var(--colorP);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.solicitar .icons {
+    color: red;
+    margin-right: 10px;
+    font-size: 20px;
+}
+
+.resenas {
+    width: 100%;
+    margin-top: 40px;
+    text-align: center;
+}
+
+.resenas h2 {
+    font-weight: bold;
+}
+
+.list_resenas {
+    margin-top: 40px;
+    width: 100%;
+    padding: 30px;
+    display: grid;
+    grid-template-columns: 50% 50%;
+}
+
+.list_resenas h3 {
+    font-weight: bold;
+    font-size: 30px;
+}
+
+.evaluar-negocio {
+    width: 100%;
+    display: grid;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.formResena {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.star {
+    font-size: 50px;
+    color: orange;
+    letter-spacing: 20px;
+    cursor: pointer;
+}
+
+textarea {
+    width: 80%;
+    padding: 20px;
+    outline: none;
+}
+
+.env_resena {
+    border: none;
+    background-color: var(--colorP);
+    padding: 10px;
+    margin-top: 20px;
+    color: white;
+    border-radius: 10px;
+    width: 20%;
+}
+.calificar {
+    grid-column: 1;
+    width: 100%;
+}
+.user_calificar h2 {
+    font-weight: bold;
+}
+h4 {
+    margin-top: 30px;
+    font-weight: bold;
+}
+
+.resena{
+    box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: 20% 80%;
+    gap: 20px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+.resena-header img {
+    width: 100px;
+    border-radius: 50%;
+    height: auto;
+    object-fit: cover;
+}
+@media screen and (max-width: 768px) {
+    .propietario {
+        width: 200px;
+        height: 180px;
+        left: 2%;
+        top: 40%;
+    }
+
+    .detalle_neg {
+        position: relative;
+        top: auto;
+        left: auto;
+        width: 90%;
+        padding: 20px;
+    }
+
+    .detalle_neg .nom_neg {
+        font-size: 20px;
+    }
+
+    .filtrarP {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .filtrarP input {
+        width: 90%;
+    }
+
+    .productos {
+        gap: 15px;
+    }
+
+    .producto {
+        width: 45%;
+    }
+
+    .productos img {
+        height: 25vh;
+    }
+
+    .info_prod {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .propietario {
+        width: 150px;
+        height: 130px;
+        left: 2%;
+        top: 35%;
+    }
+
+    .detalle_neg {
+        width: 95%;
+        padding: 15px;
+    }
+
+    .detalle_neg .nom_neg {
+        font-size: 16px;
+    }
+
+    .filtrarP input {
+        width: 100%;
+    }
+
+    .producto {
+        width: 90%;
+    }
+
+    .productos img {
+        height: 20vh;
+    }
+
+    .info_prod {
+        padding: 8px;
+        font-size: 12px;
+    }
+}
