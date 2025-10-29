@@ -246,6 +246,8 @@ class ResenasNegocios(models.Model):
     comentario = models.TextField(blank=True, null=True)
     fecha_resena = models.DateTimeField()
     estado_resena = models.CharField(max_length=9, blank=True, null=True)
+    respuesta_vendedor = models.TextField(blank=True, null=True)
+    fecha_respuesta = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False

@@ -20,7 +20,7 @@ body {
 
 .negocios .img_neg {
     width: 100%;
-    height: 40vh;
+    height: 80vh;
     object-fit: cover;
 }
 
@@ -50,9 +50,10 @@ body {
 
 .detalle_neg {
     position: absolute;
-    top: 30%;
+    top: 50%;
     left: 30%;
     background-color: rgba(255, 255, 255, 0.60);
+    box-shadow: 2px 4px 12px rgba(0, 0, 0, 0.15);
     backdrop-filter: blur(10px);
     padding: 40px;
     width: 60%;
@@ -136,7 +137,7 @@ h1 {
 .info_prod {
     position: absolute;
     left: 0;
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: rgba(255, 255, 255, 0.45);
     backdrop-filter: blur(10px);
     width: 100%;
     text-align: start;
@@ -242,6 +243,10 @@ textarea {
 h4 {
     margin-top: 30px;
     font-weight: bold;
+}
+h6 {
+    font-size: 20px;
+    font-weight: 900;
 }
 
 .resena{

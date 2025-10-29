@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'Vecy.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'vecyf',
+        'NAME': 'vecyf1',
         'USER': 'root',
         'PASSWORD': '',
         'HOST': 'localhost',

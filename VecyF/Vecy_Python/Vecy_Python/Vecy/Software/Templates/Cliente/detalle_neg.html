@@ -107,25 +107,40 @@
             </form>
         </div>
     </div>
-    <div class="user_calificar">
-        <h3>Opiniónes de Usuarios</h3>
-        <p>Visualiza las opiniónes realizadas por otros Usuarios</p>
-        <h4>Reseñas:</h4>
-        {% for r in resenas %}
-        <div class="resena">
-            <div class="resena-header">
-                <img src="{% static "img/Usuario.jpg" %}" alt="">
-            </div>
-            <div class="resena-body">
-                <span><strong>Usuario: </strong>{{ r.fkusuario_resena.fkuser.first_name }}</span> <br>
-                <span><strong>Comentario: </strong>{{ r.comentario }}</span> <br>
-                <span><strong>Calificación: </strong>{{ r.estrellas }}</span>
-            </div>
+   <div class="user_calificar">
+    <h3>Opiniones de Usuarios</h3>
+    <p>Visualiza las opiniones realizadas por otros usuarios</p>
+    <h4>Reseñas:</h4>
+
+    {% for r in resenas %}
+    <div class="resena">
+        <div class="resena-header">
+            <img src="{% static 'img/Usuario.jpg' %}" alt="Usuario" class="img-resena">
         </div>
-        {% empty %}
-        <p>No hay reseñas todavía.</p>
-        {% endfor %}
+
+        <div class="resena-body">
+            <span><strong>Usuario: </strong>{{ r.fkusuario_resena.fkuser.first_name }}</span><br>
+            <span><strong>Comentario: </strong>{{ r.comentario }}</span><br>
+            <span><strong>Calificación: </strong>{{ r.estrellas }}</span><br>
+            <small><strong>Fecha: </strong>{{ r.fecha_resena|date:"d/m/Y H:i" }}</small><br>
+
+            {% if r.respuesta_vendedor %}
+            <div class="respuesta-vendedor mt-2 p-2 border rounded bg-light">
+                <strong>Respuesta del vendedor:</strong><br>
+                <p>{{ r.respuesta_vendedor }}</p>
+                {% if r.fecha_respuesta %}
+                <small><em>Respondido el {{ r.fecha_respuesta|date:"d/m/Y H:i" }}</em></small>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
     </div>
+    <hr>
+    {% empty %}
+    <p>No hay reseñas todavía.</p>
+    {% endfor %}
+</div>
+
 </div>
 {% endblock %}
 {% block scripts %}
