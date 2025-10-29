@@ -610,12 +610,7 @@ def crear_producto_P(request):
                 }
             )
             
-            # Manejar la imagen - GUARDAR SOLO EL NOMBRE
-            img_prod_name = None
-            if img_prod:
-                img_prod_name = img_prod.name
-            
-            # Crear el producto
+            # Crear el producto sin imagen primero
             from Software.models import Productos
             producto = Productos.objects.create(
                 nom_prod=nom_prod,
@@ -625,7 +620,6 @@ def crear_producto_P(request):
                 stock_prod=int(stock_prod) if stock_prod else 0,
                 stock_minimo=5,
                 fknegocioasociado_prod=negocio,
-                img_prod=img_prod_name,
                 estado_prod=estado_prod,
                 fecha_creacion=timezone.now()
             )
@@ -789,6 +783,16 @@ def obtener_datos_producto_P(request, producto_id):
             fknegocioasociado_prod=negocio
         )
         
+        # 🔥 **CORRECCIÓN PRINCIPAL**: Convertir imagen a string para JSON
+        img_prod_actual = ""
+        if producto.img_prod:
+            # Si es un ImageFieldFile, obtener el nombre del archivo
+            if hasattr(producto.img_prod, 'name'):
+                img_prod_actual = producto.img_prod.name
+            else:
+                # Si ya es un string, usarlo directamente
+                img_prod_actual = str(producto.img_prod)
+        
         # Preparar datos para JSON
         datos_producto = {
             'pkid_prod': producto.pkid_prod,
@@ -798,7 +802,7 @@ def obtener_datos_producto_P(request, producto_id):
             'stock_prod': producto.stock_prod or 0,
             'estado_prod': producto.estado_prod or 'disponible',
             'categoria_prod': producto.fkcategoria_prod.desc_cp,
-            'img_prod_actual': producto.img_prod or ''
+            'img_prod_actual': img_prod_actual  # 🔥 Ahora es string, no objeto
         }
         
         return JsonResponse(datos_producto)
