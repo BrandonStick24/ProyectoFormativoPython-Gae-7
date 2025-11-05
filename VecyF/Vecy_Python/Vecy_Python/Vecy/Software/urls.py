@@ -16,7 +16,10 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('negocio/<int:id>/', views.detalle_negocio, name='detalle_negocio'),
     path('guardar-resena/', views.guardar_resena, name='guardar_resena'),
-
+    path('agregar_pedido/', views.agregar_pedido, name='agregar_pedido'),
+    path('guardar-pedido/', views.guardar_pedido, name='guardar_pedido'),
+    path('mis_pedidos_json/', views.mis_pedidos_json, name='mis_pedidos_json'),
+    path('cancelar_pedido/<int:pedido_id>/', views.cancelar_pedido, name='cancelar_pedido'),
     
 
     # ==================== URLs DEL VENDEDOR ASIDE ====================

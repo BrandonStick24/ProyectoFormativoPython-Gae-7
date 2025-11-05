@@ -82,6 +82,11 @@ body::-webkit-scrollbar {
     padding: 10px;
     position: relative;
 }
+.i1:hover {color: var(--colorM);}
+.i2:hover {color: orange;}
+.i3:hover {color: gray;}
+.i4:hover {color: red;}
+
 
 .item_menu::after {
     content: '';

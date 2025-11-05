@@ -265,6 +265,24 @@ h6 {
     height: auto;
     object-fit: cover;
 }
+.modal-header h5 {
+    color: black !important;
+    font-weight: bold;
+    font-size: 30px;
+}.modal-header {
+    border-bottom: none !important;
+
+}
+.confirmPe {
+    background-color: var(--colorP);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+
 @media screen and (max-width: 768px) {
     .propietario {
         width: 200px;

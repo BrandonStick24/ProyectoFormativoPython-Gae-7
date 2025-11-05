@@ -6,11 +6,12 @@ from django.contrib.auth.hashers import make_password
 from django.utils import timezone
 from datetime import date
 from django.contrib.auth.decorators import login_required
-from Software.models import ResenasNegocios, AuthUser, UsuarioPerfil, Roles, TipoDocumento, UsuariosRoles, Negocios, TipoNegocio, Productos, CategoriaProductos
+from Software.models import Pedidos, DetallesPedido, ResenasNegocios, AuthUser, UsuarioPerfil, Roles, TipoDocumento, UsuariosRoles, Negocios, TipoNegocio, Productos, CategoriaProductos
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 import json
+from django.db import transaction
 
 
 # ==================== VISTAS PÚBLICAS ====================
@@ -231,6 +232,125 @@ def cliente_dash(request):
     }
     return render(request, 'Cliente/Cliente.html', contexto)
 
+#==================== PEDIDOS =====================
+def agregar_pedido(request):
+    if request.method == 'POST':
+        try:
+            producto_id = request.POST.get('producto_id')
+            negocio_id = request.POST.get('negocio_id')
+            usuario_id = request.user.id
+
+            usuario_perfil = UsuarioPerfil.objects.get(fkuser_id=usuario_id)
+            producto = get_object_or_404(Productos, pkid_prod=producto_id)
+            negocio = get_object_or_404(Negocios, pkid_neg=negocio_id)
+
+            pedido = Pedidos.objects.create(
+                fkusuario_pedido=usuario_perfil,
+                fknegocio_pedido=negocio,
+                estado_pedido='pendiente',
+                total_pedido=producto.precio_prod,
+                fecha_pedido=timezone.now(),
+                fecha_actualizacion=timezone.now()
+            )
+
+            # Detalle del pedido
+            DetallesPedido.objects.create(
+                fkpedido_detalle=pedido,
+                fkproducto_detalle=producto,
+                cantidad_detalle=1,
+                precio_unitario=producto.precio_prod
+            )
+
+            return JsonResponse({'success': True, 'mensaje': 'Pedido agregado correctamente.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'mensaje': str(e)})
+
+    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
+
+# ================= GUARDAR PEDIDOS =================
+@login_required(login_url='login')
+def guardar_pedido(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            carrito = data.get('carrito', [])
+            fknegocio = data.get('fknegocio')
+
+            if not carrito:
+                return JsonResponse({'success': False, 'error': 'Carrito vacío'})
+
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            usuario_perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+
+            negocio = get_object_or_404(Negocios, pkid_neg=fknegocio)
+
+            total = sum(item['precio'] * item['cantidad'] for item in carrito)
+            with transaction.atomic():
+                pedido = Pedidos.objects.create(
+                    fkusuario_pedido=usuario_perfil,
+                    fknegocio_pedido=negocio,
+                    estado_pedido='pendiente',
+                    total_pedido=total,
+                    fecha_pedido=timezone.now(),
+                    fecha_actualizacion=timezone.now()
+                )
+
+                for item in carrito:
+                    producto = get_object_or_404(Productos, pkid_prod=item['id'])
+
+                    # Validar stock
+                    if producto.stock_prod < item['cantidad']:
+                        raise ValueError(f"Stock insuficiente para {producto.nom_prod}")
+
+                    DetallesPedido.objects.create(
+                        fkpedido_detalle=pedido,
+                        fkproducto_detalle=producto,
+                        cantidad_detalle=item['cantidad'],
+                        precio_unitario=item['precio']
+                    )
+
+                    # Actualizar stock
+                    producto.stock_prod -= item['cantidad']
+                    producto.save()
+
+            return JsonResponse({'success': True})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+@login_required
+def mis_pedidos_json(request):
+    try:
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+        return JsonResponse({"pedidos": []})
+
+    pedidos = Pedidos.objects.filter(fkusuario_pedido=perfil).order_by('-fecha_pedido')
+
+    data = []
+    for p in pedidos:
+        data.append({
+            "id": p.pkid_pedido,
+            "fecha": p.fecha_pedido.strftime("%d/%m/%Y %H:%M"),
+            "total": str(p.total_pedido),
+            "estado": p.estado_pedido
+        })
+
+    return JsonResponse({"pedidos": data})
+
+def cancelar_pedido(request, pedido_id):
+    if request.method == 'POST':
+        try:
+            pedido = Pedidos.objects.get(pk=pedido_id)
+            pedido.estado_pedido = 'cancelado'  
+            pedido.save()                 
+            return JsonResponse({'success': True})
+        except Pedidos.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Pedido no encontrado'})
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
 
 @login_required(login_url='login')
