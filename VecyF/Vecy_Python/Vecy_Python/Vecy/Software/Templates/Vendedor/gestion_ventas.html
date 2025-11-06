@@ -1,0 +1,141 @@
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Gestión de Ventas{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css_Vendedor/gest_p.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="tarjeta-bienvenida-ventas">
+    <h2>Gestión de Pedidos</h2>
+    <p class="text-muted">Administra los pedidos de tu negocio.</p>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Filtros -->
+<div class="barra-herramientas-ventas">
+    <div class="grupo-busqueda-filtros-ventas">
+        <div class="contenedor-busqueda-ventas">
+            <i class="fas fa-search icono-busqueda-ventas"></i>
+            <input type="text" id="inputBusqueda" class="input-busqueda-ventas" placeholder="Buscar cliente...">
+        </div>
+        
+        <div class="contenedor-filtros-ventas">
+            <label class="etiqueta-filtro-ventas">Filtrar por estado:</label>
+            <select id="selectFiltroEstado" class="select-filtro-ventas">
+                <option value="todos">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="preparando">Preparando</option>
+                <option value="enviado">Enviado</option>
+                <option value="entregado">Entregado</option>
+                <option value="cancelado">Cancelado</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Ventas -->
+<div class="contenedor-tabla-ventas">
+    <table class="tabla-ventas">
+        <thead>
+            <tr>
+                <th>ID Pedido</th>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th>Productos</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoTablaVentas">
+            {% if pedidos %}
+            {% for pedido in pedidos %}
+            <tr data-estado="{{ pedido.estado }}">
+                <td><strong>#{{ pedido.id }}</strong></td>
+                <td>{{ pedido.cliente }}</td>
+                <td>{{ pedido.fecha }}</td>
+                <td><strong>${{ pedido.total }}</strong></td>
+                <td>
+                    <span class="cantidad-productos">
+                        {{ pedido.cantidad_productos }} producto{{ pedido.cantidad_productos|pluralize }}
+                    </span>
+                </td>
+                <td>
+                    <span class="insignia-estado-pedido {{ pedido.estado }}">
+                        {{ pedido.estado|title }}
+                    </span>
+                </td>
+                <td>
+                    <div class="contenedor-opciones-ventas">
+                        <a href="{% url 'detalle_pedido' pedido.id %}" class="boton-opcion-ventas ver" title="Ver Detalles">
+                            <i class="fas fa-eye"></i> Ver
+                        </a>
+                        
+                        <form method="post" action="{% url 'cambiar_estado_pedido' pedido.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <select name="nuevo_estado" class="select-cambiar-estado" onchange="this.form.submit()">
+                                <option value="pendiente" {% if pedido.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                                <option value="confirmado" {% if pedido.estado == 'confirmado' %}selected{% endif %}>Confirmar</option>
+                                <option value="preparando" {% if pedido.estado == 'preparando' %}selected{% endif %}>Preparando</option>
+                                <option value="enviado" {% if pedido.estado == 'enviado' %}selected{% endif %}>Enviar</option>
+                                <option value="entregado" {% if pedido.estado == 'entregado' %}selected{% endif %}>Entregado</option>
+                                <option value="cancelado" {% if pedido.estado == 'cancelado' %}selected{% endif %}>Cancelar</option>
+                            </select>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+                <td colspan="7" class="sin-ventas">
+                    <i class="fas fa-shopping-cart"></i>
+                    <p class="text-muted">No hay pedidos registrados aún.</p>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Búsqueda simple
+document.getElementById('inputBusqueda').addEventListener('input', function(e) {
+    const texto = e.target.value.toLowerCase();
+    const filas = document.querySelectorAll('#cuerpoTablaVentas tr');
+    
+    filas.forEach(fila => {
+        const textoFila = fila.textContent.toLowerCase();
+        fila.style.display = textoFila.includes(texto) ? '' : 'none';
+    });
+});
+
+// Filtro por estado
+document.getElementById('selectFiltroEstado').addEventListener('change', function(e) {
+    const estado = e.target.value;
+    const filas = document.querySelectorAll('#cuerpoTablaVentas tr');
+    
+    filas.forEach(fila => {
+        if (estado === 'todos') {
+            fila.style.display = '';
+        } else {
+            const estadoFila = fila.getAttribute('data-estado');
+            fila.style.display = estadoFila === estado ? '' : 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

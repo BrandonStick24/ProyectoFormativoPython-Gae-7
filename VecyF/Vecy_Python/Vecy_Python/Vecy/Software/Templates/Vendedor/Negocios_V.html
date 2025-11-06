@@ -9,8 +9,6 @@
 {% endblock %}
 
 {% block content %}
-
-
 <div class="tarjeta-bienvenida">
     <div class="row align-items-center">
         <div class="col-md-8">
@@ -126,9 +124,45 @@
                     </button>
                     {% endif %}
 
-                    <button class="btn btn-outline-secondary btn-sm gestionar-negocio-btn" data-negocio-id="{{ negocio.pkid_neg }}">
-                        <i class="fas fa-cog"></i> Gestionar
-                    </button>
+                    <!-- Botón desplegable de gestión -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog"></i> Gestionar
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'configurar_negocio' negocio.pkid_neg %}">
+                                    <i class="fas fa-edit"></i> Editar Negocio
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEstadoNegocio" 
+                                   data-negocio-id="{{ negocio.pkid_neg }}" 
+                                   data-negocio-nombre="{{ negocio.nom_neg }}"
+                                   data-negocio-estado="{{ negocio.estado_neg }}">
+                                    <i class="fas fa-power-off"></i> 
+                                    {% if negocio.estado_neg == 'activo' %}Desactivar{% else %}Activar{% endif %} Negocio
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#modalCerrarNegocio"
+                                   data-negocio-id="{{ negocio.pkid_neg }}" 
+                                   data-negocio-nombre="{{ negocio.nom_neg }}">
+                                    <i class="fas fa-door-closed"></i> Cerrar Negocio
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#modalEliminarNegocio"
+                                    data-negocio-id="{{ negocio.pkid_neg }}" 
+                                    data-negocio-nombre="{{ negocio.nom_neg }}">
+                                    <i class="fas fa-trash-alt"></i> Eliminar Negocio
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -146,7 +180,7 @@
     {% endif %}
 </div>
 
-<!-- Modal Agregar Negocio -->
+<!-- Modal Agregar Negocio (existente) -->
 <div class="modal fade" id="modalAgregarNegocio" tabindex="-1" aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -221,6 +255,91 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para Cambiar Estado (Activar/Desactivar) -->
+<div class="modal fade" id="modalEstadoNegocio" tabindex="-1" aria-labelledby="modalEstadoNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEstadoNegocioLabel">Cambiar Estado del Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cambiar_estado_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="estado_negocio_id" name="negocio_id">
+                    <p id="textoEstadoNegocio">¿Estás seguro que deseas cambiar el estado de este negocio?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cerrar Negocio -->
+<div class="modal fade" id="modalCerrarNegocio" tabindex="-1" aria-labelledby="modalCerrarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCerrarNegocioLabel">Cerrar Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cerrar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="cerrar_negocio_id" name="negocio_id">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Advertencia:</strong> Esta acción cerrará permanentemente tu negocio.
+                    </div>
+                    <p id="textoCerrarNegocio">¿Estás seguro que deseas cerrar este negocio? Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Cerrar Negocio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Eliminar Negocio -->
+<div class="modal fade" id="modalEliminarNegocio" tabindex="-1" aria-labelledby="modalEliminarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarNegocioLabel">Eliminar Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'eliminar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="eliminar_negocio_id" name="negocio_id">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>¡Advertencia Crítica!</strong> Esta acción no se puede deshacer.
+                    </div>
+                    <p id="textoEliminarNegocio">¿Estás absolutamente seguro que deseas eliminar este negocio?</p>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="confirmarEliminacion" required>
+                        <label class="form-check-label" for="confirmarEliminacion">
+                            Sí, entiendo que esta acción eliminará permanentemente el negocio y todos sus productos asociados.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" id="btnEliminarConfirmar" disabled>
+                        <i class="fas fa-trash-alt"></i> Eliminar Permanentemente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -240,21 +359,78 @@ document.getElementById('inputBusqueda').addEventListener('input', function(e) {
     });
 });
 
-// Función para gestionar negocio
-function gestionarNegocio(negocioId) {
-    const url = "{% url 'seleccionar_negocio' 0 %}".replace('0', negocioId);
-    window.location.href = url;
-}
-
-// Event listeners para botones de gestión
+// Configurar modales de estado
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.gestionar-negocio-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const negocioId = this.getAttribute('data-negocio-id');
-            gestionarNegocio(negocioId);
+    // Modal para activar/desactivar
+    const modalEstado = document.getElementById('modalEstadoNegocio');
+    if (modalEstado) {
+        modalEstado.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const negocioId = button.getAttribute('data-negocio-id');
+            const negocioNombre = button.getAttribute('data-negocio-nombre');
+            const negocioEstado = button.getAttribute('data-negocio-estado');
+            
+            const modalTitle = modalEstado.querySelector('.modal-title');
+            const modalBodyInput = modalEstado.querySelector('#estado_negocio_id');
+            const modalBodyText = modalEstado.querySelector('#textoEstadoNegocio');
+            
+            modalBodyInput.value = negocioId;
+            
+            if (negocioEstado === 'activo') {
+                modalTitle.textContent = 'Desactivar Negocio';
+                modalBodyText.textContent = `¿Estás seguro que deseas desactivar el negocio "${negocioNombre}"? Los clientes no podrán verlo mientras esté desactivado.`;
+            } else {
+                modalTitle.textContent = 'Activar Negocio';
+                modalBodyText.textContent = `¿Estás seguro que deseas activar el negocio "${negocioNombre}"? Los clientes podrán verlo nuevamente.`;
+            }
+        });
+    }
+
+    // Modal para cerrar negocio
+    const modalCerrar = document.getElementById('modalCerrarNegocio');
+    if (modalCerrar) {
+        modalCerrar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const negocioId = button.getAttribute('data-negocio-id');
+            const negocioNombre = button.getAttribute('data-negocio-nombre');
+            
+            const modalBodyInput = modalCerrar.querySelector('#cerrar_negocio_id');
+            const modalBodyText = modalCerrar.querySelector('#textoCerrarNegocio');
+            
+            modalBodyInput.value = negocioId;
+            modalBodyText.textContent = `¿Estás seguro que deseas cerrar permanentemente el negocio "${negocioNombre}"? Esta acción no se puede deshacer y todos los productos asociados serán removidos.`;
+        });
+    }
+});
+
+
+// En el bloque extra_js, después del código existente, agrega:
+// Modal para eliminar negocio
+const modalEliminar = document.getElementById('modalEliminarNegocio');
+if (modalEliminar) {
+    modalEliminar.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const negocioId = button.getAttribute('data-negocio-id');
+        const negocioNombre = button.getAttribute('data-negocio-nombre');
+        
+        const modalBodyInput = modalEliminar.querySelector('#eliminar_negocio_id');
+        const modalBodyText = modalEliminar.querySelector('#textoEliminarNegocio');
+        const btnEliminar = modalEliminar.querySelector('#btnEliminarConfirmar');
+        const checkbox = modalEliminar.querySelector('#confirmarEliminacion');
+        
+        modalBodyInput.value = negocioId;
+        modalBodyText.textContent = `¿Estás absolutamente seguro que deseas eliminar permanentemente el negocio "${negocioNombre}"? Esta acción eliminará todos los productos, reseñas y datos asociados.`;
+        
+        // Resetear checkbox y botón
+        checkbox.checked = false;
+        btnEliminar.disabled = true;
+        
+        // Habilitar botón solo cuando el checkbox esté marcado
+        checkbox.addEventListener('change', function() {
+            btnEliminar.disabled = !this.checked;
         });
     });
-});
+}
 </script>
 
 <style>
@@ -291,6 +467,10 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 4px 8px;
     border-radius: 4px;
     font-size: 0.75rem;
+}
+/* Estilos para el dropdown de gestión */
+.dropdown-toggle::after {
+    margin-left: 0.5em;
 }
 </style>
 {% endblock %}

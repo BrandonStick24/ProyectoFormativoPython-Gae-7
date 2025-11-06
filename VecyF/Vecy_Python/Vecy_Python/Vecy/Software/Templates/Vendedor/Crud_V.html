@@ -112,9 +112,12 @@
                             <i class="fas fa-edit"></i> Editar
                         </button>
                         <button class="boton-opcion ajustar-stock"
-                            title="Ajustar Stock"
+                            title="Ajustar Stock - Stock actual: {{ producto.stock_prod }}"
                             data-id="{{ producto.pkid_prod }}"
-                            data-action="stock">
+                            data-action="stock"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            data-bs-title="Stock actual: {{ producto.stock_prod }}">
                             <i class="fas fa-boxes"></i> Stock
                         </button>
                         <button class="boton-opcion cambiar-estado"
@@ -171,16 +174,16 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-    <div class="mb-3">
-        <label for="precio_prod" class="form-label">Precio *</label>
-        <div class="input-group">
-            <span class="input-group-text">$</span>
-            <input type="text" class="form-control" id="precio_prod" name="precio_prod"
-                   placeholder="0.00" required>
-        </div>
-        <div class="form-text">Máximo: $99'999.999</div>
-    </div>
-</div>
+                            <div class="mb-3">
+                                <label for="precio_prod" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" class="form-control" id="precio_prod" name="precio_prod"
+                                           placeholder="0.00" required>
+                                </div>
+                                <div class="form-text">Máximo: $99'999.999</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="row">
@@ -234,7 +237,6 @@
         </div>
     </div>
 </div>
-
 
 <!-- Modal Editar Producto -->
 <div class="modal fade" id="modalEditarProducto" tabindex="-1"
@@ -432,8 +434,22 @@
 
 {% block extra_js %}
 <script>
+// Inicializar tooltips de Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar todos los tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 
-    function cargarDatosProducto(productoId) {
+    // También puedes inicializar todos los elementos con title attribute
+    var tooltips = document.querySelectorAll('.boton-opcion');
+    tooltips.forEach(function(element) {
+        new bootstrap.Tooltip(element);
+    });
+});
+
+function cargarDatosProducto(productoId) {
     fetch(`/vendedor/productos/datos/${productoId}/`)
         .then(response => response.json())
         .then(data => {
@@ -516,39 +532,118 @@
             console.error('Error:', error);
             alert('Error al cargar los datos del producto');
         });
-    } 
-// Funciones básicas para los modales
+} 
+
+// Variables globales para los modales
+let modalEditar = null;
+let modalStock = null;
+let modalEstado = null;
+let modalEliminar = null;
+
+// Funciones para abrir modales
 function abrirModalEditar(productoId) {
-    // Mostrar el modal
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarProducto'));
-    modal.show();
-    
-    // Cargar los datos del producto
+    if (!modalEditar) {
+        modalEditar = new bootstrap.Modal(document.getElementById('modalEditarProducto'));
+    }
+    modalEditar.show();
     cargarDatosProducto(productoId);
 }
 
 function abrirModalStock(productoId) {
-    alert('Ajustar stock producto ID: ' + productoId + ' - Esta funcionalidad se implementará después');
+    // Buscar el producto en la tabla para obtener los datos
+    const fila = document.querySelector(`[data-id="${productoId}"]`).closest('tr');
+    const nombreProducto = fila.querySelector('td:nth-child(2)').textContent;
+    
+    // Obtener el stock actual del atributo data
+    const stockActual = fila.querySelector('.ajustar-stock').getAttribute('data-bs-title').replace('Stock actual: ', '');
+
+    // Llenar el modal de ajustar stock
+    document.getElementById('producto_id_stock').value = productoId;
+    document.getElementById('nombre_producto_stock').textContent = nombreProducto;
+    document.getElementById('stock_actual').value = stockActual;
+    document.getElementById('nuevo_stock').value = stockActual;
+
+    // Actualizar el action del formulario
+    document.getElementById('formAjustarStock').action = `/vendedor/productos/ajustar-stock/${productoId}/`;
+
+    if (!modalStock) {
+        modalStock = new bootstrap.Modal(document.getElementById('modalAjustarStock'));
+    }
+    modalStock.show();
 }
 
 function abrirModalEstado(productoId) {
-    alert('Cambiar estado producto ID: ' + productoId + ' - Esta funcionalidad se implementará después');
+    // Buscar el producto en la tabla para obtener los datos
+    const fila = document.querySelector(`[data-id="${productoId}"]`).closest('tr');
+    const nombreProducto = fila.querySelector('td:nth-child(2)').textContent;
+    const estadoActual = fila.querySelector('td:nth-child(5) .insignia-estado').textContent.trim();
+
+    // Llenar el modal de cambiar estado
+    document.getElementById('producto_id_estado').value = productoId;
+    document.getElementById('nombre_producto_estado').textContent = nombreProducto;
+    document.getElementById('estado_actual').textContent = estadoActual;
+    
+    // Aplicar clase según el estado
+    const badge = document.getElementById('estado_actual');
+    badge.className = 'badge ';
+    if (estadoActual === 'Activo') {
+        badge.classList.add('bg-success');
+    } else if (estadoActual === 'Inactivo') {
+        badge.classList.add('bg-secondary');
+    } else {
+        badge.classList.add('bg-warning');
+    }
+
+    // Actualizar el action del formulario
+    document.getElementById('formCambiarEstado').action = `/vendedor/productos/cambiar-estado/${productoId}/`;
+
+    if (!modalEstado) {
+        modalEstado = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
+    }
+    modalEstado.show();
 }
 
-// Función para abrir modal de eliminar
 function abrirModalEliminar(productoId, nombreProducto) {
     document.getElementById('producto_id_eliminar').value = productoId;
     document.getElementById('nombre_producto_eliminar').textContent = nombreProducto;
-    
-    // Actualizar el action del formulario
     document.getElementById('formEliminarProducto').action = `/vendedor/productos/eliminar/${productoId}/`;
     
-    var modal = new bootstrap.Modal(document.getElementById('modalEliminarProducto'));
-    modal.show();
+    if (!modalEliminar) {
+        modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarProducto'));
+    }
+    modalEliminar.show();
 }
 
-// Manejar el envío del formulario de eliminar
+// Manejar el cierre correcto de modales
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar todos los modales
+    modalEditar = new bootstrap.Modal(document.getElementById('modalEditarProducto'));
+    modalStock = new bootstrap.Modal(document.getElementById('modalAjustarStock'));
+    modalEstado = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
+    modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminarProducto'));
+
+    // Limpiar contenido de modales al cerrarse
+    const modales = ['modalEditarProducto', 'modalCambiarEstado', 'modalAjustarStock', 'modalEliminarProducto'];
+    
+    modales.forEach(modalId => {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                // Limpiar contenido si es necesario
+                if (modalId === 'modalEditarProducto') {
+                    document.getElementById('contenidoEditarProducto').innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="mt-2">Cargando información del producto...</p>
+                        </div>
+                    `;
+                }
+            });
+        }
+    });
+
     // Manejar todos los botones de opciones
     document.querySelectorAll('.boton-opcion').forEach(button => {
         button.addEventListener('click', function() {
@@ -573,50 +668,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Manejar el formulario de eliminar (opcional - para debug)
-    document.getElementById('formEliminarProducto').addEventListener('submit', function(e) {
-        console.log('Eliminando producto...');
-        // El formulario se enviará normalmente
-    });
-});
-
-// Búsqueda en tiempo real
-document.getElementById('inputBusqueda').addEventListener('input', function(e) {
-    const textoBusqueda = e.target.value.toLowerCase();
-    const filas = document.querySelectorAll('#cuerpoTablaProductos tr');
-    
-    filas.forEach(fila => {
-        const textoFila = fila.textContent.toLowerCase();
-        if (textoFila.includes(textoBusqueda)) {
-            fila.style.display = '';
-        } else {
-            fila.style.display = 'none';
-        }
-    });
-});
-
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Manejar todos los botones de opciones
-    document.querySelectorAll('.boton-opcion').forEach(button => {
-        button.addEventListener('click', function() {
-            const id = this.getAttribute('data-id');
-            const action = this.getAttribute('data-action');
-            const nombre = this.getAttribute('data-nombre');
-            
-            switch(action) {
-                case 'editar':
-                    abrirModalEditar(id);
-                    break;
-                case 'stock':
-                    abrirModalStock(id);
-                    break;
-                case 'estado':
-                    abrirModalEstado(id);
-                    break;
-                case 'eliminar':
-                    abrirModalEliminar(id, nombre);
-                    break;
+    // Búsqueda en tiempo real
+    document.getElementById('inputBusqueda').addEventListener('input', function(e) {
+        const textoBusqueda = e.target.value.toLowerCase();
+        const filas = document.querySelectorAll('#cuerpoTablaProductos tr');
+        
+        filas.forEach(fila => {
+            const textoFila = fila.textContent.toLowerCase();
+            if (textoFila.includes(textoBusqueda)) {
+                fila.style.display = '';
+            } else {
+                fila.style.display = 'none';
             }
         });
     });

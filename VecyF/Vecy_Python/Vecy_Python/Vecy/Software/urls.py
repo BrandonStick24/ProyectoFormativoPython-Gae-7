@@ -32,15 +32,25 @@ urlpatterns = [
     path('vendedor/resenas/', vendedor_views.ver_resenas_vendedor, name='ver_resenas_vendedor'),
     path('vendedor/resenas/responder/<int:resena_id>/', vendedor_views.responder_resena, name='responder_resena'),
 
-    # ==================== NUEVAS URLs PARA MÚLTIPLES NEGOCIOS ====================
+    # ==================== URLs PARA GESTIÓN DE NEGOCIOS ====================
     path('vendedor/negocios/seleccionar/<int:negocio_id>/', views.seleccionar_negocio, name='seleccionar_negocio'),
     path('vendedor/negocios/registrar/', views.registrar_negocio_vendedor, name='registrar_negocio_vendedor'),
+    path('vendedor/configurar-negocio/<int:negocio_id>/', vendedor_views.configurar_negocio, name='configurar_negocio'),
+    path('vendedor/cambiar-estado-negocio/', vendedor_views.cambiar_estado_negocio, name='cambiar_estado_negocio'),
+    path('vendedor/cerrar-negocio/', vendedor_views.cerrar_negocio, name='cerrar_negocio'),
+    path('vendedor/eliminar-negocio/', vendedor_views.eliminar_negocio, name='eliminar_negocio'),
     
     # ==================== URLs PARA PRODUCTOS ====================
     path('vendedor/productos/crear/', views.crear_producto_P, name='crear_producto_P'), 
     path('vendedor/productos/editar/<int:producto_id>/', views.editar_producto_P, name='editar_producto_P'),
     path('vendedor/productos/datos/<int:producto_id>/', views.obtener_datos_producto_P, name='obtener_datos_producto_P'),
     path('vendedor/productos/eliminar/<int:producto_id>/', views.eliminar_producto_P, name='eliminar_producto_P'),
+    
+    # ==================== URLs PARA VENTAS ====================
+    path('ventas/', vendedor_views.gestionar_ventas, name='gestionar_ventas'),
+    path('ventas/pedido/<int:pedido_id>/', vendedor_views.detalle_pedido, name='detalle_pedido'),
+    path('ventas/cambiar-estado/<int:pedido_id>/', vendedor_views.cambiar_estado_pedido, name='cambiar_estado_pedido'),
+    path('vendedor/productos/ajustar-stock/<int:producto_id>/', vendedor_views.ajustar_stock_producto, name='ajustar_stock_producto'),
 
 ]
 if settings.DEBUG:
