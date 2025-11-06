@@ -1,0 +1,308 @@
+/* static/css_Vendedor/gest_p.css */
+
+/* Tarjeta de Bienvenida para Ventas */
+.tarjeta-bienvenida-ventas {
+    background: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+    border-left: 4px solid #4F46E5;
+}
+
+.tarjeta-bienvenida-ventas h2 {
+    color: #4F46E5;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+/* Barra de Herramientas para Ventas */
+.barra-herramientas-ventas {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.grupo-busqueda-filtros-ventas {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.contenedor-busqueda-ventas {
+    position: relative;
+    min-width: 300px;
+}
+
+.icono-busqueda-ventas {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+.input-busqueda-ventas {
+    width: 100%;
+    padding: 0.7rem 1rem 0.7rem 2.5rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+}
+
+.input-busqueda-ventas:focus {
+    outline: none;
+    border-color: #4F46E5;
+}
+
+.contenedor-filtros-ventas {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.etiqueta-filtro-ventas {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin: 0;
+}
+
+.select-filtro-ventas {
+    padding: 0.7rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    background: white;
+    transition: all 0.3s;
+}
+
+.select-filtro-ventas:focus {
+    outline: none;
+    border-color: #4F46E5;
+}
+
+/* Tabla de Ventas */
+.contenedor-tabla-ventas {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+}
+
+.tabla-ventas {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-ventas thead {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+}
+
+.tabla-ventas th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.tabla-ventas td {
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+    color: #374151;
+}
+
+.tabla-ventas tbody tr {
+    transition: all 0.3s;
+}
+
+.tabla-ventas tbody tr:hover {
+    background: #f9fafb;
+}
+
+/* Estados de pedidos mejorados */
+.insignia-estado-pedido {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: inline-block;
+    text-transform: capitalize;
+}
+
+.insignia-estado-pedido.pendiente {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.insignia-estado-pedido.confirmado {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #3b82f6;
+}
+
+.insignia-estado-pedido.preparando {
+    background: #fce7f3;
+    color: #be185d;
+    border: 1px solid #ec4899;
+}
+
+.insignia-estado-pedido.enviado {
+    background: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #4f46e5;
+}
+
+.insignia-estado-pedido.entregado {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.insignia-estado-pedido.cancelado {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+/* Botones de acciones en ventas */
+.contenedor-opciones-ventas {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.boton-opcion-ventas {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.boton-opcion-ventas.ver {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #3b82f6;
+}
+
+.boton-opcion-ventas.ver:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Select para cambiar estado */
+.select-cambiar-estado {
+    padding: 0.5rem 1rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    background: white;
+    transition: all 0.3s;
+    min-width: 140px;
+}
+
+.select-cambiar-estado:focus {
+    outline: none;
+    border-color: #4F46E5;
+}
+
+/* Estados de cantidad de productos */
+.cantidad-productos {
+    font-weight: 600;
+    color: #4F46E5;
+    background: #e0e7ff;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.85rem;
+}
+
+/* Sin ventas */
+.sin-ventas {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+}
+
+.sin-ventas i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Responsivo para ventas */
+@media (max-width: 1200px) {
+    .barra-herramientas-ventas {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .grupo-busqueda-filtros-ventas {
+        width: 100%;
+    }
+    
+    .contenedor-busqueda-ventas {
+        min-width: 100%;
+    }
+    
+    .contenedor-filtros-ventas {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 992px) {
+    .contenedor-opciones-ventas {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .select-cambiar-estado {
+        min-width: 120px;
+    }
+    
+    .tabla-ventas th,
+    .tabla-ventas td {
+        padding: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .contenedor-tabla-ventas {
+        overflow-x: auto;
+    }
+    
+    .tabla-ventas {
+        min-width: 800px;
+    }
+    
+    .barra-herramientas-ventas {
+        padding: 1rem;
+    }
+    
+    .tarjeta-bienvenida-ventas {
+        padding: 1.5rem;
+    }
+}
