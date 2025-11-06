@@ -72,6 +72,12 @@ def iniciar_sesion(request):
             login(request, user)
             messages.success(request, "¡Bienvenido, Cliente!", extra_tags='general')
             return redirect('cliente_dash')
+        
+        elif rol_desc == 'MODERADOR':
+            login(request, user)
+            messages.success(request, "¡Bienvenido, Moderador!", extra_tags='general')
+            return render(request, 'Moderador/moderador_dash.html')
+
 
         else:
             messages.error(request, "Rol no permitido.", extra_tags='general')
@@ -81,7 +87,7 @@ def iniciar_sesion(request):
 
 
 def registro_user(request):
-    roles = Roles.objects.exclude(desc_rol='Moderador')
+    roles = Roles.objects.exclude(desc_rol='MODERADOR')
     tipo_documentos = TipoDocumento.objects.all()
 
     if request.method == 'POST':
