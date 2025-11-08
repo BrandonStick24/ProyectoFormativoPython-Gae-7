@@ -1,5 +1,6 @@
+# Software/urls.py
 from django.urls import path
-from . import views, vendedor_views
+from . import views, vendedor_views, vendedor_ofertas_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -26,7 +27,6 @@ urlpatterns = [
     path('dash-vendedor/', vendedor_views.vendedor_dash, name='dash_vendedor'),
     path('vendedor/negocios/', vendedor_views.Negocios_V, name='Negocios_V'),
     path('vendedor/productos/', vendedor_views.Crud_V, name='Crud_V'),
-    path('vendedor/ofertas/', vendedor_views.Ofertas_V, name='Ofertas_V'),
     path('vendedor/chats/', vendedor_views.Chats_V, name='Chats_V'),
     path('vendedor/stock/', vendedor_views.Stock_V, name='Stock_V'),
     path('vendedor/resenas/', vendedor_views.ver_resenas_vendedor, name='ver_resenas_vendedor'),
@@ -51,6 +51,14 @@ urlpatterns = [
     path('ventas/pedido/<int:pedido_id>/', vendedor_views.detalle_pedido, name='detalle_pedido'),
     path('ventas/cambiar-estado/<int:pedido_id>/', vendedor_views.cambiar_estado_pedido, name='cambiar_estado_pedido'),
     path('vendedor/productos/ajustar-stock/<int:producto_id>/', vendedor_views.ajustar_stock_producto, name='ajustar_stock_producto'),
+
+   
+    # ==================== URLs PARA OFERTAS VENDEDOR ====================
+    path('ofertas/', vendedor_ofertas_views.Ofertas_V, name='Ofertas_V'),
+    path('ofertas/eliminar/<int:oferta_id>/', vendedor_ofertas_views.eliminar_oferta, name='eliminar_oferta'),
+
+
+    
 
 ]
 

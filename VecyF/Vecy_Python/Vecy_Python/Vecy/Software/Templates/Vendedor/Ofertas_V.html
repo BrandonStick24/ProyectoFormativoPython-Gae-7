@@ -1,0 +1,550 @@
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Gestión de Ofertas{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-2">Gestión de Ofertas</h1>
+            <p class="text-muted">Selecciona productos y configura sus ofertas</p>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Información del Negocio -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info py-2">
+                <small>
+                    <strong>Negocio activo:</strong> {{ negocio_activo.nom_neg }} | 
+                    <strong>Productos disponibles:</strong> {{ productos|length }} | 
+                    <strong>Ofertas activas:</strong> {{ ofertas_activas|length }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda y filtros -->
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <div class="input-group">
+                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                <input type="text" class="form-control" id="buscarProductos" placeholder="Buscar productos por nombre...">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" id="filtroCategoria">
+                <option value="">Todas las categorías</option>
+                {% for categoria in categorias %}
+                    <option value="{{ categoria }}">{{ categoria }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
+                <i class="fas fa-times me-1"></i>Limpiar
+            </button>
+        </div>
+    </div>
+
+    <!-- Productos Disponibles - Solo información -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-boxes me-2"></i>
+                        Productos Disponibles
+                        <span class="badge bg-secondary ms-2" id="totalProductos">{{ productos|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="contenedorProductos" class="row" style="max-height: 400px; overflow-y: auto;">
+                        {% for producto in productos %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3 producto-item" 
+                             data-nombre="{{ producto.nombre|lower }}" 
+                             data-categoria="{{ producto.categoria }}">
+                            <div class="card h-100 product-card">
+                                <div class="card-body text-center">
+                                    <div class="mb-2">
+                                        <small class="text-muted">ID: {{ producto.id }}</small>
+                                    </div>
+                                    <h6 class="card-title mb-2 text-truncate" title="{{ producto.nombre }}">
+                                        {{ producto.nombre }}
+                                    </h6>
+                                    <p class="card-text text-primary mb-2 fw-bold">${{ producto.precio }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="badge bg-light text-dark">{{ producto.categoria }}</span>
+                                        <span class="badge {% if producto.stock == 0 %}bg-danger{% elif producto.stock <= 5 %}bg-warning{% else %}bg-success{% endif %}">
+                                            Stock: {{ producto.stock }}
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-3 seleccionar-producto"
+                                            data-producto-id="{{ producto.id }}"
+                                            data-producto-nombre="{{ producto.nombre }}"
+                                            data-producto-precio="{{ producto.precio }}"
+                                            data-producto-stock="{{ producto.stock }}"
+                                            data-producto-categoria="{{ producto.categoria }}">
+                                        <i class="fas fa-plus me-1"></i>Seleccionar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-4 text-muted">
+                            <i class="fas fa-box-open fa-2x mb-3"></i>
+                            <p>No hay productos disponibles para ofertas</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración de Ofertas para Productos Seleccionados -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Configurar Ofertas
+                        <span class="badge bg-primary ms-2" id="contadorProductosSeleccionados">0</span>
+                    </h5>
+                    <div>
+                        <button class="btn btn-sm btn-outline-danger" onclick="limpiarSeleccion()">
+                            <i class="fas fa-times me-1"></i>Limpiar Todo
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="configuracionesProductos" style="max-height: 500px; overflow-y: auto;">
+                        <div class="text-center py-4 text-muted" id="mensajeVacio">
+                            <i class="fas fa-tags fa-2x mb-3"></i>
+                            <p>Selecciona productos de arriba para configurar sus ofertas</p>
+                        </div>
+                        <!-- Aquí se agregarán los formularios dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ofertas Activas -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>
+                        Ofertas Activas
+                        <span class="badge bg-success ms-2">{{ ofertas_activas|length }}</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="contenedorOfertasActivas" style="max-height: 400px; overflow-y: auto;">
+                        {% if ofertas_activas %}
+                            {% for oferta in ofertas_activas %}
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-3">
+                                            <h6 class="mb-1">{{ oferta.producto_nombre }}</h6>
+                                            <small class="text-muted">{{ oferta.titulo }}</small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <span class="badge bg-danger">{{ oferta.descuento }}% OFF</span>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted text-decoration-line-through">${{ oferta.precio_original }}</small><br>
+                                            <strong class="text-success">${{ oferta.precio_oferta|floatformat:0 }}</strong>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small>Stock oferta: {{ oferta.stock_oferta }}</small><br>
+                                            <small>Disponible: {{ oferta.stock_disponible }}</small>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small>Inicio: {{ oferta.fecha_inicio }}</small><br>
+                                            <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-tags fa-2x mb-3"></i>
+                            <p>No hay ofertas activas</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let productosSeleccionados = [];
+    const buscarInput = document.getElementById('buscarProductos');
+    const filtroCategoria = document.getElementById('filtroCategoria');
+    const productosItems = document.querySelectorAll('.producto-item');
+    const configuraciones = document.getElementById('configuracionesProductos');
+    const mensajeVacio = document.getElementById('mensajeVacio');
+    const contador = document.getElementById('contadorProductosSeleccionados');
+
+    // Obtener fecha actual en formato YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Obtener fecha de mañana para la fecha mínima de fin
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
+
+    // Búsqueda en tiempo real
+    buscarInput.addEventListener('input', filtrarProductos);
+    filtroCategoria.addEventListener('change', filtrarProductos);
+
+    function filtrarProductos() {
+        const busqueda = buscarInput.value.toLowerCase();
+        const categoria = filtroCategoria.value;
+        
+        let productosVisibles = 0;
+        
+        productosItems.forEach(item => {
+            const nombre = item.getAttribute('data-nombre');
+            const cat = item.getAttribute('data-categoria');
+            
+            const coincideBusqueda = nombre.includes(busqueda);
+            const coincideCategoria = !categoria || cat === categoria;
+            
+            if (coincideBusqueda && coincideCategoria) {
+                item.style.display = 'block';
+                productosVisibles++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+        
+        document.getElementById('totalProductos').textContent = productosVisibles;
+    }
+
+    // Limpiar filtros
+    window.limpiarFiltros = function() {
+        buscarInput.value = '';
+        filtroCategoria.value = '';
+        filtrarProductos();
+    };
+
+    // Seleccionar producto
+    document.querySelectorAll('.seleccionar-producto').forEach(button => {
+        button.addEventListener('click', function() {
+            const productoId = this.getAttribute('data-producto-id');
+            
+            // Verificar si ya está seleccionado
+            if (productosSeleccionados.find(p => p.id === productoId)) {
+                alert('Este producto ya está seleccionado');
+                return;
+            }
+
+            const producto = {
+                id: productoId,
+                nombre: this.getAttribute('data-producto-nombre'),
+                precio: parseFloat(this.getAttribute('data-producto-precio')),
+                stock: parseInt(this.getAttribute('data-producto-stock')),
+                categoria: this.getAttribute('data-producto-categoria')
+            };
+
+            productosSeleccionados.push(producto);
+            actualizarConfiguraciones();
+            actualizarContador();
+            
+            // Deshabilitar el botón
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
+            this.classList.remove('btn-outline-primary');
+            this.classList.add('btn-outline-success');
+        });
+    });
+
+    function actualizarContador() {
+        contador.textContent = productosSeleccionados.length;
+    }
+
+    function actualizarConfiguraciones() {
+        if (productosSeleccionados.length === 0) {
+            mensajeVacio.style.display = 'block';
+            configuraciones.innerHTML = '';
+            return;
+        }
+
+        mensajeVacio.style.display = 'none';
+        
+        configuraciones.innerHTML = productosSeleccionados.map((producto, index) => `
+            <div class="card mb-3 config-producto" data-id="${producto.id}">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-0">${producto.nombre}</h6>
+                        <small class="text-muted">Precio: $${producto.precio} | Stock: ${producto.stock} | ${producto.categoria}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger quitar-producto" data-id="${producto.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form method="POST" class="oferta-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="producto_id" value="${producto.id}">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Descuento %</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control descuento-input" name="porcentaje_descuento" 
+                                           value="10" min="1" max="100" step="0.1" required
+                                           data-precio-original="${producto.precio}"
+                                           data-index="${index}">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Stock oferta</label>
+                                <input type="number" class="form-control" name="stock_oferta" 
+                                       value="1" min="1" max="${producto.stock}" required>
+                                <small class="form-text text-muted">Máximo: ${producto.stock}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha inicio (opcional)</label>
+                                <input type="date" class="form-control" name="fecha_inicio" value="${today}" min="${today}">
+                                <small class="form-text text-muted">Si no se especifica, se usará la fecha actual</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha fin *</label>
+                                <input type="date" class="form-control" name="fecha_fin" required min="${tomorrowFormatted}">
+                                <small class="form-text text-muted">Obligatorio</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Sección de cálculo de precio -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <div class="alert alert-success">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small><strong>Precio original:</strong></small><br>
+                                            <span class="fw-bold">$${producto.precio}</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small><strong>Precio con descuento:</strong></small><br>
+                                            <span class="fw-bold text-success" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</span>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small><strong>Ahorro para el cliente:</strong></small><br>
+                                            <span class="fw-bold text-danger" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <small>
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Nota:</strong> La fecha fin es obligatoria. La fecha inicio será la actual si no se especifica.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-tag me-1"></i>Crear Oferta para este producto
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `).join('');
+
+        // Agregar event listeners para los cálculos en tiempo real
+        document.querySelectorAll('.descuento-input').forEach(input => {
+            input.addEventListener('input', function() {
+                calcularPrecioFinal(this);
+            });
+        });
+
+        // Agregar event listeners para quitar productos
+        document.querySelectorAll('.quitar-producto').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productoId = this.getAttribute('data-id');
+                quitarProducto(productoId);
+            });
+        });
+
+        // Validar stock antes de enviar formularios
+        document.querySelectorAll('.oferta-form').forEach(form => {
+            const stockInput = form.querySelector('input[name="stock_oferta"]');
+            const maxStock = parseInt(stockInput.max);
+            
+            form.addEventListener('submit', function(e) {
+                const stockValue = parseInt(stockInput.value);
+                if (stockValue > maxStock) {
+                    e.preventDefault();
+                    alert(`El stock de oferta no puede ser mayor a ${maxStock}`);
+                    stockInput.focus();
+                    return;
+                }
+
+                // Validar que la fecha fin sea mayor que la fecha inicio
+                const fechaInicioInput = form.querySelector('input[name="fecha_inicio"]');
+                const fechaFinInput = form.querySelector('input[name="fecha_fin"]');
+                
+                const fechaInicio = fechaInicioInput.value || today;
+                const fechaFin = fechaFinInput.value;
+                
+                if (fechaFin && fechaInicio >= fechaFin) {
+                    e.preventDefault();
+                    alert('La fecha fin debe ser posterior a la fecha inicio');
+                    fechaFinInput.focus();
+                }
+            });
+        });
+
+        // Calcular precios iniciales
+        document.querySelectorAll('.descuento-input').forEach(input => {
+            calcularPrecioFinal(input);
+        });
+    }
+
+    function calcularPrecioFinal(input) {
+        const precioOriginal = parseFloat(input.getAttribute('data-precio-original'));
+        const descuento = parseFloat(input.value) || 0;
+        const index = input.getAttribute('data-index');
+        
+        const precioConDescuento = precioOriginal * (1 - descuento / 100);
+        const ahorro = precioOriginal - precioConDescuento;
+        
+        document.getElementById(`precio-final-${index}`).textContent = `$${precioConDescuento.toFixed(0)}`;
+        document.getElementById(`ahorro-${index}`).textContent = `$${ahorro.toFixed(0)}`;
+    }
+
+    function quitarProducto(productoId) {
+        productosSeleccionados = productosSeleccionados.filter(p => p.id !== productoId);
+        
+        // Reactivar el botón en la card del producto
+        const button = document.querySelector(`.seleccionar-producto[data-producto-id="${productoId}"]`);
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = '<i class="fas fa-plus me-1"></i>Seleccionar';
+            button.classList.remove('btn-outline-success');
+            button.classList.add('btn-outline-primary');
+        }
+        
+        actualizarConfiguraciones();
+        actualizarContador();
+    }
+
+    // Limpiar toda la selección
+    window.limpiarSeleccion = function() {
+        productosSeleccionados.forEach(producto => {
+            const button = document.querySelector(`.seleccionar-producto[data-producto-id="${producto.id}"]`);
+            if (button) {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-plus me-1"></i>Seleccionar';
+                button.classList.remove('btn-outline-success');
+                button.classList.add('btn-outline-primary');
+            }
+        });
+        
+        productosSeleccionados = [];
+        actualizarConfiguraciones();
+        actualizarContador();
+    };
+});
+</script>
+
+<style>
+.product-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.config-producto {
+    border-left: 4px solid #0d6efd;
+}
+
+/* Scroll personalizado */
+#contenedorProductos::-webkit-scrollbar,
+#configuracionesProductos::-webkit-scrollbar,
+#contenedorOfertasActivas::-webkit-scrollbar {
+    width: 6px;
+}
+
+#contenedorProductos::-webkit-scrollbar-track,
+#configuracionesProductos::-webkit-scrollbar-track,
+#contenedorOfertasActivas::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#contenedorProductos::-webkit-scrollbar-thumb,
+#configuracionesProductos::-webkit-scrollbar-thumb,
+#contenedorOfertasActivas::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#contenedorProductos::-webkit-scrollbar-thumb:hover,
+#configuracionesProductos::-webkit-scrollbar-thumb:hover,
+#contenedorOfertasActivas::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-header {
+    padding: 0.75rem 1rem;
+}
+
+.text-truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+</style>
+{% endblock %}
