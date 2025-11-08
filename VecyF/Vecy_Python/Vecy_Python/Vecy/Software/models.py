@@ -77,18 +77,26 @@ class AuthUserUserPermissions(models.Model):
         unique_together = (('user', 'permission'),)
 
 
-class CarritoCompras(models.Model):
+class Carrito(models.Model):
     pkid_carrito = models.AutoField(primary_key=True)
     fkusuario_carrito = models.ForeignKey('UsuarioPerfil', models.DO_NOTHING, db_column='fkusuario_carrito')
-    fknegocio_carrito = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio_carrito')
-    fkproducto_carrito = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_carrito')
-    cantidad_carrito = models.JSONField()
-    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_agregado = models.DateTimeField()
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        managed = False
-        db_table = 'carrito_compras'
+        db_table = 'carrito'
+
+
+class CarritoItem(models.Model):
+    pkid_item = models.AutoField(primary_key=True)
+    fkcarrito = models.ForeignKey(Carrito, models.DO_NOTHING, db_column='fkcarrito')
+    fkproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto')
+    fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
+    cantidad = models.IntegerField()
+    precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = 'carrito_item'
+
 
 
 class CategoriaProductos(models.Model):
@@ -333,3 +341,24 @@ class UsuariosRoles(models.Model):
         managed = True
         db_table = 'usuarios_roles'
         unique_together = (('fkperfil', 'fkrol'),)
+
+class MetodoEntrega(models.Model):
+    pkid_metodo = models.AutoField(primary_key=True)
+    fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
+    nombre_metodo = models.CharField(max_length=50)  # Ej: 'Recoger en tienda', 'Domicilio'
+    precio_envio = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    disponible = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'metodo_entrega'
+
+class PagosNegocios(models.Model):
+    pkid_pago = models.AutoField(primary_key=True)
+    fkpedido = models.ForeignKey('Pedidos', models.DO_NOTHING, db_column='fkpedido')
+    fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
+    monto = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha_pago = models.DateTimeField(auto_now_add=True)
+    estado_pago = models.CharField(max_length=15, default='pendiente')  # pendiente, pagado
+
+    class Meta:
+        db_table = 'pagos_negocios'

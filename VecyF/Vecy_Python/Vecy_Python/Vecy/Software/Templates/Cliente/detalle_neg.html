@@ -3,39 +3,67 @@
 {% block title %}Página Principal{% endblock %}
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/detalle_neg.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 {% endblock %}
 {% block content %}
 <div class="containerv">
-    <div class="menu">
-        <a class="item_menu i1" href="{% url 'cliente_dash' %}">
-            <i class="fas fa-house"></i> Inicio</a>
-        <a class="item_menu i2" href="">
-            <i class="fas fa-basket-shopping"></i> Productos</a>
-        <a class="item_menu i3" href="#" data-bs-toggle="modal" data-bs-target="#modalCarrito">
-            <i class="fas fa-shopping-cart"></i> Carrito de pedidos
-            <span id="contadorCarrito" class="badge bg-danger">0</span>
-        </a>
-        <a class="item_menu i5" href="#" data-bs-toggle="modal" data-bs-target="#modalMisPedidos">
-            <i class="fas fa-box"></i> Mis Pedidos
-        </a>
+    <div class="header">
+        <div class="logo"><span>VECY</span></div>
+        <div class="menu-desplegable">
+            <span style="font-weight: bold;" data-bs-toggle="offcanvas" data-bs-target="#menuLateral">
+                <i class="fas fa-bars iconm"></i> Menú
+            </span>
+        </div>
+        <div class="input-group1">
+            <input class="input" type="search" placeholder="Busca negocios, productos...">
+            <i class="fas fa-search iconl"></i>
+        </div>
+        <div class="iniSesion">
+            <i class="fas fa-house"></i>
+            <a href="{% url 'cliente_dash' %}">Inicio</a>
+        </div>
+        <div class="iniSesion">
+            <i class="fas fa-truck-fast"></i>
+            <a href="" id="it2">Pedidos</a>
+        </div>
+        <div class="iniSesion">
+            <i class="fas fa-cart-shopping"></i>
+            <a href="{% url 'ver_carrito' %}">Carrito</a>
+        </div>
+        <div class="iniSesion">
+            <i class="fas fa-heart"></i>
+            <a href="">Favoritos</a>
+        </div>
+        <div class="iniSesion">
+            <i class="fas fa-user-circle"></i>
+            <a href="">Cuenta</a>
+        </div>
+    </div>
+    <!--Menu lateral-->
+    <div class="offcanvas offcanvas-start" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralLabel">
+        <div class="offcanvas-header headerM">
+            <h5 class="offcanvas-title" id="menuLateralLabel">VECY</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
+                aria-label="Cerrar"></button>
+        </div>
+        <div class="offcanvas-body bodyM">
+            <ul class="list-unstyled">
+                <span class="cat mb-5">Categorías</span>
+                <br>
+                {% for categoria in categorias %}
+                <li><a href="#" class="d-block categorias">{{ categoria.desc_cp }}</a></li>
+                {% empty %}
+                <li><span class="text-white-50">No hay categorías disponibles</span></li>
+                {% endfor %}
 
-        <a class="item_menu i4" href="">
-            <i class="fas fa-heart"></i> Favoritos</a>
-        <div class="dropdown">
-            <a href="" class="dropdown-toggle item_menu item1" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ nombre }}
-                <i class="fa-solid fa-chevron-down ms-2"></i>
-            </a>
-            <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="">Editar Cuenta</a></li>
-                <li><a class="dropdown-item" href="{% url "cerrar_sesion" %}">Salir</a></li>
             </ul>
         </div>
     </div>
     <div class="negocios">
         <img class="img_neg" src="{{ negocio.img_neg.url }}" alt="">
         <div class="propietario">
-            <img class="img_prop" src="{% static "img/Usuario.jpg" %}" alt="">
+            <img class="img_prop" src="{% static " img/Usuario.jpg" %}" alt="">
         </div>
     </div>
     <div class="detalle_neg">
@@ -79,14 +107,18 @@
                 <span><strong>Precio:</strong> ${{ prod.precio_prod }}</span> <br>
                 <span><strong>Cantidad Disponible:</strong> {{ prod.stock_prod }}</span> <br>
                 <span><strong>Descripción:</strong> {{ prod.desc_prod }}</span>
-                <div class="solicitar">
-                    <button class="btn-add-carrito" data-producto="{{ prod.pkid_prod }}"
-                        data-negocio="{{ negocio.pkid_neg }}" data-img="{{ prod.img_prod.url }}">
-                        <i class="fas fa-cart-plus" style="font-size: 20px;"></i>
-                    </button>
+                <div class="solicitar d-flex align-items-center gap-2">
+                    <button class="btn-minus btn btn-sm btn-outline-secondary">-</button>
+                    <input type="number" class="cantidad-prod form-control form-control-sm" value="1" min="1"
+                        style="width:50px;">
+                    <button class="btn-plus btn btn-sm btn-outline-secondary">+</button>
+                    <a href="#" class="btn btn-sm btn-success agregar-carrito" data-prod="{{ prod.pkid_prod }}">
+                        <i class="fas fa-cart-plus"></i> Añadir al carrito
+                    </a>
 
-                    <i class="fas fa-heart icons"></i>
+
                 </div>
+
 
             </div>
         </div>
@@ -157,113 +189,12 @@
     </div>
 
 </div>
-<!-- Modal Carrito de Pedidos -->
-<div class="modal fade" id="modalCarrito" tabindex="-1" aria-labelledby="modalCarritoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalCarritoLabel">
-                    <i class="fas fa-shopping-cart"></i> Tu Carrito de Pedidos
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Cerrar"></button>
-            </div>
-
-            <div class="modal-body">
-                <!-- Input oculto con el id del negocio -->
-                <input type="hidden" id="fknegocio" value="{{ negocio.pkid_neg }}">
-
-                <!-- Contenedor de productos -->
-                <div id="carritoContainer">
-                    <p class="text-center text-muted">Tu carrito está vacío 🛒</p>
-                </div>
-
-                <hr>
-
-                <!-- Progreso del Pedido -->
-                <div id="progresoPedido" class="mt-4" style="display:none;">
-                    <h6>Estado del Pedido:</h6>
-                    <div class="progress">
-                        <div id="barraProgreso" class="progress-bar" role="progressbar" style="width: 0%;"
-                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">Pendiente</div>
-                    </div>
-                </div>
-
-                <!-- Total y botones -->
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <h5><strong>Total:</strong> $<span id="totalCarrito">0</span></h5>
-                    <div>
-                        <button id="btnConfirmarPedido" class="confirmPe">Confirmar pedido</button>
-                        <button id="btnCancelarPedido" class="btn btn-outline-danger">Cancelar pedido</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Modal Mis Pedidos -->
-<div class="modal fade" id="modalMisPedidos" tabindex="-1" aria-labelledby="modalMisPedidosLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalMisPedidosLabel">
-                    <i class="fas fa-box"></i> Mis Pedidos
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <div class="modal-body">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Fecha</th>
-                            <th>Total</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaPedidos">
-                        <!-- Los pedidos se llenarán desde JS -->
-                        <tr><td colspan="5" class="text-center text-muted">Cargando pedidos...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
 
 
 {% endblock %}
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
-    // ================== FILTRO DE PRODUCTOS ==================
-    const buscarProducto = document.getElementById('buscarProducto');
-    const filtroPrecio = document.getElementById('filtroPrecio');
-
-    function filtrarProductos() {
-        let busqueda = buscarProducto.value.toLowerCase();
-        let rango = filtroPrecio.value;
-        let min = 0, max = Infinity;
-
-        if (rango) {
-            let limites = rango.split('-');
-            min = parseFloat(limites[0]);
-            max = parseFloat(limites[1]);
-        }
-
-        document.querySelectorAll('.producto').forEach(prod => {
-            let nombre = prod.dataset.nombre.toLowerCase();
-            let precio = parseFloat(prod.dataset.precio);
-            prod.style.display = (nombre.includes(busqueda) && precio >= min && precio <= max) ? '' : 'none';
-        });
-    }
-
-    buscarProducto.addEventListener('keyup', filtrarProductos);
-    filtroPrecio.addEventListener('change', filtrarProductos);
 
     // ================== SISTEMA DE ESTRELLAS ==================
     const stars = document.querySelectorAll('.star');
@@ -273,7 +204,10 @@ document.addEventListener('DOMContentLoaded', function () {
         star.addEventListener('mouseover', () => {
             stars.forEach((s, i) => s.innerHTML = i <= index ? '&#9733;' : '&#9734;');
         });
-        star.addEventListener('click', () => inputEstrellas.value = star.dataset.value);
+
+        star.addEventListener('click', () => {
+            inputEstrellas.value = star.dataset.value;
+        });
     });
 
     document.querySelector('.estrellas').addEventListener('mouseleave', () => {
@@ -281,237 +215,80 @@ document.addEventListener('DOMContentLoaded', function () {
         stars.forEach((s, i) => s.innerHTML = i < val ? '&#9733;' : '&#9734;');
     });
 
-    // ================== CARRITO ==================
-    let carrito = [];
-    let pedidoId = null;
-    let intervaloProgreso = null;
+    // ================== BOTONES + Y - ==================
+    const productos = document.querySelectorAll('.producto');
 
-    document.querySelectorAll('.btn-add-carrito').forEach(btn => {
-        btn.addEventListener('click', function () {
-            const productoId = this.dataset.producto;
-            const card = this.closest('.producto');
-            const nombre = card.querySelector('h6').textContent;
-            const precio = parseFloat(card.dataset.precio);
-            const imagen = this.dataset.img;
+    productos.forEach(prod => {
+        const btnMinus = prod.querySelector('.btn-minus');
+        const btnPlus = prod.querySelector('.btn-plus');
+        const inputCantidad = prod.querySelector('.cantidad-prod');
 
-            const existente = carrito.find(p => p.id === productoId);
-            if (existente) existente.cantidad++;
-            else carrito.push({ id: productoId, nombre, precio, cantidad: 1, imagen });
+        btnMinus.addEventListener('click', (e) => {
+            e.preventDefault();
+            let val = parseInt(inputCantidad.value) || 1;
+            if (val > 1) inputCantidad.value = val - 1;
+        });
 
-            actualizarModalCarrito();
+        btnPlus.addEventListener('click', (e) => {
+            e.preventDefault();
+            let val = parseInt(inputCantidad.value) || 1;
+            inputCantidad.value = val + 1;
         });
     });
 
-    function actualizarModalCarrito() {
-        const contenedor = document.getElementById('carritoContainer');
-        const total = document.getElementById('totalCarrito');
-        const contador = document.getElementById('contadorCarrito');
-
-        contenedor.innerHTML = '';
-        if (!carrito.length) {
-            contenedor.innerHTML = '<p class="text-center text-muted">Tu carrito está vacío 🛒</p>';
-            total.textContent = '0';
-            contador.textContent = '0';
-            return;
-        }
-
-        let totalPrecio = 0, totalCantidad = 0;
-
-        carrito.forEach((p, index) => {
-            const subtotal = p.precio * p.cantidad;
-            totalPrecio += subtotal;
-            totalCantidad += p.cantidad;
-
-            const div = document.createElement('div');
-            div.classList.add('carrito-producto', 'p-3', 'mb-2', 'shadow-sm', 'rounded', 'd-flex', 'justify-content-between', 'align-items-center');
-            div.innerHTML = `
-            <div class="d-flex align-items-center justify-content-between mb-2 p-2 shadow-sm rounded" style="background:#fff;">
-                <div class="d-flex align-items-center">
-                    <div class="carrito-imagen me-3">
-                        <img src="${p.imagen}" alt="${p.nombre}" class="rounded" style="width:60px; height:60px; object-fit:cover;">
-                    </div>
-                    <div class="carrito-info">
-                        <h6 class="mb-1">${p.nombre}</h6>
-                        <div class="d-flex flex-column">
-                            <span class="carrito-precio text-muted"><strong>Precio:</strong> $${p.precio}</span>
-                            <span class="carrito-cantidad badge rounded-pill" style="background-color: #55AD9B;">Cantidad: ${p.cantidad}</span>
-                            <span class="carrito-subtotal"><strong>Subtotal:</strong> $${subtotal}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="carrito-acciones ms-3">
-                    <button class="btn btn-sm btn-outline-danger eliminar-item" data-index="${index}">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-            contenedor.appendChild(div);
-        });
-
-        total.textContent = totalPrecio;
-        contador.textContent = totalCantidad;
-
-        document.querySelectorAll('.eliminar-item').forEach(btn => {
-            btn.addEventListener('click', function () {
-                carrito.splice(this.dataset.index, 1);
-                actualizarModalCarrito();
-            });
-        });
-    }
-
-    // ================== CSRF ==================
+    // ================== AGREGAR AL CARRITO AJAX ==================
     function getCookie(name) {
         let cookieValue = null;
-        if (document.cookie) {
-            document.cookie.split(';').forEach(cookie => {
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
                 cookie = cookie.trim();
-                if (cookie.startsWith(name + '=')) cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            });
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
         }
         return cookieValue;
     }
     const csrftoken = getCookie('csrftoken');
 
-    // ================== CONFIRMAR PEDIDO ==================
-    const btnConfirm = document.getElementById('btnConfirmarPedido');
+    const botonesCarrito = document.querySelectorAll('.agregar-carrito');
+    botonesCarrito.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
 
-    btnConfirm.addEventListener('click', () => {
-        if (!carrito.length) { alert('⚠️ No tienes productos en el carrito.'); return; }
+            const prodId = this.dataset.prod;
+            const inputCantidad = this.closest('.solicitar').querySelector('.cantidad-prod');
+            const cantidad = parseInt(inputCantidad.value) || 1;
 
-        const fknegocio = document.getElementById('fknegocio').value;
-
-        fetch("{% url 'guardar_pedido' %}", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": csrftoken,
-            },
-            body: JSON.stringify({ carrito, fknegocio })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                alert("✅ Pedido guardado correctamente!");
-                carrito = [];
-                actualizarModalCarrito();
-                pedidoId = data.pedido_id;
-                iniciarActualizacionProgreso(pedidoId);
-            } else {
-                alert("⚠️ Error: " + (data.error || "No se pudo guardar el pedido"));
-            }
-        })
-        .catch(err => console.error(err));
-    });
-
-    // ================== BARRA DE PROGRESO ==================
-    const estados = ['pendiente', 'confirmado', 'preparando', 'enviado', 'entregado', 'cancelado'];
-
-    function mostrarProgresoPedido(estadoActual) {
-        const barra = document.getElementById('barraProgreso');
-        if (!barra) return;
-
-        const index = estados.indexOf(estadoActual);
-        const porcentaje = ((index + 1) / (estados.length - 1)) * 100;
-
-        barra.style.width = porcentaje + '%';
-        barra.textContent = estadoActual.charAt(0).toUpperCase() + estadoActual.slice(1);
-        barra.parentElement.style.display = 'block';
-    }
-
-    function iniciarActualizacionProgreso(pedidoId) {
-        const barra = document.getElementById('barraProgreso');
-        barra.parentElement.style.display = 'block';
-
-        if (intervaloProgreso) clearInterval(intervaloProgreso);
-
-        intervaloProgreso = setInterval(() => {
-            fetch(`/estado_pedido/${pedidoId}/`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        mostrarProgresoPedido(data.estado);
-                        if (data.estado === 'entregado' || data.estado === 'cancelado') {
-                            clearInterval(intervaloProgreso);
-                        }
-                    }
+            fetch("{% url 'agregar_carrito_ajax' %}", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrftoken,
+                },
+                body: JSON.stringify({
+                    'prod_id': prodId,
+                    'cantidad': cantidad
                 })
-                .catch(err => console.error(err));
-        }, 5000);
-    }
-
-    // ================== MODAL MIS PEDIDOS ==================
-    const modalPedidos = document.getElementById('modalMisPedidos');
-
-    function cargarPedidos() {
-        const tbody = document.getElementById('tablaPedidos');
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Cargando pedidos...</td></tr>';
-
-        fetch("{% url 'mis_pedidos_json' %}")
-            .then(res => res.json())
-            .then(data => {
-                tbody.innerHTML = '';
-                if(data.pedidos.length === 0){
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No tienes pedidos.</td></tr>';
-                    return;
-                }
-
-                data.pedidos.forEach(p => {
-                    const tr = document.createElement('tr');
-                    tr.setAttribute('data-id', p.id);
-                    tr.innerHTML = `
-                        <td>${p.id}</td>
-                        <td>${p.fecha}</td>
-                        <td>$${p.total}</td>
-                        <td>${p.estado}</td>
-                        <td>
-                            ${p.estado !== 'cancelado' && p.estado !== 'entregado' 
-                              ? `<button class="btn btn-sm btn-danger btn-cancelar" data-id="${p.id}">Cancelar</button>` 
-                              : ''}
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-
-                // ================== BOTONES CANCELAR ==================
-document.querySelectorAll('.btn-cancelar').forEach(btn => {
-    btn.addEventListener('click', function () {
-        const id = this.dataset.id;
-
-        if(!confirm("¿Estás seguro de cancelar este pedido?")) return;
-
-        fetch(`/cancelar_pedido/${id}/`, {
-            method: "POST",
-            headers: { "X-CSRFToken": csrftoken }
-        })
-        .then(res => res.json())
-        .then(resp => {
-            if(resp.success){
-                alert('✅ Pedido cancelado');
-                // Actualizar la fila para mostrar estado cancelado
-                const fila = document.querySelector(`#tablaPedidos tr[data-id='${id}']`);
-                if(fila){
-                    fila.querySelector('td:nth-child(4)').textContent = 'cancelado';
-                    // Quitar el botón de cancelar
-                    const btnAccion = fila.querySelector('.btn-cancelar');
-                    if(btnAccion) btnAccion.remove();
-                }
-            } else {
-                alert('⚠️ Error al cancelar pedido');
-            }
-        })
-        .catch(err => console.error(err));
-    });
-});
             })
-            .catch(err => {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error cargando pedidos</td></tr>';
-                console.error(err);
-            });
-    }
-
-    modalPedidos.addEventListener('show.bs.modal', cargarPedidos);
+            .then(response => response.json())
+            .then(data => {
+                if(data.success){
+                    alert("Producto agregado al carrito!");
+                } else {
+                    alert("Error al agregar al carrito.");
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
 
 });
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+    crossorigin="anonymous"></script>
 {% endblock %}

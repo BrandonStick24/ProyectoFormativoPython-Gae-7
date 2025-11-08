@@ -19,9 +19,37 @@ def inicio(request):
     return render(request, 'Cliente/Index.html')
 
 
+from django.db.models import Avg
+from .models import Negocios, CategoriaProductos, ResenasNegocios
+
 def principal(request):
     negocios = Negocios.objects.all()
-    return render(request, 'Cliente/Principal.html', {'negocios': negocios})
+    categorias = CategoriaProductos.objects.all()[:20]
+    categoria_principal = CategoriaProductos.objects.filter(desc_cp="Celulares y accesorios").first()
+    otras_categorias = CategoriaProductos.objects.exclude(desc_cp="Celulares y accesorios")[:11]
+    t_negocios = TipoNegocio.objects.all()
+    if categoria_principal:
+        categorias_interes = [categoria_principal] + list(otras_categorias)
+    else:
+        categorias_interes = list(otras_categorias)
+
+    # Negocios mejor calificados (promedio de estrellas de 4 a 5)
+    negocios_mejor_calificados = (
+        Negocios.objects
+        .annotate(promedio=Avg('resenasnegocios__estrellas'))
+        .filter(promedio__gte=4)
+        .order_by('-promedio')[:10]  # Puedes ajustar la cantidad que se muestra
+    )
+
+    contexto = {
+        'negocios': negocios,
+        'categorias': categorias,
+        'categorias_interes': categorias_interes,
+        'negocios_mejor_calificados': negocios_mejor_calificados,
+        't_negocios': t_negocios
+    }
+
+    return render(request, 'Cliente/Principal.html', contexto)
 
 
 def iniciar_sesion(request):
@@ -223,7 +251,21 @@ def registro_negocio(request):
 @login_required(login_url='login')
 def cliente_dash(request):
     negocios = Negocios.objects.all()
+    categorias = CategoriaProductos.objects.all()[:20]
+    categoria_principal = CategoriaProductos.objects.filter(desc_cp="Celulares y accesorios").first()
+    otras_categorias = CategoriaProductos.objects.exclude(desc_cp="Celulares y accesorios")[:11]
     t_negocios = TipoNegocio.objects.all()
+    negocios_mejor_calificados = (
+        Negocios.objects
+        .annotate(promedio=Avg('resenasnegocios__estrellas'))
+        .filter(promedio__gte=4)
+        .order_by('-promedio')[:10]
+    )
+    if categoria_principal:
+        categorias_interes = [categoria_principal] + list(otras_categorias)
+    else:
+        categorias_interes = list(otras_categorias)
+
     try:
         perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
     except UsuarioPerfil.DoesNotExist:
@@ -234,129 +276,181 @@ def cliente_dash(request):
         'nombre' : request.user.first_name,
         'perfil' : perfil,
         'negocios': negocios,
-        't_negocios': t_negocios
+        't_negocios': t_negocios,
+        'categorias': categorias,
+        'categorias_interes': categorias_interes,
+        'negocios_mejor_calificados': negocios_mejor_calificados
     }
     return render(request, 'Cliente/Cliente.html', contexto)
 
 #==================== PEDIDOS =====================
-def agregar_pedido(request):
-    if request.method == 'POST':
-        try:
-            producto_id = request.POST.get('producto_id')
-            negocio_id = request.POST.get('negocio_id')
-            usuario_id = request.user.id
+from django.shortcuts import redirect, get_object_or_404
+from .models import Carrito, CarritoItem, Productos, UsuarioPerfil
+from django.utils import timezone
 
-            usuario_perfil = UsuarioPerfil.objects.get(fkuser_id=usuario_id)
-            producto = get_object_or_404(Productos, pkid_prod=producto_id)
-            negocio = get_object_or_404(Negocios, pkid_neg=negocio_id)
-
-            pedido = Pedidos.objects.create(
-                fkusuario_pedido=usuario_perfil,
-                fknegocio_pedido=negocio,
-                estado_pedido='pendiente',
-                total_pedido=producto.precio_prod,
-                fecha_pedido=timezone.now(),
-                fecha_actualizacion=timezone.now()
-            )
-
-            # Detalle del pedido
-            DetallesPedido.objects.create(
-                fkpedido_detalle=pedido,
-                fkproducto_detalle=producto,
-                cantidad_detalle=1,
-                precio_unitario=producto.precio_prod
-            )
-
-            return JsonResponse({'success': True, 'mensaje': 'Pedido agregado correctamente.'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'mensaje': str(e)})
-
-    return JsonResponse({'success': False, 'mensaje': 'Método no permitido.'})
-
-# ================= GUARDAR PEDIDOS =================
 @login_required(login_url='login')
-def guardar_pedido(request):
-    if request.method == 'POST':
+def agregar_al_carrito(request, producto_id):
+    if not request.user.is_authenticated:
+        return redirect('login')
+    auth_user = get_object_or_404(AuthUser, username=request.user.username)
+    usuario_perfil = get_object_or_404(UsuarioPerfil, fkuser=auth_user)
+    
+    producto = get_object_or_404(Productos, pkid_prod=producto_id)
+
+    # Obtener o crear carrito del usuario
+    carrito, created = Carrito.objects.get_or_create(
+        fkusuario_carrito=usuario_perfil
+    )
+
+    # Verificar si el producto ya está en el carrito
+    item, created = CarritoItem.objects.get_or_create(
+        fkcarrito=carrito,
+        fkproducto=producto,
+        fknegocio=producto.fknegocioasociado_prod,
+        defaults={'cantidad': 1, 'precio_unitario': producto.precio_prod}
+    )
+
+    if not created:
+        item.cantidad += 1
+        item.save()
+
+    return redirect('ver_carrito')
+
+@login_required(login_url='login')
+def agregar_carrito_ajax(request):
+    import json
+    from django.http import JsonResponse
+
+    if request.method == "POST":
+        data = json.loads(request.body)
+        prod_id = data.get('prod_id')
+        cantidad = data.get('cantidad', 1)
+
+        # Usamos directamente request.user
         try:
-            data = json.loads(request.body)
-            carrito = data.get('carrito', [])
-            fknegocio = data.get('fknegocio')
-
-            if not carrito:
-                return JsonResponse({'success': False, 'error': 'Carrito vacío'})
-
             auth_user = AuthUser.objects.get(username=request.user.username)
             usuario_perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except UsuarioPerfil.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Perfil no encontrado'})
 
-            negocio = get_object_or_404(Negocios, pkid_neg=fknegocio)
+        producto = get_object_or_404(Productos, pkid_prod=prod_id)
 
-            total = sum(item['precio'] * item['cantidad'] for item in carrito)
-            with transaction.atomic():
+        carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=usuario_perfil)
+
+        item, created = CarritoItem.objects.get_or_create(
+            fkcarrito=carrito,
+            fkproducto=producto,
+            fknegocio=producto.fknegocioasociado_prod,
+            defaults={'cantidad': cantidad, 'precio_unitario': producto.precio_prod}
+        )
+
+        if not created:
+            item.cantidad += cantidad
+            item.save()
+
+        return JsonResponse({'success': True})
+
+from django.utils import timezone
+from decimal import Decimal
+from collections import defaultdict
+from django.shortcuts import redirect
+from .models import Pedidos, DetallesPedido, PagosNegocios, CarritoItem
+
+from django.shortcuts import redirect
+from django.utils import timezone
+from django.contrib.auth.decorators import login_required
+from .models import CarritoItem, Pedidos, DetallesPedido, PagosNegocios, UsuarioPerfil
+
+from django.db import transaction
+
+@login_required(login_url='login')
+def procesar_pago(request):
+    auth_user = AuthUser.objects.get(username=request.user.username)
+    usuario_perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+    carrito_items = CarritoItem.objects.filter(fkcarrito__fkusuario_carrito=usuario_perfil)
+
+    if not carrito_items.exists():
+        return redirect('carrito')
+
+    negocios_items = {}
+    for item in carrito_items:
+        negocio = item.fknegocio
+        if negocio not in negocios_items:
+            negocios_items[negocio] = []
+        negocios_items[negocio].append(item)
+
+    try:
+        with transaction.atomic():  # <-- Inicio de transacción
+            for negocio, items in negocios_items.items():
+                total_pedido = sum(item.cantidad * item.precio_unitario for item in items)
                 pedido = Pedidos.objects.create(
                     fkusuario_pedido=usuario_perfil,
                     fknegocio_pedido=negocio,
-                    estado_pedido='pendiente',
-                    total_pedido=total,
+                    estado_pedido='pendiente',  # inicial
+                    total_pedido=total_pedido,
                     fecha_pedido=timezone.now(),
                     fecha_actualizacion=timezone.now()
                 )
 
-                for item in carrito:
-                    producto = get_object_or_404(Productos, pkid_prod=item['id'])
+                pago = PagosNegocios.objects.create(
+                    fkpedido=pedido,
+                    fknegocio=negocio,
+                    monto=total_pedido,
+                    estado_pago='pendiente'  # inicial
+                )
 
-                    # Validar stock
-                    if producto.stock_prod < item['cantidad']:
-                        raise ValueError(f"Stock insuficiente para {producto.nom_prod}")
+                # --- ACTUALIZAR ESTADOS A CONFIRMADO ---
+                pedido.estado_pedido = 'confirmado'
+                pedido.save()
+                pago.estado_pago = 'pagado'
+                pago.save()
+
+                for item in items:
+                    producto = item.fkproducto
+                    if producto.stock_prod < item.cantidad:
+                        raise ValueError(f"No hay suficiente stock de {producto.nom_prod}.")
 
                     DetallesPedido.objects.create(
                         fkpedido_detalle=pedido,
                         fkproducto_detalle=producto,
-                        cantidad_detalle=item['cantidad'],
-                        precio_unitario=item['precio']
+                        cantidad_detalle=item.cantidad,
+                        precio_unitario=item.precio_unitario
                     )
 
-                    # Actualizar stock
-                    producto.stock_prod -= item['cantidad']
+                    producto.stock_prod -= item.cantidad
                     producto.save()
 
-            return JsonResponse({'success': True})
+            carrito_items.delete()
 
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+    except Exception as e:
+        messages.error(request, f"Error al procesar el pago: {str(e)}")
+        return redirect('carrito')
 
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    return redirect('pago_exitoso')
 
-@login_required
-def mis_pedidos_json(request):
-    try:
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
-        return JsonResponse({"pedidos": []})
 
-    pedidos = Pedidos.objects.filter(fkusuario_pedido=perfil).order_by('-fecha_pedido')
+@login_required(login_url='login')
+def pago_exitoso(request):
+    return render(request, 'Cliente/pago_exitoso.html')
 
-    data = []
-    for p in pedidos:
-        data.append({
-            "id": p.pkid_pedido,
-            "fecha": p.fecha_pedido.strftime("%d/%m/%Y %H:%M"),
-            "total": str(p.total_pedido),
-            "estado": p.estado_pedido
-        })
+@login_required(login_url='login')
+def ver_carrito(request):
+    # Obtener el AuthUser correspondiente al request.user
+    auth_user = get_object_or_404(AuthUser, username=request.user.username)
+    
+    # Obtener perfil de usuario
+    usuario_perfil = get_object_or_404(UsuarioPerfil, fkuser=auth_user)
+    
+    # Obtener carrito del usuario
+    carrito = get_object_or_404(Carrito, fkusuario_carrito=usuario_perfil)
+    carrito_items = CarritoItem.objects.filter(fkcarrito=carrito)
 
-    return JsonResponse({"pedidos": data})
+    # Calculamos subtotales
+    for item in carrito_items:
+        item.subtotal = item.cantidad * item.precio_unitario
 
-def cancelar_pedido(request, pedido_id):
-    if request.method == 'POST':
-        try:
-            pedido = Pedidos.objects.get(pk=pedido_id)
-            pedido.estado_pedido = 'cancelado'  
-            pedido.save()                 
-            return JsonResponse({'success': True})
-        except Pedidos.DoesNotExist:
-            return JsonResponse({'success': False, 'error': 'Pedido no encontrado'})
-    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+    return render(request, 'Cliente/ver_carrito.html', {'carrito_items': carrito_items})
+
 
 
 @login_required(login_url='login')
