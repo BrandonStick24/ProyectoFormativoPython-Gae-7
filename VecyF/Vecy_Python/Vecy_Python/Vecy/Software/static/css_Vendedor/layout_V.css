@@ -1,4 +1,4 @@
-/* layout_V.css - VERSIÓN MEJORADA */
+/* layout_V.css - VERSIÓN MEJORADA CON ESTADOS DE MODALES */
 :root {
     --primary-color: #4F46E5;
     --secondary-color: #7C3AED;
@@ -216,6 +216,7 @@ body {
     font-weight: 600;
     color: #6b7280;
     font-size: 0.85rem;
+    transition: color 0.3s;
 }
 
 .interruptor-alternador {
@@ -265,6 +266,7 @@ body {
 
 .boton-programar:hover {
     background: var(--secondary-color);
+    transform: translateY(-1px);
 }
 
 .item-barra-lateral {
@@ -292,7 +294,7 @@ body {
     width: 25px;
 }
 
-/* CONTENIDO PRINCIPAL - NUEVO SISTEMA */
+/* CONTENIDO PRINCIPAL */
 .contenido-principal {
     margin-left: 250px;
     margin-top: 70px;
@@ -334,7 +336,7 @@ body {
     font-size: 0.9rem;
 }
 
-/* Estilos para modal */
+/* Estilos para modales del Layout */
 .modal-content {
     border: none;
     border-radius: 12px;
@@ -353,6 +355,35 @@ body {
 .modal-footer {
     border-top: 1px solid #e5e7eb;
     padding: 1rem 1.5rem;
+}
+
+/* Botones de modales */
+.btn-primary {
+    background: var(--primary-color);
+    border: none;
+    padding: 0.5rem 1.5rem;
+}
+
+.btn-primary:hover {
+    background: var(--secondary-color);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    border: none;
+    padding: 0.5rem 1.5rem;
+}
+
+/* Formularios en modales */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
 }
 
 /* RESPONSIVE */
@@ -455,5 +486,9 @@ body {
     .contenido-principal {
         margin-bottom: 50px;
         min-height: calc(100vh - 120px);
+    }
+    
+    .modal-dialog {
+        margin: 0.5rem;
     }
 }

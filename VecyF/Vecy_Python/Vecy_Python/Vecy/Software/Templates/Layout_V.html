@@ -1,4 +1,4 @@
-<!-- templates/Layout_V.html -->
+<!-- Templates/Layout_V.html -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
@@ -87,8 +87,7 @@
                         <div class="deslizador-alternador"></div>
                     </div>
                 </div>
-                <button class="boton-programar" data-bs-toggle="modal"
-                    data-bs-target="#modalProgramacion">
+                <button class="boton-programar" id="botonProgramarHorario">
                     <i class="fas fa-clock"></i> Programar Horario
                 </button>
             </div>
@@ -106,6 +105,10 @@
                 <i class="fas fa-box"></i>
                 <span>Productos</span>
             </a>
+            <a href="{% url 'gestionar_ventas' %}" class="item-barra-lateral">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Pedidos</span>
+            </a>
             <a href="{% url 'Ofertas_V' %}" class="item-barra-lateral">
                 <i class="fas fa-tag"></i>
                 <span>Ofertas</span>
@@ -118,8 +121,7 @@
                 <i class="fas fa-chart-line"></i>
                 <span>Stock</span>
             </a>
-            <button class="item-barra-lateral" data-bs-toggle="modal"
-                data-bs-target="#modalReportarProblema"
+            <button class="item-barra-lateral" id="botonReportarProblema"
                 style="border: none; background: none; width: 100%; text-align: left;">
                 <i class="fas fa-exclamation-circle"></i>
                 <span>Reportar Problema</span>
@@ -141,59 +143,89 @@
                 los derechos reservados.</p>
         </footer>
 
-        <!-- Los modales se mantienen igual -->
+        <!-- ==================== MODALES DEL LAYOUT ==================== -->
+        
         <!-- Modal para Programar Horario -->
         <div class="modal fade" id="modalProgramacion" tabindex="-1"
             aria-labelledby="modalProgramacionLabel" aria-hidden="true">
-            <!-- ... contenido del modal ... -->
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProgramacionLabel">
+                            <i class="fas fa-clock me-2"></i>Programar Horario del Negocio
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formProgramacion">
+                            <div class="mb-3">
+                                <label for="horarioApertura" class="form-label">Hora de Apertura</label>
+                                <input type="time" class="form-control" id="horarioApertura" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="horarioCierre" class="form-label">Hora de Cierre</label>
+                                <input type="time" class="form-control" id="horarioCierre" required>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="habilitarProgramacion">
+                                <label class="form-check-label" for="habilitarProgramacion">
+                                    Activar programación automática
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="guardarProgramacion">Guardar Horario</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Modal para Reportar Problema -->
         <div class="modal fade" id="modalReportarProblema" tabindex="-1"
             aria-labelledby="modalReportarProblemaLabel" aria-hidden="true">
-            <!-- ... contenido del modal ... -->
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalReportarProblemaLabel">
+                            <i class="fas fa-exclamation-circle me-2"></i>Reportar Problema
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formReportarProblema">
+                            <div class="mb-3">
+                                <label for="categoriaProblema" class="form-label">Categoría del Problema</label>
+                                <select class="form-select" id="categoriaProblema" required>
+                                    <option value="">Seleccione una categoría</option>
+                                    <option value="tecnico">Problema Técnico</option>
+                                    <option value="funcionalidad">Funcionalidad</option>
+                                    <option value="seguridad">Seguridad</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="descripcionProblema" class="form-label">Descripción Detallada</label>
+                                <textarea class="form-control" id="descripcionProblema" rows="4" 
+                                          placeholder="Describa el problema en detalle..." required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="enviarReporte">Enviar Reporte</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Bootstrap JS -->
         <script
             src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 
-        <!-- JavaScript personalizado -->
-        <script>
-        // Alternar menú desplegable del usuario
-        document.getElementById('botonDesplegableUsuario').addEventListener('click', function(e) {
-            e.stopPropagation();
-            document.getElementById('menuDesplegableUsuario').classList.toggle('mostrar');
-        });
-
-        // Cerrar menú desplegable al hacer clic fuera
-        document.addEventListener('click', function() {
-            document.getElementById('menuDesplegableUsuario').classList.remove('mostrar');
-        });
-
-        // Alternar estado del negocio en la barra lateral
-        const alternadorNegocio = document.getElementById('alternadorNegocio');
-        const textoEstado = document.getElementById('textoEstado');
-        let estaAbierto = false;
-
-        alternadorNegocio.addEventListener('click', function() {
-            estaAbierto = !estaAbierto;
-            this.classList.toggle('activo');
-            textoEstado.textContent = estaAbierto ? 'Abierto' : 'Cerrado';
-            textoEstado.style.color = estaAbierto ? '#10b981' : '#6b7280';
-        });
-
-        // Simular notificaciones
-        const insigniaNotificacion = document.querySelector('.insignia-notificacion');
-        const botonNotificaciones = document.getElementById('botonDesplegableNotificaciones');
-        
-        botonNotificaciones.addEventListener('click', function() {
-            // Simular leer notificaciones
-            setTimeout(function() {
-                insigniaNotificacion.style.display = 'none';
-            }, 1000);
-        });
-    </script>
+        <!-- JavaScript personalizado del Layout -->
+        <script src="{% static 'javascript_V/Layout_V.js' %}"></script>
 
         {% block extra_js %}{% endblock %}
     </body>

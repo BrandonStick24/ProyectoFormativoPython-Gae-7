@@ -358,7 +358,8 @@ class PagosNegocios(models.Model):
     fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
     monto = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_pago = models.DateTimeField(auto_now_add=True)
-    estado_pago = models.CharField(max_length=15, default='pendiente')  # pendiente, pagado
+    estado_pago = models.CharField(max_length=15, default='pendiente')
+    metodo_pago = models.CharField(max_length=30, default='pse')
 
     class Meta:
         db_table = 'pagos_negocios'

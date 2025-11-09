@@ -9,8 +9,6 @@
 {% endblock %}
 
 {% block content %}
-
-
 <div class="tarjeta-bienvenida">
     <div class="row align-items-center">
         <div class="col-md-8">
@@ -126,9 +124,45 @@
                     </button>
                     {% endif %}
 
-                    <button class="btn btn-outline-secondary btn-sm gestionar-negocio-btn" data-negocio-id="{{ negocio.pkid_neg }}">
-                        <i class="fas fa-cog"></i> Gestionar
-                    </button>
+                    <!-- Botón desplegable de gestión -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-cog"></i> Gestionar
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'configurar_negocio' negocio.pkid_neg %}">
+                                    <i class="fas fa-edit"></i> Editar Negocio
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEstadoNegocio" 
+                                   data-negocio-id="{{ negocio.pkid_neg }}" 
+                                   data-negocio-nombre="{{ negocio.nom_neg }}"
+                                   data-negocio-estado="{{ negocio.estado_neg }}">
+                                    <i class="fas fa-power-off"></i> 
+                                    {% if negocio.estado_neg == 'activo' %}Desactivar{% else %}Activar{% endif %} Negocio
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#modalCerrarNegocio"
+                                   data-negocio-id="{{ negocio.pkid_neg }}" 
+                                   data-negocio-nombre="{{ negocio.nom_neg }}">
+                                    <i class="fas fa-door-closed"></i> Cerrar Negocio
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#modalEliminarNegocio"
+                                    data-negocio-id="{{ negocio.pkid_neg }}" 
+                                    data-negocio-nombre="{{ negocio.nom_neg }}">
+                                    <i class="fas fa-trash-alt"></i> Eliminar Negocio
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -146,7 +180,7 @@
     {% endif %}
 </div>
 
-<!-- Modal Agregar Negocio -->
+<!-- Modal Agregar Negocio (existente) -->
 <div class="modal fade" id="modalAgregarNegocio" tabindex="-1" aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -204,93 +238,100 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dis-miss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-primary">Guardar Negocio</button>
                 </div>
             </form>
-            <script>
-                function debugForm(form) {
-                console.log("DEBUG FORM: Enviando formulario...");
-                console.log("NIT:", form.nit_neg.value);
-                console.log("Nombre:", form.nom_neg.value);
-                console.log("Tipo:", form.fktiponeg_neg.value);
-                console.log("Dirección:", form.direcc_neg.value);
-                return true; // Permitir envío
-                }
-            </script>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cambiar Estado (Activar/Desactivar) -->
+<div class="modal fade" id="modalEstadoNegocio" tabindex="-1" aria-labelledby="modalEstadoNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEstadoNegocioLabel">Cambiar Estado del Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cambiar_estado_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="estado_negocio_id" name="negocio_id">
+                    <p id="textoEstadoNegocio">¿Estás seguro que deseas cambiar el estado de este negocio?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cerrar Negocio -->
+<div class="modal fade" id="modalCerrarNegocio" tabindex="-1" aria-labelledby="modalCerrarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCerrarNegocioLabel">Cerrar Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cerrar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="cerrar_negocio_id" name="negocio_id">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>Advertencia:</strong> Esta acción cerrará permanentemente tu negocio.
+                    </div>
+                    <p id="textoCerrarNegocio">¿Estás seguro que deseas cerrar este negocio? Esta acción no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Cerrar Negocio</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Eliminar Negocio -->
+<div class="modal fade" id="modalEliminarNegocio" tabindex="-1" aria-labelledby="modalEliminarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarNegocioLabel">Eliminar Negocio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'eliminar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="eliminar_negocio_id" name="negocio_id">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>¡Advertencia Crítica!</strong> Esta acción no se puede deshacer.
+                    </div>
+                    <p id="textoEliminarNegocio">¿Estás absolutamente seguro que deseas eliminar este negocio?</p>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="confirmarEliminacion" required>
+                        <label class="form-check-label" for="confirmarEliminacion">
+                            Sí, entiendo que esta acción eliminará permanentemente el negocio y todos sus productos asociados.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" id="btnEliminarConfirmar" disabled>
+                        <i class="fas fa-trash-alt"></i> Eliminar Permanentemente
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-// Búsqueda en tiempo real
-document.getElementById('inputBusqueda').addEventListener('input', function(e) {
-    const textoBusqueda = e.target.value.toLowerCase();
-    const tarjetas = document.querySelectorAll('.negocio-card');
-    
-    tarjetas.forEach(tarjeta => {
-        const textoNegocio = tarjeta.textContent.toLowerCase();
-        if (textoNegocio.includes(textoBusqueda)) {
-            tarjeta.closest('.col-md-6').style.display = '';
-        } else {
-            tarjeta.closest('.col-md-6').style.display = 'none';
-        }
-    });
-});
-
-// Función para gestionar negocio
-function gestionarNegocio(negocioId) {
-    const url = "{% url 'seleccionar_negocio' 0 %}".replace('0', negocioId);
-    window.location.href = url;
-}
-
-// Event listeners para botones de gestión
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.gestionar-negocio-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            const negocioId = this.getAttribute('data-negocio-id');
-            gestionarNegocio(negocioId);
-        });
-    });
-});
-</script>
-
-<style>
-.negocio-card {
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 2px solid transparent;
-}
-.negocio-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-}
-.negocio-seleccionado {
-    border-color: #198754;
-    background-color: #f8fff9;
-}
-.img-negocio-card {
-    height: 160px;
-    object-fit: cover;
-}
-.img-placeholder-card {
-    height: 160px;
-    background-color: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6c757d;
-}
-.badge-seleccionado {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #198754;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-}
-</style>
+<script src="{% static 'javascript_V/Negocios_V.js' %}"></script>
 {% endblock %}

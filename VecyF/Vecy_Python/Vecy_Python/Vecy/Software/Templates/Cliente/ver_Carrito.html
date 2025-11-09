@@ -1,36 +1,581 @@
-{% extends 'base.html' %}
-{% block content %}
-<h2>Tu Carrito</h2>
-<table class="table">
-    <thead>
-        <tr>
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tu Carrito</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="p-4">
+    <div class="container">
+      <h2>Tu Carrito</h2>
+
+      <table class="table table-striped">
+        <thead>
+          <tr>
             <th>Producto</th>
             <th>Cantidad</th>
             <th>Precio Unitario</th>
             <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in carrito_items %}
-        <tr>
-            <td>{{ item.fkproducto.nom_prod }}</td>
-            <td>{{ item.cantidad }}</td>
-            <td>${{ item.precio_unitario }}</td>
-            <td>${{ item.subtotal }}</td>
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="4">No tienes productos en el carrito.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in carrito_items %}
+          <tr>
+            <td>{{ c.item.fkproducto.nom_prod }}</td>
+            <td>{{ c.item.cantidad }}</td>
+            <td>${{ c.item.precio_unitario }}</td>
+            <td>${{ c.subtotal }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
 
-{% if carrito_items %}
-<form action="{% url 'procesar_pago' %}" method="post">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-success">Pagar Todo</button>
-</form>
-{% endif %}
+      {% if carrito_items %}
+      <form id="checkoutForm" action="{% url 'procesar_pago' %}" method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="metodo_pago" class="form-label"
+            ><strong>Método de pago</strong></label
+          >
+          <select
+            name="metodo_pago"
+            id="metodo_pago"
+            class="form-select"
+            required
+          >
+            <option value="">Selecciona un método</option>
+            <option value="tarjeta">Tarjeta (Crédito/Débito)</option>
+            <option value="pse">PSE (Transferencia bancaria)</option>
+            <option value="nequi">Nequi</option>
+            <option value="daviplata">Daviplata</option>
+            <option value="efecty">Efecty / Baloto</option>
+            <option value="contra_entrega">Contra entrega</option>
+          </select>
+        </div>
 
-{% endblock %}
+        <!-- Contenedor dinámico para campos según método -->
+        <div id="methodContainer" class="mb-3"></div>
+
+        <!-- Inputs ocultos que se envían al backend -->
+        <input
+          type="hidden"
+          name="amount"
+          id="amountInput"
+          value="{{ total_carrito }}"
+        />
+        <input type="hidden" name="payment_token" id="paymentToken" value="" />
+        <input
+          type="hidden"
+          name="transaction_id"
+          id="transactionId"
+          value=""
+        />
+
+        <div class="d-flex gap-2 mb-3">
+          <button
+            type="button"
+            id="btnOpenModal"
+            class="btn btn-primary flex-grow-1"
+          >
+            Continuar al pago
+          </button>
+          <button
+            type="button"
+            id="btnSandboxSubmit"
+            class="btn btn-outline-secondary"
+          >
+            Simular pago rápido
+          </button>
+        </div>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Modal Sandbox (pasarela) -->
+    <div class="modal fade" id="gatewayModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Pasarela de pago - Modo sandbox</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Cerrar"
+            ></button>
+          </div>
+          <div class="modal-body" id="gatewayBody"></div>
+          <div class="modal-footer">
+            <button
+              id="gatewayCancel"
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button id="gatewayProcess" type="button" class="btn btn-success">
+              Procesar pago (simulado)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultado del pago -->
+    <div class="modal fade" id="resultModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Resultado del pago (sandbox)</h5>
+          </div>
+          <div class="modal-body" id="resultBody"></div>
+          <div class="modal-footer">
+            <button class="btn btn-primary" data-bs-dismiss="modal">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      /* ---------- Helpers ---------- */
+      function luhnCheck(cardNumber) {
+        const nums = cardNumber
+          .replace(/\D/g, "")
+          .split("")
+          .reverse()
+          .map((x) => parseInt(x));
+        let sum = 0;
+        for (let i = 0; i < nums.length; i++) {
+          let val = nums[i];
+          if (i % 2 === 1) {
+            val *= 2;
+            if (val > 9) val -= 9;
+          }
+          sum += val;
+        }
+        return sum % 10 === 0;
+      }
+      function detectCardBrand(number) {
+        const n = number.replace(/\D/g, "");
+        if (/^4/.test(n)) return "VISA";
+        if (/^(5[1-5])/.test(n)) return "MASTERCARD";
+        if (/^3[47]/.test(n)) return "AMEX";
+        if (/^6/.test(n)) return "DISCOVER";
+        return "CARD";
+      }
+      function formatCardNumber(value) {
+        return value
+          .replace(/\D/g, "")
+          .replace(/(.{4})/g, "$1 ")
+          .trim();
+      }
+      function maskNumber(s, last = 4) {
+        s = s.replace(/\s/g, "");
+        return s.slice(0, -last).replace(/./g, "•") + s.slice(-last);
+      }
+
+      /* ---------- UI bindings ---------- */
+      const metodoSelect = document.getElementById("metodo_pago");
+      const methodContainer = document.getElementById("methodContainer");
+      const btnOpenModal = document.getElementById("btnOpenModal");
+      const btnSandboxSubmit = document.getElementById("btnSandboxSubmit");
+      const gatewayModal = new bootstrap.Modal(
+        document.getElementById("gatewayModal")
+      );
+      const gatewayBody = document.getElementById("gatewayBody");
+      const gatewayProcess = document.getElementById("gatewayProcess");
+      const resultModal = new bootstrap.Modal(
+        document.getElementById("resultModal")
+      );
+      const resultBody = document.getElementById("resultBody");
+
+      const cardNumberPreview = document.getElementById("cardNumberPreview");
+      const cardNamePreview = document.getElementById("cardNamePreview");
+      const cardExpPreview = document.getElementById("cardExpPreview");
+      const cardBrand = document.getElementById("cardBrand");
+
+      const amountInput = document.getElementById("amountInput");
+      const paymentToken = document.getElementById("paymentToken");
+      const transactionIdInput = document.getElementById("transactionId");
+
+      /* Render fields depending on method */
+      function renderMethodFields(method) {
+        methodContainer.innerHTML = "";
+        // Tarjeta: campos completos + live preview
+        if (method === "tarjeta") {
+          methodContainer.innerHTML = `
+      <div class="mb-3">
+        <label class="form-label">Nombre en la tarjeta</label>
+        <input id="cardName" class="form-control" placeholder="Juan Pérez" required>
+      </div>
+      <div class="mb-3 input-inline">
+        <input id="cardNumber" maxlength="19" class="form-control" placeholder="4111 1111 1111 1111" required>
+      </div>
+      <div class="mb-3 input-inline">
+        <input id="cardExp" class="form-control" placeholder="MM/AA" required>
+        <input id="cardCvv" class="form-control" placeholder="CVV" maxlength="4" required>
+      </div>
+      <div class="form-text note">Usa números de prueba: <strong>4111 1111 1111 1111</strong> (Visa)</div>
+    `;
+          // bind preview
+          setTimeout(() => {
+            // small delay so elements exist
+            const elNum = document.getElementById("cardNumber");
+            const elName = document.getElementById("cardName");
+            const elExp = document.getElementById("cardExp");
+            elNum.addEventListener("input", () => {
+              elNum.value = formatCardNumber(elNum.value);
+              cardNumberPreview.textContent = elNum.value
+                ? elNum.value
+                : "•••• •••• •••• ••••";
+              cardBrand.textContent = detectCardBrand(elNum.value);
+            });
+            elName.addEventListener(
+              "input",
+              () =>
+                (cardNamePreview.textContent =
+                  elName.value.toUpperCase() || "NOMBRE TITULAR")
+            );
+            elExp.addEventListener(
+              "input",
+              () => (cardExpPreview.textContent = elExp.value || "MM/AA")
+            );
+          }, 10);
+        } else if (method === "pse") {
+          methodContainer.innerHTML = `
+      <div class="mb-3">
+        <label class="form-label">Banco</label>
+        <select id="pseBanco" class="form-select" required>
+          <option value="">Selecciona banco</option>
+          <option value="banco_1">Banco 1 (Prueba)</option>
+          <option value="banco_2">Banco 2 (Prueba)</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tipo cuenta</label>
+        <select id="pseTipo" class="form-select" required>
+          <option value="ahorros">Ahorros</option>
+          <option value="corriente">Corriente</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Número de cuenta</label>
+        <input id="pseCuenta" class="form-control" placeholder="00012345678" required>
+      </div>
+      <div class="form-text note">PSE (sandbox): se abrirá una simulación de redirección al banco.</div>
+    `;
+        } else if (method === "nequi" || method === "daviplata") {
+          methodContainer.innerHTML = `
+      <div class="mb-3">
+        <label class="form-label">Teléfono (10 dígitos)</label>
+        <input id="mmPhone" class="form-control" placeholder="3001234567" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">PIN (4 dígitos)</label>
+        <input id="mmPin" class="form-control" maxlength="4" placeholder="1234" required>
+      </div>
+      <div class="form-text note">Simulación móvil: no se realiza cargo real.</div>
+    `;
+        } else if (method === "efecty") {
+          methodContainer.innerHTML = `
+      <div class="mb-3">
+        <label class="form-label">Tu nombre</label>
+        <input id="efectyName" class="form-control" placeholder="Juan Pérez" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Correo o celular (recibirás código)</label>
+        <input id="efectyContact" class="form-control" placeholder="correo@ejemplo.com / 3001234567" required>
+      </div>
+      <div class="form-text note">Se generará un código de pago que el cliente debe presentar en el establecimiento.</div>
+    `;
+        } else if (method === "contra_entrega") {
+          methodContainer.innerHTML = `
+      <div class="mb-3">
+        <label class="form-label">Instrucciones de entrega (opcional)</label>
+        <input id="codEntrega" class="form-control" placeholder="Dejar en portería, llamar al llegar...">
+      </div>
+      <div class="form-text note">Pago en efectivo al recibir el pedido.</div>
+    `;
+        }
+      }
+
+      /* When method changes */
+      metodoSelect.addEventListener("change", (e) => {
+        renderMethodFields(e.target.value);
+        // highlight preview only for tarjeta:
+        document
+          .getElementById("cardPreview")
+          ?.classList.toggle("d-none", e.target.value !== "tarjeta");
+      });
+
+      /* Open gateway modal (simulate provider UI) */
+      btnOpenModal.addEventListener("click", () => {
+        const method = metodoSelect.value;
+        if (!method) {
+          alert("Selecciona un método.");
+          return;
+        }
+
+        // Build gateway body depending on method, more "bank-like" UI
+        let html = "";
+        if (method === "tarjeta") {
+          html = `
+      <div class="processing-screen">
+        <div style="width:80%;margin-bottom:18px">
+          <div class="mb-2"><strong>Resumen</strong></div>
+          <div class="d-flex justify-content-between"><div>Importe</div><div id="gwAmount">${
+            document.getElementById("amountInput").value
+          } COP</div></div>
+          <div class="d-flex justify-content-between"><div>Método</div><div>Tarjeta</div></div>
+        </div>
+        <div style="width:80%;">
+          <div class="form-text note">Introduce los detalles de tarjeta en el formulario principal (a la izquierda) y luego haga clic en "Procesar pago".</div>
+        </div>
+      </div>
+    `;
+        } else if (method === "pse") {
+          html = `
+      <div>
+        <div class="mb-3"><strong>Redirección a banco (sandbox)</strong></div>
+        <div class="mb-2 note">Se abrirá una simulación de la pasarela del banco. Puedes aceptar o simular rechazo.</div>
+        <div class="d-flex gap-2 mt-3">
+          <button id="gwBankAccept" class="btn btn-success">Aceptar pago en banco (simular)</button>
+          <button id="gwBankReject" class="btn btn-danger">Simular rechazo</button>
+        </div>
+      </div>
+    `;
+        } else if (method === "nequi" || method === "daviplata") {
+          html = `
+      <div>
+        <div class="mb-3"><strong>Dinero móvil (${method.toUpperCase()})</strong></div>
+        <div class="mb-2 note">Ingresa el PIN en tu app móvil (simulado). Haz clic en "Simular confirmación".</div>
+        <div class="d-flex gap-2 mt-3">
+          <button id="gwMobileConfirm" class="btn btn-success">Simular confirmación</button>
+          <button id="gwMobileFail" class="btn btn-danger">Simular fallo</button>
+        </div>
+      </div>
+    `;
+        } else if (method === "efecty") {
+          html = `
+      <div>
+        <div class="mb-3"><strong>Pago en punto (Efecty / Baloto)</strong></div>
+        <div class="mb-2 note">Se generará un código de pago que debes presentar en cualquier punto Efecty/ Baloto.</div>
+        <div class="mt-3"><button id="gwEfectyGen" class="btn btn-primary">Generar código de pago</button></div>
+      </div>
+    `;
+        } else if (method === "contra_entrega") {
+          html = `
+      <div class="processing-screen">
+        <div class="mb-2"><strong>Contra entrega</strong></div>
+        <p class="note">El cliente pagará en efectivo al momento de recibir el pedido. El pedido se marcará como pendiente de pago.</p>
+      </div>
+    `;
+        }
+
+        gatewayBody.innerHTML = html;
+        gatewayModal.show();
+
+        // Add handlers inside modal for special buttons
+        setTimeout(() => {
+          const bAccept = document.getElementById("gwBankAccept");
+          if (bAccept) bAccept.onclick = () => simulateGatewayResponse(true);
+          const bReject = document.getElementById("gwBankReject");
+          if (bReject) bReject.onclick = () => simulateGatewayResponse(false);
+          const bMobileConfirm = document.getElementById("gwMobileConfirm");
+          if (bMobileConfirm)
+            bMobileConfirm.onclick = () => simulateGatewayResponse(true);
+          const bMobileFail = document.getElementById("gwMobileFail");
+          if (bMobileFail)
+            bMobileFail.onclick = () => simulateGatewayResponse(false);
+          const bEfecty = document.getElementById("gwEfectyGen");
+          if (bEfecty)
+            bEfecty.onclick = () => {
+              // generate code, show success
+              const code =
+                "EF-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+              simulateGatewayResponse(true, { efecty_code: code });
+            };
+        }, 120);
+      });
+
+      /* Quick sandbox submit (bypass modal) */
+      btnSandboxSubmit.addEventListener("click", () => {
+        // run lightweight validation and return success
+        quickValidateAndSimulate();
+      });
+
+      /* Simulate gateway response (success boolean) */
+      function simulateGatewayResponse(success = true, extra = {}) {
+        // show processing spinner then result
+        gatewayBody.innerHTML = `
+    <div class="processing-screen">
+      <div class="spinner-border text-primary" role="status" style="width:60px;height:60px"></div>
+      <div style="margin-top:14px"><strong>Procesando en sandbox...</strong></div>
+      <div class="note">No se realiza cobro real — entorno de pruebas</div>
+    </div>`;
+        // after 1.6s simulate callback
+        setTimeout(() => {
+          const tx = "TX-" + Date.now().toString(36).toUpperCase().slice(-10);
+          paymentToken.value =
+            "sandbox_token_" + Math.random().toString(36).slice(2, 10);
+          document.getElementById("transactionId").value = tx;
+          // if extra (efecty) include code in result
+          if (success) {
+            const details = {
+              transaction_id: tx,
+              amount: amountInput.value,
+              method: metodoSelect.value,
+              ...extra,
+            };
+            showResult(true, details);
+          } else {
+            showResult(false, {
+              transaction_id: tx,
+              amount: amountInput.value,
+              method: metodoSelect.value,
+            });
+          }
+          gatewayModal.hide();
+        }, 1400);
+      }
+
+      /* Final process button in gateway modal (if user opened modal and presses process) */
+      gatewayProcess.addEventListener("click", () =>
+        simulateGatewayResponse(true)
+      );
+
+      /* Show result modal */
+      function showResult(ok, details) {
+        let html = "";
+        if (ok) {
+          html = `
+      <div class="success-screen">
+        <div class="mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" fill="green" viewBox="0 0 16 16">
+            <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM6.97 11.03a.75.75 0 0 0 1.08 0l4.992-4.992a.75.75 0 1 0-1.06-1.06L7.5 9.44 5.06 6.997a.75.75 0 0 0-1.06 1.06l2.97 3. -"/></svg>
+        </div>
+        <h5>Pago simulado exitoso</h5>
+        <p class="note">Resumen de la transacción (sandbox)</p>
+        <div class="text-start mt-3">
+          <div><strong>Método:</strong> ${details.method}</div>
+          <div><strong>Monto:</strong> ${details.amount} COP</div>
+          <div><strong>Transaction ID:</strong> ${details.transaction_id}</div>
+          ${
+            details.efecty_code
+              ? `<div><strong>Código Efecty:</strong> ${details.efecty_code}</div>`
+              : ""
+          }
+        </div>
+        <div class="mt-3">
+          <button id="sendToServer" class="btn btn-primary">Enviar resultado al servidor (opcional)</button>
+        </div>
+      </div>
+    `;
+        } else {
+          html = `<div class="p-3"><h5 class="text-danger">Pago rechazado (simulado)</h5><p class="note">Prueba otro método o intenta de nuevo.</p></div>`;
+        }
+        resultBody.innerHTML = html;
+        resultModal.show();
+
+        // handler to optionally send to backend (form submit)
+        const btnSend = document.getElementById("sendToServer");
+if (btnSend) {
+    btnSend.onclick = () => {
+        // Asegúrate de que los hidden inputs tengan valores correctos
+        document.getElementById('paymentToken').value =
+            paymentToken.value || "sandbox_token_" + Math.random().toString(36).slice(2, 8);
+        document.getElementById('transactionId').value = details.transaction_id;
+        
+        // Envía el formulario al backend
+        document.getElementById('checkoutForm').submit();
+    };
+}
+      }
+
+      /* Quick validation before simulation */
+      function quickValidateAndSimulate() {
+        const method = metodoSelect.value;
+        if (!method) {
+          alert("Selecciona método");
+          return;
+        }
+        // basic method-specific checks
+        if (method === "tarjeta") {
+          const cardEl = document.getElementById("cardNumber");
+          const expEl = document.getElementById("cardExp");
+          const cvvEl = document.getElementById("cardCvv");
+          const nameEl = document.getElementById("cardName");
+          if (!cardEl || !expEl || !cvvEl || !nameEl) {
+            alert("Completa los datos de tarjeta a la izquierda");
+            return;
+          }
+          const raw = cardEl.value.replace(/\s/g, "");
+          if (raw.length < 13 || !luhnCheck(raw)) {
+            alert("Número de tarjeta inválido (Luhn)");
+            return;
+          }
+          if (!/^\d{2}\/\d{2}$/.test(expEl.value)) {
+            alert("Formato expiración MM/AA");
+            return;
+          }
+          if (cvvEl.value.length < 3) {
+            alert("CVV inválido");
+            return;
+          }
+          // set previews & token
+          paymentToken.value =
+            "sandbox_token_" + Math.random().toString(36).slice(2, 9);
+          gatewayModal.hide();
+          simulateGatewayResponse(true);
+        } else if (method === "pse") {
+          const acc = document.getElementById("pseCuenta");
+          if (!acc || acc.value.length < 6) {
+            alert("Cuenta inválida");
+            return;
+          }
+          gatewayModal.hide();
+          simulateGatewayResponse(true);
+        } else if (method === "nequi" || method === "daviplata") {
+          const phone = document.getElementById("mmPhone");
+          const pin = document.getElementById("mmPin");
+          if (!phone || phone.value.length < 9) {
+            alert("Teléfono inválido");
+            return;
+          }
+          if (!pin || pin.value.length < 4) {
+            alert("PIN inválido");
+            return;
+          }
+          gatewayModal.hide();
+          simulateGatewayResponse(true);
+        } else if (method === "efecty") {
+          const name = document.getElementById("efectyName");
+          const contact = document.getElementById("efectyContact");
+          if (!name || !contact) {
+            alert("Completa datos para generar código");
+            return;
+          }
+          gatewayModal.hide();
+          simulateGatewayResponse(true, {
+            efecty_code:
+              "EF-" + Math.random().toString(36).slice(2, 7).toUpperCase(),
+          });
+        } else if (method === "contra_entrega") {
+          simulateGatewayResponse(true);
+        }
+      }
+
+      /* Initialize */
+      renderMethodFields("");
+    </script>
+  </body>
+</html>
