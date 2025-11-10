@@ -1,6 +1,6 @@
 # Software/urls.py
 from django.urls import path
-from . import views, vendedor_views, vendedor_ofertas_views
+from . import views, vendedor_views, vendedor_ofertas_views, moderador_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
@@ -59,6 +59,19 @@ urlpatterns = [
     # ==================== URLs PARA OFERTAS VENDEDOR ====================
     path('ofertas/', vendedor_ofertas_views.Ofertas_V, name='Ofertas_V'),
     path('ofertas/eliminar/<int:oferta_id>/', vendedor_ofertas_views.eliminar_oferta, name='eliminar_oferta'),
+
+
+    # ==================== URLs MODERADOR ====================
+    path('moderador/gestion-usuarios/', moderador_views.gestion_usuarios, name='gestion_usuarios'),
+    path('moderador/dashboard/', moderador_views.moderador_dash, name='moderador_dash'),
+    path('moderador/gestion-negocios/', moderador_views.gestion_negocios, name='gestion_negocios'),
+    path('moderador/api/negocio/<int:negocio_id>/', moderador_views.detalle_negocio_json, name='detalle_negocio_json'),
+    path('moderador/api/negocio/<int:negocio_id>/resenas/', moderador_views.resenas_negocio_json, name='resenas_negocio_json'),
+    path('moderador/api/negocio/<int:negocio_id>/productos/', moderador_views.productos_negocio_json, name='productos_negocio_json'),
+    path('moderador/api/negocio/<int:negocio_id>/cambiar-estado/', moderador_views.cambiar_estado_negocio, name='cambiar_estado_negocio'),
+    path('moderador/api/negocio/<int:negocio_id>/eliminar/', moderador_views.eliminar_negocio, name='eliminar_negocio'),
+    path('moderador/api/usuario/<int:usuario_id>/', moderador_views.detalle_usuario_json, name='detalle_usuario_json'),
+    path('moderador/api/usuario/<int:usuario_id>/cambiar-estado/', moderador_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
 
 
     

@@ -1,0 +1,506 @@
+{% extends 'layout_M.html' %}
+
+{% block title %}Gestión de Negocios - Moderador{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0 text-gray-800">Gestión de Negocios</h1>
+            <p class="text-muted">Administra y modifica los negocios registrados en la plataforma</p>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Filtros y Búsqueda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="GET" action="{% url 'gestion_negocios' %}" id="filterForm">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="searchInput" class="form-label">Buscar Negocio</label>
+                                <input type="text" class="form-control" id="searchInput" name="search" 
+                                       placeholder="Nombre, NIT o propietario..." value="{{ search_query }}"
+                                       onkeyup="filterBusinesses()">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="statusFilter" class="form-label">Filtrar por Estado</label>
+                                <select class="form-select" id="statusFilter" name="status" onchange="filterBusinesses()">
+                                    <option value="">Todos los estados</option>
+                                    <option value="Activo" {% if status_filter == 'Activo' %}selected{% endif %}>Activo</option>
+                                    <option value="Rechazado" {% if status_filter == 'Rechazado' %}selected{% endif %}>Rechazado</option>
+                                    <option value="Suspendido" {% if status_filter == 'Suspendido' %}selected{% endif %}>Suspendido</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary w-100 me-2">
+                                    <i class="fas fa-filter me-2"></i>Filtrar
+                                </button>
+                                <a href="{% url 'gestion_negocios' %}" class="btn btn-secondary">
+                                    <i class="fas fa-sync-alt"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Negocios -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Lista de Negocios</h6>
+                    <span class="badge bg-primary" id="businessCount">Total: {{ negocios|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if negocios %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="businessTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Imagen</th>
+                                    <th>Nombre del Negocio</th>
+                                    <th>Propietario</th>
+                                    <th>Categoría</th>
+                                    <th>Estado</th>
+                                    <th>Productos</th>
+                                    <th>Reseñas</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="businessTableBody">
+                                {% for negocio in negocios %}
+                                <tr class="business-row">
+                                    <td>{{ negocio.id }}</td>
+                                    <td>
+                                        <img src="{{ negocio.imagen }}" alt="{{ negocio.nombre }}" 
+                                             class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;"
+                                             onerror="this.src='/static/images/default-business.jpg'">
+                                    </td>
+                                    <td class="business-name">
+                                        <strong>{{ negocio.nombre }}</strong><br>
+                                        <small class="text-muted business-nit">NIT: {{ negocio.nit }}</small>
+                                    </td>
+                                    <td class="business-owner">
+                                        {{ negocio.propietario }}<br>
+                                        <small class="text-muted">{{ negocio.email_propietario }}</small>
+                                    </td>
+                                    <td class="business-category">{{ negocio.categoria }}</td>
+                                    <td class="business-status">
+                                        <span class="badge {% if negocio.estado == 'Activo' %}bg-success{% elif negocio.estado == 'Rechazado' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                            {{ negocio.estado }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ negocio.total_productos }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if negocio.total_reseñas > 0 %}
+                                        <div>
+                                            <small class="text-warning">
+                                                <i class="fas fa-star"></i> {{ negocio.promedio_estrellas }}
+                                            </small><br>
+                                            <small class="text-muted">({{ negocio.total_reseñas }})</small>
+                                        </div>
+                                        {% else %}
+                                        <span class="text-muted">Sin reseñas</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ negocio.fecha_creacion|date:"d/m/Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <button class="btn btn-info" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#viewBusinessModal{{ negocio.id }}"
+                                                    title="Ver detalles">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="btn btn-warning" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editStatusModal{{ negocio.id }}"
+                                                    title="Cambiar estado">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#deleteBusinessModal{{ negocio.id }}"
+                                                    title="Eliminar negocio">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No se encontraron negocios</h5>
+                        <p class="text-muted">Intenta con otros términos de búsqueda o filtros.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modales para cada negocio -->
+{% for negocio in negocios %}
+<!-- Modal para Ver Negocio {{ negocio.id }} -->
+<div class="modal fade" id="viewBusinessModal{{ negocio.id }}" tabindex="-1" aria-labelledby="viewBusinessModalLabel{{ negocio.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="viewBusinessModalLabel{{ negocio.id }}">Detalles del Negocio: {{ negocio.nombre }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Información Principal -->
+                    <div class="col-md-8">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Nombre:</strong>
+                                <p class="mb-1">{{ negocio.nombre }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>NIT:</strong>
+                                <p class="mb-1">{{ negocio.nit }}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Dirección:</strong>
+                                <p class="mb-1">{{ negocio.direccion }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Categoría:</strong>
+                                <p class="mb-1">{{ negocio.categoria }}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Estado:</strong>
+                                <span class="badge {% if negocio.estado == 'Activo' %}bg-success{% elif negocio.estado == 'Rechazado' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                    {{ negocio.estado }}
+                                </span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Contacto:</strong>
+                                <p class="mb-1">{{ negocio.telefono }}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Propietario:</strong>
+                                <p class="mb-1">{{ negocio.propietario }} ({{ negocio.email_propietario }})</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Descripción:</strong>
+                                <p class="mb-1">{{ negocio.descripcion|default:"Sin descripción" }}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Fecha de Registro:</strong>
+                                <p class="mb-1">{{ negocio.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <strong>Total Productos:</strong>
+                                <p class="mb-1">{{ negocio.total_productos }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Total Reseñas:</strong>
+                                <p class="mb-1">{{ negocio.total_reseñas }}</p>
+                            </div>
+                        </div>
+                        {% if negocio.promedio_estrellas > 0 %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong>Promedio de Estrellas:</strong>
+                                <p class="mb-1">
+                                    <span class="text-warning">
+                                        <i class="fas fa-star"></i> {{ negocio.promedio_estrellas }}/5
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Imagen del Negocio -->
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <strong>Imagen del Negocio</strong>
+                            <div class="mt-2">
+                                <img src="{{ negocio.imagen }}" 
+                                     alt="Imagen de {{ negocio.nombre }}" 
+                                     class="img-fluid rounded" 
+                                     style="max-height: 200px; width: auto;"
+                                     onerror="this.src='/static/images/default-business.jpg'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de Productos -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2">
+                            <i class="fas fa-boxes me-2"></i>Productos del Negocio
+                            <span class="badge bg-primary ms-2">{{ negocio.total_productos }}</span>
+                        </h6>
+                        {% if negocio.total_productos > 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este negocio tiene {{ negocio.total_productos }} producto(s) registrado(s) en el sistema.
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Este negocio no tiene productos registrados.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Información de Reseñas -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h6 class="border-bottom pb-2">
+                            <i class="fas fa-star me-2"></i>Valoraciones del Negocio
+                            <span class="badge bg-primary ms-2">{{ negocio.total_reseñas }}</span>
+                        </h6>
+                        {% if negocio.total_reseñas > 0 %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este negocio tiene {{ negocio.total_reseñas }} reseña(s) con un promedio de 
+                            <span class="text-warning">
+                                <i class="fas fa-star"></i> {{ negocio.promedio_estrellas }}/5
+                            </span>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Este negocio no tiene reseñas registradas.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar Estado {{ negocio.id }} -->
+<div class="modal fade" id="editStatusModal{{ negocio.id }}" tabindex="-1" aria-labelledby="editStatusModalLabel{{ negocio.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'gestion_negocios' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="editStatusModalLabel{{ negocio.id }}">Cambiar Estado: {{ negocio.nombre }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="negocio_id" value="{{ negocio.id }}">
+                    <input type="hidden" name="accion" value="cambiar_estado">
+                    
+                    <div class="mb-3">
+                        <label for="statusSelect{{ negocio.id }}" class="form-label">Seleccionar Estado</label>
+                        <select class="form-select" id="statusSelect{{ negocio.id }}" name="nuevo_estado" required>
+                            <option value="activo" {% if negocio.estado_db == 'activo' %}selected{% endif %}>Activo</option>
+                            <option value="inactivo" {% if negocio.estado_db == 'inactivo' %}selected{% endif %}>Rechazado</option>
+                            <option value="suspendido" {% if negocio.estado_db == 'suspendido' %}selected{% endif %}>Suspendido</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <small>
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Activo:</strong> El negocio estará visible y operativo.<br>
+                            <strong>Rechazado:</strong> El negocio será rechazado y no visible.<br>
+                            <strong>Suspendido:</strong> El negocio será suspendido temporalmente.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Eliminar Negocio {{ negocio.id }} -->
+<div class="modal fade" id="deleteBusinessModal{{ negocio.id }}" tabindex="-1" aria-labelledby="deleteBusinessModalLabel{{ negocio.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'gestion_negocios' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteBusinessModalLabel{{ negocio.id }}">Eliminar Negocio: {{ negocio.nombre }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="negocio_id" value="{{ negocio.id }}">
+                    <input type="hidden" name="accion" value="eliminar">
+                    
+                    <div class="text-center">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5>¿Está seguro de eliminar este negocio?</h5>
+                        <p class="mb-2"><strong>"{{ negocio.nombre }}"</strong></p>
+                        <p class="mb-0 text-danger">
+                            <small>
+                                <i class="fas fa-exclamation-circle"></i>
+                                Esta acción eliminará permanentemente el negocio y todos sus productos asociados. 
+                                Esta acción no se puede deshacer.
+                            </small>
+                        </p>
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <small class="text-muted">
+                                <strong>Detalles del negocio a eliminar:</strong><br>
+                                • NIT: {{ negocio.nit }}<br>
+                                • Propietario: {{ negocio.propietario }}<br>
+                                • Productos: {{ negocio.total_productos }}<br>
+                                • Reseñas: {{ negocio.total_reseñas }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Permanentemente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Función para filtrar negocios en tiempo real
+    function filterBusinesses() {
+        const searchText = document.getElementById('searchInput').value.toLowerCase();
+        const statusFilter = document.getElementById('statusFilter').value;
+        
+        const rows = document.querySelectorAll('#businessTableBody .business-row');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const name = row.querySelector('.business-name').textContent.toLowerCase();
+            const nit = row.querySelector('.business-nit').textContent.toLowerCase();
+            const owner = row.querySelector('.business-owner').textContent.toLowerCase();
+            const status = row.querySelector('.business-status').textContent;
+            
+            // Verificar si coincide con la búsqueda
+            const matchesSearch = searchText === '' || 
+                                 name.includes(searchText) || 
+                                 nit.includes(searchText) || 
+                                 owner.includes(searchText);
+            
+            // Verificar si coincide con el filtro de estado
+            const matchesStatus = statusFilter === '' || status.includes(statusFilter);
+            
+            // Mostrar u ocultar la fila según los filtros
+            if (matchesSearch && matchesStatus) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Actualizar el contador
+        const counter = document.getElementById('businessCount');
+        if (counter) {
+            counter.textContent = `Mostrando: ${visibleCount} de {{ negocios|length }}`;
+        }
+        
+        // Mostrar mensaje si no hay resultados
+        const tableBody = document.getElementById('businessTableBody');
+        if (visibleCount === 0) {
+            if (!document.getElementById('noResultsMessage')) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.id = 'noResultsMessage';
+                noResultsRow.innerHTML = `
+                    <td colspan="10" class="text-center py-4">
+                        <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                        <h5 class="text-muted">No se encontraron negocios</h5>
+                        <p class="text-muted">Intenta con otros términos de búsqueda o filtros.</p>
+                    </td>
+                `;
+                tableBody.appendChild(noResultsRow);
+            }
+        } else {
+            const noResultsMessage = document.getElementById('noResultsMessage');
+            if (noResultsMessage) {
+                noResultsMessage.remove();
+            }
+        }
+    }
+
+    // Inicializar filtros cuando la página cargue
+    document.addEventListener('DOMContentLoaded', function() {
+        // Aplicar filtros automáticamente si hay valores en los campos
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        
+        if (searchInput.value || statusFilter.value) {
+            filterBusinesses();
+        }
+        
+        // Agregar event listeners para búsqueda en tiempo real
+        if (searchInput) {
+            searchInput.addEventListener('input', filterBusinesses);
+        }
+        if (statusFilter) {
+            statusFilter.addEventListener('change', filterBusinesses);
+        }
+        
+        // También filtrar al hacer clic en el botón de filtrar (por si acaso)
+        const filterButton = document.querySelector('button[type="submit"]');
+        if (filterButton) {
+            filterButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                filterBusinesses();
+            });
+        }
+    });
+</script>
+{% endblock %}

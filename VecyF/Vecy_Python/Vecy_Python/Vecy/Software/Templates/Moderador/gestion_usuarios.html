@@ -1,0 +1,458 @@
+{% extends 'Layout_M.html' %}
+{% load static %}
+
+{% block title %}Gestión de Usuarios - Moderador{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Mostrar mensajes -->
+    {% if messages %}
+    <div class="row mb-4">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas de usuarios -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Estadísticas de Usuarios
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stat-card text-center p-3 border rounded">
+                                <h3 class="text-primary">{{ total_usuarios }}</h3>
+                                <p class="text-muted mb-0">Total Usuarios</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stat-card text-center p-3 border rounded">
+                                <h3 class="text-success">{{ usuarios_activos }}</h3>
+                                <p class="text-muted mb-0">Usuarios Activos</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stat-card text-center p-3 border rounded">
+                                <h3 class="text-warning">{{ total_clientes }}</h3>
+                                <p class="text-muted mb-0">Clientes</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="stat-card text-center p-3 border rounded">
+                                <h3 class="text-info">{{ total_vendedores }}</h3>
+                                <p class="text-muted mb-0">Vendedores</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de usuarios -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-users me-2"></i>Lista de Usuarios Registrados
+                        </h5>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="searchInput" class="form-control form-control-sm" 
+                                   placeholder="Buscar por nombre, email o documento..." style="width: 300px;">
+                            <select id="filterRol" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="">Todos los roles</option>
+                                <option value="CLIENTE">Clientes</option>
+                                <option value="VENDEDOR">Vendedores</option>
+                            </select>
+                            <select id="filterEstado" class="form-select form-select-sm" style="width: 150px;">
+                                <option value="">Todos los estados</option>
+                                <option value="activo">Activos</option>
+                                <option value="inactivo">Inactivos</option>
+                            </select>
+                            <button type="button" id="btnFiltrar" class="btn btn-primary btn-sm">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <button type="button" id="btnLimpiar" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-refresh"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Información de filtros aplicados -->
+                    <div id="filtrosInfo" class="alert alert-info mb-3 d-none">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Filtros aplicados:</strong>
+                        <span id="textoFiltros"></span>
+                        <span id="contadorResultados" class="ms-2"></span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Estado</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Opciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaUsuarios">
+                                {% for usuario in usuarios %}
+                                <tr class="fila-usuario" 
+                                    data-nombre="{{ usuario.nombre|lower }}" 
+                                    data-email="{{ usuario.email|lower }}"
+                                    data-documento="{{ usuario.documento|lower }}"
+                                    data-rol="{{ usuario.rol }}"
+                                    data-estado="{{ usuario.estado }}">
+                                    <td>{{ usuario.id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if usuario.img_user %}
+                                            <img src="{{ usuario.img_user.url }}" alt="{{ usuario.nombre }}" class="rounded-circle me-2" width="32" height="32">
+                                            {% else %}
+                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                                                <i class="fas fa-user text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                            <span>{{ usuario.nombre }}</span>
+                                        </div>
+                                    </td>
+                                    <td>{{ usuario.email }}</td>
+                                    <td>
+                                        <span class="badge {% if usuario.rol == 'CLIENTE' %}bg-info{% else %}bg-warning{% endif %}">
+                                            {{ usuario.rol }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if usuario.estado == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ usuario.estado|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ usuario.fecha_registro|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- Botón Ver Perfil -->
+                                            <button type="button" class="btn btn-outline-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalPerfil{{ usuario.id }}">
+                                                <i class="fas fa-eye"></i> Ver
+                                            </button>
+                                            
+                                            <!-- Botón Cambiar Estado -->
+                                            <form method="POST" action="{% url 'gestion_usuarios' %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="usuario_id" value="{{ usuario.id }}">
+                                                <input type="hidden" name="accion" value="cambiar_estado">
+                                                <button type="submit" class="btn {% if usuario.estado == 'activo' %}btn-outline-warning{% else %}btn-outline-success{% endif %}">
+                                                    {% if usuario.estado == 'activo' %}
+                                                    <i class="fas fa-ban"></i> Desactivar
+                                                    {% else %}
+                                                    <i class="fas fa-check"></i> Activar
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                            
+                                            <!-- Botón Eliminar -->
+                                            <button type="button" class="btn btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalEliminar{{ usuario.id }}">
+                                                <i class="fas fa-trash"></i> Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Modal Ver Perfil -->
+                                <div class="modal fade" id="modalPerfil{{ usuario.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-primary text-white">
+                                                <h5 class="modal-title">Perfil de {{ usuario.nombre }}</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <div class="row">
+                                                    <div class="col-md-4 text-center">
+                                                        {% if usuario.img_user %}
+                                                        <img src="{{ usuario.img_user.url }}" alt="{{ usuario.nombre }}" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">
+                                                        {% else %}
+                                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px;">
+                                                            <i class="fas fa-user text-white fa-4x"></i>
+                                                        </div>
+                                                        {% endif %}
+                                                        <h4>{{ usuario.nombre }}</h4>
+                                                        <p class="text-muted">{{ usuario.email }}</p>
+                                                        <span class="badge {% if usuario.rol == 'CLIENTE' %}bg-info{% else %}bg-warning{% endif %}">
+                                                            {{ usuario.rol }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Información Personal</label>
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Documento</small>
+                                                                    <p>{{ usuario.tipo_documento }}: {{ usuario.documento }}</p>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Fecha Nacimiento</small>
+                                                                    <p>{{ usuario.fecha_nacimiento|date:"d/m/Y" }}</p>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Estado</small>
+                                                                    <p>
+                                                                        <span class="badge {% if usuario.estado == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
+                                                                            {{ usuario.estado|title }}
+                                                                        </span>
+                                                                    </p>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <small class="text-muted">Fecha Registro</small>
+                                                                    <p>{{ usuario.fecha_registro|date:"d/m/Y H:i" }}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% if usuario.negocios %}
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Negocios</label>
+                                                            {% for negocio in usuario.negocios %}
+                                                            <div class="border rounded p-2 mb-2">
+                                                                <strong>{{ negocio.nom_neg }}</strong><br>
+                                                                <small class="text-muted">ID: {{ negocio.pkid_neg }}</small>
+                                                            </div>
+                                                            {% endfor %}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Modal Confirmación Eliminar -->
+                                <div class="modal fade" id="modalEliminar{{ usuario.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title">Confirmar Eliminación</h5>
+                                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>¿Está seguro que desea eliminar al usuario <strong>{{ usuario.nombre }}</strong>?</p>
+                                                <p class="text-danger"><small>Esta acción no se puede deshacer. Se eliminarán todos los datos asociados al usuario.</small></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                <form method="POST" action="{% url 'gestion_usuarios' %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="usuario_id" value="{{ usuario.id }}">
+                                                    <input type="hidden" name="accion" value="eliminar">
+                                                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <tr id="filaVacia">
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="fas fa-users fa-2x mb-2"></i>
+                                        <p>No hay usuarios registrados</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Elementos del DOM
+        const searchInput = document.getElementById('searchInput');
+        const filterRol = document.getElementById('filterRol');
+        const filterEstado = document.getElementById('filterEstado');
+        const btnFiltrar = document.getElementById('btnFiltrar');
+        const btnLimpiar = document.getElementById('btnLimpiar');
+        const tablaUsuarios = document.getElementById('tablaUsuarios');
+        const filasUsuarios = document.querySelectorAll('.fila-usuario');
+        const filtrosInfo = document.getElementById('filtrosInfo');
+        const textoFiltros = document.getElementById('textoFiltros');
+        const contadorResultados = document.getElementById('contadorResultados');
+        const filaVacia = document.getElementById('filaVacia');
+
+        // Función para aplicar filtros
+        function aplicarFiltros() {
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            const rolFilter = filterRol.value;
+            const estadoFilter = filterEstado.value;
+
+            let resultados = 0;
+            let filtrosAplicados = [];
+
+            // Ocultar fila vacía si existe
+            if (filaVacia) {
+                filaVacia.style.display = 'none';
+            }
+
+            // Aplicar filtros a cada fila
+            filasUsuarios.forEach(fila => {
+                const nombre = fila.getAttribute('data-nombre');
+                const email = fila.getAttribute('data-email');
+                const documento = fila.getAttribute('data-documento');
+                const rol = fila.getAttribute('data-rol');
+                const estado = fila.getAttribute('data-estado');
+
+                let coincideBusqueda = true;
+                let coincideRol = true;
+                let coincideEstado = true;
+
+                // Filtro de búsqueda
+                if (searchTerm) {
+                    coincideBusqueda = (
+                        nombre.includes(searchTerm) ||
+                        email.includes(searchTerm) ||
+                        documento.includes(searchTerm)
+                    );
+                    if (searchTerm && !filtrosAplicados.includes(`Búsqueda: "${searchTerm}"`)) {
+                        filtrosAplicados.push(`Búsqueda: "${searchTerm}"`);
+                    }
+                }
+
+                // Filtro de rol
+                if (rolFilter) {
+                    coincideRol = (rol === rolFilter);
+                    if (rolFilter && !filtrosAplicados.includes(`Rol: ${rolFilter}`)) {
+                        filtrosAplicados.push(`Rol: ${rolFilter}`);
+                    }
+                }
+
+                // Filtro de estado
+                if (estadoFilter) {
+                    coincideEstado = (estado === estadoFilter);
+                    if (estadoFilter && !filtrosAplicados.includes(`Estado: ${estadoFilter}`)) {
+                        filtrosAplicados.push(`Estado: ${estadoFilter}`);
+                    }
+                }
+
+                // Mostrar u ocultar fila según los filtros
+                if (coincideBusqueda && coincideRol && coincideEstado) {
+                    fila.style.display = '';
+                    resultados++;
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+
+            // Mostrar información de filtros
+            if (filtrosAplicados.length > 0) {
+                textoFiltros.textContent = filtrosAplicados.join(', ');
+                contadorResultados.textContent = `(${resultados} resultado${resultados !== 1 ? 's' : ''})`;
+                filtrosInfo.classList.remove('d-none');
+            } else {
+                filtrosInfo.classList.add('d-none');
+            }
+
+            // Mostrar mensaje si no hay resultados
+            if (resultados === 0 && filasUsuarios.length > 0) {
+                if (!filaVacia) {
+                    const nuevaFilaVacia = document.createElement('tr');
+                    nuevaFilaVacia.id = 'filaVacia';
+                    nuevaFilaVacia.innerHTML = `
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-users fa-2x mb-2"></i>
+                            <p>No se encontraron usuarios con los filtros aplicados</p>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="limpiarFiltros()">
+                                <i class="fas fa-refresh"></i> Limpiar filtros
+                            </button>
+                        </td>
+                    `;
+                    tablaUsuarios.appendChild(nuevaFilaVacia);
+                }
+            } else if (filaVacia) {
+                filaVacia.remove();
+            }
+        }
+
+        // Función para limpiar filtros
+        function limpiarFiltros() {
+            searchInput.value = '';
+            filterRol.value = '';
+            filterEstado.value = '';
+            aplicarFiltros();
+        }
+
+        // Event Listeners
+        btnFiltrar.addEventListener('click', aplicarFiltros);
+        btnLimpiar.addEventListener('click', limpiarFiltros);
+
+        // Filtrar al escribir en la búsqueda (con delay)
+        let timeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(aplicarFiltros, 300);
+        });
+
+        // Filtrar al cambiar selects
+        filterRol.addEventListener('change', aplicarFiltros);
+        filterEstado.addEventListener('change', aplicarFiltros);
+
+        // Función para mostrar confirmación antes de eliminar
+        const botonesEliminar = document.querySelectorAll('[data-bs-target^="#modalEliminar"]');
+        botonesEliminar.forEach(boton => {
+            boton.addEventListener('click', function() {
+                const modalId = this.getAttribute('data-bs-target');
+                const modal = new bootstrap.Modal(document.querySelector(modalId));
+                modal.show();
+            });
+        });
+
+        // Función para mostrar perfil
+        const botonesPerfil = document.querySelectorAll('[data-bs-target^="#modalPerfil"]');
+        botonesPerfil.forEach(boton => {
+            boton.addEventListener('click', function() {
+                const modalId = this.getAttribute('data-bs-target');
+                const modal = new bootstrap.Modal(document.querySelector(modalId));
+                modal.show();
+            });
+        });
+
+        // Aplicar filtros inicialmente si hay parámetros en la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('search') || urlParams.has('rol') || urlParams.has('estado')) {
+            searchInput.value = urlParams.get('search') || '';
+            filterRol.value = urlParams.get('rol') || '';
+            filterEstado.value = urlParams.get('estado') || '';
+            aplicarFiltros();
+        }
+    });
+</script>
+{% endblock %}
