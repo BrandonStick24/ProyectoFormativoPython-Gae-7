@@ -248,7 +248,7 @@
     </div>
 </div>
 
-<!-- Modal Editar Producto -->
+<!-- Modal Editar Producto -->>
 <div class="modal fade" id="modalEditarProducto" tabindex="-1"
     aria-labelledby="modalEditarProductoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -257,16 +257,15 @@
                 <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formEditarProducto" method="post" action enctype="multipart/form-data">
+            <form id="formEditarProducto" method="post" action="{% url 'editar_producto_P' 0 %}" enctype="multipart/form-data">
                 {% csrf_token %}
-                <div class="modal-body">
-                    <div id="contenidoEditarProducto">
-                        <div class="text-center py-4">
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <p class="mt-2">Cargando información del producto...</p>
+                <div class="modal-body" id="contenidoEditarProducto">
+                    <!-- Los datos se cargarán aquí dinámicamente -->
+                    <div class="text-center py-4">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Cargando...</span>
                         </div>
+                        <p class="mt-2">Cargando información del producto...</p>
                     </div>
                 </div>
                 <div class="modal-footer">

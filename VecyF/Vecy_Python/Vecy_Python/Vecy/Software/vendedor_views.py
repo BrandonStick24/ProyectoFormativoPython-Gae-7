@@ -1,4 +1,3 @@
-# Software/vendedor_views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -203,7 +202,7 @@ def Crud_V(request):
         # Obtener productos del negocio
         productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
         
-        # Obtener todas las categorías existentes
+        # Obtener todas las categorías existentes - IMPORTANTE
         categorias = CategoriaProductos.objects.all().order_by('desc_cp')
         
         # Obtener productos en oferta
@@ -223,7 +222,7 @@ def Crud_V(request):
             'perfil': datos['perfil'],
             'negocio_activo': negocio,
             'productos': productos,
-            'categorias': categorias,  # IMPORTANTE: pasar categorías al template
+            'categorias': categorias,  # ¡IMPORTANTE! Pasar categorías al template
             'productos_en_oferta': productos_en_oferta_ids,
         }
         return render(request, 'Vendedor/Crud_V.html', contexto)
@@ -231,8 +230,6 @@ def Crud_V(request):
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
         return redirect('inicio')
-
-
 
 # ==================== VISTAS VENDEDOR - CHATS ====================
 @login_required(login_url='login')
@@ -455,7 +452,7 @@ def editar_producto_P(request, producto_id):
 # ==================== VISTAS VENDEDOR - OBTENER DATOS PRODUCTO ====================
 @login_required(login_url='login')
 def obtener_datos_producto_P(request, producto_id):
-    """Vista para obtener datos del producto en formato JSON (para el modal de editar)"""
+    """Vista para obtener datos del producto - SIMPLIFICADA"""
     try:
         # Verificar permisos
         auth_user = AuthUser.objects.get(username=request.user.username)
@@ -476,17 +473,10 @@ def obtener_datos_producto_P(request, producto_id):
             fknegocioasociado_prod=negocio
         )
         
-        # Convertir imagen a string para JSON
-        img_prod_actual = ""
-        if producto.img_prod:
-            # Si es un ImageFieldFile, obtener el nombre del archivo
-            if hasattr(producto.img_prod, 'name'):
-                img_prod_actual = producto.img_prod.name
-            else:
-                # Si ya es un string, usarlo directamente
-                img_prod_actual = str(producto.img_prod)
+        # Obtener todas las categorías para el select
+        categorias = CategoriaProductos.objects.all()
         
-        # Preparar datos para JSON
+        # Preparar datos para JSON - SIMPLIFICADO
         datos_producto = {
             'pkid_prod': producto.pkid_prod,
             'nom_prod': producto.nom_prod,
@@ -494,9 +484,9 @@ def obtener_datos_producto_P(request, producto_id):
             'desc_prod': producto.desc_prod or '',
             'stock_prod': producto.stock_prod or 0,
             'estado_prod': producto.estado_prod or 'disponible',
-            'categoria_prod': producto.fkcategoria_prod.pkid_cp,  # ID para el backend
-            'categoria_nombre': producto.fkcategoria_prod.desc_cp,  # NOMBRE para mostrar en el input
-            'img_prod_actual': img_prod_actual
+            'categoria_prod': producto.fkcategoria_prod.pkid_cp,
+            'categoria_nombre': producto.fkcategoria_prod.desc_cp,
+            'img_prod_actual': producto.img_prod.name if producto.img_prod else ""
         }
         
         return JsonResponse(datos_producto)
@@ -507,7 +497,7 @@ def obtener_datos_producto_P(request, producto_id):
         return JsonResponse({'error': 'Negocio no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+    
 # ==================== VISTAS VENDEDOR - ELIMINAR PRODUCTO ====================
 @login_required(login_url='login')
 def eliminar_producto_P(request, producto_id):
@@ -549,6 +539,49 @@ def eliminar_producto_P(request, producto_id):
     
     return redirect('Crud_V')
 
+# ==================== Cambiar stock del producto ====================
+@login_required(login_url='login')
+def cambiar_estado_producto(request, producto_id):
+    """Vista para cambiar estado del producto"""
+    if request.method == 'POST':
+        try:
+            nuevo_estado = request.POST.get('nuevo_estado')
+            
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('inicio')
+            
+            negocio = datos['negocio_activo']
+            
+            with connection.cursor() as cursor:
+                # Verificar que el producto pertenece al negocio
+                cursor.execute("""
+                    SELECT nom_prod FROM productos 
+                    WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
+                """, [producto_id, negocio.pkid_neg])
+                
+                resultado = cursor.fetchone()
+                if not resultado:
+                    messages.error(request, "Producto no encontrado")
+                    return redirect('Crud_V')
+                
+                nombre_producto = resultado[0]
+                
+                # Actualizar estado
+                cursor.execute("""
+                    UPDATE productos 
+                    SET estado_prod = %s
+                    WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
+                """, [nuevo_estado, producto_id, negocio.pkid_neg])
+                
+                messages.success(request, f"✅ Estado de '{nombre_producto}' actualizado a: {nuevo_estado}")
+                
+        except Exception as e:
+            print(f"ERROR al cambiar estado: {str(e)}")
+            messages.error(request, f"Error al cambiar el estado del producto: {str(e)}")
+    
+    return redirect('Crud_V')
 # ==================== VISTAS VENDEDOR - NEGOCIOS ====================
 @login_required(login_url='login')
 def Negocios_V(request):
@@ -878,10 +911,10 @@ def eliminar_negocio(request):
     
     return redirect('Negocios_V')
 
-# ==================== GESTIÓN DE VENTAS Y PEDIDOS ====================
+# ==================== GESTIÓN DE VENTAS SIMPLIFICADA ====================
 @login_required(login_url='login')
 def gestionar_ventas(request):
-    """Vista sencilla para gestionar pedidos/ventas del vendedor"""
+    """Vista simplificada para ver ventas - SIN cambiar estados automáticos"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -890,7 +923,7 @@ def gestionar_ventas(request):
         
         negocio = datos['negocio_activo']
         
-        # Consulta simple para obtener los pedidos del negocio
+        # Consulta con información de pagos
         with connection.cursor() as cursor:
             sql = """
             SELECT 
@@ -900,13 +933,18 @@ def gestionar_ventas(request):
                 p.fecha_pedido,
                 u.first_name,
                 u.username,
-                COUNT(d.pkid_detalle) as cantidad_productos
+                COUNT(d.pkid_detalle) as cantidad_productos,
+                pg.metodo_pago,
+                pg.estado_pago,
+                up.doc_user
             FROM pedidos p
             JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
             JOIN auth_user u ON up.fkuser_id = u.id
             LEFT JOIN detalles_pedido d ON p.pkid_pedido = d.fkpedido_detalle
+            LEFT JOIN pagos_negocios pg ON p.pkid_pedido = pg.fkpedido
             WHERE p.fknegocio_pedido = %s
-            GROUP BY p.pkid_pedido, p.estado_pedido, p.total_pedido, p.fecha_pedido, u.first_name, u.username
+            GROUP BY p.pkid_pedido, p.estado_pedido, p.total_pedido, p.fecha_pedido, 
+                     u.first_name, u.username, pg.metodo_pago, pg.estado_pago, up.doc_user
             ORDER BY p.fecha_pedido DESC
             """
             cursor.execute(sql, [negocio.pkid_neg])
@@ -921,7 +959,10 @@ def gestionar_ventas(request):
                 'total': row[2],
                 'fecha': row[3].strftime('%d/%m/%Y %H:%M'),
                 'cliente': row[4] or row[5] or f"Usuario {row[0]}",
-                'cantidad_productos': row[6]
+                'documento': row[9],
+                'cantidad_productos': row[6],
+                'metodo_pago': row[7] or 'No especificado',
+                'estado_pago': row[8] or 'pendiente'
             })
         
         contexto = {
@@ -939,8 +980,8 @@ def gestionar_ventas(request):
         return redirect('inicio')
 
 @login_required(login_url='login')
-def detalle_pedido(request, pedido_id):
-    """Vista para ver detalles de un pedido específico"""
+def ver_recibo_pedido(request, pedido_id):
+    """Vista para ver el recibo completo de un pedido"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -949,15 +990,27 @@ def detalle_pedido(request, pedido_id):
         
         negocio = datos['negocio_activo']
         
-        # Verificar que el pedido pertenece al negocio del vendedor
+        # Obtener información completa del pedido con pago
         with connection.cursor() as cursor:
-            # Obtener información básica del pedido
+            # Información del pedido y pago
             cursor.execute("""
-                SELECT p.estado_pedido, p.total_pedido, p.fecha_pedido,
-                       u.first_name, u.username
+                SELECT 
+                    p.pkid_pedido,
+                    p.estado_pedido,
+                    p.total_pedido,
+                    p.fecha_pedido,
+                    u.first_name,
+                    u.username,
+                    u.email,
+                    up.doc_user,
+                    pg.metodo_pago,
+                    pg.estado_pago,
+                    pg.monto,
+                    pg.fecha_pago
                 FROM pedidos p
                 JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
                 JOIN auth_user u ON up.fkuser_id = u.id
+                LEFT JOIN pagos_negocios pg ON p.pkid_pedido = pg.fkpedido
                 WHERE p.pkid_pedido = %s AND p.fknegocio_pedido = %s
             """, [pedido_id, negocio.pkid_neg])
             
@@ -969,10 +1022,15 @@ def detalle_pedido(request, pedido_id):
             
             # Obtener detalles del pedido (productos)
             cursor.execute("""
-                SELECT d.cantidad_detalle, d.precio_unitario,
-                       pr.nom_prod, pr.desc_prod
+                SELECT 
+                    d.cantidad_detalle,
+                    d.precio_unitario,
+                    pr.nom_prod,
+                    pr.desc_prod,
+                    c.desc_cp as categoria
                 FROM detalles_pedido d
                 JOIN productos pr ON d.fkproducto_detalle = pr.pkid_prod
+                JOIN categoria_productos c ON pr.fkcategoria_prod = c.pkid_cp
                 WHERE d.fkpedido_detalle = %s
             """, [pedido_id])
             
@@ -980,22 +1038,30 @@ def detalle_pedido(request, pedido_id):
         
         # Procesar información del pedido
         pedido = {
-            'id': pedido_id,
-            'estado': pedido_info[0],
-            'total': pedido_info[1],
-            'fecha': pedido_info[2].strftime('%d/%m/%Y %H:%M'),
-            'cliente': pedido_info[3] or pedido_info[4] or f"Usuario {pedido_id}",
+            'id': pedido_info[0],
+            'estado': pedido_info[1],
+            'total': pedido_info[2],
+            'fecha': pedido_info[3].strftime('%d/%m/%Y %H:%M'),
+            'cliente_nombre': pedido_info[4] or pedido_info[5] or f"Usuario {pedido_info[0]}",
+            'cliente_email': pedido_info[6],
+            'cliente_documento': pedido_info[7],
+            'metodo_pago': pedido_info[8] or 'No especificado',
+            'estado_pago': pedido_info[9] or 'pendiente',
+            'monto_pago': pedido_info[10] or pedido_info[2],
+            'fecha_pago': pedido_info[11].strftime('%d/%m/%Y %H:%M') if pedido_info[11] else 'No procesado'
         }
         
         # Procesar detalles
         productos = []
         for detalle in detalles:
+            subtotal = detalle[0] * detalle[1]
             productos.append({
                 'cantidad': detalle[0],
                 'precio_unitario': detalle[1],
                 'nombre': detalle[2],
                 'descripcion': detalle[3],
-                'subtotal': detalle[0] * detalle[1]
+                'categoria': detalle[4],
+                'subtotal': subtotal
             })
         
         contexto = {
@@ -1004,21 +1070,23 @@ def detalle_pedido(request, pedido_id):
             'negocio_activo': negocio,
             'pedido': pedido,
             'productos': productos,
+            'negocio_info': negocio,
         }
         
-        return render(request, 'Vendedor/detalle_pedido.html', contexto)
+        return render(request, 'Vendedor/recibo_pedido.html', contexto)
         
     except Exception as e:
-        print(f"ERROR al cargar detalle: {str(e)}")
-        messages.error(request, "Error al cargar el detalle del pedido")
+        print(f"ERROR al cargar recibo: {str(e)}")
+        messages.error(request, "Error al cargar el recibo del pedido")
         return redirect('gestionar_ventas')
 
 @login_required(login_url='login')
 def cambiar_estado_pedido(request, pedido_id):
-    """Vista para cambiar estado del pedido con manejo automático de stock"""
+    """Vista para cambiar estado del pedido con manejo de cancelación"""
     if request.method == 'POST':
         try:
             nuevo_estado = request.POST.get('nuevo_estado')
+            motivo_cancelacion = request.POST.get('motivo_cancelacion', 'Sin motivo especificado')
             
             datos = obtener_datos_vendedor(request)
             if not datos or not datos.get('negocio_activo'):
@@ -1048,39 +1116,23 @@ def cambiar_estado_pedido(request, pedido_id):
                     WHERE pkid_pedido = %s AND fknegocio_pedido = %s
                 """, [nuevo_estado, datetime.now(), pedido_id, negocio.pkid_neg])
                 
-                # 3. MANEJO AUTOMÁTICO DE STOCK - DESCONTAR cuando se CONFIRMA
-                if nuevo_estado == 'confirmado' and estado_actual != 'confirmado':
-                    # Descontar stock cuando se confirma el pedido
-                    cursor.execute("""
-                        UPDATE productos p
-                        JOIN detalles_pedido dp ON p.pkid_prod = dp.fkproducto_detalle
-                        SET p.stock_prod = p.stock_prod - dp.cantidad_detalle
-                        WHERE dp.fkpedido_detalle = %s 
-                        AND p.fknegocioasociado_prod = %s
-                    """, [pedido_id, negocio.pkid_neg])
-                    
-                    # Actualizar estado a "agotado" si stock llega a 0
-                    cursor.execute("""
-                        UPDATE productos 
-                        SET estado_prod = 'agotado' 
-                        WHERE fknegocioasociado_prod = %s 
-                        AND stock_prod <= 0
-                        AND estado_prod != 'agotado'
-                    """, [negocio.pkid_neg])
-                    
-                    messages.success(request, f"✅ Pedido confirmado y stock actualizado")
-                
-                # 4. DEVOLVER STOCK si se cancela un pedido confirmado
-                elif nuevo_estado == 'cancelado' and estado_actual == 'confirmado':
+                # 3. MANEJO DE CANCELACIÓN - DEVOLVER STOCK
+                if nuevo_estado == 'cancelado' and estado_actual != 'cancelado':
                     cursor.execute("""
                         UPDATE productos p
                         JOIN detalles_pedido dp ON p.pkid_prod = dp.fkproducto_detalle
                         SET p.stock_prod = p.stock_prod + dp.cantidad_detalle,
-                            p.estado_prod = 'disponible'
+                            p.estado_prod = CASE 
+                                WHEN p.stock_prod + dp.cantidad_detalle > 0 THEN 'disponible'
+                                ELSE p.estado_prod
+                            END
                         WHERE dp.fkpedido_detalle = %s 
                         AND p.fknegocioasociado_prod = %s
                     """, [pedido_id, negocio.pkid_neg])
-                    messages.success(request, f"✅ Pedido cancelado y stock reabastecido")
+                    
+                    # Registrar motivo de cancelación
+                    print(f"PEDIDO CANCELADO: #{pedido_id} - Motivo: {motivo_cancelacion} - Negocio: {negocio.nom_neg}")
+                    messages.success(request, f"✅ Pedido cancelado. Stock reabastecido. Motivo: {motivo_cancelacion}")
                 
                 else:
                     messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}")
@@ -1088,6 +1140,44 @@ def cambiar_estado_pedido(request, pedido_id):
         except Exception as e:
             print(f"ERROR al cambiar estado: {str(e)}")
             messages.error(request, f"Error al cambiar el estado del pedido: {str(e)}")
+    
+    return redirect('gestionar_ventas')
+
+@login_required(login_url='login')
+def eliminar_pedido(request, pedido_id):
+    """Vista secreta para eliminar pedidos (solo para pruebas)"""
+    if request.method == 'POST':
+        try:
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('inicio')
+            
+            negocio = datos['negocio_activo']
+            
+            with connection.cursor() as cursor:
+                # Verificar que el pedido pertenece al negocio
+                cursor.execute("""
+                    SELECT COUNT(*) FROM pedidos 
+                    WHERE pkid_pedido = %s AND fknegocio_pedido = %s
+                """, [pedido_id, negocio.pkid_neg])
+                
+                if cursor.fetchone()[0] == 0:
+                    messages.error(request, "Pedido no encontrado o no tienes permisos.")
+                    return redirect('gestionar_ventas')
+                
+                # Primero eliminar detalles y pagos relacionados
+                cursor.execute("DELETE FROM detalles_pedido WHERE fkpedido_detalle = %s", [pedido_id])
+                cursor.execute("DELETE FROM pagos_negocios WHERE fkpedido = %s", [pedido_id])
+                
+                # Luego eliminar el pedido
+                cursor.execute("DELETE FROM pedidos WHERE pkid_pedido = %s", [pedido_id])
+            
+            messages.success(request, f"🚮 Pedido #{pedido_id} eliminado permanentemente (solo pruebas).")
+            
+        except Exception as e:
+            print(f"ERROR al eliminar pedido: {str(e)}")
+            messages.error(request, f"Error al eliminar pedido: {str(e)}")
     
     return redirect('gestionar_ventas')
 

@@ -46,12 +46,14 @@ urlpatterns = [
     path('vendedor/productos/editar/<int:producto_id>/', vendedor_views.editar_producto_P, name='editar_producto_P'),
     path('vendedor/productos/datos/<int:producto_id>/', vendedor_views.obtener_datos_producto_P, name='obtener_datos_producto_P'),
     path('vendedor/productos/eliminar/<int:producto_id>/', vendedor_views.eliminar_producto_P, name='eliminar_producto_P'),
+    path('vendedor/productos/ajustar-stock/<int:producto_id>/', vendedor_views.ajustar_stock_producto, name='ajustar_stock_producto'),
+    path('vendedor/productos/cambiar-estado/<int:producto_id>/', vendedor_views.cambiar_estado_producto, name='cambiar_estado_producto'),
     
     # ==================== URLs PARA VENTAS VENDEDOR ====================
     path('ventas/', vendedor_views.gestionar_ventas, name='gestionar_ventas'),
-    path('ventas/pedido/<int:pedido_id>/', vendedor_views.detalle_pedido, name='detalle_pedido'),
+    path('ventas/recibo/<int:pedido_id>/', vendedor_views.ver_recibo_pedido, name='ver_recibo_pedido'),
     path('ventas/cambiar-estado/<int:pedido_id>/', vendedor_views.cambiar_estado_pedido, name='cambiar_estado_pedido'),
-    path('vendedor/productos/ajustar-stock/<int:producto_id>/', vendedor_views.ajustar_stock_producto, name='ajustar_stock_producto'),
+    path('ventas/eliminar/<int:pedido_id>/', vendedor_views.eliminar_pedido, name='eliminar_pedido'),
 
    
     # ==================== URLs PARA OFERTAS VENDEDOR ====================

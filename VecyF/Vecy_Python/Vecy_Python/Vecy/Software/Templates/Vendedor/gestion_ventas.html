@@ -5,6 +5,51 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css_Vendedor/gest_p.css' %}">
+<style>
+    /* Estilos adicionales para los nuevos elementos */
+    .boton-opcion-ventas.recibo {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+        text-decoration: none;
+    }
+
+    .boton-opcion-ventas.recibo:hover {
+        background: #10b981;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .boton-opcion-ventas.eliminar {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .boton-opcion-ventas.eliminar:hover {
+        background: #ef4444;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Modal de cancelación */
+    .modal-cancelacion textarea {
+        width: 100%;
+        min-height: 100px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        resize: vertical;
+        font-family: inherit;
+    }
+
+    .modal-cancelacion textarea:focus {
+        outline: none;
+        border-color: #4F46E5;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -28,15 +73,13 @@
             <i class="fas fa-search icono-busqueda-ventas"></i>
             <input type="text" id="inputBusqueda" class="input-busqueda-ventas" placeholder="Buscar cliente...">
         </div>
-        
+
         <div class="contenedor-filtros-ventas">
             <label class="etiqueta-filtro-ventas">Filtrar por estado:</label>
             <select id="selectFiltroEstado" class="select-filtro-ventas">
                 <option value="todos">Todos los estados</option>
-                <option value="pendiente">Pendiente</option>
                 <option value="confirmado">Confirmado</option>
-                <option value="preparando">Preparando</option>
-                <option value="enviado">Enviado</option>
+                <option value="en_proceso">En Proceso</option>
                 <option value="entregado">Entregado</option>
                 <option value="cancelado">Cancelado</option>
             </select>
@@ -68,7 +111,7 @@
                 <td><strong>${{ pedido.total }}</strong></td>
                 <td>
                     <span class="cantidad-productos">
-                        {{ pedido.cantidad_productos }} producto{{ pedido.cantidad_productos|pluralize }}
+                        {{ pedido.cantidad_productos }}
                     </span>
                 </td>
                 <td>
@@ -78,21 +121,28 @@
                 </td>
                 <td>
                     <div class="contenedor-opciones-ventas">
-                        <a href="{% url 'detalle_pedido' pedido.id %}" class="boton-opcion-ventas ver" title="Ver Detalles">
-                            <i class="fas fa-eye"></i> Ver
+                        <!-- Botón Ver Recibo -->
+                        <a href="{% url 'ver_recibo_pedido' pedido.id %}" class="boton-opcion-ventas recibo" title="Ver Recibo">
+                            <i class="fas fa-receipt"></i> Recibo
                         </a>
                         
+                        <!-- Selector de Estado -->
                         <form method="post" action="{% url 'cambiar_estado_pedido' pedido.id %}" class="d-inline">
                             {% csrf_token %}
-                            <select name="nuevo_estado" class="select-cambiar-estado" onchange="this.form.submit()">
-                                <option value="pendiente" {% if pedido.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
-                                <option value="confirmado" {% if pedido.estado == 'confirmado' %}selected{% endif %}>Confirmar</option>
-                                <option value="preparando" {% if pedido.estado == 'preparando' %}selected{% endif %}>Preparando</option>
-                                <option value="enviado" {% if pedido.estado == 'enviado' %}selected{% endif %}>Enviar</option>
+                            <select name="nuevo_estado" class="select-cambiar-estado" onchange="manejarCambioEstado(this, {{ pedido.id }})">
+                                <option value="confirmado" {% if pedido.estado == 'confirmado' %}selected{% endif %}>Confirmado</option>
+                                <option value="en_proceso" {% if pedido.estado == 'en_proceso' %}selected{% endif %}>En Proceso</option>
                                 <option value="entregado" {% if pedido.estado == 'entregado' %}selected{% endif %}>Entregado</option>
                                 <option value="cancelado" {% if pedido.estado == 'cancelado' %}selected{% endif %}>Cancelar</option>
                             </select>
                         </form>
+
+                        <!-- Botón secreto para eliminar pedido (solo visible para pruebas) -->
+                        <button type="button" class="boton-opcion-ventas eliminar" 
+                                title="Eliminar Pedido (Solo pruebas)" 
+                                onclick="confirmarEliminacion({{ pedido.id }})">
+                            <i class="fas fa-trash"></i>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -107,6 +157,53 @@
             {% endif %}
         </tbody>
     </table>
+</div>
+
+<!-- Modal para cancelación -->
+<div class="modal fade" id="modalCancelacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancelar Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body modal-cancelacion">
+                <p>¿Estás seguro de que deseas cancelar este pedido?</p>
+                <form id="formCancelacion" method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Motivo de cancelación:</label>
+                        <textarea name="motivo_cancelacion" placeholder="Describe el motivo de la cancelación..." required></textarea>
+                    </div>
+                    <input type="hidden" name="nuevo_estado" value="cancelado">
+                    <input type="hidden" name="pedido_id" id="pedidoCancelarId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-danger" onclick="enviarCancelacion()">Confirmar Cancelación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para eliminación -->
+<div class="modal fade" id="modalEliminacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>⚠️ ADVERTENCIA:</strong> Esta acción es solo para pruebas y eliminará permanentemente el pedido. ¿Estás seguro?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmarEliminar">Sí, Eliminar</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -136,6 +233,87 @@ document.getElementById('selectFiltroEstado').addEventListener('change', functio
             fila.style.display = estadoFila === estado ? '' : 'none';
         }
     });
+});
+
+// Variables globales
+let pedidoActual = null;
+let pedidoAEliminar = null;
+
+// Manejo de cambio de estado
+function manejarCambioEstado(select, pedidoId) {
+    const nuevoEstado = select.value;
+    pedidoActual = pedidoId;
+    
+    if (nuevoEstado === 'cancelado') {
+        // Mostrar modal de cancelación
+        mostrarModalCancelacion(pedidoId);
+        select.value = ''; // Resetear el select
+    } else {
+        // Enviar formulario directamente para otros estados
+        enviarFormularioEstado(pedidoId, nuevoEstado);
+    }
+}
+
+// Mostrar modal de cancelación
+function mostrarModalCancelacion(pedidoId) {
+    document.getElementById('pedidoCancelarId').value = pedidoId;
+    const modal = new bootstrap.Modal(document.getElementById('modalCancelacion'));
+    modal.show();
+}
+
+// Enviar cancelación
+function enviarCancelacion() {
+    const pedidoId = document.getElementById('pedidoCancelarId').value;
+    const form = document.getElementById('formCancelacion');
+    form.action = `/ventas/cambiar-estado/${pedidoId}/`;
+    form.submit();
+}
+
+// Enviar formulario de estado normal
+function enviarFormularioEstado(pedidoId, estado) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/ventas/cambiar-estado/${pedidoId}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
+    
+    const estadoInput = document.createElement('input');
+    estadoInput.type = 'hidden';
+    estadoInput.name = 'nuevo_estado';
+    estadoInput.value = estado;
+    form.appendChild(estadoInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Manejo de eliminación secreta
+function confirmarEliminacion(pedidoId) {
+    pedidoAEliminar = pedidoId;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminacion'));
+    modal.show();
+}
+
+document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+    if (pedidoAEliminar) {
+        // Crear formulario dinámico para eliminar
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/ventas/eliminar/${pedidoAEliminar}/`;
+        
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrfmiddlewaretoken';
+        csrf.value = '{{ csrf_token }}';
+        form.appendChild(csrf);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 });
 </script>
 {% endblock %}
