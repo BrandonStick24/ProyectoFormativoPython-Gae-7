@@ -115,7 +115,7 @@ def iniciar_sesion(request):
 
 
 def registro_user(request):
-    roles = Roles.objects.exclude(desc_rol='MODERADOR')
+    roles = Roles.objects.all()
     tipo_documentos = TipoDocumento.objects.all()
 
     if request.method == 'POST':

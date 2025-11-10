@@ -63,7 +63,7 @@
     <div class="negocios">
         <img class="img_neg" src="{{ negocio.img_neg.url }}" alt="">
         <div class="propietario">
-            <img class="img_prop" src="{% static " img/Usuario.jpg" %}" alt="">
+            <img class="img_prop" src="{% static "img/Usuario.jpg" %}" alt="">
         </div>
     </div>
     <div class="detalle_neg">
@@ -98,35 +98,40 @@
     </div>
 
     <div class="productos">
-        {% for prod in productos %}
-        <div class="producto" data-nombre="{{ prod.nom_prod|lower }}" data-precio="{{ prod.precio_prod }}"
-            data-aos="fade-up">
-            <img class="prods" src="{{ prod.img_prod.url }}" alt="">
-            <div class="info_prod">
-                <h6>{{ prod.nom_prod }}</h6>
-                <span><strong>Precio:</strong> ${{ prod.precio_prod }}</span> <br>
-                <span><strong>Cantidad Disponible:</strong> {{ prod.stock_prod }}</span> <br>
-                <span><strong>Descripción:</strong> {{ prod.desc_prod }}</span>
+    {% for prod in productos %}
+    <div class="producto {% if prod.stock_prod == 0 %}sin-stock{% endif %}" 
+         data-nombre="{{ prod.nom_prod|lower }}" 
+         data-precio="{{ prod.precio_prod }}" 
+         data-aos="fade-up">
+        <img class="prods" src="{{ prod.img_prod.url }}" alt="">
+        <div class="info_prod">
+            <h6>{{ prod.nom_prod }}</h6>
+            <span><strong>Precio:</strong> ${{ prod.precio_prod }}</span> <br>
+            <span><strong>Cantidad Disponible:</strong> {{ prod.stock_prod }}</span> <br>
+            <span><strong>Descripción:</strong> {{ prod.desc_prod }}</span> <br>
+
+            {% if prod.stock_prod == 0 %}
+                <span class="text-danger fw-bold">¡Producto agotado!</span>
+            {% else %}
                 <div class="solicitar d-flex align-items-center gap-2">
                     <button class="btn-minus btn btn-sm btn-outline-secondary">-</button>
-                    <input type="number" class="cantidad-prod form-control form-control-sm" value="1" min="1"
-                        style="width:50px;">
+                    <input type="number" class="cantidad-prod form-control form-control-sm" 
+                           value="1" min="1" max="{{ prod.stock_prod }}" style="width:50px;">
                     <button class="btn-plus btn btn-sm btn-outline-secondary">+</button>
-                    <a href="#" class="btn btn-sm btn-success agregar-carrito" data-prod="{{ prod.pkid_prod }}">
+                    <button class="btn btn-sm btn-success agregar-carrito" 
+                            data-prod="{{ prod.pkid_prod }}"
+                            data-stock="{{ prod.stock_prod }}">
                         <i class="fas fa-cart-plus"></i> Añadir al carrito
-                    </a>
-
-
+                    </button>
                 </div>
-
-
-            </div>
+            {% endif %}
         </div>
+    </div>
+    {% empty %}
+    <p>No hay productos registrados para este negocio.</p>
+    {% endfor %}
+</div>
 
-
-        {% empty %}
-        <p>No hay productos registrados para este negocio.</p>
-        {% endfor %}
     </div>
 </div>
 <div class="resenas" data-aos="fade-up">
@@ -195,7 +200,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-
     // ================== SISTEMA DE ESTRELLAS ==================
     const stars = document.querySelectorAll('.star');
     const inputEstrellas = document.getElementById('estrellas_input');
@@ -216,23 +220,26 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ================== BOTONES + Y - ==================
-    const productos = document.querySelectorAll('.producto');
-
-    productos.forEach(prod => {
+    document.querySelectorAll('.producto').forEach(prod => {
         const btnMinus = prod.querySelector('.btn-minus');
         const btnPlus = prod.querySelector('.btn-plus');
         const inputCantidad = prod.querySelector('.cantidad-prod');
+        const stock = parseInt(prod.querySelector('.agregar-carrito')?.dataset.stock) || 1;
 
-        btnMinus.addEventListener('click', (e) => {
+        btnMinus?.addEventListener('click', (e) => {
             e.preventDefault();
             let val = parseInt(inputCantidad.value) || 1;
             if (val > 1) inputCantidad.value = val - 1;
         });
 
-        btnPlus.addEventListener('click', (e) => {
+        btnPlus?.addEventListener('click', (e) => {
             e.preventDefault();
             let val = parseInt(inputCantidad.value) || 1;
-            inputCantidad.value = val + 1;
+            if (val < stock) {
+                inputCantidad.value = val + 1;
+            } else {
+                alert('No puedes agregar más de la cantidad disponible');
+            }
         });
     });
 
@@ -251,16 +258,34 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return cookieValue;
     }
+
     const csrftoken = getCookie('csrftoken');
 
-    const botonesCarrito = document.querySelectorAll('.agregar-carrito');
-    botonesCarrito.forEach(btn => {
+    document.querySelectorAll('.agregar-carrito').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
-
+            
             const prodId = this.dataset.prod;
-            const inputCantidad = this.closest('.solicitar').querySelector('.cantidad-prod');
+            const stock = parseInt(this.dataset.stock);
+            const productoDiv = this.closest('.producto');
+            const inputCantidad = productoDiv.querySelector('.cantidad-prod');
             const cantidad = parseInt(inputCantidad.value) || 1;
+
+            // Validar stock
+            if (cantidad > stock) {
+                alert('No hay suficiente stock disponible');
+                return;
+            }
+
+            if (cantidad <= 0) {
+                alert('La cantidad debe ser mayor a 0');
+                return;
+            }
+
+            // Mostrar loading
+            const originalText = this.innerHTML;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+            this.disabled = true;
 
             fetch("{% url 'agregar_carrito_ajax' %}", {
                 method: "POST",
@@ -273,21 +298,77 @@ document.addEventListener('DOMContentLoaded', function () {
                     'cantidad': cantidad
                 })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+                return response.json();
+            })
             .then(data => {
                 if(data.success){
-                    alert("Producto agregado al carrito!");
+                    // Mostrar notificación
+                    showNotification('Producto agregado al carrito!', 'success');
+                    
+                    // Resetear cantidad
+                    inputCantidad.value = 1;
+                    
+                    // Actualizar contador del carrito si tienes uno
+                    updateCartCounter();
+                    
                 } else {
-                    alert("Error al agregar al carrito.");
+                    throw new Error(data.error || 'Error al agregar al carrito');
                 }
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                this.innerHTML = originalText;
+                this.disabled = false;
+            });
         });
     });
 
+    // Función para mostrar notificaciones
+    function showNotification(message, type) {
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+        `;
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 3000);
+    }
+
+    // Función para actualizar contador del carrito (si lo tienes)
+    function updateCartCounter() {
+        // Si tienes un contador de carrito en el header, actualízalo aquí
+        const cartCounter = document.querySelector('.cart-counter');
+        if (cartCounter) {
+            const currentCount = parseInt(cartCounter.textContent) || 0;
+            cartCounter.textContent = currentCount + 1;
+        }
+    }
 });
 </script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
     integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
     crossorigin="anonymous"></script>
