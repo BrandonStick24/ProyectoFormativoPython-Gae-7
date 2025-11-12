@@ -283,6 +283,84 @@ def cliente_dash(request):
     }
     return render(request, 'Cliente/Cliente.html', contexto)
 
+from django.http import HttpResponse
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_RIGHT
+from datetime import datetime
+import os
+
+def descargar_comprobante(request, transaccion_id):
+    metodo_pago = request.GET.get("metodo", "Tarjeta Crédito").capitalize()
+    monto = request.GET.get("monto", "0")
+    usuario = request.user.username if request.user.is_authenticated else "Cliente invitado"
+    fecha = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Crear respuesta PDF
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="Comprobante_{transaccion_id}.pdf"'
+
+    # Documento base
+    doc = SimpleDocTemplate(response, pagesize=letter, rightMargin=50, leftMargin=50, topMargin=60, bottomMargin=50)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    # === Encabezado ===
+    title_style = ParagraphStyle('title_style', parent=styles['Title'], fontSize=20, alignment=TA_CENTER, textColor=colors.HexColor('#55AD9B'))
+    elements.append(Paragraph("COMPROBANTE DE PAGO", title_style))
+    elements.append(Spacer(1, 12))
+
+    # Logo (si tienes uno en static)
+    logo_path = os.path.join("static", "img", "logo.png")
+    if os.path.exists(logo_path):
+        elements.append(Image(logo_path, width=100, height=50))
+        elements.append(Spacer(1, 10))
+
+    # === Datos principales ===
+    info_style = ParagraphStyle('info_style', parent=styles['Normal'], fontSize=12, leading=16)
+    info_text = f"""
+        <b>Usuario:</b> {usuario}<br/>
+        <b>Método de Pago:</b> {metodo_pago}<br/>
+        <b>ID Transacción:</b> {transaccion_id}<br/>
+        <b>Fecha y Hora:</b> {fecha}
+    """
+    elements.append(Paragraph(info_text, info_style))
+    elements.append(Spacer(1, 15))
+
+    # === Tabla de productos ===
+    # (En un caso real, obtendrías estos productos de tu base de datos o del carrito)
+    productos = [
+        ["Producto", "Cantidad", "Precio Unitario", "Subtotal"],
+        ["Helado Yogur Griego", "2", "$8.000", "$16.000"],
+        ["Totuma Natural", "1", "$5.000", "$5.000"],
+    ]
+    tabla = Table(productos, colWidths=[180, 80, 100, 100])
+    tabla.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#55AD9B')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+    ]))
+    elements.append(tabla)
+    elements.append(Spacer(1, 20))
+
+    # === Total destacado ===
+    total_style = ParagraphStyle('total_style', parent=styles['Heading2'], fontSize=14, alignment=TA_RIGHT, textColor=colors.HexColor('#000000'))
+    elements.append(Paragraph(f"<b>Total a pagar:</b> ${monto} COP", total_style))
+    elements.append(Spacer(1, 25))
+
+    # === Mensaje de agradecimiento ===
+    footer_style = ParagraphStyle('footer_style', parent=styles['Normal'], alignment=TA_CENTER, fontSize=11, textColor=colors.HexColor('#4b5563'))
+    elements.append(Paragraph("Gracias por confiar en <b>Vecy</b><i class='fas fa-heart' style='color:red;'></i><br/>Tu compra ha sido registrada con éxito.", footer_style))
+
+    # Generar PDF
+    doc.build(elements)
+    return response
+
 #==================== PEDIDOS =====================
 from django.shortcuts import redirect, get_object_or_404
 from .models import Carrito, CarritoItem, Productos, UsuarioPerfil

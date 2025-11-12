@@ -22,6 +22,7 @@ urlpatterns = [
     path('agregar_carrito_ajax/', views.agregar_carrito_ajax, name='agregar_carrito_ajax'),
     path('procesar_pago/', views.procesar_pago, name='procesar_pago'),
     path('pago_exitoso/', views.pago_exitoso, name='pago_exitoso'),
+    path('descargar_comprobante/<str:transaccion_id>/', views.descargar_comprobante, name='descargar_comprobante'),
     
 
     # ==================== URLs DEL VENDEDOR ASIDE ====================
