@@ -247,9 +247,11 @@ def registro_negocio(request):
 #=====================================================================================================
 # ========================================== VISTAS CLIENTE ==========================================
 #=====================================================================================================
-
+from django.db.models import Q, Avg
 @login_required(login_url='login')
 def cliente_dash(request):
+    query = request.GET.get('q', '')  # Capturamos lo que el usuario escribe en la barra de búsqueda
+
     negocios = Negocios.objects.all()
     categorias = CategoriaProductos.objects.all()[:20]
     categoria_principal = CategoriaProductos.objects.filter(desc_cp="Celulares y accesorios").first()
@@ -261,10 +263,25 @@ def cliente_dash(request):
         .filter(promedio__gte=4)
         .order_by('-promedio')[:10]
     )
+
     if categoria_principal:
         categorias_interes = [categoria_principal] + list(otras_categorias)
     else:
         categorias_interes = list(otras_categorias)
+
+    # Filtrado por búsqueda
+    if query:
+        negocios = negocios.filter(
+            Q(nom_neg__icontains=query) |
+            Q(desc_neg__icontains=query) |
+            Q(direcc_neg__icontains=query)
+        )
+        productos_filtrados = Productos.objects.filter(
+            Q(nom_prod__icontains=query) |
+            Q(desc_prod__icontains=query)
+        )
+    else:
+        productos_filtrados = Productos.objects.none()  # vacíos si no hay búsqueda
 
     try:
         perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
@@ -273,13 +290,15 @@ def cliente_dash(request):
         return redirect('inicio')
     
     contexto = {
-        'nombre' : request.user.first_name,
-        'perfil' : perfil,
+        'nombre': request.user.first_name,
+        'perfil': perfil,
         'negocios': negocios,
         't_negocios': t_negocios,
         'categorias': categorias,
         'categorias_interes': categorias_interes,
-        'negocios_mejor_calificados': negocios_mejor_calificados
+        'negocios_mejor_calificados': negocios_mejor_calificados,
+        'productos_filtrados': productos_filtrados,
+        'query': query
     }
     return render(request, 'Cliente/Cliente.html', contexto)
 

@@ -28,8 +28,11 @@
                 </span>
             </div>
             <div class="input-group1">
-                <input class="input" type="search" placeholder="Busca negocios, productos...">
-                <i class="fas fa-search iconl"></i>
+                <form method="get" action="{% url 'cliente_dash' %}">
+                    <input class="input" type="search" name="q" placeholder="Busca negocios, productos..."
+                        value="{{ query }}">
+                    <button type="submit"><i class="fas fa-search iconl"></i></button>
+                </form>
             </div>
             <div class="iniSesion">
                 <i class="fas fa-truck"></i>
@@ -88,33 +91,36 @@
             <div class="rowP" data-aos="fade-up">
                 {% for categoria in categorias_interes %}
                 <div class="cardC">
-                    {% if categoria.desc_cp|lower == "helado" %}
-                    <img src="{% static 'img/heladería.jpg' %}" alt="">
-                    {% elif categoria.desc_cp|lower == "abarrotes" %}
-                    <img src="{% static 'img/abarrotes.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Bebidas gaseosas" %}
-                    <img src="{% static 'img/bebidas.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Jugos naturales" %}
-                    <img src="{% static 'img/bebidasN.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Agua embotellada" %}
-                    <img src="{% static 'img/agua.jpg' %}" alt="">
-                    {% elif categoria.desc_cp|lower == "lácteos" %}
-                    <img src="{% static 'img/lacteos.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Carnes frías y embutidos" %}
-                    <img src="{% static 'img/carnes.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Celulares y accesorios" %}
-                    <img src="{% static 'img/celular.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Verduras frescas" %}
-                    <img src="{% static 'img/verduras.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Frutas frescas" %}
-                    <img src="{% static 'img/frutas.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Panadería" %}
-                    <img src="{% static 'img/panes.jpg' %}" alt="">
-                    {% elif categoria.desc_cp == "Repostería" %}
-                    <img src="{% static 'img/reposteria.jpg' %}" alt="">
-                    {% endif %}
-                    <h6 class="mt-3">{{ categoria.desc_cp }}</h6>
-                </div>
+    <a href="{% url 'cliente_dash' %}?categoria={{ categoria.pkid_cp }}">
+        {% if categoria.desc_cp|lower == "helado" %}
+        <img src="{% static 'img/heladería.jpg' %}" alt="">
+        {% elif categoria.desc_cp|lower == "abarrotes" %}
+        <img src="{% static 'img/abarrotes.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Bebidas gaseosas" %}
+        <img src="{% static 'img/bebidas.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Jugos naturales" %}
+        <img src="{% static 'img/bebidasN.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Agua embotellada" %}
+        <img src="{% static 'img/agua.jpg' %}" alt="">
+        {% elif categoria.desc_cp|lower == "lácteos" %}
+        <img src="{% static 'img/lacteos.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Carnes frías y embutidos" %}
+        <img src="{% static 'img/carnes.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Celulares y accesorios" %}
+        <img src="{% static 'img/celular.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Verduras frescas" %}
+        <img src="{% static 'img/verduras.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Frutas frescas" %}
+        <img src="{% static 'img/frutas.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Panadería" %}
+        <img src="{% static 'img/panes.jpg' %}" alt="">
+        {% elif categoria.desc_cp == "Repostería" %}
+        <img src="{% static 'img/reposteria.jpg' %}" alt="">
+        {% endif %}
+        <h6 class="mt-3">{{ categoria.desc_cp }}</h6>
+    </a>
+</div>
+
                 {% endfor %}
             </div>
         </div>
@@ -147,8 +153,75 @@
             <p>No hay negocios calificados aún.</p>
             {% endfor %}
         </div>
-
     </div>
+    <div class="rowNegs mt-5" id="resultadosBusqueda">
+        {% if query %}
+        <div class="rowNegs" id="resultadosBusquedaInner">
+            {% for negocio in negocios %}
+            <div class="cardN">
+                {% if negocio.img_neg %}
+                <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
+                {% else %}
+                <img src="{% static 'img/default_negocio.jpg' %}" alt="{{ negocio.nom_neg }}">
+                {% endif %}
+                <div class="cardN-body">
+                    <h6>{{ negocio.nom_neg }}</h6>
+                    <p>{{ negocio.desc_neg }}</p>
+                    <span>{{ negocio.direcc_neg }}</span>
+                </div>
+            </div>
+            {% endfor %}
+            {% if productos_filtrados %}
+            <div class="prods" style="width: 100%; text-align: center;">
+                <h4>Productos Encontrados</h4>
+            </div>
+            <div class="rowNegs mt-3" id="resultadosProductosInner">
+                {% for producto in productos_filtrados %}
+                <div class="cardN {% if producto.stock_prod == 0 %}sin-stock{% endif %}">
+                    {% if producto.img_prod %}
+                    <img src="{{ producto.img_prod.url }}" class="card-img-top" alt="{{ producto.nom_prod }}">
+                    {% else %}
+                    <img src="{% static 'img/default_producto.jpg' %}" class="card-img-top"
+                        alt="{{ producto.nom_prod }}">
+                    {% endif %}
+                    <div class="cardN-body">
+                        <h6>{{ producto.nom_prod }}</h6>
+                        <p>{{ producto.desc_prod }}</p>
+                        <span><strong>Precio:</strong> ${{ producto.precio_prod }}</span><br>
+                        <span><strong>Cantidad Disponible:</strong> {{ producto.stock_prod }}</span><br>
+
+                        {% if producto.stock_prod == 0 %}
+                        <span class="text-danger fw-bold">¡Producto agotado!</span>
+                        {% else %}
+                        <div class="solicitar d-flex align-items-center gap-2 mt-2">
+                            <button class="btn-minus btn btn-sm btn-outline-secondary">-</button>
+                            <input type="number" class="cantidad-prod form-control form-control-sm" value="1" min="1"
+                                max="{{ producto.stock_prod }}" style="width:50px;">
+                            <button class="btn-plus btn btn-sm btn-outline-secondary">+</button>
+                            <button class="btn btn-sm btn-success agregar-carrito" style="height: 8vh !important;"
+                                data-prod="{{ producto.pkid_prod }}" data-stock="{{ producto.stock_prod }}">
+                                <i class="fas fa-cart-plus"></i> Añadir
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <p>No hay productos encontrados.</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+
+
+        </div>
+
+        {% if not negocios and not productos_filtrados %}
+        <p>No se encontraron resultados.</p>
+        {% endif %}
+        {% endif %}
+    </div>
+
     {% endblock %}
     <footer class="footer">
         <div class="footer-section">
@@ -201,6 +274,22 @@
             once: false
         });
     </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            {% if query %}
+            const resultadosProductos = document.getElementById('resultadosProductosInner');
+            const resultadosNegocios = document.getElementById('resultadosBusquedaInner');
+
+            if (resultadosProductos) {
+                resultadosProductos.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (resultadosNegocios) {
+                resultadosNegocios.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            {% endif %}
+        });
+    </script>
+
+
 </body>
 
 </html>
