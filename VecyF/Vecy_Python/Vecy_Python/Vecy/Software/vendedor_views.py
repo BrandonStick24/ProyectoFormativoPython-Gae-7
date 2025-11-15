@@ -1,3 +1,4 @@
+# Software/vendedor_views.py
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -15,6 +16,9 @@ from Software.models import (
     Productos, CategoriaProductos, Pedidos, DetallesPedido,
     ResenasNegocios
 )
+
+# Importar función auxiliar de categorías
+from .vendedor_categorias_views import obtener_categorias_por_tiponegocio
 
 # ==================== FUNCIONES AUXILIARES VENDEDOR ====================
 def obtener_datos_vendedor(request):
@@ -188,6 +192,7 @@ def vendedor_dash(request):
 # ==================== VISTAS VENDEDOR - PRODUCTOS ====================
 @login_required(login_url='login')
 def Crud_V(request):
+    """Vista principal de productos CON VARIANTES"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos:
@@ -202,8 +207,40 @@ def Crud_V(request):
         # Obtener productos del negocio
         productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
         
-        # Obtener todas las categorías existentes - IMPORTANTE
-        categorias = CategoriaProductos.objects.all().order_by('desc_cp')
+        # Obtener variantes para cada producto
+        productos_con_variantes = []
+        for producto in productos:
+            # Obtener variantes del producto
+            variantes = []
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante
+                    FROM variantes_producto 
+                    WHERE producto_id = %s
+                    ORDER BY nombre_variante
+                """, [producto.pkid_prod])
+                
+                for row in cursor.fetchall():
+                    precio_total = float(producto.precio_prod) + float(row[2])
+                    variantes.append({
+                        'id': row[0],
+                        'nombre': row[1],
+                        'precio_adicional': float(row[2]),
+                        'precio_total': precio_total,
+                        'stock': row[3],
+                        'estado': row[4]
+                    })
+            
+            productos_con_variantes.append({
+                'producto': producto,
+                'variantes': variantes,
+                'total_variantes': len(variantes),
+                'stock_total_variantes': sum(v['stock'] for v in variantes)
+            })
+        
+        # Calcular estadísticas
+        productos_disponibles = productos.filter(estado_prod='disponible', stock_prod__gt=0)
+        productos_sin_stock = productos.filter(stock_prod=0) | productos.filter(estado_prod='agotado')
         
         # Obtener productos en oferta
         productos_en_oferta_ids = set()
@@ -213,16 +250,32 @@ def Crud_V(request):
                     SELECT DISTINCT fkproducto_id 
                     FROM promociones 
                     WHERE fknegocio_id = %s AND estado_promo = 'activa'
+                    AND fecha_fin >= CURDATE()
                 """, [negocio.pkid_neg])
                 resultados = cursor.fetchall()
                 productos_en_oferta_ids = {row[0] for row in resultados}
+        
+        # Obtener categorías filtradas por tipo de negocio
+        categorias_filtradas = []
+        if negocio and negocio.fktiponeg_neg:
+            categorias_filtradas = obtener_categorias_por_tiponegocio(negocio.fktiponeg_neg.pkid_tiponeg)
+        else:
+            # Fallback: todas las categorías
+            categorias_generales = CategoriaProductos.objects.all().order_by('desc_cp')
+            for categoria in categorias_generales:
+                categorias_filtradas.append({
+                    'id': categoria.pkid_cp,
+                    'descripcion': categoria.desc_cp
+                })
         
         contexto = {
             'nombre': datos['nombre_usuario'],
             'perfil': datos['perfil'],
             'negocio_activo': negocio,
-            'productos': productos,
-            'categorias': categorias,  # ¡IMPORTANTE! Pasar categorías al template
+            'productos_con_variantes': productos_con_variantes,
+            'productos_disponibles': productos_disponibles,
+            'productos_sin_stock': productos_sin_stock,
+            'categorias': categorias_filtradas,
             'productos_en_oferta': productos_en_oferta_ids,
         }
         return render(request, 'Vendedor/Crud_V.html', contexto)
@@ -230,6 +283,56 @@ def Crud_V(request):
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
         return redirect('inicio')
+
+@login_required(login_url='login')
+def gestionar_variantes(request, producto_id):
+    """Vista para gestionar variantes de un producto específico"""
+    try:
+        datos = obtener_datos_vendedor(request)
+        if not datos:
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('inicio')
+        
+        negocio = datos['negocio_activo']
+        
+        # Verificar que el producto pertenece al negocio
+        producto = get_object_or_404(Productos, pkid_prod=producto_id, fknegocioasociado_prod=negocio)
+        
+        # Obtener variantes del producto
+        variantes = []
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante
+                FROM variantes_producto 
+                WHERE producto_id = %s
+                ORDER BY nombre_variante
+            """, [producto_id])
+            
+            for row in cursor.fetchall():
+                precio_total = float(producto.precio_prod) + float(row[2])
+                variantes.append({
+                    'id': row[0],
+                    'nombre': row[1],
+                    'precio_adicional': float(row[2]),
+                    'precio_total': precio_total,
+                    'stock': row[3],
+                    'estado': row[4],
+                    'sku': row[5]
+                })
+        
+        contexto = {
+            'nombre': datos['nombre_usuario'],
+            'perfil': datos['perfil'],
+            'negocio_activo': negocio,
+            'producto': producto,
+            'variantes': variantes,
+        }
+        
+        return render(request, 'Vendedor/gestion_variantes.html', contexto)
+        
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('Crud_V')
 
 # ==================== VISTAS VENDEDOR - CHATS ====================
 @login_required(login_url='login')
@@ -254,27 +357,157 @@ def Chats_V(request):
 # ==================== VISTAS VENDEDOR - STOCK ====================
 @login_required(login_url='login')
 def Stock_V(request):
+    """Vista para dashboard de stock - MEJORADA"""
     try:
         datos = obtener_datos_vendedor(request)
-        if not datos:
-            messages.error(request, "Perfil de usuario no encontrado.")
+        if not datos or not datos.get('negocio_activo'):
+            messages.error(request, "No tienes un negocio activo.")
             return redirect('inicio')
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener productos del negocio
+        productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
+        
+        # Calcular estadísticas de stock (incluyendo variantes)
+        total_productos = productos.count()
+        
+        # Calcular stock total incluyendo variantes
+        stock_total = 0
+        productos_stock_bajo = []
+        
+        for producto in productos:
+            # Stock del producto principal
+            stock_producto = producto.stock_prod
+            
+            # Stock de variantes
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT SUM(stock_variante) 
+                    FROM variantes_producto 
+                    WHERE producto_id = %s AND estado_variante = 'activa'
+                """, [producto.pkid_prod])
+                resultado = cursor.fetchone()
+                stock_variantes = resultado[0] if resultado[0] else 0
+            
+            stock_total_producto = stock_producto + stock_variantes
+            
+            if stock_total_producto <= 5 and stock_total_producto > 0:
+                productos_stock_bajo.append({
+                    'producto': producto,
+                    'stock_total': stock_total_producto,
+                    'tiene_variantes': stock_variantes > 0
+                })
+            
+            stock_total += stock_total_producto
+        
+        # Calcular estadísticas
+        sin_stock = productos.filter(stock_prod=0).count()
+        stock_bajo = len(productos_stock_bajo)
+        stock_normal = total_productos - sin_stock - stock_bajo
+        
+        # Obtener productos en oferta
+        productos_oferta = []
+        productos_oferta_count = 0
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        p.nom_prod as producto_nombre,
+                        pr.porcentaje_descuento,
+                        p.precio_prod as precio_original,
+                        (p.precio_prod * (1 - pr.porcentaje_descuento / 100)) as precio_oferta,
+                        pr.stock_oferta
+                    FROM promociones pr
+                    JOIN productos p ON pr.fkproducto_id = p.pkid_prod
+                    WHERE pr.fknegocio_id = %s 
+                    AND pr.estado_promo = 'activa'
+                    AND pr.fecha_fin >= CURDATE()
+                """, [negocio.pkid_neg])
+                
+                for row in cursor.fetchall():
+                    productos_oferta.append({
+                        'producto_nombre': row[0],
+                        'descuento': float(row[1]),
+                        'precio_original': float(row[2]),
+                        'precio_oferta': float(row[3]),
+                        'stock_oferta': row[4]
+                    })
+                    productos_oferta_count += 1
+        except Exception as e:
+            print(f"Error obteniendo ofertas: {e}")
+        
+        # Obtener movimientos recientes (incluyendo variantes)
+        movimientos_recientes = []
+        movimientos_hoy = 0
+        try:
+            with connection.cursor() as cursor:
+                # Movimientos recientes
+                cursor.execute("""
+                    SELECT 
+                        ms.fecha_movimiento,
+                        p.nom_prod,
+                        COALESCE(v.nombre_variante, 'Producto principal') as variante,
+                        ms.tipo_movimiento,
+                        ms.cantidad,
+                        ms.motivo
+                    FROM movimientos_stock ms
+                    JOIN productos p ON ms.producto_id = p.pkid_prod
+                    LEFT JOIN variantes_producto v ON ms.variante_id = v.id_variante
+                    WHERE ms.negocio_id = %s
+                    ORDER BY ms.fecha_movimiento DESC
+                    LIMIT 8
+                """, [negocio.pkid_neg])
+                
+                for row in cursor.fetchall():
+                    movimientos_recientes.append({
+                        'fecha': row[0].strftime('%H:%M'),
+                        'producto': row[1],
+                        'variante': row[2],
+                        'tipo': row[3],
+                        'cantidad': row[4],
+                        'motivo': row[5]
+                    })
+                
+                # Movimientos de hoy
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM movimientos_stock 
+                    WHERE negocio_id = %s 
+                    AND DATE(fecha_movimiento) = CURDATE()
+                """, [negocio.pkid_neg])
+                movimientos_hoy = cursor.fetchone()[0] or 0
+                
+        except Exception as e:
+            print(f"Error obteniendo movimientos: {e}")
         
         contexto = {
             'nombre': datos['nombre_usuario'],
             'perfil': datos['perfil'],
-            'negocio_activo': datos['negocio_activo']
+            'negocio_activo': negocio,
+            'total_productos': total_productos,
+            'stock_total': stock_total,
+            'stock_normal': stock_normal,
+            'stock_bajo': stock_bajo,
+            'sin_stock': sin_stock,
+            'productos_stock_bajo': productos_stock_bajo,
+            'movimientos_recientes': movimientos_recientes,
+            'movimientos_hoy': movimientos_hoy,
+            'productos_oferta': productos_oferta,
+            'productos_oferta_count': productos_oferta_count,
         }
+        
         return render(request, 'Vendedor/Stock_V.html', contexto)
         
     except Exception as e:
+        print(f"ERROR en Stock_V: {str(e)}")
         messages.error(request, f"Error: {str(e)}")
         return redirect('inicio')
 
 # ==================== VISTAS VENDEDOR - CREAR PRODUCTO ====================
 @login_required(login_url='login')
 def crear_producto_P(request):
-    """Vista para crear nuevo producto usando categorías existentes"""
+    """Vista para crear nuevo producto usando categorías filtradas por tipo de negocio - CON REGISTRO DE STOCK"""
     if request.method == 'POST':
         try:
             auth_user = AuthUser.objects.get(username=request.user.username)
@@ -298,7 +531,7 @@ def crear_producto_P(request):
             desc_prod = request.POST.get('desc_prod')
             stock_prod = request.POST.get('stock_prod')
             img_prod = request.FILES.get('img_prod')
-            categoria_id = request.POST.get('categoria_prod')  # Ahora recibe ID
+            categoria_id = request.POST.get('categoria_prod')
             estado_prod = request.POST.get('estado_prod', 'disponible')
             
             # Validar campos obligatorios
@@ -313,13 +546,16 @@ def crear_producto_P(request):
                 messages.error(request, "La categoría seleccionada no existe.")
                 return redirect('Crud_V')
             
+            # Convertir stock a entero
+            stock_inicial = int(stock_prod) if stock_prod else 0
+            
             # Crear el producto
             producto = Productos.objects.create(
                 nom_prod=nom_prod,
                 precio_prod=precio_prod,
                 desc_prod=desc_prod or "",
                 fkcategoria_prod=categoria,
-                stock_prod=int(stock_prod) if stock_prod else 0,
+                stock_prod=stock_inicial,
                 stock_minimo=5,
                 fknegocioasociado_prod=negocio,
                 estado_prod=estado_prod,
@@ -346,6 +582,29 @@ def crear_producto_P(request):
                 producto.img_prod = f"productos/{filename}"
                 producto.save()
             
+            # REGISTRAR MOVIMIENTO DE STOCK POR CREACIÓN DEL PRODUCTO
+            if stock_inicial > 0:
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            INSERT INTO movimientos_stock 
+                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                             stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, [
+                            producto.pkid_prod, 
+                            negocio.pkid_neg, 
+                            'entrada', 
+                            'creacion_producto', 
+                            stock_inicial, 
+                            0,  # Stock anterior era 0 (producto nuevo)
+                            stock_inicial, 
+                            perfil.id, 
+                            datetime.now()
+                        ])
+                except Exception as e:
+                    print(f"Error registrando movimiento al crear producto (puede ignorarse): {e}")
+            
             messages.success(request, f"Producto '{nom_prod}' creado exitosamente.")
             return redirect('Crud_V')
             
@@ -363,7 +622,7 @@ def crear_producto_P(request):
 # ==================== VISTAS VENDEDOR - EDITAR PRODUCTO ====================
 @login_required(login_url='login')
 def editar_producto_P(request, producto_id):
-    """Vista para editar producto existente usando categorías existentes"""
+    """Vista para editar producto existente usando categorías filtradas por tipo de negocio"""
     if request.method == 'POST':
         try:
             # Verificar permisos y obtener negocio seleccionado
@@ -473,8 +732,18 @@ def obtener_datos_producto_P(request, producto_id):
             fknegocioasociado_prod=negocio
         )
         
-        # Obtener todas las categorías para el select
-        categorias = CategoriaProductos.objects.all()
+        # Obtener categorías filtradas por tipo de negocio
+        categorias_filtradas = []
+        if negocio and negocio.fktiponeg_neg:
+            categorias_filtradas = obtener_categorias_por_tiponegocio(negocio.fktiponeg_neg.pkid_tiponeg)
+        else:
+            # Fallback: todas las categorías
+            categorias_generales = CategoriaProductos.objects.all()
+            for categoria in categorias_generales:
+                categorias_filtradas.append({
+                    'id': categoria.pkid_cp,
+                    'descripcion': categoria.desc_cp
+                })
         
         # Preparar datos para JSON - SIMPLIFICADO
         datos_producto = {
@@ -486,7 +755,8 @@ def obtener_datos_producto_P(request, producto_id):
             'estado_prod': producto.estado_prod or 'disponible',
             'categoria_prod': producto.fkcategoria_prod.pkid_cp,
             'categoria_nombre': producto.fkcategoria_prod.desc_cp,
-            'img_prod_actual': producto.img_prod.name if producto.img_prod else ""
+            'img_prod_actual': producto.img_prod.name if producto.img_prod else "",
+            'categorias_filtradas': categorias_filtradas
         }
         
         return JsonResponse(datos_producto)
@@ -501,7 +771,7 @@ def obtener_datos_producto_P(request, producto_id):
 # ==================== VISTAS VENDEDOR - ELIMINAR PRODUCTO ====================
 @login_required(login_url='login')
 def eliminar_producto_P(request, producto_id):
-    """Vista para eliminar producto"""
+    """Vista para eliminar producto - CON REGISTRO DE STOCK"""
     if request.method == 'POST':
         try:
             # Verificar permisos y obtener negocio seleccionado
@@ -526,6 +796,32 @@ def eliminar_producto_P(request, producto_id):
             )
             
             nombre_producto = producto.nom_prod
+            stock_eliminado = producto.stock_prod
+            
+            # REGISTRAR MOVIMIENTO DE STOCK POR ELIMINACIÓN DEL PRODUCTO
+            if stock_eliminado > 0:
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            INSERT INTO movimientos_stock 
+                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                             stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, [
+                            producto_id, 
+                            negocio.pkid_neg, 
+                            'salida', 
+                            'eliminacion_producto', 
+                            stock_eliminado, 
+                            stock_eliminado,  # Stock anterior
+                            0,  # Stock nuevo es 0 (producto eliminado)
+                            perfil.id, 
+                            datetime.now()
+                        ])
+                except Exception as e:
+                    print(f"Error registrando movimiento al eliminar producto (puede ignorarse): {e}")
+            
+            # Ahora eliminar el producto
             producto.delete()
             
             messages.success(request, f"Producto '{nombre_producto}' eliminado exitosamente.")
@@ -539,7 +835,7 @@ def eliminar_producto_P(request, producto_id):
     
     return redirect('Crud_V')
 
-# ==================== Cambiar stock del producto ====================
+# ==================== Cambiar estado del producto ====================
 @login_required(login_url='login')
 def cambiar_estado_producto(request, producto_id):
     """Vista para cambiar estado del producto"""
@@ -582,6 +878,7 @@ def cambiar_estado_producto(request, producto_id):
             messages.error(request, f"Error al cambiar el estado del producto: {str(e)}")
     
     return redirect('Crud_V')
+
 # ==================== VISTAS VENDEDOR - NEGOCIOS ====================
 @login_required(login_url='login')
 def Negocios_V(request):
@@ -1183,10 +1480,11 @@ def eliminar_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def ajustar_stock_producto(request, producto_id):
-    """Vista para ajustar manualmente el stock de un producto"""
+    """Vista para ajustar manualmente el stock de un producto - MEJORADA"""
     if request.method == 'POST':
         try:
-            nuevo_stock = int(request.POST.get('nuevo_stock'))
+            tipo_ajuste = request.POST.get('tipo_ajuste', 'entrada')
+            cantidad_ajuste = int(request.POST.get('cantidad_ajuste', 0))
             motivo = request.POST.get('motivo_ajuste', 'ajuste manual')
             
             datos = obtener_datos_vendedor(request)
@@ -1208,7 +1506,26 @@ def ajustar_stock_producto(request, producto_id):
                     messages.error(request, "Producto no encontrado")
                     return redirect('Crud_V')
                 
-                stock_actual, nombre_producto = resultado
+                stock_anterior, nombre_producto = resultado
+                
+                # Calcular nuevo stock según el tipo de ajuste
+                if tipo_ajuste == 'entrada':
+                    stock_nuevo = stock_anterior + cantidad_ajuste
+                    tipo_movimiento = 'entrada'
+                    mensaje_tipo = f"+{cantidad_ajuste}"
+                elif tipo_ajuste == 'salida':
+                    stock_nuevo = stock_anterior - cantidad_ajuste
+                    tipo_movimiento = 'salida'
+                    mensaje_tipo = f"-{cantidad_ajuste}"
+                else:  # ajuste manual
+                    stock_nuevo = cantidad_ajuste
+                    tipo_movimiento = 'ajuste'
+                    mensaje_tipo = f"→ {cantidad_ajuste}"
+                
+                # Validar que el stock no sea negativo
+                if stock_nuevo < 0:
+                    messages.error(request, f"❌ No puedes tener stock negativo. Stock actual: {stock_anterior}")
+                    return redirect('Crud_V')
                 
                 # Actualizar stock
                 cursor.execute("""
@@ -1216,13 +1533,28 @@ def ajustar_stock_producto(request, producto_id):
                     SET stock_prod = %s,
                         estado_prod = CASE 
                             WHEN %s <= 0 THEN 'agotado'
-                            WHEN %s > 0 THEN 'disponible'
-                            ELSE estado_prod
+                            WHEN %s > 0 AND %s <= 5 THEN 'disponible'
+                            ELSE 'disponible'
                         END
                     WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
-                """, [nuevo_stock, nuevo_stock, nuevo_stock, producto_id, negocio.pkid_neg])
+                """, [stock_nuevo, stock_nuevo, stock_nuevo, stock_nuevo, producto_id, negocio.pkid_neg])
                 
-                messages.success(request, f"✅ Stock de '{nombre_producto}' actualizado: {stock_actual} → {nuevo_stock}")
+                # Registrar movimiento de stock
+                try:
+                    cursor.execute("""
+                        INSERT INTO movimientos_stock 
+                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                         stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, [
+                        producto_id, negocio.pkid_neg, tipo_movimiento, motivo, 
+                        cantidad_ajuste, stock_anterior, stock_nuevo,
+                        datos['perfil'].id, datetime.now()
+                    ])
+                except Exception as e:
+                    print(f"Error registrando movimiento (puede ignorarse): {e}")
+                
+                messages.success(request, f"✅ Stock de '{nombre_producto}' actualizado: {stock_anterior} {mensaje_tipo} = {stock_nuevo}")
                 
         except Exception as e:
             print(f"ERROR al ajustar stock: {str(e)}")

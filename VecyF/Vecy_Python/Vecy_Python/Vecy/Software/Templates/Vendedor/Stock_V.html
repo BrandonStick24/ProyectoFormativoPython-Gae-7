@@ -1,0 +1,603 @@
+<!--Templates/Vendedor/Stock_V.html  -->
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Gestión de Stock - {{ negocio_activo.nom_neg }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Estilos básicos para stock */
+.stock-header {
+    background: linear-gradient(135deg, #2c3e50, #34495e);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    margin-bottom: 1rem;
+    height: 100%;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+}
+
+.metric-card.total { border-left: 4px solid #2c3e50; }
+.metric-card.normal { border-left: 4px solid #27ae60; }
+.metric-card.bajo { border-left: 4px solid #f39c12; }
+.metric-card.critico { border-left: 4px solid #e74c3c; }
+.metric-card.ofertas { border-left: 4px solid #3498db; }
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    color: #7f8c8d;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+    min-height: auto;
+}
+
+.chart-container h5 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.movimientos-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.movement-item {
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-left: 3px solid #bdc3c7;
+}
+
+.movement-item.entrada {
+    border-left-color: #27ae60;
+    background: #d5f4e6;
+}
+
+.movement-item.salida {
+    border-left-color: #e74c3c;
+    background: #fadbd8;
+}
+
+.alert-stock {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0.5rem;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #2c3e50;
+    transition: all 0.2s ease;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.action-btn:hover {
+    border-color: #3498db;
+    color: #3498db;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
+/* Tamaño específico para la gráfica - MEJORADO */
+.chart-wrapper {
+    height: 280px;
+    position: relative;
+}
+
+/* Ajustes para tablas más compactas */
+.table th, .table td {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Mejoras en responsive */
+@media (max-width: 768px) {
+    .stock-header {
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stock-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+    }
+    
+    .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* Ajuste para gráfica en móviles */
+    .chart-wrapper {
+        height: 220px;
+    }
+}
+
+/* Scrollbar personalizado */
+.movimientos-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.movimientos-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.movimientos-list::-webkit-scrollbar-thumb {
+    background: #bdc3c7;
+    border-radius: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header Principal -->
+<div class="stock-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-1"><i class="fas fa-boxes me-2"></i>Gestión de Stock</h1>
+            <p class="mb-0 opacity-75" style="font-size: 0.95rem;">{{ negocio_activo.nom_neg }} - Análisis completo de inventario</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-light btn-sm me-1">
+                <i class="fas fa-chart-bar me-1"></i>Reportes
+            </a>
+            <a href="{% url 'Crud_V' %}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-edit me-1"></i>Gestionar
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Mensajes -->
+{% if messages %}
+<div class="container-fluid mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- Acciones Rápidas -->
+<div class="quick-actions">
+    <a href="{% url 'Crud_V' %}" class="action-btn">
+        <i class="fas fa-plus-circle fa-lg mb-1"></i>
+        <span class="fw-bold" style="font-size: 0.8rem;">Nuevo Producto</span>
+    </a>
+    <a href="{% url 'Ofertas_V' %}" class="action-btn">
+        <i class="fas fa-tag fa-lg mb-1"></i>
+        <span class="fw-bold" style="font-size: 0.8rem;">Gestionar Ofertas</span>
+    </a>
+    <a href="{% url 'reporte_movimientos_stock' %}" class="action-btn">
+        <i class="fas fa-file-alt fa-lg mb-1"></i>
+        <span class="fw-bold" style="font-size: 0.8rem;">Ver Reportes</span>
+    </a>
+    <button class="action-btn" data-bs-toggle="modal" data-bs-target="#modalAjusteRapido">
+        <i class="fas fa-bolt fa-lg mb-1"></i>
+        <span class="fw-bold" style="font-size: 0.8rem;">Ajuste Rápido</span>
+    </button>
+</div>
+
+<!-- Métricas Principales -->
+<div class="row mb-3">
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card total">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-dark">{{ total_productos }}</div>
+                <div class="metric-label">Total Productos</div>
+                <i class="fas fa-cubes text-muted mt-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card normal">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-success">{{ stock_normal }}</div>
+                <div class="metric-label">Stock Normal</div>
+                <i class="fas fa-check-circle text-success mt-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card bajo">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-warning">{{ stock_bajo }}</div>
+                <div class="metric-label">Stock Bajo</div>
+                <i class="fas fa-exclamation-triangle text-warning mt-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card critico">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-danger">{{ sin_stock }}</div>
+                <div class="metric-label">Sin Stock</div>
+                <i class="fas fa-times-circle text-danger mt-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card ofertas">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-primary">{{ productos_oferta_count }}</div>
+                <div class="metric-label">En Oferta</div>
+                <i class="fas fa-tag text-primary mt-1"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-2 col-md-4 col-6 mb-2">
+        <div class="card metric-card">
+            <div class="card-body text-center p-2">
+                <div class="metric-value text-info">{{ movimientos_hoy }}</div>
+                <div class="metric-label">Movimientos Hoy</div>
+                <i class="fas fa-exchange-alt text-info mt-1"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alertas de Stock Bajo -->
+{% if productos_stock_bajo %}
+<div class="alert-stock">
+    <div class="d-flex align-items-center mb-2">
+        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+        <h6 class="mb-0 text-warning">Productos que Necesitan Atención</h6>
+    </div>
+    <div class="row g-1">
+        {% for producto in productos_stock_bajo|slice:":6" %}
+        <div class="col-md-4 col-6">
+            <div class="d-flex justify-content-between align-items-center p-1 px-2 bg-white rounded">
+                <span class="fw-bold" style="font-size: 0.8rem;">{{ producto.nom_prod|truncatechars:15 }}</span>
+                <span class="badge bg-warning" style="font-size: 0.7rem;">{{ producto.stock_prod }} uds</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Contenido Principal -->
+<div class="row">
+    <!-- Columna Izquierda - Gráficas y Tabla -->
+    <div class="col-lg-8">
+        <!-- Gráfica de Distribución - MEJORADA -->
+        <div class="chart-container">
+            <h5><i class="fas fa-chart-bar me-2"></i>Distribución de Stock</h5>
+            <div class="chart-wrapper">
+                <canvas id="stockChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Productos con Stock Bajo -->
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Productos con Stock Bajo</h5>
+                <a href="{% url 'Crud_V' %}" class="btn btn-sm btn-primary">Gestionar</a>
+            </div>
+            {% if productos_stock_bajo %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Stock</th>
+                            <th>Categoría</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in productos_stock_bajo %}
+                        <tr>
+                            <td>
+                                <strong style="font-size: 0.9rem;">{{ producto.nom_prod }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge {% if producto.stock_prod == 0 %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ producto.stock_prod }} uds
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ producto.fkcategoria_prod.desc_cp }}</small>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modalEntradaStock"
+                                        data-producto-id="{{ producto.pkid_prod }}"
+                                        data-producto-nombre="{{ producto.nom_prod }}">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-3">
+                <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
+                <p class="text-success mb-0" style="font-size: 0.9rem;">¡Excelente! No hay productos con stock bajo.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Columna Derecha - Información -->
+    <div class="col-lg-4">
+        <!-- Movimientos Recientes -->
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Movimientos Recientes</h5>
+                <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-sm btn-outline-primary">Ver Todos</a>
+            </div>
+            <div class="movimientos-list">
+                {% if movimientos_recientes %}
+                    {% for movimiento in movimientos_recientes %}
+                    <div class="movement-item {% if movimiento.tipo == 'entrada' %}entrada{% else %}salida{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div style="flex: 1;">
+                                <strong style="font-size: 0.85rem;">{{ movimiento.producto }}</strong>
+                                <br>
+                                <small class="text-muted" style="font-size: 0.75rem;">{{ movimiento.motivo }}</small>
+                                <br>
+                                <small style="font-size: 0.7rem;">{{ movimiento.fecha }}</small>
+                            </div>
+                            <span class="badge {% if movimiento.tipo == 'entrada' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.7rem;">
+                                {% if movimiento.tipo == 'entrada' %}+{% else %}-{% endif %}{{ movimiento.cantidad }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-2">
+                        <i class="fas fa-inbox fa-lg text-muted mb-1"></i>
+                        <p class="text-muted mb-0" style="font-size: 0.8rem;">No hay movimientos recientes</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Productos en Oferta -->
+        <div class="chart-container">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0"><i class="fas fa-tag me-2"></i>Productos en Oferta</h5>
+                <a href="{% url 'Ofertas_V' %}" class="btn btn-sm btn-outline-primary">Gestionar</a>
+            </div>
+            {% if productos_oferta %}
+                {% for oferta in productos_oferta|slice:":3" %}
+                <div class="card mb-2">
+                    <div class="card-body p-2">
+                        <h6 class="card-title mb-1" style="font-size: 0.9rem;">{{ oferta.producto_nombre }}</h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="text-decoration-line-through text-muted" style="font-size: 0.8rem;">${{ oferta.precio_original }}</span>
+                                <span class="fw-bold text-danger ms-1" style="font-size: 0.9rem;">${{ oferta.precio_oferta }}</span>
+                            </div>
+                            <span class="badge bg-danger" style="font-size: 0.7rem;">-{{ oferta.descuento }}%</span>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.75rem;">Stock: {{ oferta.stock_oferta }}</small>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-2">
+                    <i class="fas fa-tag fa-lg text-muted mb-1"></i>
+                    <p class="text-muted mb-0" style="font-size: 0.8rem;">No hay ofertas activas</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Entrada Stock -->
+<div class="modal fade" id="modalEntradaStock" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Entrada de Stock</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="#">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="producto_id_entrada" name="producto_id">
+                    <p class="mb-2">Producto: <strong id="nombre_producto_entrada"></strong></p>
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.9rem;">Cantidad:</label>
+                        <input type="number" class="form-control form-control-sm" name="cantidad_entrada" min="1" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.9rem;">Motivo:</label>
+                        <select class="form-control form-control-sm" name="motivo_entrada">
+                            <option value="compra_proveedor">Compra a Proveedor</option>
+                            <option value="devolucion_cliente">Devolución de Cliente</option>
+                            <option value="ajuste_inventario">Ajuste de Inventario</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Registrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajuste Rápido -->
+<div class="modal fade" id="modalAjusteRapido" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Ajuste Rápido</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="#">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.9rem;">Producto:</label>
+                        <select class="form-control form-control-sm" name="producto_id" required>
+                            <option value="">Seleccionar...</option>
+                            {% for producto in productos_stock_bajo %}
+                            <option value="{{ producto.pkid_prod }}">{{ producto.nom_prod }} ({{ producto.stock_prod }} uds)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.9rem;">Tipo:</label>
+                        <select class="form-control form-control-sm" name="tipo_ajuste">
+                            <option value="entrada">Entrada (+)</option>
+                            <option value="salida">Salida (-)</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size: 0.9rem;">Cantidad:</label>
+                        <input type="number" class="form-control form-control-sm" name="cantidad" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Ajustar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gráfica de stock MEJORADA - Barras horizontales
+    const ctx = document.getElementById('stockChart').getContext('2d');
+    const stockChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Normal', 'Bajo', 'Sin Stock'],
+            datasets: [{
+                label: 'Cantidad de Productos',
+                data: [{{ stock_normal }}, {{ stock_bajo }}, {{ sin_stock }}],
+                backgroundColor: ['#27ae60', '#f39c12', '#e74c3c'],
+                borderColor: ['#219653', '#e67e22', '#c0392b'],
+                borderWidth: 1,
+                borderRadius: 4,
+                barThickness: 30, // Controla el grosor de las barras
+            }]
+        },
+        options: {
+            indexAxis: 'y', // Esto hace que las barras sean horizontales
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.parsed.x}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        font: {
+                            size: 11
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            size: 12,
+                            weight: 'bold'
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Modal de entrada de stock
+    const modalEntrada = document.getElementById('modalEntradaStock');
+    modalEntrada.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const productoId = button.getAttribute('data-producto-id');
+        const productoNombre = button.getAttribute('data-producto-nombre');
+        
+        document.getElementById('producto_id_entrada').value = productoId;
+        document.getElementById('nombre_producto_entrada').textContent = productoNombre;
+        
+        const form = this.querySelector('form');
+        form.action = "{% url 'entrada_stock_producto' 0 %}".replace('0', productoId);
+    });
+});
+</script>
+{% endblock %}

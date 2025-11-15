@@ -11,6 +11,11 @@
             <h1 class="h3 mb-2">Gestión de Ofertas</h1>
             <p class="text-muted">Selecciona productos y configura sus ofertas</p>
         </div>
+        <div>
+            <a href="{% url 'verificar_estado_ofertas' %}" class="btn btn-outline-info">
+                <i class="fas fa-sync-alt me-1"></i>Actualizar Estado
+            </a>
+        </div>
     </div>
 
     <!-- Mensajes -->
@@ -47,8 +52,8 @@
         <div class="col-md-2">
             <select class="form-select" id="filtroCategoria">
                 <option value="">Todas las categorías</option>
-                {% for categoria in categorias %}
-                    <option value="{{ categoria }}">{{ categoria }}</option>
+                {% for producto in productos %}
+                    <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -91,14 +96,32 @@
                                             Stock: {{ producto.stock }}
                                         </span>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-3 seleccionar-producto"
+                                    
+                                    <!-- Botón para producto base -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2 seleccionar-producto"
                                             data-producto-id="{{ producto.id }}"
                                             data-producto-nombre="{{ producto.nombre }}"
                                             data-producto-precio="{{ producto.precio }}"
                                             data-producto-stock="{{ producto.stock }}"
-                                            data-producto-categoria="{{ producto.categoria }}">
-                                        <i class="fas fa-plus me-1"></i>Seleccionar
+                                            data-producto-categoria="{{ producto.categoria }}"
+                                            data-variante-id="">
+                                        <i class="fas fa-plus me-1"></i>Producto Base
                                     </button>
+                                    
+                                    <!-- Botones para variantes -->
+                                    {% if producto.variantes %}
+                                        {% for variante in producto.variantes %}
+                                        <button type="button" class="btn btn-sm btn-outline-info w-100 mt-1 seleccionar-producto"
+                                                data-producto-id="{{ producto.id }}"
+                                                data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
+                                                data-producto-precio="{{ variante.precio_total }}"
+                                                data-producto-stock="{{ variante.stock }}"
+                                                data-producto-categoria="{{ producto.categoria }}"
+                                                data-variante-id="{{ variante.id }}">
+                                            <i class="fas fa-layer-group me-1"></i>{{ variante.nombre }}
+                                        </button>
+                                        {% endfor %}
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -147,47 +170,75 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
                         <i class="fas fa-bolt me-2"></i>
                         Ofertas Activas
                         <span class="badge bg-success ms-2">{{ ofertas_activas|length }}</span>
                     </h5>
+                    <div>
+                        <small class="text-muted">Actualizado: {% now "d/m/Y H:i" %}</small>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div id="contenedorOfertasActivas" style="max-height: 400px; overflow-y: auto;">
+                    <div id="contenedorOfertasActivas" style="max-height: 500px; overflow-y: auto;">
                         {% if ofertas_activas %}
                             {% for oferta in ofertas_activas %}
-                            <div class="card mb-3">
+                            <div class="card mb-3 {% if not oferta.esta_activa_real %}border-warning{% endif %}">
                                 <div class="card-body">
                                     <div class="row align-items-center">
                                         <div class="col-md-3">
                                             <h6 class="mb-1">{{ oferta.producto_nombre }}</h6>
                                             <small class="text-muted">{{ oferta.titulo }}</small>
+                                            <div class="mt-1">
+                                                <small class="text-muted">Creada: {{ oferta.fecha_creacion }}</small>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
                                             <span class="badge bg-danger">{{ oferta.descuento }}% OFF</span>
+                                            <br>
+                                            <small class="text-muted mt-1 d-block">{{ oferta.tipo_oferta|title }}</small>
                                         </div>
                                         <div class="col-md-2">
-                                            <small class="text-muted text-decoration-line-through">${{ oferta.precio_original }}</small><br>
+                                            <small class="text-muted text-decoration-line-through">${{ oferta.precio_original|floatformat:0 }}</small><br>
                                             <strong class="text-success">${{ oferta.precio_oferta|floatformat:0 }}</strong>
                                         </div>
                                         <div class="col-md-2">
                                             <small>Stock oferta: {{ oferta.stock_oferta }}</small><br>
                                             <small>Disponible: {{ oferta.stock_disponible }}</small>
+                                            {% if oferta.tipo_oferta == 'stock' %}
+                                            <br>
+                                            <small>Actual: {{ oferta.stock_actual_oferta }}</small>
+                                            {% endif %}
                                         </div>
                                         <div class="col-md-2">
                                             <small>Inicio: {{ oferta.fecha_inicio }}</small><br>
                                             <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
+                                            <br>
+                                            <span class="badge {% if oferta.esta_activa_real %}bg-success{% else %}bg-warning{% endif %} mt-1">
+                                                {% if oferta.esta_activa_real %}Activa{% else %}Inactiva{% endif %}
+                                            </span>
                                         </div>
                                         <div class="col-md-1">
-                                            <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline">
-                                                {% csrf_token %}
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                        onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </form>
+                                            <div class="btn-group-vertical">
+                                                <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline mb-1">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                                {% if oferta.esta_activa_real %}
+                                                <form method="POST" action="{% url 'finalizar_oferta_manual' oferta.id %}" class="d-inline finalizar-oferta-form">
+                                                    {% csrf_token %}
+                                                    <button type="button" class="btn btn-sm btn-outline-warning finalizar-oferta-btn" 
+                                                            data-oferta-id="{{ oferta.id }}"
+                                                            data-oferta-nombre="{{ oferta.producto_nombre }}">
+                                                        <i class="fas fa-stop"></i>
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -197,6 +248,7 @@
                         <div class="text-center py-4 text-muted">
                             <i class="fas fa-tags fa-2x mb-3"></i>
                             <p>No hay ofertas activas</p>
+                            <small>Crea tu primera oferta seleccionando productos de arriba</small>
                         </div>
                         {% endif %}
                     </div>
@@ -218,10 +270,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const mensajeVacio = document.getElementById('mensajeVacio');
     const contador = document.getElementById('contadorProductosSeleccionados');
 
-    // Obtener fecha actual en formato YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
+    // Obtener fecha y hora actual - SIN VALIDACIÓN DE HORA
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
     
-    // Obtener fecha de mañana para la fecha mínima de fin
+    // Hora por defecto: hora actual
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const currentTime = `${hours}:${minutes}`;
+    
+    // Obtener fecha de mañana
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
@@ -265,19 +323,23 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.seleccionar-producto').forEach(button => {
         button.addEventListener('click', function() {
             const productoId = this.getAttribute('data-producto-id');
+            const varianteId = this.getAttribute('data-variante-id');
+            const productoKey = `${productoId}-${varianteId}`;
             
             // Verificar si ya está seleccionado
-            if (productosSeleccionados.find(p => p.id === productoId)) {
-                alert('Este producto ya está seleccionado');
+            if (productosSeleccionados.find(p => p.key === productoKey)) {
+                alert('Este producto/variante ya está seleccionado');
                 return;
             }
 
             const producto = {
+                key: productoKey,
                 id: productoId,
                 nombre: this.getAttribute('data-producto-nombre'),
                 precio: parseFloat(this.getAttribute('data-producto-precio')),
                 stock: parseInt(this.getAttribute('data-producto-stock')),
-                categoria: this.getAttribute('data-producto-categoria')
+                categoria: this.getAttribute('data-producto-categoria'),
+                variante_id: varianteId
             };
 
             productosSeleccionados.push(producto);
@@ -287,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Deshabilitar el botón
             this.disabled = true;
             this.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
-            this.classList.remove('btn-outline-primary');
+            this.classList.remove('btn-outline-primary', 'btn-outline-info');
             this.classList.add('btn-outline-success');
         });
     });
@@ -306,24 +368,28 @@ document.addEventListener('DOMContentLoaded', function() {
         mensajeVacio.style.display = 'none';
         
         configuraciones.innerHTML = productosSeleccionados.map((producto, index) => `
-            <div class="card mb-3 config-producto" data-id="${producto.id}">
+            <div class="card mb-3 config-producto" data-key="${producto.key}">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="mb-0">${producto.nombre}</h6>
-                        <small class="text-muted">Precio: $${producto.precio} | Stock: ${producto.stock} | ${producto.categoria}</small>
+                        <small class="text-muted">
+                            Precio: $${producto.precio} | Stock: ${producto.stock} | ${producto.categoria}
+                            ${producto.variante_id ? ' | Variante ID: ' + producto.variante_id : ''}
+                        </small>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger quitar-producto" data-id="${producto.id}">
+                    <button type="button" class="btn btn-sm btn-outline-danger quitar-producto" data-key="${producto.key}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="card-body">
-                    <form method="POST" class="oferta-form">
+                    <form method="POST" action="{% url 'crear_oferta' %}" class="oferta-form">
                         {% csrf_token %}
                         <input type="hidden" name="producto_id" value="${producto.id}">
+                        <input type="hidden" name="variante_id" value="${producto.variante_id}">
                         
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label">Descuento %</label>
+                                <label class="form-label">Descuento % *</label>
                                 <div class="input-group">
                                     <input type="number" class="form-control descuento-input" name="porcentaje_descuento" 
                                            value="10" min="1" max="100" step="0.1" required
@@ -333,20 +399,33 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Stock oferta</label>
+                                <label class="form-label">Stock oferta *</label>
                                 <input type="number" class="form-control" name="stock_oferta" 
                                        value="1" min="1" max="${producto.stock}" required>
                                 <small class="form-text text-muted">Máximo: ${producto.stock}</small>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Fecha inicio (opcional)</label>
-                                <input type="date" class="form-control" name="fecha_inicio" value="${today}" min="${today}">
-                                <small class="form-text text-muted">Si no se especifica, se usará la fecha actual</small>
+                                <label class="form-label">Tipo oferta *</label>
+                                <select class="form-select tipo-oferta-select" name="tipo_oferta" required data-index="${index}">
+                                    <option value="tiempo">Por tiempo</option>
+                                    <option value="stock">Por stock</option>
+                                </select>
                             </div>
                             <div class="col-md-3">
+                                <label class="form-label">Fecha inicio *</label>
+                                <input type="date" class="form-control" name="fecha_inicio" value="${today}" min="${today}" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Hora inicio *</label>
+                                <input type="time" class="form-control" name="hora_inicio" value="${currentTime}" required>
+                            </div>
+                            <div class="col-md-3 fecha-fin-container">
                                 <label class="form-label">Fecha fin *</label>
-                                <input type="date" class="form-control" name="fecha_fin" required min="${tomorrowFormatted}">
-                                <small class="form-text text-muted">Obligatorio</small>
+                                <input type="date" class="form-control fecha-fin-input" name="fecha_fin" min="${today}" required>
+                            </div>
+                            <div class="col-md-3 hora-fin-container">
+                                <label class="form-label">Hora fin *</label>
+                                <input type="time" class="form-control hora-fin-input" name="hora_fin" value="23:59" required>
                             </div>
                         </div>
                         
@@ -372,20 +451,27 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                         
+                        <!-- Información según tipo de oferta -->
                         <div class="row mt-2">
                             <div class="col-12">
-                                <div class="alert alert-info">
+                                <div class="alert alert-info" id="info-oferta-${index}">
                                     <small>
                                         <i class="fas fa-info-circle me-1"></i>
-                                        <strong>Nota:</strong> La fecha fin es obligatoria. La fecha inicio será la actual si no se especifica.
+                                        <span id="info-tiempo-${index}">
+                                            <strong>Oferta por tiempo:</strong> La oferta estará activa hasta la fecha y hora fin especificada.
+                                        </span>
+                                        <span class="d-none" id="info-stock-${index}">
+                                            <br><strong>Oferta por stock:</strong> La oferta estará activa hasta agotar el stock asignado o hasta la fecha fin, lo que ocurra primero.
+                                        </span>
                                     </small>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row mt-2">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-tag me-1"></i>Crear Oferta para este producto
+                                    <i class="fas fa-tag me-1"></i>Crear Oferta para ${producto.nombre}
                                 </button>
                             </div>
                         </div>
@@ -401,39 +487,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        // Agregar event listeners para tipo de oferta
+        document.querySelectorAll('.tipo-oferta-select').forEach(select => {
+            select.addEventListener('change', function() {
+                actualizarTipoOferta(this);
+            });
+            // Inicializar estado
+            actualizarTipoOferta(select);
+        });
+
         // Agregar event listeners para quitar productos
         document.querySelectorAll('.quitar-producto').forEach(btn => {
             btn.addEventListener('click', function() {
-                const productoId = this.getAttribute('data-id');
-                quitarProducto(productoId);
+                const productoKey = this.getAttribute('data-key');
+                quitarProducto(productoKey);
             });
         });
 
-        // Validar stock antes de enviar formularios
+        // Validar antes de enviar formularios
         document.querySelectorAll('.oferta-form').forEach(form => {
-            const stockInput = form.querySelector('input[name="stock_oferta"]');
-            const maxStock = parseInt(stockInput.max);
-            
             form.addEventListener('submit', function(e) {
-                const stockValue = parseInt(stockInput.value);
-                if (stockValue > maxStock) {
+                if (!validarFormularioOferta(this)) {
                     e.preventDefault();
-                    alert(`El stock de oferta no puede ser mayor a ${maxStock}`);
-                    stockInput.focus();
-                    return;
-                }
-
-                // Validar que la fecha fin sea mayor que la fecha inicio
-                const fechaInicioInput = form.querySelector('input[name="fecha_inicio"]');
-                const fechaFinInput = form.querySelector('input[name="fecha_fin"]');
-                
-                const fechaInicio = fechaInicioInput.value || today;
-                const fechaFin = fechaFinInput.value;
-                
-                if (fechaFin && fechaInicio >= fechaFin) {
-                    e.preventDefault();
-                    alert('La fecha fin debe ser posterior a la fecha inicio');
-                    fechaFinInput.focus();
                 }
             });
         });
@@ -456,17 +531,78 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById(`ahorro-${index}`).textContent = `$${ahorro.toFixed(0)}`;
     }
 
-    function quitarProducto(productoId) {
-        productosSeleccionados = productosSeleccionados.filter(p => p.id !== productoId);
-        
-        // Reactivar el botón en la card del producto
-        const button = document.querySelector(`.seleccionar-producto[data-producto-id="${productoId}"]`);
-        if (button) {
-            button.disabled = false;
-            button.innerHTML = '<i class="fas fa-plus me-1"></i>Seleccionar';
-            button.classList.remove('btn-outline-success');
-            button.classList.add('btn-outline-primary');
+    function actualizarTipoOferta(select) {
+        const index = select.getAttribute('data-index');
+        const tipoOferta = select.value;
+        const infoTiempo = document.getElementById(`info-tiempo-${index}`);
+        const infoStock = document.getElementById(`info-stock-${index}`);
+    
+        if (tipoOferta === 'stock') {
+            // PARA STOCK: Mostrar información específica pero mantener campos visibles
+            infoTiempo.classList.add('d-none');
+            infoStock.classList.remove('d-none');
+        } else {
+            // PARA TIEMPO: Mostrar información de tiempo
+            infoTiempo.classList.remove('d-none');
+            infoStock.classList.add('d-none');
         }
+    }
+
+    function validarFormularioOferta(form) {
+        const stockInput = form.querySelector('input[name="stock_oferta"]');
+        const maxStock = parseInt(stockInput.max);
+        const stockValue = parseInt(stockInput.value);
+        
+        if (stockValue > maxStock) {
+            alert(`El stock de oferta no puede ser mayor a ${maxStock}`);
+            stockInput.focus();
+            return false;
+        }
+
+        const tipoOferta = form.querySelector('select[name="tipo_oferta"]').value;
+        const fechaInicioInput = form.querySelector('input[name="fecha_inicio"]');
+        const horaInicioInput = form.querySelector('input[name="hora_inicio"]');
+        const fechaFinInput = form.querySelector('input[name="fecha_fin"]');
+        const horaFinInput = form.querySelector('input[name="hora_fin"]');
+        
+        const fechaInicio = fechaInicioInput.value;
+        const horaInicio = horaInicioInput.value;
+        const fechaFin = fechaFinInput.value;
+        const horaFin = horaFinInput.value;
+        
+        // Validar que fecha fin sea mayor o igual a fecha inicio
+        if (fechaFin < fechaInicio) {
+            alert('La fecha de fin no puede ser anterior a la fecha de inicio');
+            fechaFinInput.focus();
+            return false;
+        }
+        
+        // Si es el mismo día, validar que la hora fin sea mayor
+        if (fechaFin === fechaInicio) {
+            if (horaFin <= horaInicio) {
+                alert('Para el mismo día, la hora de fin debe ser posterior a la hora de inicio');
+                horaFinInput.focus();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function quitarProducto(productoKey) {
+        productosSeleccionados = productosSeleccionados.filter(p => p.key !== productoKey);
+        
+        // Reactivar todos los botones con el mismo producto/variante
+        const [productoId, varianteId] = productoKey.split('-');
+        const buttons = document.querySelectorAll(`.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`);
+        
+        buttons.forEach(button => {
+            button.disabled = false;
+            const isVariante = varianteId !== '';
+            button.innerHTML = `<i class="fas fa-plus me-1"></i>${isVariante ? button.getAttribute('data-producto-nombre').split(' - ')[1] : 'Producto Base'}`;
+            button.classList.remove('btn-outline-success');
+            button.classList.add(isVariante ? 'btn-outline-info' : 'btn-outline-primary');
+        });
         
         actualizarConfiguraciones();
         actualizarContador();
@@ -475,19 +611,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Limpiar toda la selección
     window.limpiarSeleccion = function() {
         productosSeleccionados.forEach(producto => {
-            const button = document.querySelector(`.seleccionar-producto[data-producto-id="${producto.id}"]`);
-            if (button) {
+            const [productoId, varianteId] = producto.key.split('-');
+            const buttons = document.querySelectorAll(`.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`);
+            
+            buttons.forEach(button => {
                 button.disabled = false;
-                button.innerHTML = '<i class="fas fa-plus me-1"></i>Seleccionar';
+                const isVariante = varianteId !== '';
+                button.innerHTML = `<i class="fas fa-plus me-1"></i>${isVariante ? button.getAttribute('data-producto-nombre').split(' - ')[1] : 'Producto Base'}`;
                 button.classList.remove('btn-outline-success');
-                button.classList.add('btn-outline-primary');
-            }
+                button.classList.add(isVariante ? 'btn-outline-info' : 'btn-outline-primary');
+            });
         });
         
         productosSeleccionados = [];
         actualizarConfiguraciones();
         actualizarContador();
     };
+
+    // Manejar botones de finalizar oferta
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.finalizar-oferta-btn')) {
+            const button = e.target.closest('.finalizar-oferta-btn');
+            const ofertaId = button.getAttribute('data-oferta-id');
+            const ofertaNombre = button.getAttribute('data-oferta-nombre');
+            
+            if (confirm(`¿Estás seguro de que deseas finalizar la oferta "${ofertaNombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                const form = button.closest('.finalizar-oferta-form');
+                form.submit();
+            }
+        }
+    });
 });
 </script>
 
@@ -495,15 +648,22 @@ document.addEventListener('DOMContentLoaded', function() {
 .product-card {
     transition: all 0.2s ease;
     cursor: pointer;
+    border: 1px solid #e9ecef;
 }
 
 .product-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #4F46E5;
 }
 
 .config-producto {
     border-left: 4px solid #0d6efd;
+    transition: all 0.3s ease;
+}
+
+.config-producto:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 /* Scroll personalizado */
@@ -534,17 +694,63 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .card-body {
-    padding: 1rem;
+    padding: 1.25rem;
 }
 
 .card-header {
-    padding: 0.75rem 1rem;
+    padding: 1rem 1.25rem;
+    background-color: rgba(248, 249, 250, 0.8) !important;
 }
 
 .text-truncate {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.btn-group-vertical .btn {
+    margin-bottom: 0.25rem;
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.alert {
+    border: none;
+    border-radius: 8px;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .row.g-3 {
+        margin-bottom: -0.5rem;
+    }
+    
+    .row.g-3 > [class*="col-"] {
+        margin-bottom: 0.5rem;
+    }
 }
 </style>
 {% endblock %}
