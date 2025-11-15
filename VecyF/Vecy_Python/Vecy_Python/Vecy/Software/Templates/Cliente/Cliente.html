@@ -1,295 +1,1917 @@
 {% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{% static 'css/principal.css' %}" />
-    <link rel="stylesheet" href="{% static 'css/index.css' %}" />
-    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <title>Principal</title>
-</head>
+{% block title %}VECY - Dashboard{% endblock %}
 
-<body>
-    {% block content %}
-    <div class="containerv">
-        <img class="img_fondo" src="{% static 'img/iglesia.jpg'%}" alt="" />
-        <div class="contenido"></div>
-        <div class="header">
-            <div class="logo"><span>VECY</span></div>
-            <div class="menu-desplegable">
-                <span style="font-weight: bold;" data-bs-toggle="offcanvas" data-bs-target="#menuLateral">
-                    <i class="fas fa-bars iconm"></i> Menú
-                </span>
-            </div>
-            <div class="input-group1">
-                <form method="get" action="{% url 'cliente_dash' %}">
-                    <input class="input" type="search" name="q" placeholder="Busca negocios, productos..."
-                        value="{{ query }}">
-                    <button type="submit"><i class="fas fa-search iconl"></i></button>
-                </form>
-            </div>
-            <div class="iniSesion">
-                <i class="fas fa-truck"></i>
-                <a href="" id="it2">Pedidos</a>
-            </div>
-            <div class="iniSesion">
-                <i class="fas fa-cart-shopping"></i>
-                <a href="{% url 'ver_carrito' %}">Carrito</a>
-            </div>
-            <div class="iniSesion">
-                <i class="fas fa-heart"></i>
-                <a href="">Favoritos</a>
-            </div>
-            <div class="iniSesion">
-                <i class="fas fa-user-circle"></i>
-                <a href="{% url 'cerrar_sesion' %}">Salir</a>
-            </div>
+{% block content %}
+<!-- Hero Carousel Section -->
+<section class="hero-carousel">
+    <div id="mainCarousel" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-indicators">
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="0" class="active"></button>
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="1"></button>
+            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="2"></button>
         </div>
-        <!--Menu lateral-->
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralLabel">
-            <div class="offcanvas-header headerM">
-                <h5 class="offcanvas-title" id="menuLateralLabel">VECY</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-                    aria-label="Cerrar"></button>
-            </div>
-            <div class="offcanvas-body bodyM">
-                <ul class="list-unstyled">
-                    <span class="cat mb-5">Categorías</span>
-                    <br>
-                    {% for categoria in categorias %}
-                    <li><a href="#" class="d-block categorias">{{ categoria.desc_cp }}</a></li>
-                    {% empty %}
-                    <li><span class="text-white-50">No hay categorías disponibles</span></li>
-                    {% endfor %}
-
-                </ul>
-            </div>
-        </div>
-
-        <div class="men_ini">
-            <h1>Te damos la Bienvenida</h1>
-            <p>Encuentra los negocios y productos cerca de ti.</p>
-            <button class="info btn1">Ver Negocios</button>
-            <button class="info btn2" onclick="location.href='#negocios'">Ver Categorías</button>
-        </div>
-    </div>
-    <div class="anuncio">
-        <marquee behavior="scroll" direction="left">
-            🙂 Encuentra todo lo que necesites a un clic.
-        </marquee>
-    </div>
-
-    <div class="main" id="negocios">
-        <div class="categoriaNeg">
-            <h4>Categorías Que Te Pueden Interesar</h4>
-            <div class="rowP" data-aos="fade-up">
-                {% for categoria in categorias_interes %}
-                <div class="cardC">
-    <a href="{% url 'cliente_dash' %}?categoria={{ categoria.pkid_cp }}">
-        {% if categoria.desc_cp|lower == "helado" %}
-        <img src="{% static 'img/heladería.jpg' %}" alt="">
-        {% elif categoria.desc_cp|lower == "abarrotes" %}
-        <img src="{% static 'img/abarrotes.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Bebidas gaseosas" %}
-        <img src="{% static 'img/bebidas.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Jugos naturales" %}
-        <img src="{% static 'img/bebidasN.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Agua embotellada" %}
-        <img src="{% static 'img/agua.jpg' %}" alt="">
-        {% elif categoria.desc_cp|lower == "lácteos" %}
-        <img src="{% static 'img/lacteos.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Carnes frías y embutidos" %}
-        <img src="{% static 'img/carnes.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Celulares y accesorios" %}
-        <img src="{% static 'img/celular.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Verduras frescas" %}
-        <img src="{% static 'img/verduras.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Frutas frescas" %}
-        <img src="{% static 'img/frutas.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Panadería" %}
-        <img src="{% static 'img/panes.jpg' %}" alt="">
-        {% elif categoria.desc_cp == "Repostería" %}
-        <img src="{% static 'img/reposteria.jpg' %}" alt="">
-        {% endif %}
-        <h6 class="mt-3">{{ categoria.desc_cp }}</h6>
-    </a>
-</div>
-
-                {% endfor %}
-            </div>
-        </div>
-        <div class="negs">
-            <h4>Negocios Mejor Calificados</h4>
-            <p>Encuentra los negocios cerca de ti.</p>
-        </div>
-        <div class="rowNegs">
-            {% for negocio in negocios_mejor_calificados %}
-            <div class="cardN">
-                {% if negocio.img_neg %}
-                <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
-                {% else %}
-                <img src="{% static 'img/default_negocio.jpg' %}" alt="{{ negocio.nom_neg }}">
-                {% endif %}
-                <div class="cardN-body">
-                    <h6 class="mt-3">{{ negocio.nom_neg }}</h6>
-                    <p>{{ negocio.desc_neg }}</p>
-                    <div><i class="fas fa-map-marker-alt iconmap"></i> {{ negocio.direcc_neg }}</div>
-                    <span><strong>Tipo Negocio:</strong> {{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
-                    <div class="verP">
-                        <a href="{% url 'detalle_negocio' negocio.pkid_neg %}" type="button">Ver Productos</a>
+        <div class="carousel-inner">
+            <!-- Slide 1: Ofertas Destacadas -->
+            <div class="carousel-item active">
+                <div class="carousel-background" style="background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);"></div>
+                <div class="container">
+                    <div class="row align-items-center min-vh-60">
+                        <div class="col-lg-6">
+                            <div class="carousel-content">
+                                <div class="carousel-badge">
+                                    <i class="fas fa-bolt me-2"></i>
+                                    Oferta Especial
+                                </div>
+                                <h1 class="carousel-title">Hasta 50% de Descuento</h1>
+                                <p class="carousel-text">En productos seleccionados de tus negocios favoritos</p>
+                                <div class="carousel-actions">
+                                    <button class="btn-carousel-primary">Ver Ofertas</button>
+                                    <button class="btn-carousel-secondary">Explorar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="carousel-image">
+                                <div class="placeholder-image">
+                                    <i class="fas fa-tag fa-8x"></i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="calificacion">
-                        <p>⭐ {{ negocio.promedio|floatformat:1 }}</p>
+                </div>
+            </div>
+            
+            <!-- Slide 2: Nuevos Negocios -->
+            <div class="carousel-item">
+                <div class="carousel-background" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);"></div>
+                <div class="container">
+                    <div class="row align-items-center min-vh-60">
+                        <div class="col-lg-6">
+                            <div class="carousel-content">
+                                <div class="carousel-badge">
+                                    <i class="fas fa-store me-2"></i>
+                                    Nuevos Negocios
+                                </div>
+                                <h1 class="carousel-title">Descubre Locales Nuevos</h1>
+                                <p class="carousel-text">Conoce los establecimientos que se han unido recientemente</p>
+                                <div class="carousel-actions">
+                                    <button class="btn-carousel-primary">Explorar Negocios</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="carousel-image">
+                                <div class="placeholder-image">
+                                    <i class="fas fa-store-alt fa-8x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Slide 3: Envío Gratis -->
+            <div class="carousel-item">
+                <div class="carousel-background" style="background: linear-gradient(135deg, #27ae60 0%, var(--secondary) 100%);"></div>
+                <div class="container">
+                    <div class="row align-items-center min-vh-60">
+                        <div class="col-lg-6">
+                            <div class="carousel-content">
+                                <div class="carousel-badge">
+                                    <i class="fas fa-shipping-fast me-2"></i>
+                                    Envío Gratis
+                                </div>
+                                <h1 class="carousel-title">Envío Sin Costo</h1>
+                                <p class="carousel-text">En compras superiores a $50.000 en negocios participantes</p>
+                                <div class="carousel-actions">
+                                    <button class="btn-carousel-primary">Ver Condiciones</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="carousel-image">
+                                <div class="placeholder-image">
+                                    <i class="fas fa-shipping-fast fa-8x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <button class="carousel-control-prev" type="button" data-bs-target="#mainCarousel" data-bs-slide="prev">
+            <span class="carousel-control-prev-icon"></span>
+        </button>
+        <button class="carousel-control-next" type="button" data-bs-target="#mainCarousel" data-bs-slide="next">
+            <span class="carousel-control-next-icon"></span>
+        </button>
+    </div>
+</section>
+
+<!-- Quick Stats Section -->
+<section class="quick-stats py-4">
+    <div class="container">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="stat-item-quick">
+                    <div class="stat-icon-quick">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <div class="stat-content-quick">
+                        <span class="stat-number-quick">{{ pedidos_count }}</span>
+                        <span class="stat-label-quick">Pedidos Totales</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item-quick">
+                    <div class="stat-icon-quick">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-content-quick">
+                        <span class="stat-number-quick">{{ pedidos_pendientes }}</span>
+                        <span class="stat-label-quick">Pendientes</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item-quick">
+                    <div class="stat-icon-quick">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="stat-content-quick">
+                        <span class="stat-number-quick">{{ negocios_recientes|length }}</span>
+                        <span class="stat-label-quick">Negocios</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-item-quick">
+                    <div class="stat-icon-quick">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-content-quick">
+                        <span class="stat-number-quick">{{ carrito_count|default:0 }}</span>
+                        <span class="stat-label-quick">En Carrito</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Recommended Products Section -->
+<section class="recommended-section py-5">
+    <div class="container">
+        <div class="section-header d-flex justify-content-between align-items-center mb-5">
+            <div class="header-text">
+                <h2 class="section-title">Productos Recomendados</h2>
+                <p class="section-subtitle">Seleccionados especialmente para ti</p>
+            </div>
+            <a href="#" class="btn-view-all">
+                Ver todos <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+
+        <div class="products-grid">
+            {% for producto in productos_recomendados|slice:":6" %}
+            <div class="product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="product-image-container">
+                    {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="product-image">
+                    {% else %}
+                        <div class="product-image-placeholder">
+                            <i class="fas fa-box"></i>
+                        </div>
+                    {% endif %}
+                    <div class="product-actions">
+                        <button class="btn-action btn-wishlist" onclick="toggleWishlist({{ producto.pkid_prod }})">
+                            <i class="far fa-heart"></i>
+                        </button>
+                        <button class="btn-action btn-quickview" onclick="quickView({{ producto.pkid_prod }})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="product-badges">
+                        {% if forloop.counter <= 2 %}
+                        <span class="badge badge-featured">Destacado</span>
+                        {% endif %}
+                        <span class="badge badge-discount">-20%</span>
+                    </div>
+                </div>
+                <div class="product-info">
+                    <h3 class="product-title">{{ producto.nom_prod }}</h3>
+                    <p class="product-vendor">
+                        <i class="fas fa-store me-1"></i>
+                        {{ producto.fknegocioasociado_prod.nom_neg }}
+                    </p>
+                    <div class="product-meta">
+                        <div class="price-info">
+                            <span class="current-price">${{ producto.precio_prod }}</span>
+                            <span class="original-price">${% widthratio producto.precio_prod 0.8 1 %}</span>
+                        </div>
+                        <div class="rating-info">
+                            <div class="stars">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= 4 %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <span class="rating-count">({{ forloop.counter|add:20 }})</span>
+                        </div>
+                    </div>
+                    <button class="btn-add-to-cart" onclick="addToCart({{ producto.pkid_prod }})">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Agregar al Carrito
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state text-center py-5">
+                <div class="empty-icon mb-3">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h4>No hay productos recomendados</h4>
+                <p class="text-muted">Explora más productos para recibir recomendaciones personalizadas</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Flash Sales Section -->
+<section class="flash-sales-section py-5">
+    <div class="container">
+        <div class="section-header mb-5">
+            <div class="flash-header-content">
+                <div class="flash-icon">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div class="flash-text">
+                    <h2 class="section-title">Ofertas Flash</h2>
+                    <p class="section-subtitle">Termina en:</p>
+                </div>
+                <div class="countdown-timer">
+                    <div class="timer-unit">
+                        <span class="time" id="flash-hours">02</span>
+                        <span class="label">Horas</span>
+                    </div>
+                    <div class="timer-separator">:</div>
+                    <div class="timer-unit">
+                        <span class="time" id="flash-minutes">15</span>
+                        <span class="label">Minutos</span>
+                    </div>
+                    <div class="timer-separator">:</div>
+                    <div class="timer-unit">
+                        <span class="time" id="flash-seconds">30</span>
+                        <span class="label">Segundos</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flash-products-scroller">
+            {% for producto in productos_oferta %}
+            <div class="flash-product-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0 }}00">
+                <div class="flash-product-image">
+                    {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                    {% else %}
+                        <div class="flash-image-placeholder">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                    {% endif %}
+                    <div class="flash-overlay">
+                        <button class="btn-flash-cart" onclick="addToCart({{ producto.pkid_prod }})">
+                            <i class="fas fa-cart-plus"></i>
+                        </button>
+                    </div>
+                    <div class="flash-indicator">
+                        <span class="pulse-dot"></span>
+                        Flash Sale
+                    </div>
+                </div>
+                <div class="flash-product-info">
+                    <h4>{{ producto.nom_prod }}</h4>
+                    <div class="flash-pricing">
+                        <span class="flash-price">${{ producto.precio_prod }}</span>
+                        <span class="flash-original-price">${% widthratio producto.precio_prod 0.8 1 %}</span>
+                    </div>
+                    <div class="sold-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ forloop.counter|add:20 }}%"></div>
+                        </div>
+                        <span class="sold-text">{{ forloop.counter|add:10 }} vendidos</span>
                     </div>
                 </div>
             </div>
             {% empty %}
-            <p>No hay negocios calificados aún.</p>
+            <div class="empty-state text-center py-5">
+                <div class="empty-icon mb-3">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <h4>No hay ofertas flash disponibles</h4>
+                <p class="text-muted">Vuelve pronto para descubrir ofertas especiales</p>
+            </div>
             {% endfor %}
         </div>
     </div>
-    <div class="rowNegs mt-5" id="resultadosBusqueda">
-        {% if query %}
-        <div class="rowNegs" id="resultadosBusquedaInner">
-            {% for negocio in negocios %}
-            <div class="cardN">
-                {% if negocio.img_neg %}
-                <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
-                {% else %}
-                <img src="{% static 'img/default_negocio.jpg' %}" alt="{{ negocio.nom_neg }}">
-                {% endif %}
-                <div class="cardN-body">
-                    <h6>{{ negocio.nom_neg }}</h6>
-                    <p>{{ negocio.desc_neg }}</p>
-                    <span>{{ negocio.direcc_neg }}</span>
-                </div>
-            </div>
-            {% endfor %}
-            {% if productos_filtrados %}
-            <div class="prods" style="width: 100%; text-align: center;">
-                <h4>Productos Encontrados</h4>
-            </div>
-            <div class="rowNegs mt-3" id="resultadosProductosInner">
-                {% for producto in productos_filtrados %}
-                <div class="cardN {% if producto.stock_prod == 0 %}sin-stock{% endif %}">
-                    {% if producto.img_prod %}
-                    <img src="{{ producto.img_prod.url }}" class="card-img-top" alt="{{ producto.nom_prod }}">
-                    {% else %}
-                    <img src="{% static 'img/default_producto.jpg' %}" class="card-img-top"
-                        alt="{{ producto.nom_prod }}">
-                    {% endif %}
-                    <div class="cardN-body">
-                        <h6>{{ producto.nom_prod }}</h6>
-                        <p>{{ producto.desc_prod }}</p>
-                        <span><strong>Precio:</strong> ${{ producto.precio_prod }}</span><br>
-                        <span><strong>Cantidad Disponible:</strong> {{ producto.stock_prod }}</span><br>
+</section>
 
-                        {% if producto.stock_prod == 0 %}
-                        <span class="text-danger fw-bold">¡Producto agotado!</span>
-                        {% else %}
-                        <div class="solicitar d-flex align-items-center gap-2 mt-2">
-                            <button class="btn-minus btn btn-sm btn-outline-secondary">-</button>
-                            <input type="number" class="cantidad-prod form-control form-control-sm" value="1" min="1"
-                                max="{{ producto.stock_prod }}" style="width:50px;">
-                            <button class="btn-plus btn btn-sm btn-outline-secondary">+</button>
-                            <button class="btn btn-sm btn-success agregar-carrito" style="height: 8vh !important;"
-                                data-prod="{{ producto.pkid_prod }}" data-stock="{{ producto.stock_prod }}">
-                                <i class="fas fa-cart-plus"></i> Añadir
-                            </button>
+<!-- Featured Products Section -->
+<section class="featured-section py-5 bg-light">
+    <div class="container">
+        <div class="section-header text-center mb-5">
+            <h2 class="section-title">Productos Destacados</h2>
+            <p class="section-subtitle">Los más populares esta semana</p>
+        </div>
+
+        <div class="featured-grid">
+            {% for producto in productos_destacados %}
+            <div class="featured-card" data-aos="flip-up" data-aos-delay="{{ forloop.counter0 }}50">
+                <div class="card-glass">
+                    <div class="card-header">
+                        <div class="featured-badge">
+                            <i class="fas fa-crown"></i>
+                            Destacado
                         </div>
+                        <button class="card-wishlist" onclick="toggleWishlist({{ producto.pkid_prod }})">
+                            <i class="far fa-heart"></i>
+                        </button>
+                    </div>
+                    <div class="card-image">
+                        {% if producto.img_prod %}
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                        {% else %}
+                            <div class="card-image-placeholder">
+                                <i class="fas fa-star"></i>
+                            </div>
                         {% endif %}
                     </div>
+                    <div class="card-content">
+                        <h3>{{ producto.nom_prod }}</h3>
+                        <p class="card-description">{{ producto.desc_prod|truncatewords:15|default:"Producto de calidad" }}</p>
+                        <div class="card-features">
+                            <span class="feature">
+                                <i class="fas fa-shipping-fast"></i>
+                                Envío gratis
+                            </span>
+                            <span class="feature">
+                                <i class="fas fa-undo"></i>
+                                30 días
+                            </span>
+                        </div>
+                        <div class="card-footer">
+                            <div class="price">
+                                <span class="current">${{ producto.precio_prod }}</span>
+                                <span class="original">${% widthratio producto.precio_prod 0.85 1 %}</span>
+                            </div>
+                            <button class="btn-featured-cart" onclick="addToCart({{ producto.pkid_prod }})">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                {% empty %}
-                <p>No hay productos encontrados.</p>
-                {% endfor %}
             </div>
-            {% endif %}
-
-
-
+            {% empty %}
+            <div class="empty-state text-center py-5">
+                <div class="empty-icon mb-3">
+                    <i class="fas fa-star"></i>
+                </div>
+                <h4>No hay productos destacados</h4>
+                <p class="text-muted">Los productos destacados aparecerán aquí</p>
+            </div>
+            {% endfor %}
         </div>
-
-        {% if not negocios and not productos_filtrados %}
-        <p>No se encontraron resultados.</p>
-        {% endif %}
-        {% endif %}
     </div>
+</section>
 
-    {% endblock %}
-    <footer class="footer">
-        <div class="footer-section">
-            <h3>Vecy Software</h3>
-            <p>Conectamos negocios con clientes para que siempre encuentres lo que necesitas.</p>
+<!-- Featured Businesses Section -->
+<section class="businesses-section py-5">
+    <div class="container">
+        <div class="section-header text-center mb-5">
+            <h2 class="section-title">Negocios Destacados</h2>
+            <p class="section-subtitle">Descubre los mejores establecimientos locales</p>
         </div>
 
-        <div class="footer-section">
-            <h3>Enlaces</h3>
-            <ul>
-                <li><a href="#">Inicio</a></li>
-                <li><a href="#">Tiendas</a></li>
-                <li><a href="#">Productos</a></li>
-                <li><a href="#">Sobre Nosotros</a></li>
-            </ul>
+        <div class="businesses-grid">
+            {% for negocio in negocios_mejor_calificados %}
+            <div class="business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
+                <div class="business-header">
+                    <div class="business-image">
+                        {% if negocio.img_neg %}
+                            <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
+                        {% else %}
+                            <div class="business-image-placeholder">
+                                <i class="fas fa-store"></i>
+                            </div>
+                        {% endif %}
+                        <div class="verified-badge">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <button class="btn-follow">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
+                <div class="business-info">
+                    <h3>{{ negocio.nom_neg }}</h3>
+                    <p class="business-category">{{ negocio.fktiponeg_neg.desc_tiponeg }}</p>
+                    <div class="business-rating">
+                        <div class="stars">
+                            {% with promedio=negocio.promedio|default:0 %}
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= promedio %}
+                                        <i class="fas fa-star"></i>
+                                    {% elif forloop.counter <= promedio|add:0.5 %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </div>
+                        <span class="rating-text">{{ negocio.promedio|floatformat:1 }} ({{ negocio.total_resenas }})</span>
+                    </div>
+                    <p class="business-description">{{ negocio.desc_neg|truncatewords:15 }}</p>
+                    <a href="{% url 'detalle_negocio_logeado' negocio.pkid_neg %}" class="btn-visit-store">
+                        Visitar Tienda <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state text-center py-5">
+                <div class="empty-icon mb-3">
+                    <i class="fas fa-store"></i>
+                </div>
+                <h4>No hay negocios destacados</h4>
+                <p class="text-muted">Pronto descubrirás negocios increíbles</p>
+            </div>
+            {% endfor %}
         </div>
+    </div>
+</section>
 
-        <div class="footer-section">
-            <h3>Contacto</h3>
-            <ul>
-                <li>Bogotá, Colombia</li>
-                <li><a href="#">moderador@vecy.com</a></li>
-            </ul>
+<!-- CTA Section -->
+<section class="cta-section py-5">
+    <div class="container">
+        <div class="cta-content text-center">
+            <h2 class="cta-title">¿Necesitas ayuda con tu compra?</h2>
+            <p class="cta-text">Nuestro equipo de soporte está disponible 24/7 para ayudarte</p>
+            <button class="btn-cta">
+                <i class="fas fa-headset me-2"></i>
+                Contactar Soporte
+            </button>
         </div>
+    </div>
+</section>
 
-        <div class="footer-section redes">
-            <h3>Síguenos</h3>
-            <div class="social-icons">
-                <a href="#"><i class="fab fa-facebook-f"></i></a>
-                <a href="#"><i class="fab fa-twitter"></i></a>
-                <a href="#"><i class="fab fa-instagram"></i></a>
-                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+<!-- Quick Actions FAB -->
+<div class="fab-container">
+    <input type="checkbox" id="fab-toggle" class="fab-toggle">
+    <label for="fab-toggle" class="fab-button">
+        <i class="fas fa-plus"></i>
+    </label>
+    <div class="fab-actions">
+        <button class="fab-action" onclick="openSupport()" data-tooltip="Soporte">
+            <i class="fas fa-headset"></i>
+        </button>
+        <button class="fab-action" onclick="openChatBot()" data-tooltip="ChatBot">
+            <i class="fas fa-robot"></i>
+        </button>
+        <button class="fab-action" onclick="openHelp()" data-tooltip="Ayuda">
+            <i class="fas fa-question-circle"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ChatBot Modal -->
+<div class="modal fade" id="chatBotModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-robot text-primary me-2"></i>
+                    Asistente VECY
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="chat-interface">
+                    <div class="chat-messages">
+                        <div class="message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <p>¡Hola {{ user.first_name }}! ¿En qué puedo ayudarte hoy?</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" class="chat-input" placeholder="Escribe tu mensaje...">
+                        <button class="btn-send">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-    </footer>
-
-    <div class="footer-bottom">
-        © 2025 Vecy Software. Todos los derechos reservados.
     </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-        crossorigin="anonymous"></script>
-    <script>
-        AOS.init({
-            duration: 1000,
-            mirror: true,
-            once: false
-        });
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            {% if query %}
-            const resultadosProductos = document.getElementById('resultadosProductosInner');
-            const resultadosNegocios = document.getElementById('resultadosBusquedaInner');
+<script>
+// Initialize AOS
+AOS.init({
+    duration: 800,
+    once: true,
+    offset: 50
+});
 
-            if (resultadosProductos) {
-                resultadosProductos.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else if (resultadosNegocios) {
-                resultadosNegocios.scrollIntoView({ behavior: 'smooth', block: 'start' });
+// Flash Sale Countdown
+function initFlashCountdown() {
+    const hoursElement = document.getElementById('flash-hours');
+    const minutesElement = document.getElementById('flash-minutes');
+    const secondsElement = document.getElementById('flash-seconds');
+    
+    let time = 2 * 60 * 60 + 15 * 60 + 30; // 2 hours, 15 minutes, 30 seconds
+    
+    const timer = setInterval(() => {
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time % 3600) / 60);
+        const seconds = time % 60;
+        
+        hoursElement.textContent = hours.toString().padStart(2, '0');
+        minutesElement.textContent = minutes.toString().padStart(2, '0');
+        secondsElement.textContent = seconds.toString().padStart(2, '0');
+        
+        if (time <= 0) {
+            clearInterval(timer);
+            document.querySelector('.countdown-timer').innerHTML = '<div class="timer-ended">Oferta Finalizada</div>';
+        }
+        
+        time--;
+    }, 1000);
+}
+
+// Cart functionality
+function addToCart(productId) {
+    const button = event.target.closest('button');
+    const originalContent = button.innerHTML;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Agregando...';
+    button.disabled = true;
+    
+    setTimeout(() => {
+        button.innerHTML = '<i class="fas fa-check me-2"></i>Agregado';
+        button.classList.add('added');
+        
+        setTimeout(() => {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+            button.classList.remove('added');
+        }, 2000);
+    }, 1000);
+    
+    showNotification('Producto agregado al carrito', 'success');
+}
+
+// Wishlist functionality
+function toggleWishlist(productId) {
+    const button = event.currentTarget;
+    const icon = button.querySelector('i');
+    
+    if (icon.classList.contains('far')) {
+        icon.classList.replace('far', 'fas');
+        icon.style.color = '#e74c3c';
+        showNotification('Agregado a favoritos', 'success');
+    } else {
+        icon.classList.replace('fas', 'far');
+        icon.style.color = '';
+        showNotification('Removido de favoritos', 'info');
+    }
+}
+
+// Quick View functionality
+function quickView(productId) {
+    showNotification('Función de vista rápida en desarrollo', 'info');
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="fas fa-${getNotificationIcon(type)}"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.classList.add('show'), 100);
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
             }
-            {% endif %}
+        }, 300);
+    }, 3000);
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        success: 'check-circle',
+        error: 'exclamation-circle',
+        warning: 'exclamation-triangle',
+        info: 'info-circle'
+    };
+    return icons[type] || 'info-circle';
+}
+
+// Modal functions
+function openChatBot() {
+    const modal = new bootstrap.Modal(document.getElementById('chatBotModal'));
+    modal.show();
+}
+
+function openSupport() {
+    showNotification('Soporte disponible 24/7', 'info');
+}
+
+function openHelp() {
+    showNotification('Centro de ayuda en desarrollo', 'info');
+}
+
+// FAB functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const fabToggle = document.getElementById('fab-toggle');
+    const fabButton = document.querySelector('.fab-button');
+    const fabActions = document.querySelector('.fab-actions');
+    
+    if (fabToggle && fabButton) {
+        fabButton.addEventListener('click', function() {
+            const isActive = fabToggle.checked;
+            
+            if (isActive) {
+                fabToggle.checked = false;
+                fabActions.classList.remove('show');
+            } else {
+                fabToggle.checked = true;
+                fabActions.classList.add('show');
+            }
         });
-    </script>
+        
+        // Close FAB when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.fab-container')) {
+                fabToggle.checked = false;
+                fabActions.classList.remove('show');
+            }
+        });
+    }
+    
+    // Initialize carousel
+    const myCarousel = document.getElementById('mainCarousel');
+    if (myCarousel) {
+        const carousel = new bootstrap.Carousel(myCarousel, {
+            interval: 5000,
+            wrap: true
+        });
+    }
+    
+    // Initialize countdown
+    initFlashCountdown();
+});
+</script>
 
+<style>
+:root {
+    --primary: #3598db;
+    --secondary: #34495e;
+    --dark: #2d3e50;
+    --light: #f8f9fb;
+    --white: #ffffff;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
 
-</body>
+/* Hero Carousel */
+.hero-carousel {
+    position: relative;
+    overflow: hidden;
+}
 
-</html>
+.carousel-item {
+    min-height: 500px;
+    position: relative;
+}
+
+.carousel-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.carousel-content {
+    color: white;
+    padding: 3rem 0;
+}
+
+.carousel-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: inline-block;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    backdrop-filter: blur(10px);
+}
+
+.carousel-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.carousel-text {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+    max-width: 500px;
+}
+
+.carousel-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.btn-carousel-primary {
+    background: var(--white);
+    color: var(--primary);
+    border: none;
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.btn-carousel-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.btn-carousel-secondary {
+    background: transparent;
+    color: var(--white);
+    border: 2px solid var(--white);
+    padding: 0.8rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.btn-carousel-secondary:hover {
+    background: var(--white);
+    color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.carousel-image {
+    text-align: center;
+    padding: 2rem 0;
+}
+
+.placeholder-image {
+    color: rgba(255, 255, 255, 0.8);
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
+}
+
+.carousel-indicators button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin: 0 5px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+}
+
+.carousel-indicators button.active {
+    background-color: var(--white);
+}
+
+.carousel-control-prev,
+.carousel-control-next {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0 1rem;
+    backdrop-filter: blur(10px);
+}
+
+/* Quick Stats */
+.quick-stats {
+    background: var(--white);
+    border-bottom: 1px solid var(--light);
+}
+
+.stat-item-quick {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.stat-item-quick:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-icon-quick {
+    width: 50px;
+    height: 50px;
+    background: var(--primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 1.2rem;
+}
+
+.stat-content-quick {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-number-quick {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1;
+}
+
+.stat-label-quick {
+    font-size: 0.8rem;
+    color: var(--secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Products Grid */
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.product-card {
+    background: var(--white);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: 1px solid var(--light);
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(53, 152, 219, 0.15);
+}
+
+.product-image-container {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.product-image, .product-image-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--transition);
+}
+
+.product-image-placeholder {
+    background: var(--light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary);
+    font-size: 3rem;
+}
+
+.product-card:hover .product-image {
+    transform: scale(1.1);
+}
+
+.product-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.product-card:hover .product-actions {
+    opacity: 1;
+}
+
+.btn-action {
+    width: 40px;
+    height: 40px;
+    background: var(--white);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: var(--shadow);
+}
+
+.btn-action:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.product-badges {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.badge {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-featured {
+    background: #f39c12;
+    color: var(--white);
+}
+
+.badge-discount {
+    background: #e74c3c;
+    color: var(--white);
+}
+
+.product-info {
+    padding: 1.5rem;
+}
+
+.product-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--dark);
+}
+
+.product-vendor {
+    color: var(--secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.price-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.current-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.original-price {
+    font-size: 1rem;
+    color: var(--secondary);
+    text-decoration: line-through;
+}
+
+.rating-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.stars {
+    color: #f1c40f;
+}
+
+.rating-count {
+    font-size: 0.8rem;
+    color: var(--secondary);
+}
+
+.btn-add-to-cart {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-add-to-cart:hover {
+    background: var(--dark);
+    transform: translateY(-2px);
+}
+
+.btn-add-to-cart:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-add-to-cart.added {
+    background: #27ae60;
+}
+
+/* Flash Sales */
+.flash-sales-section {
+    background: linear-gradient(135deg, var(--light) 0%, #e8edf5 100%);
+}
+
+.flash-header-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.flash-icon {
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--white);
+    font-size: 1.5rem;
+}
+
+.countdown-timer {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--white);
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: var(--shadow);
+}
+
+.timer-unit {
+    text-align: center;
+}
+
+.time {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    display: block;
+}
+
+.label {
+    font-size: 0.8rem;
+    color: var(--secondary);
+    text-transform: uppercase;
+}
+
+.timer-separator {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0.5rem;
+}
+
+.flash-products-scroller {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.flash-product-card {
+    background: var(--white);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.flash-product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(231, 76, 60, 0.2);
+}
+
+.flash-product-image {
+    position: relative;
+    height: 180px;
+    overflow: hidden;
+}
+
+.flash-product-image img, .flash-image-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.flash-image-placeholder {
+    background: #fdf2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #e74c3c;
+    font-size: 2rem;
+}
+
+.flash-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(231, 76, 60, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.flash-product-card:hover .flash-overlay {
+    opacity: 1;
+}
+
+.btn-flash-cart {
+    width: 50px;
+    height: 50px;
+    background: var(--white);
+    border: none;
+    border-radius: 50%;
+    color: #e74c3c;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-flash-cart:hover {
+    transform: scale(1.1);
+}
+
+.flash-indicator {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: #e74c3c;
+    color: var(--white);
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--white);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.flash-product-info {
+    padding: 1.5rem;
+}
+
+.flash-product-info h4 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.flash-pricing {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.flash-price {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #e74c3c;
+}
+
+.flash-original-price {
+    font-size: 1rem;
+    color: var(--secondary);
+    text-decoration: line-through;
+}
+
+.sold-progress {
+    margin-top: 1rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--light);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #e74c3c;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.sold-text {
+    font-size: 0.8rem;
+    color: var(--secondary);
+}
+
+/* Featured Products */
+.featured-section {
+    background: linear-gradient(135deg, var(--light) 0%, #e8edf5 100%);
+}
+
+.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.featured-card {
+    perspective: 1000px;
+}
+
+.card-glass {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: var(--transition);
+}
+
+.featured-card:hover .card-glass {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.featured-badge {
+    background: linear-gradient(135deg, #f1c40f, #f39c12);
+    color: var(--white);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.card-wishlist {
+    background: none;
+    border: none;
+    color: var(--secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.card-wishlist:hover {
+    color: #e74c3c;
+    transform: scale(1.1);
+}
+
+.card-image {
+    height: 150px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-image img, .card-image-placeholder {
+    max-height: 100%;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.card-image-placeholder {
+    color: var(--secondary);
+    font-size: 3rem;
+}
+
+.card-content h3 {
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.card-description {
+    color: var(--secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.card-features {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--secondary);
+}
+
+.feature i {
+    color: var(--primary);
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.price {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.price .current {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.price .original {
+    font-size: 1rem;
+    color: var(--secondary);
+    text-decoration: line-through;
+}
+
+.btn-featured-cart {
+    width: 40px;
+    height: 40px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-featured-cart:hover {
+    background: var(--dark);
+    transform: scale(1.1);
+}
+
+/* Businesses Section */
+.businesses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.business-card {
+    background: var(--white);
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border: 1px solid var(--light);
+}
+
+.business-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+}
+
+.business-header {
+    position: relative;
+    padding: 1.5rem 1.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.business-image {
+    width: 80px;
+    height: 80px;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+.business-image img, .business-image-placeholder {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.business-image-placeholder {
+    background: var(--light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary);
+    font-size: 1.5rem;
+}
+
+.verified-badge {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background: #27ae60;
+    color: var(--white);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    border: 2px solid var(--white);
+}
+
+.btn-follow {
+    width: 40px;
+    height: 40px;
+    background: var(--white);
+    border: 1px solid var(--light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-follow:hover {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.business-info {
+    padding: 1.5rem;
+}
+
+.business-info h3 {
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+.business-category {
+    color: var(--primary);
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.business-rating {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.business-rating .stars {
+    color: #f1c40f;
+}
+
+.rating-text {
+    font-size: 0.9rem;
+    color: var(--secondary);
+}
+
+.business-description {
+    color: var(--secondary);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+.btn-visit-store {
+    width: 100%;
+    padding: 0.8rem 1.5rem;
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.btn-visit-store:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* CTA Section */
+.cta-section {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+    color: var(--white);
+}
+
+.cta-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.cta-text {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+}
+
+.btn-cta {
+    background: var(--white);
+    color: var(--primary);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-cta:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* FAB Button */
+.fab-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+}
+
+.fab-toggle {
+    display: none;
+}
+
+.fab-button {
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 5px 20px rgba(53, 152, 219, 0.3);
+    transition: var(--transition);
+    z-index: 1001;
+    position: relative;
+}
+
+.fab-button:hover {
+    background: var(--dark);
+    transform: scale(1.1);
+}
+
+.fab-toggle:checked + .fab-button {
+    transform: rotate(45deg);
+    background: #e74c3c;
+}
+
+.fab-actions {
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.fab-toggle:checked ~ .fab-actions {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.fab-action {
+    width: 50px;
+    height: 50px;
+    background: var(--white);
+    border: none;
+    border-radius: 50%;
+    color: var(--dark);
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.fab-action:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.fab-action:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 60px;
+    background: var(--dark);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* Notifications */
+.notification {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    background: var(--white);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    padding: 1rem 1.5rem;
+    transform: translateX(400px);
+    transition: var(--transition);
+    z-index: 1060;
+    max-width: 300px;
+    border-left: 4px solid var(--primary);
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-success {
+    border-left-color: #27ae60;
+}
+
+.notification-error {
+    border-left-color: #e74c3c;
+}
+
+.notification-warning {
+    border-left-color: #f39c12;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    color: var(--dark);
+}
+
+.notification-content i {
+    margin-right: 0.5rem;
+}
+
+.notification-success .notification-content i {
+    color: #27ae60;
+}
+
+.notification-error .notification-content i {
+    color: #e74c3c;
+}
+
+.notification-warning .notification-content i {
+    color: #f39c12;
+}
+
+/* Buttons */
+.btn-view-all {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+    padding: 0.8rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-view-all:hover {
+    background: var(--primary);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+/* Section Headers */
+.section-header {
+    margin-bottom: 3rem;
+}
+
+.section-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 0.5rem;
+}
+
+.section-subtitle {
+    color: var(--secondary);
+    font-size: 1.1rem;
+}
+
+/* Empty States */
+.empty-state {
+    grid-column: 1 / -1;
+    padding: 3rem 2rem;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: var(--secondary);
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .carousel-title {
+        font-size: 2rem;
+    }
+    
+    .carousel-text {
+        font-size: 1rem;
+    }
+    
+    .carousel-actions {
+        flex-direction: column;
+    }
+    
+    .min-vh-60 {
+        min-height: 400px;
+    }
+    
+    .stat-item-quick {
+        text-align: center;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .featured-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .businesses-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .flash-header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .cta-title {
+        font-size: 2rem;
+    }
+}
+
+.min-vh-60 {
+    min-height: 500px;
+}
+
+/* Utility Classes */
+.text-muted {
+    color: var(--secondary) !important;
+}
+
+.border-top {
+    border-top: 1px solid var(--light) !important;
+}
+
+.border-bottom {
+    border-bottom: 1px solid var(--light) !important;
+}
+
+/* Smooth transitions for all interactive elements */
+.btn, .card, .product-card, .featured-card, .business-card, .fab-button, .fab-action {
+    transition: var(--transition);
+}
+
+/* Focus states for accessibility */
+.btn:focus, .form-control:focus, .star-label:focus {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+</style>
+{% endblock %}

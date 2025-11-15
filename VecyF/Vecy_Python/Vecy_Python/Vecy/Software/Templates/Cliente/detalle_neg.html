@@ -1,375 +1,618 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Página Principal{% endblock %}
+
+{% block title %}{{ negocio.nom_neg }} - VECY{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/detalle_neg.css' %}">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 {% endblock %}
+
 {% block content %}
-<div class="containerv">
-    <div class="header">
-        <div class="logo"><span>VECY</span></div>
-        <div class="menu-desplegable">
-            <span style="font-weight: bold;" data-bs-toggle="offcanvas" data-bs-target="#menuLateral">
-                <i class="fas fa-bars iconm"></i> Menú
-            </span>
-        </div>
-        <div class="input-group1">
-            <input class="input" type="search" placeholder="Busca negocios, productos...">
-            <i class="fas fa-search iconl"></i>
-        </div>
-        <div class="iniSesion">
-            <i class="fas fa-house"></i>
-            <a href="{% url 'cliente_dash' %}">Inicio</a>
-        </div>
-        <div class="iniSesion">
-            <i class="fas fa-truck-fast"></i>
-            <a href="" id="it2">Pedidos</a>
-        </div>
-        <div class="iniSesion">
-            <i class="fas fa-cart-shopping"></i>
-            <a href="{% url 'ver_carrito' %}">Carrito</a>
-        </div>
-        <div class="iniSesion">
-            <i class="fas fa-heart"></i>
-            <a href="">Favoritos</a>
-        </div>
-        <div class="iniSesion">
-            <i class="fas fa-user-circle"></i>
-            <a href="">Cuenta</a>
-        </div>
-    </div>
-    <!--Menu lateral-->
-    <div class="offcanvas offcanvas-start" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralLabel">
-        <div class="offcanvas-header headerM">
-            <h5 class="offcanvas-title" id="menuLateralLabel">VECY</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-                aria-label="Cerrar"></button>
-        </div>
-        <div class="offcanvas-body bodyM">
-            <ul class="list-unstyled">
-                <span class="cat mb-5">Categorías</span>
-                <br>
-                {% for categoria in categorias %}
-                <li><a href="#" class="d-block categorias">{{ categoria.desc_cp }}</a></li>
-                {% empty %}
-                <li><span class="text-white-50">No hay categorías disponibles</span></li>
-                {% endfor %}
+<!-- Hero Section Élite -->
+<section class="business-hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-50">
+            <div class="col-lg-8">
+                <div class="business-hero-content" data-aos="fade-right">
+                    <!-- Header Principal -->
+                    <div class="d-flex align-items-center flex-wrap gap-3 mb-4">
+                        <h1 class="display-4 fw-bold mb-0 text-dark">{{ negocio.nom_neg }}</h1>
+                        <span class="business-verified-badge">
+                            <i class="fas fa-check me-2"></i>Negocio Verificado
+                        </span>
+                    </div>
+                    
+                    <!-- Categoría -->
+                    <div class="category-tag mb-4">
+                        <span class="badge-vecy">
+                            <i class="fas fa-tag me-2"></i>{{ tipo_negocio.desc_tiponeg }}
+                        </span>
+                    </div>
 
-            </ul>
-        </div>
-    </div>
-    <div class="negocios">
-        <img class="img_neg" src="{{ negocio.img_neg.url }}" alt="">
-        <div class="propietario">
-            <img class="img_prop" src="{% static "img/Usuario.jpg" %}" alt="">
-        </div>
-    </div>
-    <div class="detalle_neg">
-        <span>
-            <h1>{{negocio.nom_neg}}</h1>
-        </span>
-        <span class="nom_neg"><strong class="em1">Dirección: </strong>{{negocio.direcc_neg}}</span> <br>
-        <span class="nom_neg"><strong class="em1">Tipo Negocio: </strong>{{tipo_negocio.desc_tiponeg}}</span> <br>
-        <span class="nom_neg"><strong class="em1">Sobre Nosotros: </strong>{{negocio.desc_neg}}</span>
-        <span class="nom_neg"><strong class="em1">Calificación: </strong>
-            <i class="fas fa-star iconc"></i>
-            <i class="fas fa-star iconc"></i>
-            <i class="fas fa-star iconc"></i>
-            <i class="fas fa-star iconc"></i>
-            <i class="fas fa-star iconc"></i>
-        </span>
-    </div>
-</div>
-<div class="catalogo_productos" data-aos="fade-up">
-    <h2>Nuestro Catálogo de Productos</h2>
-    <p>Encuentra el helado que más te guste</p>
+                    <!-- Estadísticas Destacadas -->
+                    <div class="business-stats-grid">
+                        <!-- Rating -->
+                        <div class="business-stat-card" data-aos="zoom-in" data-aos-delay="100">
+                            <span class="business-stat-number">{{ promedio_calificacion|floatformat:1 }}</span>
+                            <div class="business-stat-label">
+                                <div class="stars text-warning mb-2">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= promedio_calificacion %}
+                                            <i class="fas fa-star"></i>
+                                        {% elif forloop.counter <= promedio_calificacion|add:0.5 %}
+                                            <i class="fas fa-star-half-alt"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                                {{ total_resenas }} Reseñas
+                            </div>
+                        </div>
 
-    <div class="filtrarP" data-aos="fade-up">
-        <input type="search" id="buscarProducto" placeholder="Buscar Productos...">
-        <select id="filtroPrecio" name="filtroPrecio" class="select2" required>
-            <option value="" selected>Filtrar por precio</option>
-            <option value="0-5000">Hasta $5,000</option>
-            <option value="5001-10000">$5,001 - $10,000</option>
-            <option value="10001-20000">$10,001 - $20,000</option>
-            <option value="20001-999999">Más de $20,000</option>
-        </select>
-    </div>
+                        <!-- Productos -->
+                        <div class="business-stat-card" data-aos="zoom-in" data-aos-delay="200">
+                            <span class="business-stat-number">{{ productos.count }}</span>
+                            <div class="business-stat-label">
+                                <i class="fas fa-box-open me-2"></i>Productos
+                            </div>
+                        </div>
 
-    <div class="productos">
-    {% for prod in productos %}
-    <div class="producto {% if prod.stock_prod == 0 %}sin-stock{% endif %}" 
-         data-nombre="{{ prod.nom_prod|lower }}" 
-         data-precio="{{ prod.precio_prod }}" 
-         data-aos="fade-up">
-        <img class="prods" src="{{ prod.img_prod.url }}" alt="">
-        <div class="info_prod">
-            <h6>{{ prod.nom_prod }}</h6>
-            <span><strong>Precio:</strong> ${{ prod.precio_prod }}</span> <br>
-            <span><strong>Cantidad Disponible:</strong> {{ prod.stock_prod }}</span> <br>
-            <span><strong>Descripción:</strong> {{ prod.desc_prod }}</span> <br>
-
-            {% if prod.stock_prod == 0 %}
-                <span class="text-danger fw-bold">¡Producto agotado!</span>
-            {% else %}
-                <div class="solicitar d-flex align-items-center gap-2">
-                    <button class="btn-minus btn btn-sm btn-outline-secondary">-</button>
-                    <input type="number" class="cantidad-prod form-control form-control-sm" 
-                           value="1" min="1" max="{{ prod.stock_prod }}" style="width:50px;">
-                    <button class="btn-plus btn btn-sm btn-outline-secondary">+</button>
-                    <button class="btn btn-sm btn-success agregar-carrito" 
-                            data-prod="{{ prod.pkid_prod }}"
-                            data-stock="{{ prod.stock_prod }}">
-                        <i class="fas fa-cart-plus"></i> Añadir al carrito
-                    </button>
+                        <!-- Experiencia -->
+                        <div class="business-stat-card" data-aos="zoom-in" data-aos-delay="300">
+                            <span class="business-stat-number">100%</span>
+                            <div class="business-stat-label">
+                                <i class="fas fa-award me-2"></i>Confianza
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            {% endif %}
-        </div>
-    </div>
-    {% empty %}
-    <p>No hay productos registrados para este negocio.</p>
-    {% endfor %}
-</div>
-
-    </div>
-</div>
-<div class="resenas" data-aos="fade-up">
-    <h2>Calificaciónes Y Opiniónes</h2>
-    <p>En este apartado puedes calificar tu experiencia con el Negocio</p>
-</div>
-<div class="list_resenas" data-aos="fade-up">
-    <div class="calificar">
-        <h3>Califíca tu Experiencia</h3>
-        <p>Comparte tu opinión con otros usuarios</p>
-        <div class="evaluar-negocio">
-            <form id="formResena" method="POST" action="{% url 'guardar_resena' %}">
-                {% csrf_token %}
-                <div class="estrellas">
-                    <span class="star" data-value="1">&#9734;</span>
-                    <span class="star" data-value="2">&#9734;</span>
-                    <span class="star" data-value="3">&#9734;</span>
-                    <span class="star" data-value="4">&#9734;</span>
-                    <span class="star" data-value="5">&#9734;</span>
-                </div>
-                <input type="hidden" name="estrellas" id="estrellas_input" value="5">
-                <textarea name="comentario" placeholder="Escribe tu opinión..."></textarea>
-                <input type="hidden" name="fknegocio_resena" value="{{ negocio.pkid_neg }}"> <br>
-                <button class="env_resena" type="submit">Enviar</button>
-            </form>
-        </div>
-    </div>
-    <div class="user_calificar">
-        <h3>Opiniones de Usuarios</h3>
-        <p>Visualiza las opiniones realizadas por otros usuarios</p>
-        <h4>Reseñas:</h4>
-
-        {% for r in resenas %}
-        <div class="resena">
-            <div class="resena-header">
-                <img src="{% static 'img/Usuario.jpg' %}" alt="Usuario" class="img-resena">
             </div>
-
-            <div class="resena-body">
-                <span><strong>Usuario: </strong>{{ r.fkusuario_resena.fkuser.first_name }}</span><br>
-                <span><strong>Comentario: </strong>{{ r.comentario }}</span><br>
-                <span><strong>Calificación: </strong>{{ r.estrellas }}</span><br>
-                <small><strong>Fecha: </strong>{{ r.fecha_resena|date:"d/m/Y H:i" }}</small><br>
-
-                {% if r.respuesta_vendedor %}
-                <div class="respuesta-vendedor mt-2 p-2 border rounded bg-light">
-                    <strong>Respuesta del vendedor:</strong><br>
-                    <p>{{ r.respuesta_vendedor }}</p>
-                    {% if r.fecha_respuesta %}
-                    <small><em>Respondido el {{ r.fecha_respuesta|date:"d/m/Y H:i" }}</em></small>
+            
+            <!-- Imagen del Negocio -->
+            <div class="col-lg-4">
+                <div class="business-hero-image" data-aos="fade-left" data-aos-delay="400">
+                    {% if negocio.img_neg %}
+                        <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" 
+                             class="img-fluid w-100" style="height: 320px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-gradient-primary text-white p-5 text-center h-100 d-flex align-items-center justify-content-center rounded-3">
+                            <div>
+                                <i class="fas fa-store fa-4x mb-3"></i>
+                                <h3 class="fw-bold mb-0">{{ negocio.nom_neg }}</h3>
+                                <p class="mb-0 opacity-80">{{ tipo_negocio.desc_tiponeg }}</p>
+                            </div>
+                        </div>
                     {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
-        <hr>
-        {% empty %}
-        <p>No hay reseñas todavía.</p>
-        {% endfor %}
     </div>
+</section>
 
+<!-- Contenido Principal -->
+<div class="container py-5">
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Descripción del Negocio -->
+            {% if negocio.desc_neg %}
+            <section class="business-contact-card mb-5" data-aos="fade-up">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="fas fa-info-circle fa-2x text-primary me-3"></i>
+                    <h3 class="section-title mb-0">Sobre Nosotros</h3>
+                </div>
+                <p class="lead text-muted lh-lg mb-0">{{ negocio.desc_neg }}</p>
+            </section>
+            {% endif %}
+
+            <!-- Catálogo de Productos -->
+            <section class="mb-5" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-boxes fa-2x text-primary me-3"></i>
+                        <h3 class="section-title mb-0">Catálogo de Productos</h3>
+                    </div>
+                    <span class="badge-vecy">{{ productos.count }} productos</span>
+                </div>
+
+                {% if productos %}
+                <div class="product-grid-vecy">
+                    {% for producto in productos %}
+                    <article class="product-card-vecy" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                        <div class="product-image-vecy">
+                            {% if producto.img_prod %}
+                                <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" 
+                                     class="w-100 h-100">
+                            {% else %}
+                                <div class="w-100 h-100 bg-gradient-light d-flex align-items-center justify-content-center">
+                                    <div class="text-center">
+                                        <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted small mb-0">Imagen no disponible</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Badge de Estado -->
+                            <span class="product-badge-vecy {% if producto.stock_prod == 0 %}product-badge-out-of-stock{% endif %}">
+                                {% if producto.stock_prod > 0 %}
+                                    <i class="fas fa-check me-1"></i>Disponible
+                                {% else %}
+                                    <i class="fas fa-times me-1"></i>Agotado
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="product-info-vecy">
+                            <!-- Información del Producto -->
+                            <h4 class="product-title-vecy">{{ producto.nom_prod }}</h4>
+                            
+                            {% if producto.desc_prod %}
+                            <p class="product-description-vecy">{{ producto.desc_prod }}</p>
+                            {% endif %}
+                            
+                            <!-- Categoría -->
+                            <span class="product-category-vecy">
+                                <i class="fas fa-tag me-1"></i>{{ producto.fkcategoria_prod.desc_cp }}
+                            </span>
+                            
+                            <!-- Precio -->
+                            <div class="product-price-vecy">
+                                ${{ producto.precio_prod|floatformat:0 }}
+                            </div>
+                            
+                            <!-- Stock -->
+                            <div class="stock-info mb-3">
+                                <small class="text-muted d-flex align-items-center">
+                                    <i class="fas fa-box me-2"></i>
+                                    {% if producto.stock_prod > 0 %}
+                                        <strong class="text-success">{{ producto.stock_prod }}</strong> unidades disponibles
+                                    {% else %}
+                                        <strong class="text-danger">Producto agotado</strong>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            
+                            <!-- Acción -->
+                            {% if producto.stock_prod > 0 %}
+                            <button class="add-to-cart-btn-vecy" onclick="showLoginAlert()">
+                                <i class="fas fa-cart-plus"></i>
+                                Agregar al Carrito
+                            </button>
+                            {% else %}
+                            <button class="add-to-cart-btn-vecy" disabled>
+                                <i class="fas fa-clock"></i>
+                                Próximamente
+                            </button>
+                            {% endif %}
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <!-- Estado Vacío Productos -->
+                <div class="empty-state-vecy" data-aos="fade-up">
+                    <div class="empty-state-content">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">Catálogo Vacío</h4>
+                        <p class="text-muted mb-4">Este negocio está preparando sus productos. Vuelve pronto para descubrir su oferta.</p>
+                        <button class="btn-vecy-primary" onclick="showNotification('Te notificaremos cuando haya productos')">
+                            <i class="fas fa-bell me-2"></i>Notificarme
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- Reseñas y Opiniones -->
+            <section class="mb-5" data-aos="fade-up">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-star fa-2x text-warning me-3"></i>
+                        <h3 class="section-title mb-0">Opiniones de Clientes</h3>
+                    </div>
+                    <button class="btn-vecy-primary" onclick="showLoginAlert()">
+                        <i class="fas fa-edit me-2"></i>Escribir Reseña
+                    </button>
+                </div>
+
+                {% if resenas %}
+                    {% for resena in resenas %}
+                    <article class="review-card-vecy" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                        <!-- Header Reseña -->
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="user-avatar me-3">
+                                    <div class="contact-icon">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h6 class="mb-1 fw-bold">{{ resena.fkusuario_resena.fkuser.first_name }} {{ resena.fkusuario_resena.fkuser.last_name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ resena.fecha_resena|date:"d M Y" }}
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="stars text-warning">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= resena.estrellas %}
+                                        <i class="fas fa-star"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <!-- Comentario -->
+                        {% if resena.comentario %}
+                        <p class="mb-0 text-dark lh-lg">{{ resena.comentario }}</p>
+                        {% else %}
+                        <p class="text-muted mb-0 fst-italic">
+                            <i class="fas fa-comment-slash me-2"></i>El cliente no dejó un comentario
+                        </p>
+                        {% endif %}
+                        
+                        <!-- Respuesta del Vendedor -->
+                        {% if resena.respuesta_vendedor %}
+                        <div class="vendor-response">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-store text-success me-2"></i>
+                                <strong class="text-success">Respuesta del Propietario</strong>
+                                <small class="text-muted ms-2">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ resena.fecha_respuesta|date:"d M Y" }}
+                                </small>
+                            </div>
+                            <p class="mb-0 text-dark">{{ resena.respuesta_vendedor }}</p>
+                        </div>
+                        {% endif %}
+                    </article>
+                    {% endfor %}
+                {% else %}
+                <!-- Estado Vacío Reseñas -->
+                <div class="empty-state-vecy" data-aos="fade-up">
+                    <div class="empty-state-content">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <h4 class="text-muted mb-3">Sin Opiniones Todavía</h4>
+                        <p class="text-muted mb-4">Sé el primero en compartir tu experiencia con este negocio.</p>
+                        <button class="btn-vecy-primary" onclick="showLoginAlert()">
+                            <i class="fas fa-edit me-2"></i>Escribir Primera Reseña
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- Sidebar Información -->
+        <div class="col-lg-4">
+            <!-- Información de Contacto -->
+            <section class="business-contact-card mb-4" data-aos="fade-left">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="fas fa-address-card fa-2x text-primary me-3"></i>
+                    <h4 class="section-title mb-0">Información de Contacto</h4>
+                </div>
+                
+                <!-- Dirección -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block mb-1">Ubicación</strong>
+                        <p class="mb-0 text-muted">{{ negocio.direcc_neg }}</p>
+                    </div>
+                </div>
+
+                <!-- NIT -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-id-card"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block mb-1">NIT Empresarial</strong>
+                        <p class="mb-0 text-muted">{{ negocio.nit_neg }}</p>
+                    </div>
+                </div>
+
+                <!-- Propietario -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-user-tie"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block mb-1">Propietario</strong>
+                        <p class="mb-0 text-muted">{{ propietario.fkuser.first_name }} {{ propietario.fkuser.last_name }}</p>
+                    </div>
+                </div>
+
+                <!-- Contacto -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block mb-1">Email de Contacto</strong>
+                        <p class="mb-0 text-muted">{{ propietario.fkuser.email }}</p>
+                    </div>
+                </div>
+
+                <!-- Horario -->
+                <div class="contact-item">
+                    <div class="contact-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block mb-1">Horario de Atención</strong>
+                        <p class="mb-0 text-muted">Lun - Vie: 8:00 AM - 6:00 PM</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Mapa de Ubicación -->
+            <section class="business-contact-card mb-4" data-aos="fade-left" data-aos-delay="200">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="fas fa-map-marked-alt fa-2x text-primary me-3"></i>
+                    <h4 class="section-title mb-0">Ubicación Exacta</h4>
+                </div>
+                
+                <div class="map-container-vecy">
+                    <div id="leaflet-map"></div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <button class="btn-vecy-outline w-100" onclick="openInOpenStreetMap()">
+                        <i class="fas fa-external-link-alt me-2"></i>
+                        Abrir en Google Maps
+                    </button>
+                </div>
+            </section>
+
+            <!-- Acciones Rápidas -->
+            <section class="business-contact-card" data-aos="fade-left" data-aos-delay="300">
+                <div class="d-flex align-items-center mb-4">
+                    <i class="fas fa-bolt fa-2x text-warning me-3"></i>
+                    <h4 class="section-title mb-0">Acciones Rápidas</h4>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn-vecy-primary" onclick="showLoginAlert()">
+                        <i class="fas fa-shopping-cart me-2"></i>Realizar Pedido
+                    </button>
+                    <button class="btn-vecy-outline" onclick="showLoginAlert()">
+                        <i class="fas fa-comment me-2"></i>Contactar al Vendedor
+                    </button>
+                    <button class="btn-vecy-outline" onclick="showLoginAlert()">
+                        <i class="fas fa-share-alt me-2"></i>Compartir Negocio
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
 </div>
 
-
+<!-- Navegación Inferior -->
+<div class="container mb-5">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{% url 'principal' %}" class="btn-vecy-outline" data-aos="fade-right">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Negocios
+                </a>
+                
+                <div class="d-flex gap-2" data-aos="fade-left">
+                    <button class="btn-vecy-outline" onclick="scrollToTop()">
+                        <i class="fas fa-arrow-up me-2"></i>Ir Arriba
+                    </button>
+                    <button class="btn-vecy-primary" onclick="showLoginAlert()">
+                        <i class="fas fa-heart me-2"></i>Guardar Favorito
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
+
 {% block scripts %}
+<!-- AOS Animation -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Leaflet Maps -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    // ================== SISTEMA DE ESTRELLAS ==================
-    const stars = document.querySelectorAll('.star');
-    const inputEstrellas = document.getElementById('estrellas_input');
-
-    stars.forEach((star, index) => {
-        star.addEventListener('mouseover', () => {
-            stars.forEach((s, i) => s.innerHTML = i <= index ? '&#9733;' : '&#9734;');
-        });
-
-        star.addEventListener('click', () => {
-            inputEstrellas.value = star.dataset.value;
-        });
+    // Inicializar AOS
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 50
     });
 
-    document.querySelector('.estrellas').addEventListener('mouseleave', () => {
-        const val = parseInt(inputEstrellas.value) || 0;
-        stars.forEach((s, i) => s.innerHTML = i < val ? '&#9733;' : '&#9734;');
-    });
-
-    // ================== BOTONES + Y - ==================
-    document.querySelectorAll('.producto').forEach(prod => {
-        const btnMinus = prod.querySelector('.btn-minus');
-        const btnPlus = prod.querySelector('.btn-plus');
-        const inputCantidad = prod.querySelector('.cantidad-prod');
-        const stock = parseInt(prod.querySelector('.agregar-carrito')?.dataset.stock) || 1;
-
-        btnMinus?.addEventListener('click', (e) => {
-            e.preventDefault();
-            let val = parseInt(inputCantidad.value) || 1;
-            if (val > 1) inputCantidad.value = val - 1;
-        });
-
-        btnPlus?.addEventListener('click', (e) => {
-            e.preventDefault();
-            let val = parseInt(inputCantidad.value) || 1;
-            if (val < stock) {
-                inputCantidad.value = val + 1;
-            } else {
-                alert('No puedes agregar más de la cantidad disponible');
-            }
-        });
-    });
-
-    // ================== AGREGAR AL CARRITO AJAX ==================
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let cookie of cookies) {
-                cookie = cookie.trim();
-                if (cookie.startsWith(name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    const csrftoken = getCookie('csrftoken');
-
-    document.querySelectorAll('.agregar-carrito').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            const prodId = this.dataset.prod;
-            const stock = parseInt(this.dataset.stock);
-            const productoDiv = this.closest('.producto');
-            const inputCantidad = productoDiv.querySelector('.cantidad-prod');
-            const cantidad = parseInt(inputCantidad.value) || 1;
-
-            // Validar stock
-            if (cantidad > stock) {
-                alert('No hay suficiente stock disponible');
-                return;
-            }
-
-            if (cantidad <= 0) {
-                alert('La cantidad debe ser mayor a 0');
-                return;
-            }
-
-            // Mostrar loading
-            const originalText = this.innerHTML;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
-            this.disabled = true;
-
-            fetch("{% url 'agregar_carrito_ajax' %}", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "X-CSRFToken": csrftoken,
-                },
-                body: JSON.stringify({
-                    'prod_id': prodId,
-                    'cantidad': cantidad
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Error en la respuesta del servidor');
-                }
-                return response.json();
-            })
+    // Mapa Leaflet Profesional
+    function initMap() {
+        const address = "{{ negocio.direcc_neg }}";
+        
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&addressdetails=1`)
+            .then(response => response.json())
             .then(data => {
-                if(data.success){
-                    // Mostrar notificación
-                    showNotification('Producto agregado al carrito!', 'success');
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lon = parseFloat(data[0].lon);
                     
-                    // Resetear cantidad
-                    inputCantidad.value = 1;
+                    // Mapa con configuración profesional
+                    const map = L.map('leaflet-map', {
+                        zoomControl: true,
+                        scrollWheelZoom: true,
+                        dragging: true,
+                        tap: true
+                    }).setView([lat, lon], 16);
                     
-                    // Actualizar contador del carrito si tienes uno
-                    updateCartCounter();
+                    // Tile layer con estilo mejorado
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '© OpenStreetMap contributors',
+                        maxZoom: 19,
+                        detectRetina: true
+                    }).addTo(map);
+                    
+                    // Icono personalizado premium
+                    const customIcon = L.divIcon({
+                        html: `
+                            <div style="
+                                background: linear-gradient(135deg, #3598db 0%, #4aa8e8 100%);
+                                width: 50px;
+                                height: 50px;
+                                border-radius: 50%;
+                                border: 4px solid white;
+                                box-shadow: 0 4px 20px rgba(53, 152, 219, 0.4);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                color: white;
+                                font-size: 16px;
+                                animation: pulse 2s infinite;
+                            ">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            <style>
+                                @keyframes pulse {
+                                    0% { transform: scale(1); }
+                                    50% { transform: scale(1.1); }
+                                    100% { transform: scale(1); }
+                                }
+                            </style>
+                        `,
+                        className: 'leaflet-custom-icon',
+                        iconSize: [50, 50],
+                        iconAnchor: [25, 50],
+                        popupAnchor: [0, -50]
+                    });
+                    
+                    // Marcador con popup elegante
+                    const marker = L.marker([lat, lon], {icon: customIcon}).addTo(map);
+                    
+                    const popupContent = `
+                        <div style="min-width: 250px; padding: 12px;">
+                            <div class="d-flex align-items-center mb-2">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3598db 0%, #4aa8e8 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 12px;">
+                                    <i class="fas fa-store"></i>
+                                </div>
+                                <div>
+                                    <h6 style="margin: 0; color: #3598db; font-weight: 700;">{{ negocio.nom_neg }}</h6>
+                                    <small style="color: #7f8c8d;">{{ tipo_negocio.desc_tiponeg }}</small>
+                                </div>
+                            </div>
+                            <p style="margin: 8px 0 0 0; color: #34495e; font-size: 13px; line-height: 1.4;">
+                                <i class="fas fa-map-marker-alt me-2" style="color: #3598db;"></i>
+                                {{ negocio.direcc_neg }}
+                            </p>
+                        </div>
+                    `;
+                    
+                    marker.bindPopup(popupContent, {
+                        className: 'custom-popup',
+                        maxWidth: 300
+                    }).openPopup();
                     
                 } else {
-                    throw new Error(data.error || 'Error al agregar al carrito');
+                    showMapError();
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showNotification('Error: ' + error.message, 'error');
-            })
-            .finally(() => {
-                // Restaurar botón
-                this.innerHTML = originalText;
-                this.disabled = false;
+                console.error('Error cargando mapa:', error);
+                showMapError();
             });
-        });
-    });
-
-    // Función para mostrar notificaciones
-    function showNotification(message, type) {
-        // Crear elemento de notificación
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
+    }
+    
+    function showMapError() {
+        document.getElementById('leaflet-map').innerHTML = `
+            <div class="w-100 h-100 bg-gradient-light d-flex align-items-center justify-content-center">
+                <div class="text-center p-4">
+                    <i class="fas fa-map-marker-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted mb-2">Ubicación no disponible</h5>
+                    <p class="text-muted mb-3">No pudimos cargar la ubicación en este momento.</p>
+                    <button class="btn-vecy-primary btn-sm" onclick="openInOpenStreetMap()">
+                        <i class="fas fa-external-link-alt me-2"></i>Abrir en mapa externo
+                    </button>
+                </div>
+            </div>
         `;
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-remover después de 3 segundos
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
+    }
+    
+    function openInOpenStreetMap() {
+        const address = encodeURIComponent("{{ negocio.direcc_neg }}");
+        window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+    }
+    
+    // Alertas Profesionales
+    function showLoginAlert() {
+        Swal.fire({
+            title: '🔐 Acceso Requerido',
+            html: `
+                <div class="text-center py-3">
+                    <div class="icon-container mb-3">
+                        <i class="fas fa-lock fa-4x text-primary mb-3"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-2">¡Únete a la Comunidad VECY!</h4>
+                    <p class="text-muted mb-4">Accede a todas las funciones premium y conecta con los mejores negocios locales.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary btn-lg py-3">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </a>
+                        <a href="{% url 'registro_usuario' %}" class="btn btn-outline-primary py-3">
+                            <i class="fas fa-user-plus me-2"></i>Crear Cuenta Gratis
+                        </a>
+                    </div>
+                </div>
+            `,
+            showCloseButton: true,
+            showConfirmButton: false,
+            width: '420px',
+            background: '#ffffff',
+            customClass: {
+                popup: 'rounded-4 border-0 shadow-lg'
             }
-        }, 3000);
+        });
     }
-
-    // Función para actualizar contador del carrito (si lo tienes)
-    function updateCartCounter() {
-        // Si tienes un contador de carrito en el header, actualízalo aquí
-        const cartCounter = document.querySelector('.cart-counter');
-        if (cartCounter) {
-            const currentCount = parseInt(cartCounter.textContent) || 0;
-            cartCounter.textContent = currentCount + 1;
-        }
+    
+    function showNotification(message) {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: message,
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#27ae60',
+            color: 'white',
+            iconColor: 'white'
+        });
     }
-});
+    
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // Inicializar cuando cargue la página
+    document.addEventListener('DOMContentLoaded', function() {
+        initMap();
+        
+        // Efectos de scroll suave
+        const scrollElements = document.querySelectorAll('[data-aos]');
+        
+        // Agregar clase de carga inicial
+        document.body.classList.add('loaded');
+    });
 </script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
-    crossorigin="anonymous"></script>
 {% endblock %}

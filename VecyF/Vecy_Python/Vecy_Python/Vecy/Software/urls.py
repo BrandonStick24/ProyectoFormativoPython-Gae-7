@@ -1,30 +1,16 @@
-# Software/urls.py
 from django.urls import path
 from . import views, vendedor_views, vendedor_ofertas_views, moderador_views
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.urls import include
 
 urlpatterns = [
-    # ==================== URLs PÚBLICAS Y CLIENTE ====================
     path('', views.inicio, name='inicio'),
     path('principal/', views.principal, name='principal'),
-    path('login/', views.iniciar_sesion, name='login'),
-    path('registro/', views.registro_user, name='registro_user'),
-    path('cliente/dashboard/', views.cliente_dash, name='cliente_dash'),
-    path('cierre/', views.cerrar_sesion, name='cerrar_sesion'),
-    path('registrar-negocio/', views.registro_negocio, name='registro_negocios'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('negocio/<int:id>/', views.detalle_negocio, name='detalle_negocio'),
-    path('guardar-resena/', views.guardar_resena, name='guardar_resena'),
-    path('agregar_carrito/<int:producto_id>/', views.agregar_al_carrito, name='agregar_carrito'),
-    path('ver_carrito/', views.ver_carrito, name='ver_carrito'),
-    path('agregar_carrito_ajax/', views.agregar_carrito_ajax, name='agregar_carrito_ajax'),
-    path('procesar_pago/', views.procesar_pago, name='procesar_pago'),
-    path('pago_exitoso/', views.pago_exitoso, name='pago_exitoso'),
-    path('descargar_comprobante/<str:transaccion_id>/', views.descargar_comprobante, name='descargar_comprobante'),
+    path('auth/', include('Software.urls_auth')),  # Cambia el prefijo
+    path('cliente/', include('Software.urls_cliente')),  # Cambia el prefijo
     
-
     # ==================== URLs DEL VENDEDOR ASIDE ====================
     path('dash-vendedor/', vendedor_views.vendedor_dash, name='dash_vendedor'),
     path('vendedor/negocios/', vendedor_views.Negocios_V, name='Negocios_V'),
@@ -73,10 +59,6 @@ urlpatterns = [
     path('moderador/api/negocio/<int:negocio_id>/eliminar/', moderador_views.eliminar_negocio, name='eliminar_negocio'),
     path('moderador/api/usuario/<int:usuario_id>/', moderador_views.detalle_usuario_json, name='detalle_usuario_json'),
     path('moderador/api/usuario/<int:usuario_id>/cambiar-estado/', moderador_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
-
-
-    
-
 ]
 
 if settings.DEBUG:
