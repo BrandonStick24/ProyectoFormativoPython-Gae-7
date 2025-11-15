@@ -195,27 +195,6 @@
     opacity: 0.5;
 }
 
-/* Imágenes de variantes */
-.variante-imagen {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 2px solid #e5e7eb;
-}
-
-.variante-sin-imagen {
-    width: 50px;
-    height: 50px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    border: 2px dashed #d1d5db;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
     .variantes-header {
@@ -314,7 +293,6 @@
                 <table class="variantes-table">
                     <thead>
                         <tr>
-                            <th>Imagen</th>
                             <th>Nombre de Variante</th>
                             <th>Precio Adicional</th>
                             <th>Precio Total</th>
@@ -327,15 +305,6 @@
                         {% if variantes %}
                         {% for variante in variantes %}
                         <tr>
-                            <td>
-                                {% if variante.imagen %}
-                                <img src="/media/variantes/{{ variante.imagen }}" alt="{{ variante.nombre }}" class="variante-imagen">
-                                {% else %}
-                                <div class="variante-sin-imagen">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                                {% endif %}
-                            </td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="variante-icon me-3">
@@ -376,8 +345,8 @@
                                             data-variante-nombre="{{ variante.nombre }}"
                                             data-variante-precio="{{ variante.precio_adicional }}"
                                             data-variante-stock="{{ variante.stock }}"
+                                            data-variante-sku="{{ variante.sku|default:'' }}"
                                             data-variante-estado="{{ variante.estado }}"
-                                            data-variante-imagen="{% if variante.imagen %}/media/variantes/{{ variante.imagen }}{% endif %}"
                                             title="Editar variante">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -406,7 +375,7 @@
                         {% endfor %}
                         {% else %}
                         <tr>
-                            <td colspan="7">
+                            <td colspan="6">
                                 <div class="empty-state">
                                     <i class="fas fa-layer-group"></i>
                                     <h5>No hay variantes registradas</h5>
@@ -425,7 +394,7 @@
     </div>
 </div>
 
-<!-- Modal Agregar Variante - Mejorado -->
+<!-- Modal Agregar Variante - MODIFICADO -->
 <div class="modal fade" id="modalAgregarVariante" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -467,11 +436,14 @@
                             </div>
                         </div>
                         <div class="col-md-6">
+                            <!-- CAMPO DE IMAGEN AGREGADO - REEMPLAZA EL SKU -->
                             <div class="mb-3">
-                                <label class="form-label">Imagen de la Variante</label>
+                                <label class="form-label">Imagen de la Variante (Opcional)</label>
                                 <input type="file" class="form-control" name="imagen_variante" 
                                        accept="image/*">
-                                <div class="form-text">Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB</div>
+                                <div class="form-text">
+                                    Formatos: JPG, PNG, GIF. Máx: 5MB
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -505,7 +477,8 @@
     </div>
 </div>
 
-<!-- Modal Editar Variante -->
+<!-- Los otros modales (Editar Variante y Ajustar Stock) se mantienen igual pero con la clase modal-lg -->
+<!-- Modal Editar Variante - MODIFICADO -->
 <div class="modal fade" id="modalEditarVariante" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -547,14 +520,13 @@
                             </div>
                         </div>
                         <div class="col-md-6">
+                            <!-- CAMPO DE IMAGEN AGREGADO - REEMPLAZA EL SKU -->
                             <div class="mb-3">
                                 <label class="form-label">Imagen de la Variante</label>
                                 <input type="file" class="form-control" name="imagen_variante" 
-                                       accept="image/*" id="editar_imagen_variante">
-                                <div class="form-text">Dejar vacío para mantener la imagen actual</div>
-                                <div id="imagen-actual-container" class="mt-2">
-                                    <small class="text-muted">Imagen actual:</small>
-                                    <div id="imagen-actual-preview" class="mt-1"></div>
+                                       accept="image/*">
+                                <div class="form-text">
+                                    Dejar vacío para mantener la imagen actual
                                 </div>
                             </div>
                         </div>
@@ -671,22 +643,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const varianteNombre = button.getAttribute('data-variante-nombre');
             const variantePrecio = button.getAttribute('data-variante-precio');
             const varianteStock = button.getAttribute('data-variante-stock');
+            const varianteSku = button.getAttribute('data-variante-sku');
             const varianteEstado = button.getAttribute('data-variante-estado');
-            const varianteImagen = button.getAttribute('data-variante-imagen');
             
             document.getElementById('editar_variante_id').value = varianteId;
             document.getElementById('editar_nombre_variante').value = varianteNombre;
             document.getElementById('editar_precio_adicional').value = variantePrecio;
             document.getElementById('editar_stock_variante').value = varianteStock;
+            document.getElementById('editar_sku_variante').value = varianteSku;
             document.getElementById('editar_estado_variante').value = varianteEstado;
-            
-            // Mostrar imagen actual si existe
-            const imagenPreview = document.getElementById('imagen-actual-preview');
-            if (varianteImagen && varianteImagen !== '') {
-                imagenPreview.innerHTML = `<img src="${varianteImagen}" alt="Imagen actual" class="variante-imagen" style="width: 80px; height: 80px;">`;
-            } else {
-                imagenPreview.innerHTML = '<div class="variante-sin-imagen" style="width: 80px; height: 80px;"><i class="fas fa-image"></i></div>';
-            }
             
             const form = document.getElementById('formEditarVariante');
             form.action = `/vendedor/variantes/editar/${varianteId}/`;
@@ -707,7 +672,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('ajustar_stock_actual').value = varianteStock;
             
             const form = document.getElementById('formAjustarStockVariante');
-            form.action = `/vendedor/variantes/ajustar-stock/${varianteId}/`;
+            // ESTA URL SÍ EXISTE
+            form.action = `/vendedor/productos/variantes/ajustar-stock/${varianteId}/`;
         });
     }
 });

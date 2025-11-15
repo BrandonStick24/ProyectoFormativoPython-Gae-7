@@ -1,3 +1,4 @@
+<!-- Templates/Vendedor/Crud_V.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
@@ -5,35 +6,117 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css_Vendedor/crud_V.css' %}">
+<style>
+/* Estilos para variantes */
+.variantes-section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
 
+.variante-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.variante-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.variante-nombre {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.variante-precio {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.variante-stock {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.stock-bajo { background: #fff3cd; color: #856404; }
+.stock-normal { background: #d1ecf1; color: #0c5460; }
+.stock-critico { background: #f8d7da; color: #721c24; }
+
+.btn-variantes {
+    background: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+.btn-variantes:hover {
+    background: #138496;
+    border-color: #117a8b;
+}
+</style>
 {% endblock %}
 
 {% block content %}
+<!-- Header Mejorado con Gráficas -->
 <div class="tarjeta-bienvenida">
-    <h2>Gestión de Productos</h2>
-    <p class="text-muted">Administra tu inventario de productos de forma eficiente.</p>
-    {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h2>Gestión de Productos</h2>
+            <p class="text-muted">Administra tu inventario de productos y sus variantes.</p>
+        </div>
+        <div class="col-md-6">
+            <div class="estadisticas-grid">
+                <div class="estadistica-card total">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_con_variantes|length }}</div>
+                    <div class="estadistica-titulo">Total Productos</div>
+                </div>
+                
+                <div class="estadistica-card disponibles">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_disponibles.count }}</div>
+                    <div class="estadistica-titulo">Disponibles</div>
+                </div>
+                
+                <div class="estadistica-card oferta">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_en_oferta|length }}</div>
+                    <div class="estadistica-titulo">En Oferta</div>
+                </div>
+            </div>
+        </div>
     </div>
-    {% endfor %}
-    {% endif %}
 </div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
 
 <!-- Barra de Herramientas -->
 <div class="barra-herramientas">
     <div class="grupo-botones-accion">
-        <button class="boton-accion boton-primario" id="btnAgregarProducto" data-bs-toggle="modal"
-            data-bs-target="#modalAgregarProducto">
+        <button class="boton-accion boton-primario" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
             <i class="fas fa-plus"></i> Agregar Producto
-        </button>
-        <button class="boton-accion boton-secundario" id="btnImportarExcel">
-            <i class="fas fa-file-excel"></i> Importar Listado
-        </button>
-        <button class="boton-accion boton-secundario" id="btnExportar">
-            <i class="fas fa-download"></i> Exportar
         </button>
     </div>
 
@@ -42,128 +125,339 @@
             <i class="fas fa-search icono-busqueda"></i>
             <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar producto...">
         </div>
+    </div>
+</div>
 
-        <div class="contenedor-filtros">
-            <label class="etiqueta-filtro">Filtrar por:</label>
-            <select id="selectFiltro" class="select-filtro">
-                <option value="nombre">Nombre</option>
-                <option value="precio">Precio</option>
-                <option value="estado">Estado</option>
-                <option value="stock">Stock</option>
-            </select>
-            <button class="boton-filtro" id="btnOrdenAsc">
-                <i class="fas fa-sort-amount-up"></i>
-            </button>
+<!-- Lista de Productos con Variantes -->
+<div class="contenedor-productos">
+    {% for producto_data in productos_con_variantes %}
+    {% with producto=producto_data.producto variantes=producto_data.variantes %}
+    <div class="producto-card">
+        <div class="producto-header">
+            <div class="producto-info">
+                <div class="producto-imagen">
+                    {% if producto.img_prod %}
+                    <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                    {% else %}
+                    <div class="img-placeholder">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="producto-details">
+                    <h5>{{ producto.nom_prod }}</h5>
+                    <p class="text-muted">{{ producto.desc_prod|default:"Sin descripción" }}</p>
+                    <div class="producto-meta">
+                        <span class="precio">${{ producto.precio_prod }}</span>
+                        <span class="categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
+                        <span class="stock {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                            Stock: {{ producto.stock_prod }}
+                        </span>
+                        {% if producto.pkid_prod in productos_en_oferta %}
+                        <span class="badge bg-danger">En Oferta</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="producto-actions">
+                <button class="btn btn-warning btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalEditarProducto"
+                        data-producto-id="{{ producto.pkid_prod }}"
+                        data-producto-nombre="{{ producto.nom_prod }}"
+                        data-producto-precio="{{ producto.precio_prod }}"
+                        data-producto-stock="{{ producto.stock_prod }}"
+                        data-producto-estado="{{ producto.estado_prod }}"
+                        data-producto-categoria="{{ producto.fkcategoria_prod.pkid_cp }}"
+                        data-producto-descripcion="{{ producto.desc_prod|default:'' }}">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+
+                <button class="btn btn-info btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalAjustarStock"
+                        data-producto-id="{{ producto.pkid_prod }}"
+                        data-producto-nombre="{{ producto.nom_prod }}"
+                        data-producto-stock="{{ producto.stock_prod }}">
+                    <i class="fas fa-boxes"></i> Stock
+                </button>
+                
+                <a href="{% url 'gestionar_variantes' producto.pkid_prod %}" class="btn btn-variantes btn-sm">
+                    <i class="fas fa-layer-group"></i> Variantes ({{ variantes|length }})
+                </a>
+                
+                <button class="btn btn-danger btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalEliminarProducto"
+                        data-producto-id="{{ producto.pkid_prod }}"
+                        data-producto-nombre="{{ producto.nom_prod }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sección de Variantes -->
+        {% if variantes %}
+        <div class="variantes-section">
+            <h6><i class="fas fa-layer-group me-2"></i>Variantes de este producto:</h6>
+            <div class="variantes-list">
+                {% for variante in variantes %}
+                <div class="variante-card">
+                    <div class="variante-header">
+                        <span class="variante-nombre">{{ variante.nombre }}</span>
+                        <span class="variante-precio">${{ variante.precio_total }}</span>
+                    </div>
+                    <div class="variante-details">
+                        <span>Precio adicional: ${{ variante.precio_adicional }}</span>
+                        <span class="variante-stock {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                            Stock: {{ variante.stock }}
+                        </span>
+                        {% if variante.sku %}
+                        <span class="text-muted">SKU: {{ variante.sku }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div class="text-center py-5">
+        <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No hay productos registrados</h4>
+        <p class="text-muted">Comienza agregando tu primer producto.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+            <i class="fas fa-plus"></i> Agregar primer producto
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Los modales existentes se mantienen igual -->
+ <!-- Modal Editar Producto -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-labelledby="modalEditarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarProducto" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_editar" name="producto_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_prod_editar" class="form-label">Nombre del Producto *</label>
+                                <input type="text" class="form-control" id="nom_prod_editar" name="nom_prod" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="precio_prod_editar" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precio_prod_editar" name="precio_prod" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria_prod_editar" class="form-label">Categoría *</label>
+                                <select class="form-control" id="categoria_prod_editar" name="categoria_prod" required>
+                                    <option value="">Selecciona una categoría...</option>
+                                    {% for categoria in categorias %}
+                                    <option value="{{ categoria.pkid_cp }}">{{ categoria.desc_cp }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_prod_editar" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="stock_prod_editar" name="stock_prod" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estado_prod_editar" class="form-label">Estado del Producto</label>
+                                <select class="form-control" id="estado_prod_editar" name="estado_prod">
+                                    <option value="disponible">Disponible</option>
+                                    <option value="no_disponible">No Disponible</option>
+                                    <option value="agotado">Agotado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_prod_editar" class="form-label">Imagen del Producto</label>
+                                <input type="file" class="form-control" id="img_prod_editar" name="img_prod" accept="image/*">
+                                <div class="form-text" id="imagen_actual_texto">Imagen actual se mantendrá si no se selecciona nueva</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_prod_editar" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="desc_prod_editar" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Producto</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Tabla de Productos REALES -->
-<div class="contenedor-tabla">
-    <table class="tabla-productos">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Nombre del Producto</th>
-                <th>Precio</th>
-                <th>Stock</th>
-                <th>Estado</th>
-                <th>Categoría</th>
-                <th>Opciones</th>
-            </tr>
-        </thead>
-        <tbody id="cuerpoTablaProductos">
-            {% if productos %}
-            {% for producto in productos %}
-            <tr>
-                <td>{{ producto.pkid_prod }}</td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        {{ producto.nom_prod }}
-                        {% if producto.pkid_prod in productos_en_oferta %}
-                        <span class="badge bg-warning ms-2" style="font-size: 0.7rem;">
-                            <i class="fas fa-tag me-1"></i>En Oferta
-                        </span>
-                        {% endif %}
-                    </div>
-                </td>
-                <td>${{ producto.precio_prod }}</td>
-                <td>
-                    {% if producto.stock_prod == 0 %}
-                    <span class="insignia-stock sin-stock">Sin stock</span>
-                    {% elif producto.stock_prod <= 5 %} <span class="insignia-stock poco-stock">Poco stock</span>
-                        {% else %}
-                        <span class="insignia-stock con-stock">Con stock</span>
-                        {% endif %}
-                </td>
-                <td>
-                    {% if producto.estado_prod == 'disponible' %}
-                    <span class="insignia-estado activo">Activo</span>
-                    {% elif producto.estado_prod == 'no_disponible' %}
-                    <span class="insignia-estado inactivo">Inactivo</span>
-                    {% else %}
-                    <span class="insignia-estado agotado">Agotado</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {{ producto.fkcategoria_prod.desc_cp }}
-                </td>
-                <td>
-                    <div class="contenedor-opciones">
-                        <button class="btn btn-warning btn-editar-producto" data-id="{{ producto.pkid_prod }}"
-                            data-nombre="{{ producto.nom_prod }}" data-precio="{{ producto.precio_prod }}"
-                            data-stock="{{ producto.stock_prod }}" data-estado="{{ producto.estado_prod }}"
-                            data-categoria="{{ producto.fkcategoria_prod.pkid_cp }}"
-                            data-descripcion="{{ producto.desc_prod }}" data-bs-toggle="modal"
-                            data-bs-target="#modalEditarProducto">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
+<!-- Modal Ajustar Stock -->
+<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-labelledby="modalAjustarStockLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAjustarStockLabel">Ajustar Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAjustarStock" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_stock" name="producto_id">
+                <div class="modal-body">
+                    <p>Producto: <strong id="nombre_producto_stock"></strong></p>
 
-
-                        <button class="boton-opcion ajustar-stock"
-                            title="Ajustar Stock - Stock actual: {{ producto.stock_prod }}"
-                            data-id="{{ producto.pkid_prod }}" data-action="stock" data-bs-toggle="tooltip"
-                            data-bs-placement="top" data-bs-title="Stock actual: {{ producto.stock_prod }}">
-                            <i class="fas fa-boxes"></i> Stock
-                        </button>
-                        <button class="boton-opcion cambiar-estado" title="Cambiar Estado"
-                            data-id="{{ producto.pkid_prod }}" data-action="estado">
-                            <i class="fas fa-toggle-on"></i> Estado
-                        </button>
-                        <button class="boton-opcion eliminar" title="Eliminar" data-id="{{ producto.pkid_prod }}"
-                            data-nombre="{{ producto.nom_prod }}" data-action="eliminar">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_actual" class="form-label">Stock Actual:</label>
+                                <input type="number" class="form-control" id="stock_actual" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipo_ajuste" class="form-label">Tipo de Ajuste:</label>
+                                <select class="form-control" id="tipo_ajuste" name="tipo_ajuste">
+                                    <option value="entrada">Entrada (+)</option>
+                                    <option value="salida">Salida (-)</option>
+                                    <option value="ajuste">Ajuste Manual</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
-                </td>
-            </tr>
-            {% endfor %}
-            {% else %}
-            <tr>
-                <td colspan="7" class="text-center py-4">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">No hay productos registrados aún.</p>
-                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
-                        <i class="fas fa-plus"></i> Agregar tu primer producto
-                    </button>
-                </td>
-            </tr>
-            {% endif %}
-        </tbody>
-    </table>
+
+                    <div class="mb-3">
+                        <label for="cantidad_ajuste" class="form-label">Cantidad:</label>
+                        <input type="number" class="form-control" id="cantidad_ajuste" name="cantidad_ajuste" min="0" required>
+                        <div class="form-text" id="texto_ayuda">
+                            Ingrese la cantidad a sumar o restar
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="campo_stock_final" style="display: none;">
+                        <label for="stock_final" class="form-label">Stock Final:</label>
+                        <input type="number" class="form-control" id="stock_final" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="motivo_ajuste" class="form-label">Motivo del Ajuste:</label>
+                        <select class="form-control" id="motivo_ajuste" name="motivo_ajuste">
+                            <option value="compra_proveedor">Compra a Proveedor</option>
+                            <option value="devolucion_cliente">Devolución de Cliente</option>
+                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
+                            <option value="danio_perdida">Daño o Pérdida</option>
+                            <option value="promocion">Preparación para Promoción</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
+<!-- Modal Cambiar Estado -->
+<div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCambiarEstadoLabel">Cambiar Estado del Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formCambiarEstado" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_estado" name="producto_id">
+                <div class="modal-body">
+                    <p>Producto: <strong id="nombre_producto_estado"></strong></p>
+                    <div class="mb-3">
+                        <label for="nuevo_estado" class="form-label">Nuevo Estado:</label>
+                        <select class="form-control" id="nuevo_estado" name="nuevo_estado">
+                            <option value="disponible">Disponible</option>
+                            <option value="no_disponible">No Disponible</option>
+                            <option value="agotado">Agotado</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado Actual:</label>
+                        <div id="estado_actual" class="badge bg-secondary"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Cambiar Estado</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Producto -->
+<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarProductoLabel">Eliminar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEliminarProducto" method="post">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_eliminar" name="producto_id">
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar el producto?</p>
+                    <p><strong id="nombre_producto_eliminar"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Esta acción no se puede deshacer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Modal Agregar Producto -->
-<div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-labelledby="modalAgregarProductoLabel"
-    aria-hidden="true">
+<div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-labelledby="modalAgregarProductoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalAgregarProductoLabel">Agregar Nuevo Producto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formAgregarProducto" method="post" action="{% url 'crear_producto_P' %}"
-                enctype="multipart/form-data">
+            <form method="post" action="{% url 'crear_producto_P' %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-body">
                     <div class="row">
@@ -178,10 +472,8 @@
                                 <label for="precio_prod" class="form-label">Precio *</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="text" class="form-control" id="precio_prod" name="precio_prod"
-                                        placeholder="0.00" required>
+                                    <input type="number" class="form-control" id="precio_prod" name="precio_prod" step="0.01" min="0" required>
                                 </div>
-                                <div class="form-text">Máximo: $99'999.999</div>
                             </div>
                         </div>
                     </div>
@@ -193,17 +485,15 @@
                                 <select class="form-control" id="categoria_prod" name="categoria_prod" required>
                                     <option value="">Selecciona una categoría...</option>
                                     {% for categoria in categorias %}
-                                    <option value="{{ categoria.pkid_cp }}">{{ categoria.desc_cp }}</option>
+                                    <option value="{{ categoria.id }}">{{ categoria.descripcion }}</option>
                                     {% endfor %}
                                 </select>
-                                <div class="form-text">Escribe para filtrar las categorías</div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="stock_prod" class="form-label">Stock</label>
-                                <input type="number" class="form-control" id="stock_prod" name="stock_prod" min="0"
-                                    value="0">
+                                <input type="number" class="form-control" id="stock_prod" name="stock_prod" min="0" value="0">
                             </div>
                         </div>
                     </div>
@@ -223,15 +513,13 @@
                             <div class="mb-3">
                                 <label for="img_prod" class="form-label">Imagen del Producto</label>
                                 <input type="file" class="form-control" id="img_prod" name="img_prod" accept="image/*">
-                                <div class="form-text">Opcional. Formatos: JPG, PNG, GIF</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="desc_prod" class="form-label">Descripción</label>
-                        <textarea class="form-control" id="desc_prod" name="desc_prod" rows="3"
-                            placeholder="Describe tu producto..."></textarea>
+                        <textarea class="form-control" id="desc_prod" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -243,256 +531,233 @@
     </div>
 </div>
 
-<!-- Modal Editar Producto -->
-<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-labelledby="modalEditarProductoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEditarProducto" method="post" action="#" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="nom_prod_editar" class="form-label">Nombre del Producto *</label>
-                                <input type="text" class="form-control" id="nom_prod_editar" name="nom_prod" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="precio_prod_editar" class="form-label">Precio *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="text" class="form-control" id="precio_prod_editar" name="precio_prod"
-                                        placeholder="0.00" required>
-                                </div>
-                                <div class="form-text">Máximo: $99'999.999</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="categoria_prod_editar" class="form-label">Categoría *</label>
-                                <select class="form-control" id="categoria_prod_editar" name="categoria_prod" required>
-                                    <option value="">Selecciona una categoría...</option>
-                                    {% for categoria in categorias %}
-                                    <option value="{{ categoria.pkid_cp }}">{{ categoria.desc_cp }}</option>
-                                    {% endfor %}
-                                </select>
-                                <div class="form-text">Escribe para filtrar las categorías</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="stock_prod_editar" class="form-label">Stock</label>
-                                <input type="number" class="form-control" id="stock_prod_editar" name="stock_prod"
-                                    min="0" value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="estado_prod_editar" class="form-label">Estado del Producto</label>
-                                <select class="form-control" id="estado_prod_editar" name="estado_prod">
-                                    <option value="disponible">Disponible</option>
-                                    <option value="no_disponible">No Disponible</option>
-                                    <option value="agotado">Agotado</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="img_prod_editar" class="form-label">Imagen del Producto</label>
-                                <input type="file" class="form-control" id="img_prod_editar" name="img_prod"
-                                    accept="image/*">
-                                <div class="form-text">Opcional. Formatos: JPG, PNG, GIF</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="desc_prod_editar" class="form-label">Descripción</label>
-                        <textarea class="form-control" id="desc_prod_editar" name="desc_prod" rows="3"
-                            placeholder="Describe tu producto..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Producto</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-
-<!-- Modal Cambiar Estado -->
-<div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalCambiarEstadoLabel">Cambiar Estado del Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formCambiarEstado" method="post" action>
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" id="producto_id_estado" name="producto_id">
-                    <p>Producto: <strong id="nombre_producto_estado"></strong></p>
-
-                    <div class="mb-3">
-                        <label class="form-label">Estado Actual:</label>
-                        <div id="estado_actual" class="badge bg-secondary">Cargando...</div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="nuevo_estado" class="form-label">Nuevo Estado:</label>
-                        <select class="form-control" id="nuevo_estado" name="nuevo_estado">
-                            <option value="disponible">Disponible</option>
-                            <option value="no_disponible">No Disponible</option>
-                            <option value="agotado">Agotado</option>
-                        </select>
-                    </div>
-
-                    <div class="alert alert-info">
-                        <small>
-                            <i class="fas fa-info-circle"></i>
-                            <strong>Disponible:</strong> Producto visible para clientes<br>
-                            <strong>No Disponible:</strong> Producto oculto temporalmente<br>
-                            <strong>Agotado:</strong> Producto visible pero sin stock
-                        </small>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Estado</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Eliminar Producto -->
-<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEliminarProductoLabel">Confirmar Eliminación</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEliminarProducto" method="post" action>
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" id="producto_id_eliminar" name="producto_id">
-                    <p>¿Estás seguro de que deseas eliminar el producto <strong id="nombre_producto_eliminar"></strong>?
-                    </p>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Advertencia:</strong> Esta acción no se puede deshacer. El producto será eliminado
-                        permanentemente.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Ajustar Stock -->
-<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-labelledby="modalAjustarStockLabel"
-    aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalAjustarStockLabel">Ajustar Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formAjustarStock" method="post" action>
-                {% csrf_token %}
-                <div class="modal-body">
-                    <input type="hidden" id="producto_id_stock" name="producto_id">
-                    <p>Producto: <strong id="nombre_producto_stock"></strong></p>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="stock_actual" class="form-label">Stock Actual:</label>
-                                <input type="number" class="form-control" id="stock_actual" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="nuevo_stock" class="form-label">Nuevo Stock:</label>
-                        <input type="number" class="form-control" id="nuevo_stock" name="nuevo_stock" min="0" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="motivo_ajuste" class="form-label">Motivo del Ajuste:</label>
-                        <select class="form-control" id="motivo_ajuste" name="motivo_ajuste">
-                            <option value="entrada">Entrada de inventario</option>
-                            <option value="salida">Salida de inventario</option>
-                            <option value="ajuste">Ajuste físico</option>
-                            <option value="devolucion">Devolución</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Stock</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+<!-- Los otros modales (editar, ajustar stock, etc.) se mantienen igual -->
 {% endblock %}
 
 {% block extra_js %}
-
-<script src="{% static 'javascript_V/Crud_V.js' %}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar modal de editar producto
     const modalEditar = document.getElementById('modalEditarProducto');
-    
-    modalEditar.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget; // Botón que abrió el modal
+    if (modalEditar) {
+        modalEditar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            const productoPrecio = button.getAttribute('data-producto-precio');
+            const productoStock = button.getAttribute('data-producto-stock');
+            const productoEstado = button.getAttribute('data-producto-estado');
+            const productoCategoria = button.getAttribute('data-producto-categoria');
+            const productoDescripcion = button.getAttribute('data-producto-descripcion');
+            
+            // Llenar los campos del modal
+            document.getElementById('producto_id_editar').value = productoId;
+            document.getElementById('nom_prod_editar').value = productoNombre;
+            document.getElementById('precio_prod_editar').value = productoPrecio;
+            document.getElementById('stock_prod_editar').value = productoStock;
+            document.getElementById('estado_prod_editar').value = productoEstado;
+            document.getElementById('categoria_prod_editar').value = productoCategoria;
+            document.getElementById('desc_prod_editar').value = productoDescripcion;
+            
+            // Configurar la acción del formulario
+            const form = document.getElementById('formEditarProducto');
+            form.action = `/vendedor/productos/editar/${productoId}/`;
+        });
+    }
+
+    // Configurar modal de ajustar stock
+    const modalStock = document.getElementById('modalAjustarStock');
+    if (modalStock) {
+        modalStock.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            const productoStock = button.getAttribute('data-producto-stock');
+            
+            document.getElementById('producto_id_stock').value = productoId;
+            document.getElementById('nombre_producto_stock').textContent = productoNombre;
+            document.getElementById('stock_actual').value = productoStock;
+            
+            // Configurar la acción del formulario
+            const form = document.getElementById('formAjustarStock');
+            form.action = `/vendedor/productos/ajustar-stock/${productoId}/`;
+            
+            // Resetear campos
+            document.getElementById('cantidad_ajuste').value = '';
+            document.getElementById('stock_final').value = '';
+            document.getElementById('tipo_ajuste').value = 'entrada';
+            document.getElementById('motivo_ajuste').value = 'compra_proveedor';
+            document.getElementById('campo_stock_final').style.display = 'none';
+        });
+    }
+
+    // Configurar modal de cambiar estado
+    const modalEstado = document.getElementById('modalCambiarEstado');
+    if (modalEstado) {
+        modalEstado.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            const productoEstado = button.getAttribute('data-producto-estado');
+            
+            document.getElementById('producto_id_estado').value = productoId;
+            document.getElementById('nombre_producto_estado').textContent = productoNombre;
+            document.getElementById('nuevo_estado').value = productoEstado;
+            
+            // Mostrar estado actual
+            const estadoActual = document.getElementById('estado_actual');
+            estadoActual.textContent = productoEstado;
+            estadoActual.className = 'badge ';
+            if (productoEstado === 'disponible') {
+                estadoActual.classList.add('bg-success');
+            } else if (productoEstado === 'no_disponible') {
+                estadoActual.classList.add('bg-secondary');
+            } else {
+                estadoActual.classList.add('bg-danger');
+            }
+            
+            // Configurar la acción del formulario
+            const form = document.getElementById('formCambiarEstado');
+            form.action = `/vendedor/productos/cambiar-estado/${productoId}/`;
+        });
+    }
+
+    // Configurar modal de eliminar
+    const modalEliminar = document.getElementById('modalEliminarProducto');
+    if (modalEliminar) {
+        modalEliminar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            
+            document.getElementById('producto_id_eliminar').value = productoId;
+            document.getElementById('nombre_producto_eliminar').textContent = productoNombre;
+            
+            // Configurar la acción del formulario
+            const form = document.getElementById('formEliminarProducto');
+            form.action = `/vendedor/productos/eliminar/${productoId}/`;
+        });
+    }
+
+    // Lógica para calcular stock final en ajuste de stock
+    const tipoAjuste = document.getElementById('tipo_ajuste');
+    const cantidadAjuste = document.getElementById('cantidad_ajuste');
+    const stockActual = document.getElementById('stock_actual');
+    const stockFinal = document.getElementById('stock_final');
+    const textoAyuda = document.getElementById('texto_ayuda');
+    const campoStockFinal = document.getElementById('campo_stock_final');
+
+    function calcularStockFinal() {
+        const stockActualVal = parseInt(stockActual.value) || 0;
+        const cantidadVal = parseInt(cantidadAjuste.value) || 0;
+        const tipo = tipoAjuste.value;
+
+        let stockFinalVal = stockActualVal;
         
-        // Obtener datos del botón
-        const id = button.getAttribute('data-id');
-        const nombre = button.getAttribute('data-nombre');
-        const precio = button.getAttribute('data-precio');
-        const stock = button.getAttribute('data-stock');
-        const estado = button.getAttribute('data-estado');
-        const categoria = button.getAttribute('data-categoria');
-        const descripcion = button.getAttribute('data-descripcion');
+        if (tipo === 'entrada') {
+            stockFinalVal = stockActualVal + cantidadVal;
+            textoAyuda.textContent = `Se sumarán ${cantidadVal} unidades al stock actual`;
+        } else if (tipo === 'salida') {
+            stockFinalVal = stockActualVal - cantidadVal;
+            textoAyuda.textContent = `Se restarán ${cantidadVal} unidades al stock actual`;
+            if (stockFinalVal < 0) {
+                textoAyuda.innerHTML = `<span class="text-danger">⚠️ El stock final no puede ser negativo</span>`;
+            }
+        } else {
+            stockFinalVal = cantidadVal;
+            textoAyuda.textContent = `El stock se establecerá en ${cantidadVal} unidades`;
+        }
 
-        // Llenar los campos del modal
-        document.getElementById('nom_prod_editar').value = nombre;
-        document.getElementById('precio_prod_editar').value = precio;
-        document.getElementById('stock_prod_editar').value = stock;
-        document.getElementById('estado_prod_editar').value = estado;
-        document.getElementById('categoria_prod_editar').value = categoria;
-        document.getElementById('desc_prod_editar').value = descripcion;
+        if (stockFinal) {
+            stockFinal.value = stockFinalVal;
+        }
+        
+        // Mostrar/ocultar campo de stock final
+        if (cantidadVal > 0 && campoStockFinal) {
+            campoStockFinal.style.display = 'block';
+            if (stockFinal) {
+                stockFinal.className = `form-control ${stockFinalVal < 0 ? 'is-invalid' : (stockFinalVal <= 5 ? 'is-warning' : 'is-valid')}`;
+            }
+        } else if (campoStockFinal) {
+            campoStockFinal.style.display = 'none';
+        }
+    }
 
-        // Opcional: cambiar acción del form para enviar el id
-        const form = document.getElementById('formEditarProducto');
-        form.action = "{% url 'editar_producto_P' 0 %}".replace('0', id);
-    });
+    if (tipoAjuste && cantidadAjuste) {
+        tipoAjuste.addEventListener('change', calcularStockFinal);
+        cantidadAjuste.addEventListener('input', calcularStockFinal);
+    }
+
+    // Filtros y búsqueda
+    const selectFiltro = document.getElementById('selectFiltro');
+    const inputBusqueda = document.getElementById('inputBusqueda');
+    
+    function aplicarFiltros() {
+        const filtro = selectFiltro.value;
+        const texto = inputBusqueda.value.toLowerCase();
+        const filas = document.querySelectorAll('#cuerpoTablaProductos tr');
+        
+        filas.forEach(fila => {
+            if (fila.cells.length < 2) return;
+            
+            const textoFila = fila.textContent.toLowerCase();
+            const esOferta = fila.classList.contains('producto-oferta');
+            const stock = parseInt(fila.cells[3].querySelector('.fw-bold').textContent) || 0;
+            const estado = fila.cells[4].textContent.toLowerCase();
+            
+            let mostrar = true;
+            
+            // Aplicar filtro seleccionado
+            if (filtro === 'oferta' && !esOferta) {
+                mostrar = false;
+            } else if (filtro === 'disponible' && (stock === 0 || estado.includes('agotado'))) {
+                mostrar = false;
+            } else if (filtro === 'sin-stock' && stock > 0) {
+                mostrar = false;
+            }
+            
+            // Aplicar búsqueda de texto
+            if (mostrar && texto && !textoFila.includes(texto)) {
+                mostrar = false;
+            }
+            
+            fila.style.display = mostrar ? '' : 'none';
+        });
+    }
+
+    if (selectFiltro && inputBusqueda) {
+        selectFiltro.addEventListener('change', aplicarFiltros);
+        inputBusqueda.addEventListener('input', aplicarFiltros);
+    }
+
+    // Ordenamiento
+    let ordenAscendente = true;
+    const btnOrdenAsc = document.getElementById('btnOrdenAsc');
+    if (btnOrdenAsc) {
+        btnOrdenAsc.addEventListener('click', function() {
+            ordenAscendente = !ordenAscendente;
+            this.innerHTML = ordenAscendente ? '<i class="fas fa-sort-amount-up"></i>' : '<i class="fas fa-sort-amount-down"></i>';
+        });
+    }
+
+    // Funcionalidad de botones de acción
+    const btnImportarExcel = document.getElementById('btnImportarExcel');
+    if (btnImportarExcel) {
+        btnImportarExcel.addEventListener('click', function() {
+            alert('Funcionalidad de Importar Excel - Aquí se abriría un selector de archivos');
+        });
+    }
+
+    const btnExportar = document.getElementById('btnExportar');
+    if (btnExportar) {
+        btnExportar.addEventListener('click', function() {
+            alert('Funcionalidad de Exportar - Aquí se exportarían los datos a Excel o CSV');
+        });
+    }
 });
-
 </script>
 {% endblock %}
