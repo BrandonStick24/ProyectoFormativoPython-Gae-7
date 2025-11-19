@@ -7,8 +7,14 @@
 body {
     font-family: Arial, sans-serif;
     min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* CONTENEDOR PRINCIPAL */
+.contenedor-principal {
     display: flex;
     flex-direction: column;
+    min-height: 100vh;
 }
 
 /* HEADER */
@@ -20,24 +26,20 @@ body {
     justify-content: space-between;
     align-items: center;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.logo-contenedor {
-    width: 50px;
-    height: 50px;
-    background-color: white;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    color: #2c3e50;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    z-index: 1000;
 }
 
 .info-usuario {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-left: 280px;
+    transform: translateX(200%);
 }
 
 .nombre-usuario {
@@ -104,7 +106,7 @@ body {
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     border-radius: 5px;
     min-width: 180px;
-    z-index: 1000;
+    z-index: 1001;
 }
 
 .menu-desplegable.activo {
@@ -129,18 +131,18 @@ body {
     border-bottom: none;
 }
 
-/* CONTENEDOR PRINCIPAL */
-.contenedor-principal {
-    display: flex;
-    flex: 1;
-}
-
 /* ASIDE */
 .barra-lateral {
+    position: fixed;
+    left: 0;
+    top: 70px; /* Altura del header */
+    height: calc(100vh - 70px);
     width: 250px;
     background-color: #34495e;
     padding: 20px 0;
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    z-index: 999;
+    overflow-y: auto;
 }
 
 .menu-lateral {
@@ -171,11 +173,22 @@ body {
     color: white;
 }
 
+/* CONTENIDO WRAPPER */
+.contenido-wrapper {
+    margin-left: 250px; /* Ancho del sidebar */
+    margin-top: 70px; /* Altura del header */
+    min-height: calc(100vh - 70px);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
 /* CONTENIDO MAIN */
 .contenido-principal {
     flex: 1;
     padding: 30px;
     background-color: #f8f9fa;
+    min-height: calc(100vh - 140px); /* 70px header + 70px footer */
 }
 
 /* FOOTER */
@@ -215,4 +228,24 @@ body {
 
 .shadow {
     box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .barra-lateral {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    
+    .barra-lateral.mobile-open {
+        transform: translateX(0);
+    }
+    
+    .contenido-wrapper {
+        margin-left: 0;
+    }
+    
+    .info-usuario {
+        margin-left: 0;
+    }
 }
