@@ -273,42 +273,11 @@
                     </div>
                 </div>
 
-                <!-- Información de Productos -->
-                <div class="row mt-4">
-                    <div class="col-12">
-                        <h6 class="border-bottom pb-2">
-                            <i class="fas fa-boxes me-2"></i>Productos del Negocio
-                            <span class="badge bg-primary ms-2">{{ negocio.total_productos }}</span>
-                        </h6>
-                        {% if negocio.total_productos > 0 %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Este negocio tiene {{ negocio.total_productos }} producto(s) registrado(s) en el sistema.
-                        </div>
-                        {% else %}
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Este negocio no tiene productos registrados.
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
                 <!-- Información de Reseñas -->
                 <div class="row mt-4">
                     <div class="col-12">
-                        <h6 class="border-bottom pb-2">
-                            <i class="fas fa-star me-2"></i>Valoraciones del Negocio
-                            <span class="badge bg-primary ms-2">{{ negocio.total_reseñas }}</span>
-                        </h6>
                         {% if negocio.total_reseñas > 0 %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            Este negocio tiene {{ negocio.total_reseñas }} reseña(s) con un promedio de 
-                            <span class="text-warning">
-                                <i class="fas fa-star"></i> {{ negocio.promedio_estrellas }}/5
-                            </span>
-                        </div>
+                       
                         {% else %}
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>

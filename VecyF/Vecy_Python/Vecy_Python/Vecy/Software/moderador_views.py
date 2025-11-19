@@ -4,16 +4,20 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
+from Software.models import Negocios, UsuarioPerfil, Pedidos, DetallesPedido, ResenasNegocios, AuthUser, Roles, TipoDocumento, UsuariosRoles, TipoNegocio, Productos, CategoriaProductos, Reportes
 from django.utils import timezone
 from django.db.models import Count, Avg
 from django.contrib import messages
 from django.db.models import Q
-
-# Importar modelos
-from Software.models import Negocios, ResenasNegocios, UsuarioPerfil, TipoNegocio, Productos, AuthUser, UsuariosRoles, Roles
+from django.utils import timezone
+from datetime import timedelta
+from collections import Counter
+from django.contrib.auth.models import User
+from django.db.models.functions import ExtractMonth, ExtractYear
+from Software.email_utils import enviar_notificacion_simple
 
 def obtener_datos_moderador(request):
-    """Función auxiliar para obtener datos del moderador - SIMILAR A OBTENER_DATOS_VENDEDOR"""
+    """Función auxiliar para obtener datos del moderador"""
     try:
         auth_user = AuthUser.objects.get(username=request.user.username)
         perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
@@ -27,20 +31,12 @@ def obtener_datos_moderador(request):
         return None
 
 def is_moderator(user):
-    """Verifica si el usuario es moderador - VERSIÓN COMPLETA"""
-    try:
-        # Si user es un string (email/username), obtener el objeto AuthUser
-        if isinstance(user, str):
-            try:
-                user = AuthUser.objects.get(username=user)
-            except AuthUser.DoesNotExist:
-                return False
+    """Verifica si el usuario es moderador"""
+    if not user.is_authenticated:
+        return False
         
-        # Verificar que user sea un objeto AuthUser
-        if not isinstance(user, AuthUser):
-            return False
-            
-        # Buscar el perfil del usuario
+    try:
+        # Obtener el perfil del usuario
         perfil = UsuarioPerfil.objects.get(fkuser=user)
         
         # Verificar si tiene rol de moderador
@@ -48,59 +44,361 @@ def is_moderator(user):
             fkperfil=perfil, 
             fkrol__desc_rol='MODERADOR'
         ).exists()
-    except (UsuarioPerfil.DoesNotExist, AuthUser.DoesNotExist, AttributeError, TypeError):
+    except (UsuarioPerfil.DoesNotExist, AuthUser.DoesNotExist):
         return False
 
-def verificar_moderador_login(request):
-    """Verificación de login de moderador - SIMILAR A LA LÓGICA DEL VENDEDOR"""
-    try:
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        
-        rol_usuario = UsuariosRoles.objects.filter(fkperfil=perfil).first()
-        if not rol_usuario:
-            return False
-            
-        return rol_usuario.fkrol.desc_rol.upper() == 'MODERADOR'
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
-        return False
-
+# VISTA PRINCIPAL DEL MODERADOR - AHORA CON ESTADÍSTICAS COMPLETAS
 @login_required(login_url='/login/')
 def moderador_dash(request):
-    """Dashboard principal del moderador - CON VERIFICACIÓN COMPLETA"""
-    # Verificación adicional similar a la del vendedor
-    if not verificar_moderador_login(request):
-        messages.error(request, "No tienes permisos de moderador.")
-        return redirect('/login/')
-    
+    """Vista principal del dashboard del moderador con estadísticas completas"""
     try:
-        datos = obtener_datos_moderador(request)
-        if not datos:
-            messages.error(request, "Perfil de usuario no encontrado.")
+        # Verificar si es moderador
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
             return redirect('/login/')
         
-        contexto = {
-            'nombre': datos['nombre_usuario'],
-            'perfil': datos['perfil'],
-        }
-        return render(request, 'Moderador/moderador_dash.html', contexto)
+        # ============ CÓDIGO DE ESTADÍSTICAS COMPLETAS ============
+        # Obtener el rango de tiempo (último año)
+        fecha_limite = timezone.now() - timedelta(days=365)
         
+        # 1. REGISTRO DE USUARIOS POR MES
+        usuarios_por_mes = User.objects.filter(
+            date_joined__gte=fecha_limite
+        ).annotate(
+            mes=ExtractMonth('date_joined'),
+            ano=ExtractYear('date_joined')
+        ).values('mes', 'ano').annotate(total=Count('pk')).order_by('ano', 'mes')
+        
+        # Preparar datos para el gráfico de usuarios por mes
+        meses_labels = []
+        usuarios_data = []
+        
+        # Crear nombres de meses en español
+        meses_espanol = {
+            1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
+            7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
+        }
+        
+        for item in usuarios_por_mes:
+            mes_num = item['mes']
+            ano = item['ano']
+            meses_labels.append(f"{meses_espanol.get(mes_num, mes_num)}/{str(ano)[-2:]}")
+            usuarios_data.append(item['total'])
+        
+        # 2. NEGOCIOS POR CATEGORÍA
+        negocios_por_categoria = Negocios.objects.values(
+            'fktiponeg_neg__desc_tiponeg'
+        ).annotate(total=Count('pkid_neg')).order_by('-total')[:10]
+        
+        categorias_nombres = [item['fktiponeg_neg__desc_tiponeg'] for item in negocios_por_categoria]
+        categorias_totales = [item['total'] for item in negocios_por_categoria]
+        
+        # 3. REPORTES POR TIPO
+        reportes_por_tipo = Reportes.objects.values('motivo').annotate(
+            total=Count('pkid_reporte')
+        ).order_by('-total')
+        
+        reportes_tipos = [item['motivo'] for item in reportes_por_tipo]
+        reportes_totales = [item['total'] for item in reportes_por_tipo]
+        
+        # 4. ACTIVIDAD DE MODERACIÓN
+        acciones_moderacion = [
+            {'tipo_accion': 'Negocios Aprobados', 'total': Negocios.objects.filter(estado_neg='activo').count()},
+            {'tipo_accion': 'Negocios Rechazados', 'total': Negocios.objects.filter(estado_neg='inactivo').count()},
+            {'tipo_accion': 'Negocios Suspendidos', 'total': Negocios.objects.filter(estado_neg='suspendido').count()},
+            {'tipo_accion': 'Reportes Atendidos', 'total': Reportes.objects.filter(estado_reporte='atendido').count()},
+            {'tipo_accion': 'Reseñas Moderadas', 'total': ResenasNegocios.objects.filter(~Q(estado_resena='pendiente')).count()},
+        ]
+        
+        acciones_tipos = [item['tipo_accion'] for item in acciones_moderacion]
+        acciones_totales = [item['total'] for item in acciones_moderacion]
+        
+        # MÉTRICAS PRINCIPALES
+        total_usuarios = User.objects.count()
+        usuarios_activos = User.objects.filter(is_active=True).count()
+        total_negocios = Negocios.objects.count()
+        negocios_activos = Negocios.objects.filter(estado_neg='activo').count()
+        negocios_suspendidos = Negocios.objects.filter(estado_neg='suspendido').count()
+        negocios_inactivos = Negocios.objects.filter(estado_neg='inactivo').count()
+        total_resenas = ResenasNegocios.objects.count()
+        
+        resenas_activas = ResenasNegocios.objects.filter(estado_resena='activa').count()
+        
+        # Calcular promedio de estrellas
+        promedio_estrellas = ResenasNegocios.objects.aggregate(
+            avg_rating=Avg('estrellas')
+        )['avg_rating'] or 0
+        
+        contexto = {
+            'nombre': request.user.first_name,
+            'perfil': perfil,
+            
+            # Métricas principales para las tarjetas
+            'total_usuarios': total_usuarios,
+            'usuarios_activos': usuarios_activos,
+            'total_negocios': total_negocios,
+            'negocios_activos': negocios_activos,
+            'negocios_suspendidos': negocios_suspendidos,
+            'negocios_inactivos': negocios_inactivos,
+            'total_resenas': total_resenas,
+            'resenas_activas': resenas_activas,
+            'promedio_estrellas': round(promedio_estrellas, 1),
+            
+            # Datos para gráficas
+            'meses_labels': meses_labels,
+            'usuarios_data': usuarios_data,
+            'categorias_nombres': categorias_nombres,
+            'categorias_totales': categorias_totales,
+            'reportes_tipos': reportes_tipos,
+            'reportes_totales': reportes_totales,
+            'acciones_tipos': acciones_tipos,
+            'acciones_totales': acciones_totales,
+            'negocios_por_categoria': negocios_por_categoria,
+        }
+        
+        return render(request, 'Moderador/estadisticas.html', contexto)
+        
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, "Perfil de usuario no encontrado.")
+        return redirect('/login/')
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
         return redirect('/login/')
 
+# GESTIÓN DE USUARIOS
+@login_required(login_url='/login/')
+def gestion_usuarios(request):
+    """Vista para gestión de usuarios por parte del moderador"""
+    try:
+        # Misma verificación que en estadísticas
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
+            return redirect('/login/')
+        
+        # Procesar cambio de estado si viene por POST
+        if request.method == 'POST':
+            usuario_id = request.POST.get('usuario_id')
+            accion = request.POST.get('accion')
+            
+            try:
+                perfil_usuario = UsuarioPerfil.objects.get(id=usuario_id)
+                user = perfil_usuario.fkuser
+                
+                # Verificar que no sea un moderador
+                es_moderador_usuario = UsuariosRoles.objects.filter(
+                    fkperfil=perfil_usuario, 
+                    fkrol__desc_rol='MODERADOR'
+                ).exists()
+                
+                if es_moderador_usuario:
+                    messages.error(request, 'No puedes modificar usuarios con rol de MODERADOR')
+                    return redirect('gestion_usuarios')
+                
+                if accion == 'cambiar_estado':
+                    nuevo_estado = 'inactivo' if perfil_usuario.estado_user == 'activo' else 'activo'
+                    estado_anterior = perfil_usuario.estado_user
+                    perfil_usuario.estado_user = nuevo_estado
+                    perfil_usuario.save()
+                    
+                    # También actualizar el estado en auth_user
+                    user.is_active = (nuevo_estado == 'activo')
+                    user.save()
+                    
+                    # ENVIAR CORREO DE NOTIFICACIÓN - VERSIÓN SIMPLE
+                    from Software.email_utils import enviar_notificacion_simple
+                    
+                    # Notificar al usuario
+                    accion_correo = 'bloquear' if nuevo_estado == 'inactivo' else 'desbloquear'
+                    resultado = enviar_notificacion_simple(user, accion_correo)
+                    
+                    mensaje = f'Estado del usuario {user.username} cambiado a {nuevo_estado}'
+                    if resultado['success']:
+                        if resultado['enviado_a'] == user.email:
+                            mensaje += ' - Notificación enviada al usuario'
+                        else:
+                            mensaje += ' - Notificación enviada al administrador'
+                    else:
+                        mensaje += f' - Error: {resultado["error"]}'
+                    
+                    messages.success(request, mensaje)
+                
+                elif accion == 'eliminar':
+                    username = user.username
+                    
+                    # Enviar notificación antes de eliminar usando la versión simple
+                    from Software.email_utils import enviar_notificacion_simple
+                    
+                    # Notificar eliminación
+                    resultado = enviar_notificacion_simple(user, 'eliminar')
+                    
+                    # Eliminar el perfil y el usuario
+                    user.delete()
+                    
+                    mensaje = f'Usuario {username} eliminado correctamente'
+                    if resultado['success']:
+                        if resultado['enviado_a'] == user.email:
+                            mensaje += ' - Notificación enviada al usuario'
+                        else:
+                            mensaje += ' - Notificación enviada al administrador'
+                    else:
+                        mensaje += f' - Error: {resultado["error"]}'
+                    
+                    messages.success(request, mensaje)
+                
+            except UsuarioPerfil.DoesNotExist:
+                messages.error(request, 'Usuario no encontrado')
+            except Exception as e:
+                messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+            
+            return redirect('gestion_usuarios')
+        
+        # Obtener parámetros de filtrado
+        search_query = request.GET.get('search', '')
+        rol_filter = request.GET.get('rol', '')
+        estado_filter = request.GET.get('estado', '')
+        
+        # Obtener usuarios EXCLUYENDO MODERADORES usando subquery
+        perfiles_moderadores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='MODERADOR'
+        ).values_list('fkperfil_id', flat=True)
+        
+        # Consulta base excluyendo moderadores
+        usuarios_perfiles = UsuarioPerfil.objects.select_related(
+            'fkuser', 'fktipodoc_user'
+        ).prefetch_related('usuariosroles_set__fkrol').exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        # Aplicar filtros
+        if search_query:
+            usuarios_perfiles = usuarios_perfiles.filter(
+                Q(fkuser__first_name__icontains=search_query) |
+                Q(fkuser__last_name__icontains=search_query) |
+                Q(fkuser__username__icontains=search_query) |
+                Q(fkuser__email__icontains=search_query)
+            )
+        
+        if rol_filter:
+            usuarios_perfiles = usuarios_perfiles.filter(
+                usuariosroles_set__fkrol__desc_rol=rol_filter
+            ).distinct()
+        
+        if estado_filter:
+            usuarios_perfiles = usuarios_perfiles.filter(estado_user=estado_filter)
+        
+        usuarios_data = []
+        for perfil_usuario in usuarios_perfiles:
+            user = perfil_usuario.fkuser
+            roles = perfil_usuario.usuariosroles_set.all()
+            
+            # Determinar el rol principal
+            rol_principal = 'CLIENTE'  # Por defecto
+            if roles.exists():
+                # Buscar el primer rol que no sea MODERADOR
+                for rol in roles:
+                    if rol.fkrol.desc_rol != 'MODERADOR':
+                        rol_principal = rol.fkrol.desc_rol
+                        break
+            
+            # Obtener negocios si es vendedor
+            negocios = []
+            if rol_principal == 'VENDEDOR':
+                negocios_vendedor = Negocios.objects.filter(
+                    fkpropietario_neg=perfil_usuario.id
+                ).values('pkid_neg', 'nom_neg')
+                negocios = list(negocios_vendedor)
+            
+            # Construir nombre completo
+            nombre_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nombre_completo:
+                nombre_completo = user.username
+            
+            usuarios_data.append({
+                'id': perfil_usuario.id,
+                'user_id': user.id,
+                'nombre': nombre_completo,
+                'email': user.email,
+                'documento': perfil_usuario.doc_user,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'fecha_nacimiento': perfil_usuario.fechanac_user,
+                'estado': perfil_usuario.estado_user,
+                'rol': rol_principal,
+                'img_user': perfil_usuario.img_user,
+                'fecha_registro': user.date_joined,
+                'negocios': negocios
+            })
+        
+        # Aplicar filtros adicionales en memoria para búsqueda más precisa
+        if search_query:
+            search_lower = search_query.lower()
+            usuarios_data = [
+                u for u in usuarios_data 
+                if (search_lower in u['nombre'].lower() or 
+                    search_lower in u['email'].lower() or
+                    search_lower in u['documento'].lower())
+            ]
+        
+        # Estadísticas para los gráficos (basadas en los datos filtrados)
+        total_usuarios = len(usuarios_data)
+        usuarios_activos = len([u for u in usuarios_data if u['estado'] == 'activo'])
+        total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
+        total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
+        
+        context = {
+            'nombre': request.user.first_name,
+            'perfil': perfil,
+            'usuarios': usuarios_data,
+            'total_usuarios': total_usuarios,
+            'usuarios_activos': usuarios_activos,
+            'total_clientes': total_clientes,
+            'total_vendedores': total_vendedores,
+            'titulo_pagina': 'Gestión de Usuarios',
+            'search_query': search_query,
+            'rol_filter': rol_filter,
+            'estado_filter': estado_filter
+        }
+        
+        return render(request, 'Moderador/gestion_usuarios.html', context)
+    
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, "Perfil de usuario no encontrado.")
+        return redirect('/login/')
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('/login/')
+
+# GESTIÓN DE NEGOCIOS
 @login_required(login_url='/login/')
 def gestion_negocios(request):
-    """Vista principal de gestión de negocios para moderadores"""
-    # Verificación de moderador
-    if not verificar_moderador_login(request):
-        messages.error(request, "No tienes permisos de moderador.")
-        return redirect('/login/')
-    
+    """Vista principal de gestión de negocios para moderadores"""    
     try:
-        datos = obtener_datos_moderador(request)
-        if not datos:
-            messages.error(request, "Perfil de usuario no encontrado.")
+        # Misma verificación que en estadísticas
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
             return redirect('/login/')
         
         # Procesar acciones por POST
@@ -138,7 +436,7 @@ def gestion_negocios(request):
                 elif accion == 'eliminar':
                     nombre_negocio = negocio.nom_neg
                     negocio.delete()
-                    messages.success(request, f'Negocio "{nombre_negocio}" eliminado correctamente')
+                    messages.success(request, f'Negocios "{nombre_negocio}" eliminado correctamente')
                 
                 else:
                     messages.error(request, 'Acción no válida')
@@ -242,8 +540,8 @@ def gestion_negocios(request):
             })
         
         context = {
-            'nombre': datos['nombre_usuario'],
-            'perfil': datos['perfil'],
+            'nombre': request.user.first_name,
+            'perfil': perfil,
             'negocios': negocios_data,
             'titulo_pagina': 'Gestión de Negocios',
             'search_query': search_query,
@@ -252,175 +550,9 @@ def gestion_negocios(request):
         
         return render(request, 'Moderador/gestion_negocios.html', context)
     
-    except Exception as e:
-        messages.error(request, f"Error: {str(e)}")
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, "Perfil de usuario no encontrado.")
         return redirect('/login/')
-
-@login_required(login_url='/login/')
-def gestion_usuarios(request):
-    """Vista para gestión de usuarios por parte del moderador"""
-    # Verificación de moderador
-    if not verificar_moderador_login(request):
-        messages.error(request, "No tienes permisos de moderador.")
-        return redirect('/login/')
-    
-    try:
-        datos = obtener_datos_moderador(request)
-        if not datos:
-            messages.error(request, "Perfil de usuario no encontrado.")
-            return redirect('/login/')
-        
-        # Procesar cambio de estado si viene por POST
-        if request.method == 'POST':
-            usuario_id = request.POST.get('usuario_id')
-            accion = request.POST.get('accion')
-            
-            try:
-                perfil = UsuarioPerfil.objects.get(id=usuario_id)
-                
-                # Verificar que no sea un moderador
-                es_moderador = UsuariosRoles.objects.filter(
-                    fkperfil=perfil, 
-                    fkrol__desc_rol='MODERADOR'
-                ).exists()
-                
-                if es_moderador:
-                    messages.error(request, 'No puedes modificar usuarios con rol de MODERADOR')
-                    return redirect('gestion_usuarios')
-                
-                if accion == 'cambiar_estado':
-                    nuevo_estado = 'inactivo' if perfil.estado_user == 'activo' else 'activo'
-                    perfil.estado_user = nuevo_estado
-                    perfil.save()
-                    
-                    # También actualizar el estado en auth_user
-                    user = perfil.fkuser
-                    user.is_active = (nuevo_estado == 'activo')
-                    user.save()
-                    
-                    messages.success(request, f'Estado del usuario {perfil.fkuser.username} cambiado a {nuevo_estado}')
-                
-                elif accion == 'eliminar':
-                    username = perfil.fkuser.username
-                    # Eliminar el perfil y el usuario
-                    perfil.fkuser.delete()
-                    messages.success(request, f'Usuario {username} eliminado correctamente')
-                
-            except UsuarioPerfil.DoesNotExist:
-                messages.error(request, 'Usuario no encontrado')
-            except Exception as e:
-                messages.error(request, f'Error al procesar la solicitud: {str(e)}')
-            
-            return redirect('gestion_usuarios')
-        
-        # Obtener parámetros de filtrado
-        search_query = request.GET.get('search', '')
-        rol_filter = request.GET.get('rol', '')
-        estado_filter = request.GET.get('estado', '')
-        
-        # Obtener usuarios EXCLUYENDO MODERADORES usando subquery
-        perfiles_moderadores = UsuariosRoles.objects.filter(
-            fkrol__desc_rol='MODERADOR'
-        ).values_list('fkperfil_id', flat=True)
-        
-        # Consulta base excluyendo moderadores
-        usuarios_perfiles = UsuarioPerfil.objects.select_related(
-            'fkuser', 'fktipodoc_user'
-        ).prefetch_related('usuariosroles_set__fkrol').exclude(
-            id__in=perfiles_moderadores
-        )
-        
-        # Aplicar filtros
-        if search_query:
-            usuarios_perfiles = usuarios_perfiles.filter(
-                Q(fkuser__first_name__icontains=search_query) |
-                Q(fkuser__last_name__icontains=search_query) |
-                Q(fkuser__username__icontains=search_query) |
-                Q(fkuser__email__icontains=search_query)
-            )
-        
-        if rol_filter:
-            usuarios_perfiles = usuarios_perfiles.filter(
-                usuariosroles_set__fkrol__desc_rol=rol_filter
-            ).distinct()
-        
-        if estado_filter:
-            usuarios_perfiles = usuarios_perfiles.filter(estado_user=estado_filter)
-        
-        usuarios_data = []
-        for perfil in usuarios_perfiles:
-            user = perfil.fkuser
-            roles = perfil.usuariosroles_set.all()
-            
-            # Determinar el rol principal
-            rol_principal = 'CLIENTE'  # Por defecto
-            if roles.exists():
-                # Buscar el primer rol que no sea MODERADOR
-                for rol in roles:
-                    if rol.fkrol.desc_rol != 'MODERADOR':
-                        rol_principal = rol.fkrol.desc_rol
-                        break
-            
-            # Obtener negocios si es vendedor
-            negocios = []
-            if rol_principal == 'VENDEDOR':
-                negocios_vendedor = Negocios.objects.filter(
-                    fkpropietario_neg=perfil.id
-                ).values('pkid_neg', 'nom_neg')
-                negocios = list(negocios_vendedor)
-            
-            # Construir nombre completo
-            nombre_completo = f"{user.first_name} {user.last_name}".strip()
-            if not nombre_completo:
-                nombre_completo = user.username
-            
-            usuarios_data.append({
-                'id': perfil.id,
-                'user_id': user.id,
-                'nombre': nombre_completo,
-                'email': user.email,
-                'documento': perfil.doc_user,
-                'tipo_documento': perfil.fktipodoc_user.desc_doc,
-                'fecha_nacimiento': perfil.fechanac_user,
-                'estado': perfil.estado_user,
-                'rol': rol_principal,
-                'img_user': perfil.img_user,
-                'fecha_registro': user.date_joined,
-                'negocios': negocios
-            })
-        
-        # Aplicar filtros adicionales en memoria para búsqueda más precisa
-        if search_query:
-            search_lower = search_query.lower()
-            usuarios_data = [
-                u for u in usuarios_data 
-                if (search_lower in u['nombre'].lower() or 
-                    search_lower in u['email'].lower() or
-                    search_lower in u['documento'].lower())
-            ]
-        
-        # Estadísticas para los gráficos (basadas en los datos filtrados)
-        total_usuarios = len(usuarios_data)
-        usuarios_activos = len([u for u in usuarios_data if u['estado'] == 'activo'])
-        total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
-        total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
-        
-        context = {
-            'nombre': datos['nombre_usuario'],
-            'perfil': datos['perfil'],
-            'usuarios': usuarios_data,
-            'total_usuarios': total_usuarios,
-            'usuarios_activos': usuarios_activos,
-            'total_clientes': total_clientes,
-            'total_vendedores': total_vendedores,
-            'titulo_pagina': 'Gestión de Usuarios',
-            'search_query': search_query,
-            'rol_filter': rol_filter,
-            'estado_filter': estado_filter
-        }
-        
-        return render(request, 'Moderador/gestion_usuarios.html', context)
-    
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
         return redirect('/login/')
@@ -428,7 +560,6 @@ def gestion_usuarios(request):
 # ==================== APIs para Gestión de Negocios ====================
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 def detalle_negocio_json(request, negocio_id):
     """API para obtener detalles completos de un negocio (para modal)"""
     try:
@@ -483,7 +614,6 @@ def detalle_negocio_json(request, negocio_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 def resenas_negocio_json(request, negocio_id):
     """API para obtener reseñas de un negocio"""
     try:
@@ -511,7 +641,6 @@ def resenas_negocio_json(request, negocio_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 def productos_negocio_json(request, negocio_id):
     """API para obtener productos de un negocio"""
     try:
@@ -547,7 +676,6 @@ def productos_negocio_json(request, negocio_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_negocio(request, negocio_id):
@@ -583,7 +711,6 @@ def cambiar_estado_negocio(request, negocio_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 @csrf_exempt
 @require_http_methods(["POST"])
 def eliminar_negocio(request, negocio_id):
@@ -603,39 +730,9 @@ def eliminar_negocio(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/login/')
-@user_passes_test(is_moderator)
-def estadisticas_negocios(request):
-    """API para obtener estadísticas generales de negocios"""
-    try:
-        total_negocios = Negocios.objects.count()
-        negocios_activos = Negocios.objects.filter(estado_neg='activo').count()
-        negocios_inactivos = Negocios.objects.filter(estado_neg='inactivo').count()
-        negocios_suspendidos = Negocios.objects.filter(estado_neg='suspendido').count()
-        
-        # Negocios por categoría
-        negocios_por_categoria = Negocios.objects.values(
-            'fktiponeg_neg__desc_tiponeg'
-        ).annotate(
-            total=Count('pkid_neg')
-        ).order_by('-total')
-        
-        estadisticas = {
-            'total_negocios': total_negocios,
-            'negocios_activos': negocios_activos,
-            'negocios_inactivos': negocios_inactivos,
-            'negocios_suspendidos': negocios_suspendidos,
-            'negocios_por_categoria': list(negocios_por_categoria)
-        }
-        
-        return JsonResponse(estadisticas)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
 # ==================== APIs para Gestión de Usuarios ====================
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 def detalle_usuario_json(request, usuario_id):
     """API para obtener detalles completos de un usuario (para modal)"""
     try:
@@ -685,7 +782,6 @@ def detalle_usuario_json(request, usuario_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 @login_required(login_url='/login/')
-@user_passes_test(is_moderator)
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_usuario(request, usuario_id):
@@ -717,3 +813,227 @@ def cambiar_estado_usuario(request, usuario_id):
         return JsonResponse({'error': 'Usuario no encontrado'}, status=404)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+# VISTA DE VERIFICACIÓN DE LOGIN (opcional)
+@login_required(login_url='login')
+def verificar_moderador_login(request):
+    negocios = Negocios.objects.all()
+    t_negocios = TipoNegocio.objects.all()
+    try:
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, "Perfil de usuario no encontrado.")
+        return redirect('inicio')
+    
+    contexto = {
+        'nombre' : request.user.first_name,
+        'perfil' : perfil,
+        'negocios': negocios,
+        't_negocios': t_negocios
+    }
+    return render(request, 'Cliente/Cliente.html', contexto)
+
+# ==================== VISTAS PARA CORREOS ====================
+
+@login_required(login_url='/login/')
+def enviar_correos(request):
+    """Vista para la página de envío de correos"""
+    try:
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
+            return redirect('/login/')
+        
+        # Obtener usuarios EXCLUYENDO MODERADORES
+        perfiles_moderadores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='MODERADOR'
+        ).values_list('fkperfil_id', flat=True)
+        
+        usuarios_perfiles = UsuarioPerfil.objects.select_related(
+            'fkuser', 'fktipodoc_user'
+        ).prefetch_related('usuariosroles_set__fkrol').exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        usuarios_data = []
+        for perfil_usuario in usuarios_perfiles:
+            user = perfil_usuario.fkuser
+            roles = perfil_usuario.usuariosroles_set.all()
+            
+            # Determinar el rol principal
+            rol_principal = 'CLIENTE'
+            if roles.exists():
+                for rol in roles:
+                    if rol.fkrol.desc_rol != 'MODERADOR':
+                        rol_principal = rol.fkrol.desc_rol
+                        break
+            
+            # Construir nombre completo
+            nombre_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nombre_completo:
+                nombre_completo = user.username
+            
+            usuarios_data.append({
+                'id': perfil_usuario.id,
+                'nombre': nombre_completo,
+                'email': user.email,
+                'documento': perfil_usuario.doc_user,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'estado': perfil_usuario.estado_user,
+                'rol': rol_principal,
+                'fecha_registro': user.date_joined.strftime("%d/%m/%Y")
+            })
+        
+        # Obtener estadísticas
+        total_usuarios = len(usuarios_data)
+        total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
+        total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
+        
+        context = {
+            'nombre': request.user.first_name,
+            'perfil': perfil,
+            'titulo_pagina': 'Enviar Correos',
+            'total_usuarios': total_usuarios,
+            'total_vendedores': total_vendedores,
+            'total_clientes': total_clientes,
+            'usuarios': usuarios_data,  # Pasar los usuarios al template
+        }
+        
+        return render(request, 'Moderador/correo.html', context)
+    
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, "Perfil de usuario no encontrado.")
+        return redirect('/login/')
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('/login/')
+    
+@login_required(login_url='/login/')
+@csrf_exempt
+@require_http_methods(["POST"])
+def enviar_correo_masivo(request):
+    """API para enviar correos masivos"""
+    try:
+        # Verificar permisos de moderador
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'success': False, 'error': 'No tienes permisos de moderador'})
+        
+        # Obtener datos del formulario
+        data = json.loads(request.body)
+        
+        destinatarios_ids = data.get('destinatarios', [])
+        asunto = data.get('asunto', '')
+        mensaje_html = data.get('mensaje', '')
+        tipo_correo = data.get('tipo_correo', 'promocional')
+        urgente = data.get('urgente', False)
+        
+        if not asunto or not mensaje_html:
+            return JsonResponse({'success': False, 'error': 'Asunto y mensaje son requeridos'})
+        
+        # Obtener correos de destinatarios usando la nueva función
+        from Software.email_utils import obtener_destinatarios_usuarios, enviar_correo_promocional, enviar_correo_simple
+        
+        todos_correos = obtener_destinatarios_usuarios()
+        
+        if not todos_correos:
+            return JsonResponse({'success': False, 'error': 'No se encontraron destinatarios válidos'})
+        
+        # Enviar correo según el tipo
+        if tipo_correo == 'promocional':
+            resultado = enviar_correo_promocional(
+                destinatarios=todos_correos,
+                asunto=asunto,
+                mensaje_html=mensaje_html,
+                es_test=False  # Cambiar a False cuando estés en producción
+            )
+        else:
+            resultado = enviar_correo_simple(
+                destinatarios=todos_correos,
+                asunto=asunto,
+                mensaje_html=mensaje_html,
+                urgente=urgente,
+                es_test=False  # Cambiar a False cuando estés en producción
+            )
+        
+        return JsonResponse(resultado)
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+# En views.py - agregar esta vista
+@login_required(login_url='/login/')
+def api_usuarios_correos(request):
+    """API para obtener usuarios para el sistema de correos"""
+    try:
+        # Verificar permisos de moderador
+        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol='MODERADOR'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos'}, status=403)
+        
+        # Obtener usuarios EXCLUYENDO MODERADORES
+        perfiles_moderadores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='MODERADOR'
+        ).values_list('fkperfil_id', flat=True)
+        
+        usuarios_perfiles = UsuarioPerfil.objects.select_related(
+            'fkuser', 'fktipodoc_user'
+        ).prefetch_related('usuariosroles_set__fkrol').exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        usuarios_data = []
+        for perfil_usuario in usuarios_perfiles:
+            user = perfil_usuario.fkuser
+            roles = perfil_usuario.usuariosroles_set.all()
+            
+            # Determinar el rol principal
+            rol_principal = 'CLIENTE'
+            if roles.exists():
+                for rol in roles:
+                    if rol.fkrol.desc_rol != 'MODERADOR':
+                        rol_principal = rol.fkrol.desc_rol
+                        break
+            
+            # Construir nombre completo
+            nombre_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nombre_completo:
+                nombre_completo = user.username
+            
+            usuarios_data.append({
+                'id': perfil_usuario.id,
+                'nombre': nombre_completo,
+                'email': user.email,
+                'documento': perfil_usuario.doc_user,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'estado': perfil_usuario.estado_user,
+                'rol': rol_principal,
+                'fecha_registro': user.date_joined.strftime("%d/%m/%Y")
+            })
+        
+        return JsonResponse({
+            'usuarios': usuarios_data,
+            'total': len(usuarios_data),
+            'vendedores': len([u for u in usuarios_data if u['rol'] == 'VENDEDOR']),
+            'clientes': len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+

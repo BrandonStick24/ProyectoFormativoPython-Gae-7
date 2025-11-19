@@ -78,18 +78,32 @@ urlpatterns = [
     path('variantes/<int:variante_id>/eliminar/', vendedor_variantes_views.eliminar_variante, name='eliminar_variante'),
     path('variantes/<int:variante_id>/ajustar-stock/', vendedor_variantes_views.ajustar_stock_variante, name='ajustar_stock_variante'),
     
-
     # ==================== URLs MODERADOR ====================
-    path('moderador/gestion-usuarios/', moderador_views.gestion_usuarios, name='gestion_usuarios'),
     path('moderador/dashboard/', moderador_views.moderador_dash, name='moderador_dash'),
+    path('moderador/gestion-usuarios/', moderador_views.gestion_usuarios, name='gestion_usuarios'),
     path('moderador/gestion-negocios/', moderador_views.gestion_negocios, name='gestion_negocios'),
+    path('moderador/enviar-correos/', moderador_views.enviar_correos, name='enviar_correos'),
+    
+    # ==================== APIs MODERADOR - NEGOCIOS ====================
     path('moderador/api/negocio/<int:negocio_id>/', moderador_views.detalle_negocio_json, name='detalle_negocio_json'),
     path('moderador/api/negocio/<int:negocio_id>/resenas/', moderador_views.resenas_negocio_json, name='resenas_negocio_json'),
     path('moderador/api/negocio/<int:negocio_id>/productos/', moderador_views.productos_negocio_json, name='productos_negocio_json'),
-    path('moderador/api/negocio/<int:negocio_id>/cambiar-estado/', moderador_views.cambiar_estado_negocio, name='cambiar_estado_negocio'),
-    path('moderador/api/negocio/<int:negocio_id>/eliminar/', moderador_views.eliminar_negocio, name='eliminar_negocio'),
+    path('moderador/api/negocio/<int:negocio_id>/cambiar-estado/', moderador_views.cambiar_estado_negocio, name='api_cambiar_estado_negocio'),
+    path('moderador/api/negocio/<int:negocio_id>/eliminar/', moderador_views.eliminar_negocio, name='api_eliminar_negocio'),
+    
+    # ==================== APIs MODERADOR - USUARIOS ====================
     path('moderador/api/usuario/<int:usuario_id>/', moderador_views.detalle_usuario_json, name='detalle_usuario_json'),
     path('moderador/api/usuario/<int:usuario_id>/cambiar-estado/', moderador_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+    path('moderador/api/usuario/<int:usuario_id>/cambiar-estado/', moderador_views.cambiar_estado_usuario, name='api_cambiar_estado_usuario'),
+    
+    # ==================== APIs MODERADOR - CORREOS ====================
+    path('moderador/enviar-correo-masivo/', moderador_views.enviar_correo_masivo, name='enviar_correo_masivo'),
+    
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
