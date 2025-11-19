@@ -5,16 +5,40 @@
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-2">Gestión de Ofertas</h1>
-            <p class="text-muted">Selecciona productos y configura sus ofertas</p>
-        </div>
-        <div>
-            <a href="{% url 'verificar_estado_ofertas' %}" class="btn btn-outline-info">
-                <i class="fas fa-sync-alt me-1"></i>Actualizar Estado
-            </a>
+    <!-- Header Mejorado con Estadísticas -->
+    <div class="tarjeta-bienvenida">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2>Gestión de Ofertas</h2>
+                <p class="text-muted">Crea y administra promociones para tus productos y variantes.</p>
+            </div>
+            <div class="col-md-6">
+                <div class="estadisticas-grid">
+                    <div class="estadistica-card total">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ productos|length }}</div>
+                        <div class="estadistica-titulo">Productos</div>
+                    </div>
+                    
+                    <div class="estadistica-card disponibles">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ ofertas_activas|length }}</div>
+                        <div class="estadistica-titulo">Ofertas Activas</div>
+                    </div>
+                    
+                    <div class="estadistica-card oferta">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ productos_con_variantes|length }}</div>
+                        <div class="estadistica-titulo">Con Variantes</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -22,238 +46,267 @@
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
                 {{ message }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         {% endfor %}
     {% endif %}
 
-    <!-- Información del Negocio -->
-    <div class="row mb-3">
-        <div class="col-12">
-            <div class="alert alert-info py-2">
-                <small>
-                    <strong>Negocio activo:</strong> {{ negocio_activo.nom_neg }} | 
-                    <strong>Productos disponibles:</strong> {{ productos|length }} | 
-                    <strong>Ofertas activas:</strong> {{ ofertas_activas|length }}
+    <!-- Información del Negocio Mejorada -->
+    <div class="info-negocio-card">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="info-item">
+                    <i class="fas fa-store"></i>
+                    <div class="info-content">
+                        <span class="info-label">Negocio activo</span>
+                        <span class="info-value">{{ negocio_activo.nom_neg }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <i class="fas fa-box-open"></i>
+                    <div class="info-content">
+                        <span class="info-label">Productos disponibles</span>
+                        <span class="info-value">{{ productos|length }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="info-item">
+                    <i class="fas fa-bolt"></i>
+                    <div class="info-content">
+                        <span class="info-label">Ofertas activas</span>
+                        <span class="info-value">{{ ofertas_activas|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de Herramientas Mejorada -->
+    <div class="barra-herramientas">
+        <div class="grupo-botones-accion">
+            <button class="boton-accion boton-secundario" onclick="limpiarSeleccion()">
+                <i class="fas fa-times"></i> Limpiar Selección
+            </button>
+            <a href="{% url 'verificar_estado_ofertas' %}" class="boton-accion boton-primario">
+                <i class="fas fa-sync-alt"></i> Actualizar Estado
+            </a>
+        </div>
+
+        <div class="grupo-busqueda-filtros">
+            <div class="contenedor-busqueda">
+                <i class="fas fa-search icono-busqueda"></i>
+                <input type="text" class="input-busqueda" id="buscarProductos" placeholder="Buscar productos por nombre...">
+            </div>
+            
+            <div class="contenedor-filtros">
+                <select class="select-filtro" id="filtroCategoria">
+                    <option value="">Todas las categorías</option>
+                    {% for producto in productos %}
+                        <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
+                    {% endfor %}
+                </select>
+                
+                <button class="boton-accion boton-secundario" onclick="limpiarFiltros()">
+                    <i class="fas fa-times"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos Disponibles - Diseño Mejorado -->
+    <div class="seccion-productos">
+        <div class="seccion-header">
+            <h3><i class="fas fa-boxes me-2"></i>Productos Disponibles</h3>
+            <span class="contador-seccion" id="totalProductos">{{ productos|length }}</span>
+        </div>
+        
+        <div class="contenedor-cards-grid">
+            {% for producto in productos %}
+            <div class="producto-card-oferta producto-item" 
+                 data-nombre="{{ producto.nombre|lower }}" 
+                 data-categoria="{{ producto.categoria }}">
+                <div class="producto-header-oferta">
+                    <div class="producto-info-basica">
+                        <h5 class="producto-nombre">{{ producto.nombre }}</h5>
+                        <div class="producto-meta-oferta">
+                            <span class="producto-precio">${{ producto.precio }}</span>
+                            <span class="producto-categoria">{{ producto.categoria }}</span>
+                        </div>
+                        <div class="producto-stock-info">
+                            <span class="badge-stock {% if producto.stock == 0 %}stock-critico{% elif producto.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-box"></i> Stock: {{ producto.stock }}
+                            </span>
+                            <small class="producto-id">ID: {{ producto.id }}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="producto-acciones-oferta">
+                    <!-- Botón principal para producto base -->
+                    <button type="button" class="btn btn-producto-base seleccionar-producto"
+                            data-producto-id="{{ producto.id }}"
+                            data-producto-nombre="{{ producto.nombre }}"
+                            data-producto-precio="{{ producto.precio }}"
+                            data-producto-stock="{{ producto.stock }}"
+                            data-producto-categoria="{{ producto.categoria }}"
+                            data-variante-id="">
+                        <i class="fas fa-tag"></i>
+                        <span>Producto Base</span>
+                    </button>
+                    
+                    <!-- Botón desplegable para variantes -->
+                    {% if producto.variantes %}
+                    <div class="variantes-accordion">
+                        <button class="btn btn-variantes-toggle" type="button">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Variantes ({{ producto.variantes|length }})</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        
+                        <div class="variantes-lista">
+                            {% for variante in producto.variantes %}
+                            <button type="button" class="btn btn-variante seleccionar-producto"
+                                    data-producto-id="{{ producto.id }}"
+                                    data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
+                                    data-producto-precio="{{ variante.precio_total }}"
+                                    data-producto-stock="{{ variante.stock }}"
+                                    data-producto-categoria="{{ producto.categoria }}"
+                                    data-variante-id="{{ variante.id }}">
+                                <i class="fas fa-cube"></i>
+                                <span class="variante-nombre">{{ variante.nombre }}</span>
+                                <span class="variante-precio">${{ variante.precio_total }}</span>
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="estado-vacio">
+                <i class="fas fa-box-open fa-3x"></i>
+                <h4>No hay productos disponibles</h4>
+                <p>No hay productos disponibles para crear ofertas en este momento.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Configuración de Ofertas - Diseño Mejorado -->
+    <div class="seccion-configuracion">
+        <div class="seccion-header">
+            <h3><i class="fas fa-cog me-2"></i>Configurar Ofertas</h3>
+            <span class="contador-seccion" id="contadorProductosSeleccionados">0</span>
+        </div>
+        
+        <div class="contenedor-configuraciones" id="configuracionesProductos">
+            <div class="estado-vacio" id="mensajeVacio">
+                <i class="fas fa-tags fa-3x"></i>
+                <h4>Sin productos seleccionados</h4>
+                <p>Selecciona productos de arriba para configurar sus ofertas</p>
+                <small class="texto-ayuda">
+                    <i class="fas fa-lightbulb"></i>
+                    Puedes seleccionar el producto base o variantes específicas
                 </small>
             </div>
+            <!-- Aquí se agregarán los formularios dinámicamente -->
         </div>
     </div>
 
-    <!-- Barra de búsqueda y filtros -->
-    <div class="row mb-3">
-        <div class="col-md-8">
-            <div class="input-group">
-                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                <input type="text" class="form-control" id="buscarProductos" placeholder="Buscar productos por nombre...">
-            </div>
+    <!-- Ofertas Activas - Diseño Mejorado -->
+    <div class="seccion-ofertas-activas">
+        <div class="seccion-header">
+            <h3><i class="fas fa-bolt me-2"></i>Ofertas Activas</h3>
+            <span class="contador-seccion">{{ ofertas_activas|length }}</span>
         </div>
-        <div class="col-md-2">
-            <select class="form-select" id="filtroCategoria">
-                <option value="">Todas las categorías</option>
-                {% for producto in productos %}
-                    <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button class="btn btn-outline-secondary w-100" onclick="limpiarFiltros()">
-                <i class="fas fa-times me-1"></i>Limpiar
-            </button>
-        </div>
-    </div>
-
-    <!-- Productos Disponibles - Solo información -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-boxes me-2"></i>
-                        Productos Disponibles
-                        <span class="badge bg-secondary ms-2" id="totalProductos">{{ productos|length }}</span>
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div id="contenedorProductos" class="row" style="max-height: 400px; overflow-y: auto;">
-                        {% for producto in productos %}
-                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3 producto-item" 
-                             data-nombre="{{ producto.nombre|lower }}" 
-                             data-categoria="{{ producto.categoria }}">
-                            <div class="card h-100 product-card">
-                                <div class="card-body text-center">
-                                    <div class="mb-2">
-                                        <small class="text-muted">ID: {{ producto.id }}</small>
-                                    </div>
-                                    <h6 class="card-title mb-2 text-truncate" title="{{ producto.nombre }}">
-                                        {{ producto.nombre }}
-                                    </h6>
-                                    <p class="card-text text-primary mb-2 fw-bold">${{ producto.precio }}</p>
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span class="badge bg-light text-dark">{{ producto.categoria }}</span>
-                                        <span class="badge {% if producto.stock == 0 %}bg-danger{% elif producto.stock <= 5 %}bg-warning{% else %}bg-success{% endif %}">
-                                            Stock: {{ producto.stock }}
-                                        </span>
-                                    </div>
-                                    
-                                    <!-- Botón para producto base -->
-                                    <button type="button" class="btn btn-sm btn-outline-primary w-100 mt-2 seleccionar-producto"
-                                            data-producto-id="{{ producto.id }}"
-                                            data-producto-nombre="{{ producto.nombre }}"
-                                            data-producto-precio="{{ producto.precio }}"
-                                            data-producto-stock="{{ producto.stock }}"
-                                            data-producto-categoria="{{ producto.categoria }}"
-                                            data-variante-id="">
-                                        <i class="fas fa-plus me-1"></i>Producto Base
-                                    </button>
-                                    
-                                    <!-- Botones para variantes -->
-                                    {% if producto.variantes %}
-                                        {% for variante in producto.variantes %}
-                                        <button type="button" class="btn btn-sm btn-outline-info w-100 mt-1 seleccionar-producto"
-                                                data-producto-id="{{ producto.id }}"
-                                                data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
-                                                data-producto-precio="{{ variante.precio_total }}"
-                                                data-producto-stock="{{ variante.stock }}"
-                                                data-producto-categoria="{{ producto.categoria }}"
-                                                data-variante-id="{{ variante.id }}">
-                                            <i class="fas fa-layer-group me-1"></i>{{ variante.nombre }}
-                                        </button>
-                                        {% endfor %}
-                                    {% endif %}
-                                </div>
+        
+        <div class="contenedor-ofertas-activas">
+            {% if ofertas_activas %}
+                {% for oferta in ofertas_activas %}
+                <div class="oferta-activa-card {% if not oferta.esta_activa_real %}oferta-inactiva{% endif %}">
+                    <div class="oferta-header">
+                        <div class="oferta-info-principal">
+                            <h5 class="oferta-producto">{{ oferta.producto_nombre }}</h5>
+                            <p class="oferta-titulo">{{ oferta.titulo }}</p>
+                            <div class="oferta-meta">
+                                <span class="oferta-fecha">Creada: {{ oferta.fecha_creacion }}</span>
+                                <span class="badge-tipo-oferta">{{ oferta.tipo_oferta|title }}</span>
                             </div>
                         </div>
-                        {% empty %}
-                        <div class="col-12 text-center py-4 text-muted">
-                            <i class="fas fa-box-open fa-2x mb-3"></i>
-                            <p>No hay productos disponibles para ofertas</p>
+                        
+                        <div class="oferta-descuento">
+                            <span class="porcentaje-descuento">{{ oferta.descuento }}% OFF</span>
                         </div>
-                        {% endfor %}
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Configuración de Ofertas para Productos Seleccionados -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-cog me-2"></i>
-                        Configurar Ofertas
-                        <span class="badge bg-primary ms-2" id="contadorProductosSeleccionados">0</span>
-                    </h5>
-                    <div>
-                        <button class="btn btn-sm btn-outline-danger" onclick="limpiarSeleccion()">
-                            <i class="fas fa-times me-1"></i>Limpiar Todo
-                        </button>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="configuracionesProductos" style="max-height: 500px; overflow-y: auto;">
-                        <div class="text-center py-4 text-muted" id="mensajeVacio">
-                            <i class="fas fa-tags fa-2x mb-3"></i>
-                            <p>Selecciona productos de arriba para configurar sus ofertas</p>
-                        </div>
-                        <!-- Aquí se agregarán los formularios dinámicamente -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Ofertas Activas -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-bolt me-2"></i>
-                        Ofertas Activas
-                        <span class="badge bg-success ms-2">{{ ofertas_activas|length }}</span>
-                    </h5>
-                    <div>
-                        <small class="text-muted">Actualizado: {% now "d/m/Y H:i" %}</small>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div id="contenedorOfertasActivas" style="max-height: 500px; overflow-y: auto;">
-                        {% if ofertas_activas %}
-                            {% for oferta in ofertas_activas %}
-                            <div class="card mb-3 {% if not oferta.esta_activa_real %}border-warning{% endif %}">
-                                <div class="card-body">
-                                    <div class="row align-items-center">
-                                        <div class="col-md-3">
-                                            <h6 class="mb-1">{{ oferta.producto_nombre }}</h6>
-                                            <small class="text-muted">{{ oferta.titulo }}</small>
-                                            <div class="mt-1">
-                                                <small class="text-muted">Creada: {{ oferta.fecha_creacion }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <span class="badge bg-danger">{{ oferta.descuento }}% OFF</span>
-                                            <br>
-                                            <small class="text-muted mt-1 d-block">{{ oferta.tipo_oferta|title }}</small>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <small class="text-muted text-decoration-line-through">${{ oferta.precio_original|floatformat:0 }}</small><br>
-                                            <strong class="text-success">${{ oferta.precio_oferta|floatformat:0 }}</strong>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <small>Stock oferta: {{ oferta.stock_oferta }}</small><br>
-                                            <small>Disponible: {{ oferta.stock_disponible }}</small>
-                                            {% if oferta.tipo_oferta == 'stock' %}
-                                            <br>
-                                            <small>Actual: {{ oferta.stock_actual_oferta }}</small>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-2">
-                                            <small>Inicio: {{ oferta.fecha_inicio }}</small><br>
-                                            <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
-                                            <br>
-                                            <span class="badge {% if oferta.esta_activa_real %}bg-success{% else %}bg-warning{% endif %} mt-1">
-                                                {% if oferta.esta_activa_real %}Activa{% else %}Inactiva{% endif %}
-                                            </span>
-                                        </div>
-                                        <div class="col-md-1">
-                                            <div class="btn-group-vertical">
-                                                <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline mb-1">
-                                                    {% csrf_token %}
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                            onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
-                                                        <i class="fas fa-trash"></i>
-                                                    </button>
-                                                </form>
-                                                {% if oferta.esta_activa_real %}
-                                                <form method="POST" action="{% url 'finalizar_oferta_manual' oferta.id %}" class="d-inline finalizar-oferta-form">
-                                                    {% csrf_token %}
-                                                    <button type="button" class="btn btn-sm btn-outline-warning finalizar-oferta-btn" 
-                                                            data-oferta-id="{{ oferta.id }}"
-                                                            data-oferta-nombre="{{ oferta.producto_nombre }}">
-                                                        <i class="fas fa-stop"></i>
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    
+                    <div class="oferta-detalles">
+                        <div class="detalle-precios">
+                            <div class="precio-original">
+                                <small>Precio original</small>
+                                <span class="precio-tachado">${{ oferta.precio_original|floatformat:0 }}</span>
                             </div>
-                            {% endfor %}
-                        {% else %}
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-tags fa-2x mb-3"></i>
-                            <p>No hay ofertas activas</p>
-                            <small>Crea tu primera oferta seleccionando productos de arriba</small>
+                            <div class="precio-oferta">
+                                <small>Precio oferta</small>
+                                <span class="precio-final">${{ oferta.precio_oferta|floatformat:0 }}</span>
+                            </div>
                         </div>
+                        
+                        <div class="detalle-stock">
+                            <div class="progreso-stock">
+                                <div class="progreso-bar" style="width: {{ oferta.stock_disponible|divisibleby:oferta.stock_oferta }}%"></div>
+                            </div>
+                            <div class="stock-info">
+                                <span>Stock: {{ oferta.stock_disponible }}/{{ oferta.stock_oferta }}</span>
+                                {% if oferta.tipo_oferta == 'stock' %}
+                                <small>Actual: {{ oferta.stock_actual_oferta }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="detalle-tiempo">
+                            <div class="tiempo-info">
+                                <small>Inicio: {{ oferta.fecha_inicio }}</small>
+                                <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
+                            </div>
+                            <span class="badge-estado {% if oferta.esta_activa_real %}estado-activo{% else %}estado-inactivo{% endif %}">
+                                {% if oferta.esta_activa_real %}Activa{% else %}Inactiva{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="oferta-acciones">
+                        <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-accion btn-eliminar" 
+                                    onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                        {% if oferta.esta_activa_real %}
+                        <form method="POST" action="{% url 'finalizar_oferta_manual' oferta.id %}" class="d-inline finalizar-oferta-form">
+                            {% csrf_token %}
+                            <button type="button" class="btn btn-accion btn-detener finalizar-oferta-btn" 
+                                    data-oferta-id="{{ oferta.id }}"
+                                    data-oferta-nombre="{{ oferta.producto_nombre }}">
+                                <i class="fas fa-stop"></i>
+                            </button>
+                        </form>
                         {% endif %}
                     </div>
                 </div>
+                {% endfor %}
+            {% else %}
+            <div class="estado-vacio">
+                <i class="fas fa-tags fa-3x"></i>
+                <h4>No hay ofertas activas</h4>
+                <p>Crea tu primera oferta seleccionando productos de arriba</p>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -270,11 +323,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const mensajeVacio = document.getElementById('mensajeVacio');
     const contador = document.getElementById('contadorProductosSeleccionados');
 
-    // Obtener fecha y hora actual - SIN VALIDACIÓN DE HORA
+    // Obtener fecha y hora actual
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
-    // Hora por defecto: hora actual
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const currentTime = `${hours}:${minutes}`;
@@ -283,6 +334,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
+
+    // Inicializar acordeones de variantes
+    document.querySelectorAll('.btn-variantes-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const accordion = this.closest('.variantes-accordion');
+            const lista = accordion.querySelector('.variantes-lista');
+            const icono = this.querySelector('.fa-chevron-down');
+            
+            lista.classList.toggle('activo');
+            icono.classList.toggle('rotado');
+        });
+    });
 
     // Búsqueda en tiempo real
     buscarInput.addEventListener('input', filtrarProductos);
@@ -328,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Verificar si ya está seleccionado
             if (productosSeleccionados.find(p => p.key === productoKey)) {
-                alert('Este producto/variante ya está seleccionado');
+                mostrarNotificacion('Este producto/variante ya está seleccionado', 'warning');
                 return;
             }
 
@@ -348,9 +412,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Deshabilitar el botón
             this.disabled = true;
-            this.innerHTML = '<i class="fas fa-check me-1"></i>Seleccionado';
-            this.classList.remove('btn-outline-primary', 'btn-outline-info');
-            this.classList.add('btn-outline-success');
+            this.classList.add('seleccionado');
+            
+            mostrarNotificacion(`"${producto.nombre}" agregado a configuración`, 'success');
         });
     });
 
@@ -360,7 +424,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function actualizarConfiguraciones() {
         if (productosSeleccionados.length === 0) {
-            mensajeVacio.style.display = 'block';
+            mensajeVacio.style.display = 'flex';
             configuraciones.innerHTML = '';
             return;
         }
@@ -368,135 +432,147 @@ document.addEventListener('DOMContentLoaded', function() {
         mensajeVacio.style.display = 'none';
         
         configuraciones.innerHTML = productosSeleccionados.map((producto, index) => `
-            <div class="card mb-3 config-producto" data-key="${producto.key}">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="mb-0">${producto.nombre}</h6>
-                        <small class="text-muted">
-                            Precio: $${producto.precio} | Stock: ${producto.stock} | ${producto.categoria}
-                            ${producto.variante_id ? ' | Variante ID: ' + producto.variante_id : ''}
-                        </small>
+            <div class="configuracion-oferta-card" data-key="${producto.key}">
+                <div class="configuracion-header">
+                    <div class="configuracion-info">
+                        <i class="fas ${producto.variante_id ? 'fa-layer-group text-info' : 'fa-box text-primary'}"></i>
+                        <div class="configuracion-detalles">
+                            <h5>${producto.nombre}</h5>
+                            <div class="configuracion-meta">
+                                <span class="precio-config">$${producto.precio}</span>
+                                <span class="stock-config">Stock: ${producto.stock}</span>
+                                <span class="categoria-config">${producto.categoria}</span>
+                                <span class="tipo-config">
+                                    ${producto.variante_id ? '<i class="fas fa-cube"></i> Variante' : '<i class="fas fa-box"></i> Producto Base'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger quitar-producto" data-key="${producto.key}">
+                    <button type="button" class="btn btn-quitar quitar-producto" data-key="${producto.key}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{% url 'crear_oferta' %}" class="oferta-form">
+                
+                <div class="configuracion-body">
+                    <form method="POST" action="{% url 'crear_oferta' %}" class="form-configuracion-oferta">
                         {% csrf_token %}
                         <input type="hidden" name="producto_id" value="${producto.id}">
                         <input type="hidden" name="variante_id" value="${producto.variante_id}">
                         
-                        <div class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">Descuento % *</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control descuento-input" name="porcentaje_descuento" 
-                                           value="10" min="1" max="100" step="0.1" required
-                                           data-precio-original="${producto.precio}"
+                        <div class="fila-configuracion">
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Descuento % *</label>
+                                <div class="grupo-input">
+                                    <input type="number" class="control-formulario descuento-input" 
+                                           name="porcentaje_descuento" value="10" min="1" max="100" 
+                                           step="0.1" required data-precio-original="${producto.precio}" 
                                            data-index="${index}">
-                                    <span class="input-group-text">%</span>
+                                    <span class="sufijo-input">%</span>
                                 </div>
+                                <small class="texto-ayuda-campo">Entre 1% y 100%</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Stock oferta *</label>
-                                <input type="number" class="form-control" name="stock_oferta" 
+                            
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Stock oferta *</label>
+                                <input type="number" class="control-formulario" name="stock_oferta" 
                                        value="1" min="1" max="${producto.stock}" required>
-                                <small class="form-text text-muted">Máximo: ${producto.stock}</small>
+                                <small class="texto-ayuda-campo">Máximo disponible: ${producto.stock}</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Tipo oferta *</label>
-                                <select class="form-select tipo-oferta-select" name="tipo_oferta" required data-index="${index}">
+                            
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Tipo oferta *</label>
+                                <select class="control-formulario tipo-oferta-select" name="tipo_oferta" 
+                                        required data-index="${index}">
                                     <option value="tiempo">Por tiempo</option>
                                     <option value="stock">Por stock</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Fecha inicio *</label>
-                                <input type="date" class="form-control" name="fecha_inicio" value="${today}" min="${today}" required>
+                        </div>
+                        
+                        <div class="fila-configuracion">
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Fecha inicio *</label>
+                                <input type="date" class="control-formulario" name="fecha_inicio" 
+                                       value="${today}" min="${today}" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Hora inicio *</label>
-                                <input type="time" class="form-control" name="hora_inicio" value="${currentTime}" required>
+                            
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Hora inicio *</label>
+                                <input type="time" class="control-formulario" name="hora_inicio" 
+                                       value="${currentTime}" required>
                             </div>
-                            <div class="col-md-3 fecha-fin-container">
-                                <label class="form-label">Fecha fin *</label>
-                                <input type="date" class="form-control fecha-fin-input" name="fecha_fin" min="${today}" required>
+                            
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Fecha fin *</label>
+                                <input type="date" class="control-formulario fecha-fin-input" 
+                                       name="fecha_fin" value="${tomorrowFormatted}" min="${today}" required>
                             </div>
-                            <div class="col-md-3 hora-fin-container">
-                                <label class="form-label">Hora fin *</label>
-                                <input type="time" class="form-control hora-fin-input" name="hora_fin" value="23:59" required>
+                            
+                            <div class="campo-configuracion">
+                                <label class="etiqueta-campo">Hora fin *</label>
+                                <input type="time" class="control-formulario hora-fin-input" 
+                                       name="hora_fin" value="23:59" required>
                             </div>
                         </div>
                         
-                        <!-- Sección de cálculo de precio -->
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="alert alert-success">
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <small><strong>Precio original:</strong></small><br>
-                                            <span class="fw-bold">$${producto.precio}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <small><strong>Precio con descuento:</strong></small><br>
-                                            <span class="fw-bold text-success" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</span>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <small><strong>Ahorro para el cliente:</strong></small><br>
-                                            <span class="fw-bold text-danger" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</span>
-                                        </div>
-                                    </div>
+                        <!-- Resumen de precios -->
+                        <div class="resumen-precios">
+                            <h6><i class="fas fa-calculator me-2"></i>Resumen de Precios</h6>
+                            <div class="grid-precios">
+                                <div class="item-precio">
+                                    <span class="etiqueta-precio">Precio original</span>
+                                    <span class="valor-precio">$${producto.precio}</span>
+                                </div>
+                                <div class="item-precio">
+                                    <span class="etiqueta-precio">Precio con descuento</span>
+                                    <span class="valor-precio precio-final" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</span>
+                                </div>
+                                <div class="item-precio">
+                                    <span class="etiqueta-precio">Ahorro para el cliente</span>
+                                    <span class="valor-precio ahorro-cliente" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</span>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Información según tipo de oferta -->
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="alert alert-info" id="info-oferta-${index}">
-                                    <small>
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        <span id="info-tiempo-${index}">
-                                            <strong>Oferta por tiempo:</strong> La oferta estará activa hasta la fecha y hora fin especificada.
-                                        </span>
-                                        <span class="d-none" id="info-stock-${index}">
-                                            <br><strong>Oferta por stock:</strong> La oferta estará activa hasta agotar el stock asignado o hasta la fecha fin, lo que ocurra primero.
-                                        </span>
-                                    </small>
-                                </div>
+                        <div class="info-oferta" id="info-oferta-${index}">
+                            <i class="fas fa-info-circle"></i>
+                            <div class="info-contenido">
+                                <span id="info-tiempo-${index}">
+                                    <strong>Oferta por tiempo:</strong> La oferta estará activa hasta la fecha y hora fin especificada.
+                                </span>
+                                <span class="d-none" id="info-stock-${index}">
+                                    <strong>Oferta por stock:</strong> La oferta estará activa hasta agotar el stock asignado o hasta la fecha fin, lo que ocurra primero.
+                                </span>
                             </div>
                         </div>
                         
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="fas fa-tag me-1"></i>Crear Oferta para ${producto.nombre}
-                                </button>
-                            </div>
+                        <!-- Botón de crear oferta -->
+                        <div class="acciones-configuracion">
+                            <button type="submit" class="btn btn-crear-oferta">
+                                <i class="fas fa-tag me-2"></i>
+                                Crear Oferta para "${producto.nombre}"
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         `).join('');
 
-        // Agregar event listeners para los cálculos en tiempo real
+        // Agregar event listeners
         document.querySelectorAll('.descuento-input').forEach(input => {
             input.addEventListener('input', function() {
                 calcularPrecioFinal(this);
             });
         });
 
-        // Agregar event listeners para tipo de oferta
         document.querySelectorAll('.tipo-oferta-select').forEach(select => {
             select.addEventListener('change', function() {
                 actualizarTipoOferta(this);
             });
-            // Inicializar estado
             actualizarTipoOferta(select);
         });
 
-        // Agregar event listeners para quitar productos
         document.querySelectorAll('.quitar-producto').forEach(btn => {
             btn.addEventListener('click', function() {
                 const productoKey = this.getAttribute('data-key');
@@ -504,8 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // Validar antes de enviar formularios
-        document.querySelectorAll('.oferta-form').forEach(form => {
+        document.querySelectorAll('.form-configuracion-oferta').forEach(form => {
             form.addEventListener('submit', function(e) {
                 if (!validarFormularioOferta(this)) {
                     e.preventDefault();
@@ -538,11 +613,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const infoStock = document.getElementById(`info-stock-${index}`);
     
         if (tipoOferta === 'stock') {
-            // PARA STOCK: Mostrar información específica pero mantener campos visibles
             infoTiempo.classList.add('d-none');
             infoStock.classList.remove('d-none');
         } else {
-            // PARA TIEMPO: Mostrar información de tiempo
             infoTiempo.classList.remove('d-none');
             infoStock.classList.add('d-none');
         }
@@ -554,7 +627,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const stockValue = parseInt(stockInput.value);
         
         if (stockValue > maxStock) {
-            alert(`El stock de oferta no puede ser mayor a ${maxStock}`);
+            mostrarNotificacion(`El stock de oferta no puede ser mayor a ${maxStock}`, 'error');
             stockInput.focus();
             return false;
         }
@@ -570,20 +643,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const fechaFin = fechaFinInput.value;
         const horaFin = horaFinInput.value;
         
-        // Validar que fecha fin sea mayor o igual a fecha inicio
         if (fechaFin < fechaInicio) {
-            alert('La fecha de fin no puede ser anterior a la fecha de inicio');
+            mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio', 'error');
             fechaFinInput.focus();
             return false;
         }
         
-        // Si es el mismo día, validar que la hora fin sea mayor
-        if (fechaFin === fechaInicio) {
-            if (horaFin <= horaInicio) {
-                alert('Para el mismo día, la hora de fin debe ser posterior a la hora de inicio');
-                horaFinInput.focus();
-                return false;
-            }
+        if (fechaFin === fechaInicio && horaFin <= horaInicio) {
+            mostrarNotificacion('Para el mismo día, la hora de fin debe ser posterior a la hora de inicio', 'error');
+            horaFinInput.focus();
+            return false;
         }
 
         return true;
@@ -592,40 +661,42 @@ document.addEventListener('DOMContentLoaded', function() {
     function quitarProducto(productoKey) {
         productosSeleccionados = productosSeleccionados.filter(p => p.key !== productoKey);
         
-        // Reactivar todos los botones con el mismo producto/variante
         const [productoId, varianteId] = productoKey.split('-');
         const buttons = document.querySelectorAll(`.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`);
         
         buttons.forEach(button => {
             button.disabled = false;
-            const isVariante = varianteId !== '';
-            button.innerHTML = `<i class="fas fa-plus me-1"></i>${isVariante ? button.getAttribute('data-producto-nombre').split(' - ')[1] : 'Producto Base'}`;
-            button.classList.remove('btn-outline-success');
-            button.classList.add(isVariante ? 'btn-outline-info' : 'btn-outline-primary');
+            button.classList.remove('seleccionado');
         });
         
         actualizarConfiguraciones();
         actualizarContador();
+        mostrarNotificacion('Producto removido de la configuración', 'info');
     }
 
     // Limpiar toda la selección
     window.limpiarSeleccion = function() {
-        productosSeleccionados.forEach(producto => {
-            const [productoId, varianteId] = producto.key.split('-');
-            const buttons = document.querySelectorAll(`.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`);
-            
-            buttons.forEach(button => {
-                button.disabled = false;
-                const isVariante = varianteId !== '';
-                button.innerHTML = `<i class="fas fa-plus me-1"></i>${isVariante ? button.getAttribute('data-producto-nombre').split(' - ')[1] : 'Producto Base'}`;
-                button.classList.remove('btn-outline-success');
-                button.classList.add(isVariante ? 'btn-outline-info' : 'btn-outline-primary');
+        if (productosSeleccionados.length === 0) {
+            mostrarNotificacion('No hay productos seleccionados', 'info');
+            return;
+        }
+
+        if (confirm(`¿Estás seguro de que deseas limpiar toda la selección? Se perderán ${productosSeleccionados.length} configuraciones.`)) {
+            productosSeleccionados.forEach(producto => {
+                const [productoId, varianteId] = producto.key.split('-');
+                const buttons = document.querySelectorAll(`.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`);
+                
+                buttons.forEach(button => {
+                    button.disabled = false;
+                    button.classList.remove('seleccionado');
+                });
             });
-        });
-        
-        productosSeleccionados = [];
-        actualizarConfiguraciones();
-        actualizarContador();
+            
+            productosSeleccionados = [];
+            actualizarConfiguraciones();
+            actualizarContador();
+            mostrarNotificacion('Todas las configuraciones han sido limpiadas', 'success');
+        }
     };
 
     // Manejar botones de finalizar oferta
@@ -641,115 +712,1128 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Función para mostrar notificaciones
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        // Eliminar notificaciones existentes
+        const notificacionesExistentes = document.querySelectorAll('.notificacion-temporal');
+        notificacionesExistentes.forEach(notif => notif.remove());
+
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'warning': 'alert-warning',
+            'info': 'alert-info'
+        }[tipo] || 'alert-info';
+
+        const iconClass = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        }[tipo] || 'fa-info-circle';
+
+        const notificacionHTML = `
+            <div class="alert ${alertClass} alert-dismissible fade show notificacion-temporal" role="alert" 
+                 style="position: fixed; top: 100px; right: 20px; z-index: 1060; min-width: 300px;">
+                <i class="fas ${iconClass} me-2"></i>
+                ${mensaje}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', notificacionHTML);
+        
+        // Auto-eliminar después de 4 segundos
+        setTimeout(() => {
+            const alert = document.querySelector('.notificacion-temporal');
+            if (alert) {
+                alert.remove();
+            }
+        }, 4000);
+    }
 });
 </script>
 
 <style>
-.product-card {
-    transition: all 0.2s ease;
-    cursor: pointer;
-    border: 1px solid #e9ecef;
+/* Estilos generales mejorados basados en el diseño del CRUD */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #4F46E5, #7C3AED);
+    --success-gradient: linear-gradient(135deg, #10B981, #059669);
+    --warning-gradient: linear-gradient(135deg, #F59E0B, #D97706);
+    --danger-gradient: linear-gradient(135deg, #EF4444, #DC2626);
 }
 
-.product-card:hover {
+/* Tarjeta de Bienvenida */
+.tarjeta-bienvenida {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.tarjeta-bienvenida::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(30deg);
+}
+
+.tarjeta-bienvenida h2 {
+    color: white;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.tarjeta-bienvenida p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0;
+    position: relative;
+}
+
+/* Estadísticas Grid */
+.estadisticas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.estadistica-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.estadistica-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.estadistica-icono {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.estadistica-numero {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: white;
+}
+
+.estadistica-titulo {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Información del Negocio */
+.info-negocio-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.info-item i {
+    font-size: 1.5rem;
+    color: #4F46E5;
+    width: 40px;
+    height: 40px;
+    background: #EEF2FF;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    color: #6B7280;
+    font-weight: 500;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    color: #1F2937;
+    font-weight: 600;
+}
+
+/* Barra de Herramientas */
+.barra-herramientas {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.grupo-botones-accion {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.boton-accion {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+}
+
+.boton-primario {
+    background: var(--secondary-gradient);
+    color: white;
+}
+
+.boton-primario:hover {
+    background: linear-gradient(135deg, #4338CA, #6D28D9);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    color: white;
+}
+
+.boton-secundario {
+    background: white;
+    color: #4F46E5;
+    border: 2px solid #4F46E5;
+}
+
+.boton-secundario:hover {
+    background: #4F46E5;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Filtros y Búsqueda */
+.grupo-busqueda-filtros {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.contenedor-busqueda {
+    position: relative;
+    min-width: 300px;
+}
+
+.icono-busqueda {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6B7280;
+    z-index: 2;
+}
+
+.input-busqueda {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s;
+    background: white;
+}
+
+.input-busqueda:focus {
+    outline: none;
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.contenedor-filtros {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.select-filtro {
+    padding: 0.8rem 1rem;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    background: white;
+    transition: all 0.3s;
+    min-width: 150px;
+}
+
+.select-filtro:focus {
+    outline: none;
     border-color: #4F46E5;
 }
 
-.config-producto {
-    border-left: 4px solid #0d6efd;
-    transition: all 0.3s ease;
-}
-
-.config-producto:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-/* Scroll personalizado */
-#contenedorProductos::-webkit-scrollbar,
-#configuracionesProductos::-webkit-scrollbar,
-#contenedorOfertasActivas::-webkit-scrollbar {
-    width: 6px;
-}
-
-#contenedorProductos::-webkit-scrollbar-track,
-#configuracionesProductos::-webkit-scrollbar-track,
-#contenedorOfertasActivas::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-#contenedorProductos::-webkit-scrollbar-thumb,
-#configuracionesProductos::-webkit-scrollbar-thumb,
-#contenedorOfertasActivas::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
-}
-
-#contenedorProductos::-webkit-scrollbar-thumb:hover,
-#configuracionesProductos::-webkit-scrollbar-thumb:hover,
-#contenedorOfertasActivas::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-.card-body {
-    padding: 1.25rem;
-}
-
-.card-header {
-    padding: 1rem 1.25rem;
-    background-color: rgba(248, 249, 250, 0.8) !important;
-}
-
-.text-truncate {
-    white-space: nowrap;
+/* Secciones */
+.seccion-productos,
+.seccion-configuracion,
+.seccion-ofertas-activas {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-.btn-group-vertical .btn {
-    margin-bottom: 0.25rem;
+.seccion-header {
+    background: #F8FAFC;
+    padding: 1.5rem;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.badge {
-    font-size: 0.75em;
+.seccion-header h3 {
+    color: #1F2937;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
 }
 
-.alert {
+.contador-seccion {
+    background: var(--secondary-gradient);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Contenedor de Productos */
+.contenedor-cards-grid {
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+}
+
+.producto-card-oferta {
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.producto-card-oferta:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translateY(-3px);
+    border-color: #4F46E5;
+}
+
+.producto-header-oferta {
+    padding: 1.25rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.producto-info-basica h5 {
+    color: #1F2937;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.producto-meta-oferta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.producto-precio {
+    font-weight: 700;
+    color: #10B981;
+    font-size: 1.2rem;
+}
+
+.producto-categoria {
+    background: #E0E7FF;
+    color: #3730A3;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.producto-stock-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.badge-stock {
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.stock-critico {
+    background: #FEE2E2;
+    color: #DC2626;
+    border: 1px solid #FECACA;
+}
+
+.stock-bajo {
+    background: #FEF3C7;
+    color: #D97706;
+    border: 1px solid #FDE68A;
+}
+
+.stock-normal {
+    background: #D1FAE5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+}
+
+.producto-id {
+    color: #6B7280;
+    font-size: 0.8rem;
+}
+
+/* Acciones de Producto */
+.producto-acciones-oferta {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
     border: none;
     border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 0.9rem;
+    justify-content: center;
 }
 
-.form-control:focus,
-.form-select:focus {
+.btn-producto-base {
+    background: var(--secondary-gradient);
+    color: white;
+    box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+}
+
+.btn-producto-base:hover {
+    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+}
+
+.btn-producto-base.seleccionado {
+    background: #10B981;
+    cursor: not-allowed;
+}
+
+/* Acordeón de Variantes */
+.variantes-accordion {
+    position: relative;
+}
+
+.btn-variantes-toggle {
+    background: #8B5CF6;
+    color: white;
+    width: 100%;
+    justify-content: space-between;
+    box-shadow: 0 2px 5px rgba(139, 92, 246, 0.3);
+}
+
+.btn-variantes-toggle:hover {
+    background: #7C3AED;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4);
+}
+
+.btn-variantes-toggle .fa-chevron-down {
+    transition: transform 0.3s ease;
+}
+
+.btn-variantes-toggle .fa-chevron-down.rotado {
+    transform: rotate(180deg);
+}
+
+.variantes-lista {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.variantes-lista.activo {
+    max-height: 300px;
+}
+
+.btn-variante {
+    background: #F8FAFC;
+    color: #374151;
+    border: 1px solid #E5E7EB;
+    justify-content: space-between;
+}
+
+.btn-variante:hover {
+    background: #E5E7EB;
     border-color: #4F46E5;
-    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+    transform: translateX(5px);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    border: none;
+.btn-variante.seleccionado {
+    background: #10B981;
+    color: white;
+    cursor: not-allowed;
+}
+
+.variante-nombre {
+    flex: 1;
+    text-align: left;
+}
+
+.variante-precio {
+    font-weight: 600;
+    color: #10B981;
+}
+
+/* Configuración de Ofertas */
+.contenedor-configuraciones {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.configuracion-oferta-card {
+    background: #F8FAFC;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    overflow: hidden;
     transition: all 0.3s ease;
 }
 
-.btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+.configuracion-oferta-card:hover {
+    border-color: #4F46E5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.configuracion-header {
+    background: white;
+    padding: 1.25rem;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.configuracion-info {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.configuracion-info i {
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.configuracion-detalles h5 {
+    color: #1F2937;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.configuracion-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.configuracion-meta span {
+    padding: 0.3rem 0.6rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.precio-config {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.stock-config {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.categoria-config {
+    background: #F3E8FF;
+    color: #7C3AED;
+}
+
+.tipo-config {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.btn-quitar {
+    background: #FEE2E2;
+    color: #DC2626;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.btn-quitar:hover {
+    background: #DC2626;
+    color: white;
+}
+
+/* Formulario de Configuración */
+.configuracion-body {
+    padding: 1.5rem;
+}
+
+.fila-configuracion {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.campo-configuracion {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.etiqueta-campo {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+}
+
+.grupo-input {
+    position: relative;
+    display: flex;
+}
+
+.control-formulario {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+    background: white;
+}
+
+.control-formulario:focus {
+    outline: none;
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.sufijo-input {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6B7280;
+    font-weight: 500;
+}
+
+.texto-ayuda-campo {
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+
+/* Resumen de Precios */
+.resumen-precios {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    margin: 1.5rem 0;
+}
+
+.resumen-precios h6 {
+    color: #374151;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.grid-precios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.item-precio {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.etiqueta-precio {
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+
+.valor-precio {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.precio-final {
+    color: #10B981;
+}
+
+.ahorro-cliente {
+    color: #EF4444;
+}
+
+/* Información de Oferta */
+.info-oferta {
+    background: #DBEAFE;
+    padding: 1rem;
+    border-radius: 8px;
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    margin: 1rem 0;
+}
+
+.info-oferta i {
+    color: #1E40AF;
+    font-size: 1.1rem;
+    margin-top: 0.1rem;
+}
+
+.info-contenido {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+/* Botón Crear Oferta */
+.acciones-configuracion {
+    text-align: center;
+    margin-top: 1.5rem;
+}
+
+.btn-crear-oferta {
+    background: var(--success-gradient);
+    color: white;
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    width: 100%;
+}
+
+.btn-crear-oferta:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Ofertas Activas */
+.contenedor-ofertas-activas {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.oferta-activa-card {
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.oferta-activa-card:hover {
+    border-color: #4F46E5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+
+.oferta-inactiva {
+    opacity: 0.7;
+    background: #F9FAFB;
+}
+
+.oferta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.oferta-info-principal h5 {
+    color: #1F2937;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.oferta-titulo {
+    color: #6B7280;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.oferta-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.oferta-fecha {
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+
+.badge-tipo-oferta {
+    background: #E0E7FF;
+    color: #3730A3;
+    padding: 0.3rem 0.6rem;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.oferta-descuento .porcentaje-descuento {
+    background: var(--danger-gradient);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Detalles de Oferta */
+.oferta-detalles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.detalle-precios {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.precio-original,
+.precio-oferta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.precio-tachado {
+    text-decoration: line-through;
+    color: #6B7280;
+    font-size: 0.9rem;
+}
+
+.precio-final {
+    color: #10B981;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.detalle-stock {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progreso-stock {
+    background: #E5E7EB;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.progreso-bar {
+    height: 100%;
+    background: var(--success-gradient);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.stock-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+    color: #374151;
+}
+
+.detalle-tiempo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tiempo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.tiempo-info small {
+    color: #6B7280;
+}
+
+.badge-estado {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.estado-activo {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.estado-inactivo {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+/* Acciones de Oferta */
+.oferta-acciones {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-accion {
+    padding: 0.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+}
+
+.btn-eliminar {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.btn-eliminar:hover {
+    background: #DC2626;
+    color: white;
+}
+
+.btn-detener {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.btn-detener:hover {
+    background: #D97706;
+    color: white;
+}
+
+/* Estados Vacío */
+.estado-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    color: #6B7280;
+}
+
+.estado-vacio i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.estado-vacio h4 {
+    color: #6B7280;
+    margin-bottom: 0.5rem;
+}
+
+.estado-vacio p {
+    margin-bottom: 1rem;
+}
+
+.texto-ayuda {
+    font-size: 0.9rem;
+    color: #9CA3AF;
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+    .contenedor-cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+    
+    .fila-configuracion {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
-    .card-body {
+    .estadisticas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .barra-herramientas {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .grupo-botones-accion {
+        flex-direction: column;
+    }
+    
+    .boton-accion {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .contenedor-busqueda {
+        min-width: 100%;
+    }
+    
+    .contenedor-filtros {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .contenedor-cards-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .oferta-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .oferta-detalles {
+        grid-template-columns: 1fr;
+    }
+    
+    .configuracion-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .configuracion-meta {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .tarjeta-bienvenida {
+        padding: 1.5rem;
+    }
+    
+    .seccion-header {
+        padding: 1rem;
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .contenedor-cards-grid,
+    .contenedor-configuraciones,
+    .contenedor-ofertas-activas {
         padding: 1rem;
     }
     
-    .row.g-3 {
-        margin-bottom: -0.5rem;
-    }
-    
-    .row.g-3 > [class*="col-"] {
-        margin-bottom: 0.5rem;
+    .producto-header-oferta,
+    .configuracion-header,
+    .configuracion-body,
+    .oferta-activa-card {
+        padding: 1rem;
     }
 }
 </style>

@@ -13,7 +13,6 @@ from Software.models import (
     Negocios, UsuarioPerfil, AuthUser, Productos
 )
 
-# Función auxiliar para obtener datos del vendedor
 def obtener_datos_vendedor_variantes(request):
     """Función específica para variantes que valida que exista un negocio activo"""
     try:
@@ -55,6 +54,47 @@ def obtener_datos_vendedor_variantes(request):
     except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
         messages.error(request, "Error al cargar datos del usuario.")
         return None
+
+# Función para registrar movimientos de stock de variantes
+def registrar_movimiento_variante(variante_id, negocio_id, usuario_id, tipo_movimiento, motivo, cantidad, stock_anterior, stock_nuevo):
+    """Función para registrar movimientos de stock específicos para variantes"""
+    try:
+        with connection.cursor() as cursor:
+            # Obtener información de la variante y producto
+            cursor.execute("""
+                SELECT producto_id, nombre_variante 
+                FROM variantes_producto 
+                WHERE id_variante = %s
+            """, [variante_id])
+            resultado = cursor.fetchone()
+            
+            if resultado:
+                producto_id, nombre_variante = resultado
+                
+                # Registrar movimiento con variante_id
+                cursor.execute("""
+                    INSERT INTO movimientos_stock 
+                    (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                     stock_anterior, stock_nuevo, usuario_id, fecha_movimiento, variante_id, descripcion_variante)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    producto_id,
+                    negocio_id,
+                    tipo_movimiento,
+                    motivo,
+                    cantidad,
+                    stock_anterior,
+                    stock_nuevo,
+                    usuario_id,
+                    datetime.now(),
+                    variante_id,
+                    nombre_variante
+                ])
+                return True
+        return False
+    except Exception as e:
+        print(f"Error registrando movimiento de variante: {e}")
+        return False
 
 @login_required(login_url='login')
 def gestionar_variantes(request, producto_id):
@@ -124,7 +164,7 @@ def gestionar_variantes(request, producto_id):
 
 @login_required(login_url='login')
 def crear_variante(request, producto_id):
-    """Vista para crear una nueva variante"""
+    """Vista para crear una nueva variante - CON REGISTRO DE MOVIMIENTO DE STOCK"""
     if request.method == 'POST':
         try:
             datos = obtener_datos_vendedor_variantes(request)
@@ -150,6 +190,9 @@ def crear_variante(request, producto_id):
             if not nombre_variante:
                 messages.error(request, "El nombre de la variante es obligatorio.")
                 return redirect('gestionar_variantes', producto_id=producto_id)
+            
+            # Convertir stock a entero
+            stock_inicial = int(stock_variante) if stock_variante else 0
             
             # Procesar imagen si se subió
             nombre_archivo_imagen = None
@@ -179,10 +222,26 @@ def crear_variante(request, producto_id):
                     producto_id,
                     nombre_variante,
                     precio_adicional,
-                    stock_variante,
-                    sku_unico,  # SKU único generado automáticamente
+                    stock_inicial,  # Usar stock convertido
+                    sku_unico,
                     nombre_archivo_imagen
                 ])
+                
+                # Obtener el ID de la variante recién creada
+                variante_id = cursor.lastrowid
+            
+            # REGISTRAR MOVIMIENTO DE STOCK POR CREACIÓN DE VARIANTE
+            if stock_inicial > 0:
+                registrar_movimiento_variante(
+                    variante_id=variante_id,
+                    negocio_id=negocio.pkid_neg,
+                    usuario_id=datos['perfil'].id,
+                    tipo_movimiento='entrada',
+                    motivo='creacion_variante',
+                    cantidad=stock_inicial,
+                    stock_anterior=0,  # Stock anterior era 0 (variante nueva)
+                    stock_nuevo=stock_inicial
+                )
             
             messages.success(request, f"Variante '{nombre_variante}' creada exitosamente.")
             
@@ -197,7 +256,7 @@ def crear_variante(request, producto_id):
 
 @login_required(login_url='login')
 def editar_variante(request, variante_id):
-    """Vista para editar una variante existente"""
+    """Vista para editar una variante existente - CON REGISTRO DE MOVIMIENTOS DE STOCK"""
     if request.method == 'POST':
         try:
             datos = obtener_datos_vendedor_variantes(request)
@@ -211,6 +270,27 @@ def editar_variante(request, variante_id):
             stock_variante = request.POST.get('stock_variante', 0)
             estado_variante = request.POST.get('estado_variante', 'activa')
             imagen_variante = request.FILES.get('imagen_variante')
+            
+            # Convertir stock a entero
+            nuevo_stock = int(stock_variante) if stock_variante else 0
+            
+            # Obtener stock actual antes de la actualización
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT stock_variante, producto_id 
+                    FROM variantes_producto 
+                    WHERE id_variante = %s
+                """, [variante_id])
+                resultado = cursor.fetchone()
+                
+                if not resultado:
+                    messages.error(request, "Variante no encontrada.")
+                    return redirect('Crud_V')
+                
+                stock_anterior, producto_id = resultado
+            
+            # Calcular diferencia de stock
+            diferencia_stock = nuevo_stock - stock_anterior
             
             # Procesar nueva imagen si se subió
             nombre_archivo_imagen = None
@@ -239,7 +319,7 @@ def editar_variante(request, variante_id):
                     """, [
                         nombre_variante,
                         precio_adicional,
-                        stock_variante,
+                        nuevo_stock,
                         estado_variante,
                         nombre_archivo_imagen,
                         variante_id
@@ -254,10 +334,26 @@ def editar_variante(request, variante_id):
                     """, [
                         nombre_variante,
                         precio_adicional,
-                        stock_variante,
+                        nuevo_stock,
                         estado_variante,
                         variante_id
                     ])
+            
+            # REGISTRAR MOVIMIENTO DE STOCK SI HAY CAMBIO
+            if diferencia_stock != 0:
+                tipo_movimiento = 'entrada' if diferencia_stock > 0 else 'salida'
+                motivo = 'ajuste_stock_variante'
+                
+                registrar_movimiento_variante(
+                    variante_id=variante_id,
+                    negocio_id=datos['negocio_activo'].pkid_neg,
+                    usuario_id=datos['perfil'].id,
+                    tipo_movimiento=tipo_movimiento,
+                    motivo=motivo,
+                    cantidad=abs(diferencia_stock),
+                    stock_anterior=stock_anterior,
+                    stock_nuevo=nuevo_stock
+                )
             
             messages.success(request, f"Variante '{nombre_variante}' actualizada exitosamente.")
             
@@ -277,7 +373,7 @@ def editar_variante(request, variante_id):
 
 @login_required(login_url='login')
 def eliminar_variante(request, variante_id):
-    """Vista para eliminar una variante"""
+    """Vista para eliminar una variante - CON REGISTRO DE MOVIMIENTO DE STOCK"""
     if request.method == 'POST':
         try:
             datos = obtener_datos_vendedor_variantes(request)
@@ -287,11 +383,27 @@ def eliminar_variante(request, variante_id):
             
             # Obtener información de la variante antes de eliminar
             with connection.cursor() as cursor:
-                cursor.execute("SELECT producto_id, nombre_variante, imagen_variante FROM variantes_producto WHERE id_variante = %s", [variante_id])
+                cursor.execute("""
+                    SELECT producto_id, nombre_variante, imagen_variante, stock_variante 
+                    FROM variantes_producto WHERE id_variante = %s
+                """, [variante_id])
                 resultado = cursor.fetchone()
                 
                 if resultado:
-                    producto_id, nombre_variante, imagen_variante = resultado
+                    producto_id, nombre_variante, imagen_variante, stock_eliminado = resultado
+                    
+                    # REGISTRAR MOVIMIENTO DE STOCK POR ELIMINACIÓN DE VARIANTE
+                    if stock_eliminado > 0:
+                        registrar_movimiento_variante(
+                            variante_id=variante_id,
+                            negocio_id=datos['negocio_activo'].pkid_neg,
+                            usuario_id=datos['perfil'].id,
+                            tipo_movimiento='salida',
+                            motivo='eliminacion_variante',
+                            cantidad=stock_eliminado,
+                            stock_anterior=stock_eliminado,
+                            stock_nuevo=0
+                        )
                     
                     # Eliminar la imagen del sistema de archivos si existe
                     if imagen_variante:
@@ -319,7 +431,7 @@ def eliminar_variante(request, variante_id):
 
 @login_required(login_url='login')
 def ajustar_stock_variante(request, variante_id):
-    """Vista para ajustar stock de una variante específica"""
+    """Vista para ajustar stock de una variante específica - CON REGISTRO DE MOVIMIENTO"""
     if request.method == 'POST':
         try:
             tipo_ajuste = request.POST.get('tipo_ajuste', 'entrada')
@@ -366,24 +478,17 @@ def ajustar_stock_variante(request, variante_id):
                     WHERE id_variante = %s
                 """, [stock_nuevo, variante_id])
                 
-                # Registrar movimiento de stock
-                cursor.execute("""
-                    INSERT INTO movimientos_stock 
-                    (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                     stock_anterior, stock_nuevo, usuario_id, fecha_movimiento, variante_id)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, [
-                    producto_id,
-                    datos['negocio_activo'].pkid_neg,
-                    tipo_ajuste,
-                    motivo,
-                    abs(cantidad_ajuste),
-                    stock_anterior,
-                    stock_nuevo,
-                    datos['perfil'].id,
-                    datetime.now(),
-                    variante_id
-                ])
+                # REGISTRAR MOVIMIENTO DE STOCK
+                registrar_movimiento_variante(
+                    variante_id=variante_id,
+                    negocio_id=datos['negocio_activo'].pkid_neg,
+                    usuario_id=datos['perfil'].id,
+                    tipo_movimiento=tipo_ajuste,
+                    motivo=motivo,
+                    cantidad=abs(cantidad_ajuste),
+                    stock_anterior=stock_anterior,
+                    stock_nuevo=stock_nuevo
+                )
             
             messages.success(request, f"✅ Stock de '{nombre_variante}' actualizado: {stock_anterior} → {stock_nuevo}")
             

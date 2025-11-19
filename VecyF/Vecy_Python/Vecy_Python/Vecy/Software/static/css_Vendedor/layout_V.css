@@ -1,18 +1,19 @@
-/* ==================== VARIABLES DE COLOR - FÁCIL PERSONALIZACIÓN ==================== */
+/* static /css_Vendedor/layout.css - Nueva Paleta */
 :root {
-    /* Colores Principales */
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #8b5cf6;
-    --secondary-dark: #7c3aed;
+    /* Colores Principales - NUEVOS */
+    --primary: #5F85DB;
+    --primary-dark: #4a6bb8;
+    --primary-light: #7a9de5;
+    --secondary: #26282B;
+    --secondary-dark: #1a1c1e;
+    --secondary-light: #3a3d42;
     
     /* Colores de Estado */
     --success: #10b981;
     --success-dark: #059669;
     --danger: #ef4444;
     --warning: #f59e0b;
-    --info: #3b82f6;
+    --info: #5F85DB;
     
     /* Colores Neutros */
     --white: #ffffff;
@@ -85,7 +86,7 @@ body {
     left: 0;
     right: 0;
     height: var(--header-height);
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    background: linear-gradient(135deg, var(--secondary) 0%, var(--secondary-light) 100%);
     box-shadow: var(--shadow-lg);
     display: flex;
     align-items: center;
@@ -174,7 +175,7 @@ body {
 }
 
 .boton-notificacion:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(95, 133, 219, 0.3);
     transform: scale(1.05);
 }
 
@@ -192,7 +193,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--primary);
+    border: 2px solid var(--secondary);
     animation: pulse 2s infinite;
 }
 
@@ -231,7 +232,7 @@ body {
 }
 
 .boton-usuario:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(95, 133, 219, 0.3);
     transform: translateY(-2px);
 }
 
@@ -409,7 +410,7 @@ body {
 }
 
 .boton-programar:hover {
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -506,7 +507,7 @@ body {
     left: 0;
     right: 0;
     height: var(--footer-height);
-    background: var(--gray-900);
+    background: var(--secondary);
     color: var(--gray-300);
     display: flex;
     align-items: center;
@@ -565,7 +566,7 @@ body {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -596,7 +597,7 @@ body {
 .form-control:focus,
 .form-select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px rgba(95, 133, 219, 0.1);
     outline: none;
 }
 
@@ -678,7 +679,7 @@ body {
     }
     
     .boton-menu-movil:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(95, 133, 219, 0.3);
     }
 }
 

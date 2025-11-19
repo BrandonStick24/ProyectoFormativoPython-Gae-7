@@ -1,123 +1,112 @@
-/* static/css_Vendedor/detalle_p.css */
+/* static/css_Vendedor/detalle_p.css - VERSIÓN MEJORADA */
 
-/* Tarjeta de Bienvenida para Detalle */
+/* Tarjeta de Bienvenida para Detalle - Compacta */
 .tarjeta-bienvenida-detalle {
     background: white;
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
     border-left: 4px solid #10b981;
 }
 
 .tarjeta-bienvenida-detalle h2 {
-    color: #10b981;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.25rem;
+    font-weight: 700;
+    font-size: 1.5rem;
 }
 
-/* Botón de volver mejorado */
-.btn-volver-pedidos {
-    background: #6b7280;
+/* Botón flotante superior */
+.btn-flotante-superior {
+    background: #10b981;
     color: white;
     border: none;
-    padding: 0.7rem 1.5rem;
-    border-radius: 8px;
-    text-decoration: none;
+    border-radius: 50px;
+    padding: 10px 18px;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s;
+    gap: 8px;
     font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s;
+    margin-left: auto;
 }
 
-.btn-volver-pedidos:hover {
-    background: #4b5563;
-    color: white;
+.btn-flotante-superior:hover {
+    background: #059669;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+    box-shadow: 0 6px 25px rgba(16, 185, 129, 0.4);
+    color: white;
 }
 
-/* Cards de información */
+/* Contenedor de botones superiores */
+.contenedor-botones-superiores {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-left: auto;
+}
+
+/* Cards de información - Más compactas */
 .card-detalle-pedido {
     border: none;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     margin-bottom: 1.5rem;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
 }
 
 .card-detalle-pedido:hover {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
 }
 
 .card-header-detalle {
     background: linear-gradient(135deg, #4F46E5, #7C3AED);
     color: white;
-    padding: 1.2rem 1.5rem;
-    border-radius: 15px 15px 0 0 !important;
+    padding: 1rem 1.25rem;
+    border-radius: 12px 12px 0 0 !important;
     border: none;
 }
 
 .card-header-detalle h5 {
     margin: 0;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .card-body-detalle {
-    padding: 1.5rem;
+    padding: 1.25rem;
 }
 
-/* Información del pedido */
-.info-pedido-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8rem 0;
-    border-bottom: 1px solid #f3f4f6;
-}
-
-.info-pedido-item:last-child {
-    border-bottom: none;
-}
-
-.info-pedido-label {
-    font-weight: 600;
-    color: #374151;
-}
-
-.info-pedido-value {
-    color: #6b7280;
-    font-weight: 500;
-}
-
-/* Badge de estado mejorado */
+/* Badge de estado mejorado y compacto */
 .badge-estado-pedido {
-    padding: 0.6rem 1.2rem;
-    border-radius: 25px;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     text-transform: capitalize;
 }
 
-/* Formulario de cambiar estado */
+/* Formulario de cambiar estado - Compacto */
 .form-cambiar-estado {
     background: #f8fafc;
-    padding: 1.5rem;
+    padding: 1.25rem;
     border-radius: 10px;
     border: 2px solid #e5e7eb;
 }
 
 .select-estado-pedido {
-    padding: 0.8rem 1rem;
+    padding: 0.7rem 1rem;
     border: 2px solid #e5e7eb;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.95rem;
     cursor: pointer;
     background: white;
     transition: all 0.3s;
     width: 100%;
+    font-weight: 500;
 }
 
 .select-estado-pedido:focus {
@@ -130,11 +119,11 @@
     background: #4F46E5;
     color: white;
     border: none;
-    padding: 0.8rem 2rem;
+    padding: 0.7rem 1.5rem;
     border-radius: 8px;
     font-weight: 600;
     transition: all 0.3s;
-    width: 100%;
+    font-size: 0.95rem;
 }
 
 .btn-actualizar-estado:hover {
@@ -143,14 +132,14 @@
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
-/* Tabla de productos del pedido */
+/* Tabla de productos del pedido - Más compacta */
 .tabla-productos-pedido {
     width: 100%;
     border-collapse: collapse;
     background: white;
     border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    font-size: 0.9rem;
 }
 
 .tabla-productos-pedido thead {
@@ -159,21 +148,21 @@
 }
 
 .tabla-productos-pedido th {
-    padding: 1.2rem 1rem;
+    padding: 1rem 0.8rem;
     text-align: left;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 }
 
 .tabla-productos-pedido td {
-    padding: 1rem;
+    padding: 0.8rem;
     border-bottom: 1px solid #e5e7eb;
-    font-size: 0.95rem;
     color: #374151;
+    vertical-align: middle;
 }
 
 .tabla-productos-pedido tbody tr {
-    transition: all 0.3s;
+    transition: all 0.2s;
 }
 
 .tabla-productos-pedido tbody tr:hover {
@@ -193,17 +182,18 @@
 /* Precios y cantidades */
 .precio-unitario {
     color: #6b7280;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .subtotal-producto {
     color: #059669;
     font-weight: 600;
+    font-size: 0.9rem;
 }
 
 .total-pedido {
     color: #059669;
-    font-size: 1.1rem;
+    font-weight: 700;
 }
 
 /* Sin productos */
@@ -214,50 +204,100 @@
 }
 
 .sin-productos i {
-    font-size: 3rem;
+    font-size: 2.5rem;
     margin-bottom: 1rem;
     opacity: 0.5;
 }
 
 /* Alertas personalizadas */
 .alert-pedido {
-    border-radius: 10px;
+    border-radius: 8px;
     border: none;
-    padding: 1rem 1.5rem;
+    padding: 0.8rem 1.25rem;
+    font-size: 0.9rem;
 }
 
-/* Responsivo para detalle */
+/* Responsivo mejorado */
 @media (max-width: 768px) {
     .tarjeta-bienvenida-detalle {
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
     
     .card-body-detalle {
         padding: 1rem;
     }
     
-    .info-pedido-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    
     .tabla-productos-pedido {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
     
     .tabla-productos-pedido th,
     .tabla-productos-pedido td {
-        padding: 0.8rem 0.5rem;
+        padding: 0.7rem 0.5rem;
+    }
+    
+    .info-grid-pedido {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .btn-flotante-superior {
+        padding: 8px 14px;
+        font-size: 14px;
+    }
+    
+    .contenedor-botones-superiores {
+        gap: 8px;
     }
 }
 
 @media (max-width: 576px) {
-    .row.mb-4 {
+    .container-fluid {
+        padding: 0 0.5rem;
+    }
+    
+    .tarjeta-bienvenida-detalle {
+        margin-bottom: 1rem;
+    }
+    
+    .card-detalle-pedido {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-actualizar-estado {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .contenedor-botones-superiores {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .btn-flotante-superior {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Estilos de impresión adicionales */
+@media print {
+    .container-fluid {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .card-detalle-pedido {
+        break-inside: avoid;
         margin-bottom: 1rem !important;
     }
     
-    .col-md-6 {
-        margin-bottom: 1rem;
+    .tabla-productos-pedido {
+        font-size: 11px !important;
+    }
+    
+    .total-pedido {
+        font-size: 12px !important;
     }
 }

@@ -1,4 +1,3 @@
-<!-- Templates/Vendedor/Crud_V.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
@@ -6,63 +5,6 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css_Vendedor/crud_V.css' %}">
-<style>
-/* Estilos para variantes */
-.variantes-section {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin-top: 2rem;
-}
-
-.variante-card {
-    background: white;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.variante-header {
-    display: flex;
-    justify-content: between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-.variante-nombre {
-    font-weight: bold;
-    color: #2c3e50;
-}
-
-.variante-precio {
-    color: #27ae60;
-    font-weight: bold;
-}
-
-.variante-stock {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: bold;
-}
-
-.stock-bajo { background: #fff3cd; color: #856404; }
-.stock-normal { background: #d1ecf1; color: #0c5460; }
-.stock-critico { background: #f8d7da; color: #721c24; }
-
-.btn-variantes {
-    background: #17a2b8;
-    border-color: #17a2b8;
-    color: white;
-}
-
-.btn-variantes:hover {
-    background: #138496;
-    border-color: #117a8b;
-}
-</style>
 {% endblock %}
 
 {% block content %}
@@ -112,7 +54,7 @@
 {% endfor %}
 {% endif %}
 
-<!-- Barra de Herramientas -->
+<!-- Barra de Herramientas Mejorada -->
 <div class="barra-herramientas">
     <div class="grupo-botones-accion">
         <button class="boton-accion boton-primario" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
@@ -122,8 +64,22 @@
 
     <div class="grupo-busqueda-filtros">
         <div class="contenedor-busqueda">
-            <i class="fas fa-search icono-busqueda"></i>
-            <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar producto...">
+            <i class="fas fa-search icono-busqueda" title="Haz clic para limpiar búsqueda"></i>
+            <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar por nombre, descripción o categoría...">
+        </div>
+        
+        <div class="contenedor-filtros">
+            <select class="select-filtro" id="selectFiltro">
+                <option value="todos">Todos los productos</option>
+                <option value="disponible">Disponibles</option>
+                <option value="sin-stock">Sin stock</option>
+                <option value="stock-bajo">Stock bajo (≤ 5)</option>
+                <option value="oferta">En oferta</option>
+            </select>
+            
+            <button class="boton-accion boton-secundario" id="btnOrdenAsc" title="Ordenar productos">
+                <i class="fas fa-sort-amount-up"></i>
+            </button>
         </div>
     </div>
 </div>
@@ -146,81 +102,102 @@
                 </div>
                 <div class="producto-details">
                     <h5>{{ producto.nom_prod }}</h5>
-                    <p class="text-muted">{{ producto.desc_prod|default:"Sin descripción" }}</p>
+                    <p class="producto-descripcion">{{ producto.desc_prod|default:"Sin descripción"|truncatewords:20 }}</p>
                     <div class="producto-meta">
                         <span class="precio">${{ producto.precio_prod }}</span>
                         <span class="categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
                         <span class="stock {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                            Stock: {{ producto.stock_prod }}
+                            <i class="fas fa-boxes"></i> Stock: {{ producto.stock_prod }}
                         </span>
                         {% if producto.pkid_prod in productos_en_oferta %}
-                        <span class="badge bg-danger">En Oferta</span>
+                        <span class="badge-oferta">
+                            <i class="fas fa-tag"></i> Oferta Activa
+                        </span>
                         {% endif %}
                     </div>
                 </div>
             </div>
             <div class="producto-actions">
+                <!-- Botón Editar - Ahora abre directamente el modal con datos -->
                 <button class="btn btn-warning btn-sm" 
                         data-bs-toggle="modal" 
                         data-bs-target="#modalEditarProducto"
-                        data-producto-id="{{ producto.pkid_prod }}"
-                        data-producto-nombre="{{ producto.nom_prod }}"
-                        data-producto-precio="{{ producto.precio_prod }}"
-                        data-producto-stock="{{ producto.stock_prod }}"
-                        data-producto-estado="{{ producto.estado_prod }}"
-                        data-producto-categoria="{{ producto.fkcategoria_prod.pkid_cp }}"
-                        data-producto-descripcion="{{ producto.desc_prod|default:'' }}">
+                        onclick="cargarDatosProducto('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}', '{{ producto.precio_prod }}', '{{ producto.stock_prod }}', '{{ producto.estado_prod }}', '{{ producto.fkcategoria_prod.pkid_cp }}', `{{ producto.desc_prod|default:''|escapejs }}`)">
                     <i class="fas fa-edit"></i> Editar
                 </button>
 
+                <!-- Botón Ajustar Stock -->
                 <button class="btn btn-info btn-sm" 
                         data-bs-toggle="modal" 
                         data-bs-target="#modalAjustarStock"
-                        data-producto-id="{{ producto.pkid_prod }}"
-                        data-producto-nombre="{{ producto.nom_prod }}"
-                        data-producto-stock="{{ producto.stock_prod }}">
+                        onclick="cargarDatosStock('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}', '{{ producto.stock_prod }}')">
                     <i class="fas fa-boxes"></i> Stock
                 </button>
                 
+                <!-- Botón Variantes -->
                 <a href="{% url 'gestionar_variantes' producto.pkid_prod %}" class="btn btn-variantes btn-sm">
-                    <i class="fas fa-layer-group"></i> Variantes ({{ variantes|length }})
+                    <i class="fas fa-layer-group"></i> Variantes 
+                    <span class="contador-variantes-boton">{{ variantes|length }}</span>
                 </a>
                 
+                <!-- Botón Eliminar -->
                 <button class="btn btn-danger btn-sm" 
                         data-bs-toggle="modal" 
                         data-bs-target="#modalEliminarProducto"
-                        data-producto-id="{{ producto.pkid_prod }}"
-                        data-producto-nombre="{{ producto.nom_prod }}">
+                        onclick="cargarDatosEliminar('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}')">
                     <i class="fas fa-trash"></i>
                 </button>
+                
+                <i class="fas fa-chevron-down flecha-acordeon"></i>
             </div>
         </div>
 
         <!-- Sección de Variantes -->
-        {% if variantes %}
         <div class="variantes-section">
-            <h6><i class="fas fa-layer-group me-2"></i>Variantes de este producto:</h6>
-            <div class="variantes-list">
+            <div class="variantes-header">
+                <h6>
+                    <i class="fas fa-layer-group"></i>
+                    Variantes del Producto
+                    <span class="contador-variantes">{{ variantes|length }} variante{{ variantes|length|pluralize }}</span>
+                </h6>
+            </div>
+            
+            {% if variantes %}
+            <div class="variantes-grid">
                 {% for variante in variantes %}
                 <div class="variante-card">
                     <div class="variante-header">
                         <span class="variante-nombre">{{ variante.nombre }}</span>
                         <span class="variante-precio">${{ variante.precio_total }}</span>
                     </div>
-                    <div class="variante-details">
-                        <span>Precio adicional: ${{ variante.precio_adicional }}</span>
-                        <span class="variante-stock {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                            Stock: {{ variante.stock }}
-                        </span>
+                    <div class="variante-detalles">
+                        <div class="variante-info">
+                            <span>Precio adicional: ${{ variante.precio_adicional }}</span>
+                        </div>
+                        <div class="variante-info">
+                            <span class="variante-stock {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-box"></i> Stock: {{ variante.stock }}
+                            </span>
+                        </div>
                         {% if variante.sku %}
-                        <span class="text-muted">SKU: {{ variante.sku }}</span>
+                        <div class="variante-info">
+                            <span class="text-muted">SKU: {{ variante.sku }}</span>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
                 {% endfor %}
             </div>
+            {% else %}
+            <div class="text-center py-3">
+                <i class="fas fa-layer-group fa-2x text-muted mb-2"></i>
+                <p class="text-muted mb-0">Este producto no tiene variantes registradas.</p>
+                <a href="{% url 'gestionar_variantes' producto.pkid_prod %}" class="btn btn-variantes btn-sm mt-2">
+                    <i class="fas fa-plus"></i> Agregar primera variante
+                </a>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
     {% endwith %}
     {% empty %}
@@ -235,220 +212,6 @@
     {% endfor %}
 </div>
 
-<!-- Los modales existentes se mantienen igual -->
- <!-- Modal Editar Producto -->
-<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-labelledby="modalEditarProductoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEditarProducto" method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" id="producto_id_editar" name="producto_id">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="nom_prod_editar" class="form-label">Nombre del Producto *</label>
-                                <input type="text" class="form-control" id="nom_prod_editar" name="nom_prod" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="precio_prod_editar" class="form-label">Precio *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" id="precio_prod_editar" name="precio_prod" step="0.01" min="0" required>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="categoria_prod_editar" class="form-label">Categoría *</label>
-                                <select class="form-control" id="categoria_prod_editar" name="categoria_prod" required>
-                                    <option value="">Selecciona una categoría...</option>
-                                    {% for categoria in categorias %}
-                                    <option value="{{ categoria.pkid_cp }}">{{ categoria.desc_cp }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="stock_prod_editar" class="form-label">Stock</label>
-                                <input type="number" class="form-control" id="stock_prod_editar" name="stock_prod" min="0" value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="estado_prod_editar" class="form-label">Estado del Producto</label>
-                                <select class="form-control" id="estado_prod_editar" name="estado_prod">
-                                    <option value="disponible">Disponible</option>
-                                    <option value="no_disponible">No Disponible</option>
-                                    <option value="agotado">Agotado</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="img_prod_editar" class="form-label">Imagen del Producto</label>
-                                <input type="file" class="form-control" id="img_prod_editar" name="img_prod" accept="image/*">
-                                <div class="form-text" id="imagen_actual_texto">Imagen actual se mantendrá si no se selecciona nueva</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="desc_prod_editar" class="form-label">Descripción</label>
-                        <textarea class="form-control" id="desc_prod_editar" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Producto</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Ajustar Stock -->
-<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-labelledby="modalAjustarStockLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalAjustarStockLabel">Ajustar Stock</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formAjustarStock" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="producto_id_stock" name="producto_id">
-                <div class="modal-body">
-                    <p>Producto: <strong id="nombre_producto_stock"></strong></p>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="stock_actual" class="form-label">Stock Actual:</label>
-                                <input type="number" class="form-control" id="stock_actual" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="tipo_ajuste" class="form-label">Tipo de Ajuste:</label>
-                                <select class="form-control" id="tipo_ajuste" name="tipo_ajuste">
-                                    <option value="entrada">Entrada (+)</option>
-                                    <option value="salida">Salida (-)</option>
-                                    <option value="ajuste">Ajuste Manual</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="cantidad_ajuste" class="form-label">Cantidad:</label>
-                        <input type="number" class="form-control" id="cantidad_ajuste" name="cantidad_ajuste" min="0" required>
-                        <div class="form-text" id="texto_ayuda">
-                            Ingrese la cantidad a sumar o restar
-                        </div>
-                    </div>
-
-                    <div class="mb-3" id="campo_stock_final" style="display: none;">
-                        <label for="stock_final" class="form-label">Stock Final:</label>
-                        <input type="number" class="form-control" id="stock_final" readonly>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="motivo_ajuste" class="form-label">Motivo del Ajuste:</label>
-                        <select class="form-control" id="motivo_ajuste" name="motivo_ajuste">
-                            <option value="compra_proveedor">Compra a Proveedor</option>
-                            <option value="devolucion_cliente">Devolución de Cliente</option>
-                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
-                            <option value="danio_perdida">Daño o Pérdida</option>
-                            <option value="promocion">Preparación para Promoción</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar Stock</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Cambiar Estado -->
-<div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalCambiarEstadoLabel">Cambiar Estado del Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formCambiarEstado" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="producto_id_estado" name="producto_id">
-                <div class="modal-body">
-                    <p>Producto: <strong id="nombre_producto_estado"></strong></p>
-                    <div class="mb-3">
-                        <label for="nuevo_estado" class="form-label">Nuevo Estado:</label>
-                        <select class="form-control" id="nuevo_estado" name="nuevo_estado">
-                            <option value="disponible">Disponible</option>
-                            <option value="no_disponible">No Disponible</option>
-                            <option value="agotado">Agotado</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Estado Actual:</label>
-                        <div id="estado_actual" class="badge bg-secondary"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Cambiar Estado</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Eliminar Producto -->
-<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEliminarProductoLabel">Eliminar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEliminarProducto" method="post">
-                {% csrf_token %}
-                <input type="hidden" id="producto_id_eliminar" name="producto_id">
-                <div class="modal-body">
-                    <p>¿Estás seguro de que deseas eliminar el producto?</p>
-                    <p><strong id="nombre_producto_eliminar"></strong></p>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Esta acción no se puede deshacer.
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 <!-- Modal Agregar Producto -->
 <div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-labelledby="modalAgregarProductoLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -531,233 +294,186 @@
     </div>
 </div>
 
-<!-- Los otros modales (editar, ajustar stock, etc.) se mantienen igual -->
+<!-- Modal Editar Producto -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-labelledby="modalEditarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarProducto" method="post" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_editar" name="producto_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_prod_editar" class="form-label">Nombre del Producto *</label>
+                                <input type="text" class="form-control" id="nom_prod_editar" name="nom_prod" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="precio_prod_editar" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precio_prod_editar" name="precio_prod" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria_prod_editar" class="form-label">Categoría *</label>
+                                <select class="form-control" id="categoria_prod_editar" name="categoria_prod" required>
+                                    <option value="">Selecciona una categoría...</option>
+                                    {% for categoria in categorias %}
+                                    <option value="{{ categoria.id }}">{{ categoria.descripcion }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_prod_editar" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="stock_prod_editar" name="stock_prod" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estado_prod_editar" class="form-label">Estado del Producto</label>
+                                <select class="form-control" id="estado_prod_editar" name="estado_prod">
+                                    <option value="disponible">Disponible</option>
+                                    <option value="no_disponible">No Disponible</option>
+                                    <option value="agotado">Agotado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_prod_editar" class="form-label">Imagen del Producto</label>
+                                <input type="file" class="form-control" id="img_prod_editar" name="img_prod" accept="image/*">
+                                <div class="form-text">La imagen actual se mantendrá si no se selecciona una nueva</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_prod_editar" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="desc_prod_editar" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajustar Stock -->
+<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-labelledby="modalAjustarStockLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAjustarStockLabel">Ajustar Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAjustarStock" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_stock" name="producto_id">
+                <div class="modal-body">
+                    <p>Producto: <strong id="nombre_producto_stock"></strong></p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_actual" class="form-label">Stock Actual:</label>
+                                <input type="number" class="form-control" id="stock_actual" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipo_ajuste" class="form-label">Tipo de Ajuste:</label>
+                                <select class="form-control" id="tipo_ajuste" name="tipo_ajuste">
+                                    <option value="entrada">Entrada (+)</option>
+                                    <option value="salida">Salida (-)</option>
+                                    <option value="ajuste">Ajuste Manual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cantidad_ajuste" class="form-label">Cantidad:</label>
+                        <input type="number" class="form-control" id="cantidad_ajuste" name="cantidad_ajuste" min="0" required>
+                        <div class="form-text" id="texto_ayuda">
+                            Ingrese la cantidad a sumar o restar
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="campo_stock_final" style="display: none;">
+                        <label for="stock_final" class="form-label">Stock Final:</label>
+                        <input type="number" class="form-control" id="stock_final" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="motivo_ajuste" class="form-label">Motivo del Ajuste:</label>
+                        <select class="form-control" id="motivo_ajuste" name="motivo_ajuste">
+                            <option value="compra_proveedor">Compra a Proveedor</option>
+                            <option value="devolucion_cliente">Devolución de Cliente</option>
+                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
+                            <option value="danio_perdida">Daño o Pérdida</option>
+                            <option value="promocion">Preparación para Promoción</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Producto -->
+<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarProductoLabel">Eliminar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEliminarProducto" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_eliminar" name="producto_id">
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar el producto?</p>
+                    <p><strong id="nombre_producto_eliminar"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Esta acción no se puede deshacer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Configurar modal de editar producto
-    const modalEditar = document.getElementById('modalEditarProducto');
-    if (modalEditar) {
-        modalEditar.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            const productoId = button.getAttribute('data-producto-id');
-            const productoNombre = button.getAttribute('data-producto-nombre');
-            const productoPrecio = button.getAttribute('data-producto-precio');
-            const productoStock = button.getAttribute('data-producto-stock');
-            const productoEstado = button.getAttribute('data-producto-estado');
-            const productoCategoria = button.getAttribute('data-producto-categoria');
-            const productoDescripcion = button.getAttribute('data-producto-descripcion');
-            
-            // Llenar los campos del modal
-            document.getElementById('producto_id_editar').value = productoId;
-            document.getElementById('nom_prod_editar').value = productoNombre;
-            document.getElementById('precio_prod_editar').value = productoPrecio;
-            document.getElementById('stock_prod_editar').value = productoStock;
-            document.getElementById('estado_prod_editar').value = productoEstado;
-            document.getElementById('categoria_prod_editar').value = productoCategoria;
-            document.getElementById('desc_prod_editar').value = productoDescripcion;
-            
-            // Configurar la acción del formulario
-            const form = document.getElementById('formEditarProducto');
-            form.action = `/vendedor/productos/editar/${productoId}/`;
-        });
-    }
-
-    // Configurar modal de ajustar stock
-    const modalStock = document.getElementById('modalAjustarStock');
-    if (modalStock) {
-        modalStock.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            const productoId = button.getAttribute('data-producto-id');
-            const productoNombre = button.getAttribute('data-producto-nombre');
-            const productoStock = button.getAttribute('data-producto-stock');
-            
-            document.getElementById('producto_id_stock').value = productoId;
-            document.getElementById('nombre_producto_stock').textContent = productoNombre;
-            document.getElementById('stock_actual').value = productoStock;
-            
-            // Configurar la acción del formulario
-            const form = document.getElementById('formAjustarStock');
-            form.action = `/vendedor/productos/ajustar-stock/${productoId}/`;
-            
-            // Resetear campos
-            document.getElementById('cantidad_ajuste').value = '';
-            document.getElementById('stock_final').value = '';
-            document.getElementById('tipo_ajuste').value = 'entrada';
-            document.getElementById('motivo_ajuste').value = 'compra_proveedor';
-            document.getElementById('campo_stock_final').style.display = 'none';
-        });
-    }
-
-    // Configurar modal de cambiar estado
-    const modalEstado = document.getElementById('modalCambiarEstado');
-    if (modalEstado) {
-        modalEstado.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            const productoId = button.getAttribute('data-producto-id');
-            const productoNombre = button.getAttribute('data-producto-nombre');
-            const productoEstado = button.getAttribute('data-producto-estado');
-            
-            document.getElementById('producto_id_estado').value = productoId;
-            document.getElementById('nombre_producto_estado').textContent = productoNombre;
-            document.getElementById('nuevo_estado').value = productoEstado;
-            
-            // Mostrar estado actual
-            const estadoActual = document.getElementById('estado_actual');
-            estadoActual.textContent = productoEstado;
-            estadoActual.className = 'badge ';
-            if (productoEstado === 'disponible') {
-                estadoActual.classList.add('bg-success');
-            } else if (productoEstado === 'no_disponible') {
-                estadoActual.classList.add('bg-secondary');
-            } else {
-                estadoActual.classList.add('bg-danger');
-            }
-            
-            // Configurar la acción del formulario
-            const form = document.getElementById('formCambiarEstado');
-            form.action = `/vendedor/productos/cambiar-estado/${productoId}/`;
-        });
-    }
-
-    // Configurar modal de eliminar
-    const modalEliminar = document.getElementById('modalEliminarProducto');
-    if (modalEliminar) {
-        modalEliminar.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            const productoId = button.getAttribute('data-producto-id');
-            const productoNombre = button.getAttribute('data-producto-nombre');
-            
-            document.getElementById('producto_id_eliminar').value = productoId;
-            document.getElementById('nombre_producto_eliminar').textContent = productoNombre;
-            
-            // Configurar la acción del formulario
-            const form = document.getElementById('formEliminarProducto');
-            form.action = `/vendedor/productos/eliminar/${productoId}/`;
-        });
-    }
-
-    // Lógica para calcular stock final en ajuste de stock
-    const tipoAjuste = document.getElementById('tipo_ajuste');
-    const cantidadAjuste = document.getElementById('cantidad_ajuste');
-    const stockActual = document.getElementById('stock_actual');
-    const stockFinal = document.getElementById('stock_final');
-    const textoAyuda = document.getElementById('texto_ayuda');
-    const campoStockFinal = document.getElementById('campo_stock_final');
-
-    function calcularStockFinal() {
-        const stockActualVal = parseInt(stockActual.value) || 0;
-        const cantidadVal = parseInt(cantidadAjuste.value) || 0;
-        const tipo = tipoAjuste.value;
-
-        let stockFinalVal = stockActualVal;
-        
-        if (tipo === 'entrada') {
-            stockFinalVal = stockActualVal + cantidadVal;
-            textoAyuda.textContent = `Se sumarán ${cantidadVal} unidades al stock actual`;
-        } else if (tipo === 'salida') {
-            stockFinalVal = stockActualVal - cantidadVal;
-            textoAyuda.textContent = `Se restarán ${cantidadVal} unidades al stock actual`;
-            if (stockFinalVal < 0) {
-                textoAyuda.innerHTML = `<span class="text-danger">⚠️ El stock final no puede ser negativo</span>`;
-            }
-        } else {
-            stockFinalVal = cantidadVal;
-            textoAyuda.textContent = `El stock se establecerá en ${cantidadVal} unidades`;
-        }
-
-        if (stockFinal) {
-            stockFinal.value = stockFinalVal;
-        }
-        
-        // Mostrar/ocultar campo de stock final
-        if (cantidadVal > 0 && campoStockFinal) {
-            campoStockFinal.style.display = 'block';
-            if (stockFinal) {
-                stockFinal.className = `form-control ${stockFinalVal < 0 ? 'is-invalid' : (stockFinalVal <= 5 ? 'is-warning' : 'is-valid')}`;
-            }
-        } else if (campoStockFinal) {
-            campoStockFinal.style.display = 'none';
-        }
-    }
-
-    if (tipoAjuste && cantidadAjuste) {
-        tipoAjuste.addEventListener('change', calcularStockFinal);
-        cantidadAjuste.addEventListener('input', calcularStockFinal);
-    }
-
-    // Filtros y búsqueda
-    const selectFiltro = document.getElementById('selectFiltro');
-    const inputBusqueda = document.getElementById('inputBusqueda');
-    
-    function aplicarFiltros() {
-        const filtro = selectFiltro.value;
-        const texto = inputBusqueda.value.toLowerCase();
-        const filas = document.querySelectorAll('#cuerpoTablaProductos tr');
-        
-        filas.forEach(fila => {
-            if (fila.cells.length < 2) return;
-            
-            const textoFila = fila.textContent.toLowerCase();
-            const esOferta = fila.classList.contains('producto-oferta');
-            const stock = parseInt(fila.cells[3].querySelector('.fw-bold').textContent) || 0;
-            const estado = fila.cells[4].textContent.toLowerCase();
-            
-            let mostrar = true;
-            
-            // Aplicar filtro seleccionado
-            if (filtro === 'oferta' && !esOferta) {
-                mostrar = false;
-            } else if (filtro === 'disponible' && (stock === 0 || estado.includes('agotado'))) {
-                mostrar = false;
-            } else if (filtro === 'sin-stock' && stock > 0) {
-                mostrar = false;
-            }
-            
-            // Aplicar búsqueda de texto
-            if (mostrar && texto && !textoFila.includes(texto)) {
-                mostrar = false;
-            }
-            
-            fila.style.display = mostrar ? '' : 'none';
-        });
-    }
-
-    if (selectFiltro && inputBusqueda) {
-        selectFiltro.addEventListener('change', aplicarFiltros);
-        inputBusqueda.addEventListener('input', aplicarFiltros);
-    }
-
-    // Ordenamiento
-    let ordenAscendente = true;
-    const btnOrdenAsc = document.getElementById('btnOrdenAsc');
-    if (btnOrdenAsc) {
-        btnOrdenAsc.addEventListener('click', function() {
-            ordenAscendente = !ordenAscendente;
-            this.innerHTML = ordenAscendente ? '<i class="fas fa-sort-amount-up"></i>' : '<i class="fas fa-sort-amount-down"></i>';
-        });
-    }
-
-    // Funcionalidad de botones de acción
-    const btnImportarExcel = document.getElementById('btnImportarExcel');
-    if (btnImportarExcel) {
-        btnImportarExcel.addEventListener('click', function() {
-            alert('Funcionalidad de Importar Excel - Aquí se abriría un selector de archivos');
-        });
-    }
-
-    const btnExportar = document.getElementById('btnExportar');
-    if (btnExportar) {
-        btnExportar.addEventListener('click', function() {
-            alert('Funcionalidad de Exportar - Aquí se exportarían los datos a Excel o CSV');
-        });
-    }
-});
-</script>
+<script src="{% static 'javascript_V/Crud_V.js' %}"></script>
 {% endblock %}

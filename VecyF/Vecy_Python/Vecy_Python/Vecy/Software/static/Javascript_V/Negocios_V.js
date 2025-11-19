@@ -1,105 +1,120 @@
-// static/js_Vendedor/Negocios_V.js
-
+// static/javascript_V/Negocios_V.js - VERSIÓN MEJORADA
 document.addEventListener('DOMContentLoaded', function() {
-    // ==================== BÚSQUEDA EN TIEMPO REAL ====================
+    // Inicializar tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // ==================== BÚSQUEDA Y FILTROS ====================
     const inputBusqueda = document.getElementById('inputBusqueda');
-    if (inputBusqueda) {
-        inputBusqueda.addEventListener('input', function(e) {
-            const textoBusqueda = e.target.value.toLowerCase();
-            const tarjetas = document.querySelectorAll('.negocio-card');
-            
-            tarjetas.forEach(tarjeta => {
-                const textoNegocio = tarjeta.textContent.toLowerCase();
-                const contenedorPadre = tarjeta.closest('.col-xl-3, .col-lg-4, .col-md-6, .col-sm-6');
-                
-                if (textoNegocio.includes(textoBusqueda)) {
-                    contenedorPadre.style.display = '';
-                } else {
-                    contenedorPadre.style.display = 'none';
-                }
-            });
-        });
-    }
-
-    // ==================== MODAL DE EDITAR NEGOCIO ====================
-    const modalEditar = document.getElementById('modalEditarNegocio');
-    if (modalEditar) {
-        modalEditar.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const negocioId = button.getAttribute('data-negocio-id');
-            const negocioNombre = button.getAttribute('data-negocio-nombre');
-            const negocioRut = button.getAttribute('data-negocio-nit');
-            const negocioDireccion = button.getAttribute('data-negocio-direccion');
-            const negocioDescripcion = button.getAttribute('data-negocio-descripcion');
-            const negocioTipo = button.getAttribute('data-negocio-tipo');
-            const negocioImagen = button.getAttribute('data-negocio-imagen');
+    const selectFiltro = document.getElementById('selectFiltro');
     
-            // Actualizar el formulario
-            document.getElementById('editar_nom_neg').value = negocioNombre;
-            document.getElementById('editar_nit_neg').value = negocioRut;
-            document.getElementById('editar_direcc_neg').value = negocioDireccion;
-            document.getElementById('editar_desc_neg').value = negocioDescripcion || '';
-            document.getElementById('editar_fktiponeg_neg').value = negocioTipo;
-
-            // Actualizar action del formulario
-            const form = document.getElementById('formEditarNegocio');
-            form.action = `/vendedor/configurar-negocio/${negocioId}/`;
-
-            // Manejar la imagen
-            const imagenActual = document.getElementById('editar_imagen_actual');
-            const noImagen = document.getElementById('editar_no_image');
-
-            if (negocioImagen && negocioImagen !== 'None') {
-                imagenActual.src = negocioImagen;
-                imagenActual.style.display = 'block';
-                noImagen.style.display = 'none';
-            } else {
-                imagenActual.style.display = 'none';
-                noImagen.style.display = 'flex';
+    function aplicarFiltros() {
+        const filtro = selectFiltro ? selectFiltro.value : 'todos';
+        const texto = inputBusqueda ? inputBusqueda.value.toLowerCase() : '';
+        const negociosCards = document.querySelectorAll('.negocio-card-item');
+        const negocioActivo = document.querySelector('.negocio-activo-card');
+        
+        let negociosVisibles = 0;
+        
+        negociosCards.forEach(card => {
+            const negocioNombre = card.querySelector('.negocio-card-title').textContent.toLowerCase();
+            const negocioDescripcion = card.querySelector('.negocio-card-descripcion').textContent.toLowerCase();
+            const estado = card.getAttribute('data-estado');
+            
+            const textoCompleto = negocioNombre + ' ' + negocioDescripcion;
+            
+            let mostrar = true;
+            
+            // Aplicar filtro seleccionado
+            if (filtro !== 'todos' && estado !== filtro) {
+                mostrar = false;
+            }
+            
+            // Aplicar búsqueda de texto
+            if (mostrar && texto && !textoCompleto.includes(texto)) {
+                mostrar = false;
+            }
+            
+            card.style.display = mostrar ? 'block' : 'none';
+            
+            if (mostrar) {
+                negociosVisibles++;
+                card.style.animation = 'fadeInUp 0.5s ease';
             }
         });
+        
+        // Mostrar mensaje si no hay resultados
+        const mensajeNoResultados = document.getElementById('mensajeNoResultados');
+        const tieneActivo = negocioActivo && negocioActivo.style.display !== 'none';
+        
+        if (negociosVisibles === 0 && !tieneActivo) {
+            if (!mensajeNoResultados) {
+                const mensaje = document.createElement('div');
+                mensaje.id = 'mensajeNoResultados';
+                mensaje.className = 'text-center py-5 w-100';
+                mensaje.innerHTML = `
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No se encontraron negocios</h4>
+                    <p class="text-muted">Intenta con otros términos de búsqueda o filtros.</p>
+                `;
+                document.querySelector('.contenedor-negocios-grid').appendChild(mensaje);
+            }
+        } else if (mensajeNoResultados) {
+            mensajeNoResultados.remove();
+        }
     }
 
-    // ==================== VALIDACIÓN SIMPLE DE RUT ====================
+    // Inicializar filtros
+    if (selectFiltro) {
+        selectFiltro.addEventListener('change', aplicarFiltros);
+    }
     
-    // Cambiar: de 8-14 a 8-11 caracteres para coincidir con la BD
-    function validarRUT(rut) {
-        return rut.length >= 8 && rut.length <= 11;
+    if (inputBusqueda) {
+        inputBusqueda.addEventListener('input', aplicarFiltros);
+        
+        // Limpiar búsqueda con icono
+        const iconoBusqueda = document.querySelector('.icono-busqueda');
+        if (iconoBusqueda) {
+            iconoBusqueda.addEventListener('click', function() {
+                inputBusqueda.value = '';
+                aplicarFiltros();
+                inputBusqueda.focus();
+            });
+        }
     }
 
-    // Validación formulario agregar
+    // ==================== VALIDACIÓN DE FORMULARIOS ====================
+    function validarNIT(nit) {
+        return nit.length >= 8 && nit.length <= 11 && /^\d+$/.test(nit);
+    }
+
     const formAgregar = document.getElementById('formAgregarNegocio');
     if (formAgregar) {
         formAgregar.addEventListener('submit', function(e) {
-            const rut = document.getElementById('nit_neg').value.trim();
+            const nit = document.getElementById('nit_neg').value.trim();
             
-            if (!validarRUT(rut)) {
+            if (!validarNIT(nit)) {
                 e.preventDefault();
-                alert('El RUT debe tener entre 8 y 11 caracteres');
+                mostrarAlerta('El NIT debe tener entre 8 y 11 caracteres numéricos', 'error');
                 document.getElementById('nit_neg').focus();
                 return false;
             }
-            return true;
-        });
-    }
-
-    // Validación formulario editar
-    const formEditar = document.getElementById('formEditarNegocio');
-    if (formEditar) {
-        formEditar.addEventListener('submit', function(e) {
-            const rut = document.getElementById('editar_nit_neg').value.trim();
             
-            if (!validarRUT(rut)) {
+            const descripcion = document.getElementById('desc_neg').value;
+            if (descripcion.length > 500) {
                 e.preventDefault();
-                alert('El RUT debe tener entre 8 y 11 caracteres');
-                document.getElementById('editar_nit_neg').focus();
+                mostrarAlerta('La descripción no puede exceder los 500 caracteres', 'error');
+                document.getElementById('desc_neg').focus();
                 return false;
             }
+            
             return true;
         });
     }
 
-    // ==================== CONFIGURACIÓN DE OTROS MODALES ====================
+    // ==================== CONFIGURACIÓN DE MODALES ====================
     
     // Modal para activar/desactivar
     const modalEstado = document.getElementById('modalEstadoNegocio');
@@ -110,35 +125,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const negocioNombre = button.getAttribute('data-negocio-nombre');
             const negocioEstado = button.getAttribute('data-negocio-estado');
             
-            const modalTitle = modalEstado.querySelector('.modal-title');
             const modalBodyInput = modalEstado.querySelector('#estado_negocio_id');
             const modalBodyText = modalEstado.querySelector('#textoEstadoNegocio');
+            const modalInfo = modalEstado.querySelector('#infoEstadoNegocio');
             
             modalBodyInput.value = negocioId;
             
             if (negocioEstado === 'activo') {
-                modalTitle.textContent = 'Desactivar Negocio';
-                modalBodyText.textContent = `¿Estás seguro que deseas desactivar el negocio "${negocioNombre}"? Los clientes no podrán verlo mientras esté desactivado.`;
+                modalBodyText.textContent = `¿Estás seguro que deseas desactivar el negocio "${negocioNombre}"?`;
+                modalInfo.textContent = 'Los clientes no podrán ver tu negocio ni tus productos mientras esté desactivado.';
             } else {
-                modalTitle.textContent = 'Activar Negocio';
-                modalBodyText.textContent = `¿Estás seguro que deseas activar el negocio "${negocioNombre}"? Los clientes podrán verlo nuevamente.`;
+                modalBodyText.textContent = `¿Estás seguro que deseas activar el negocio "${negocioNombre}"?`;
+                modalInfo.textContent = 'Los clientes podrán ver tu negocio y productos nuevamente.';
             }
-        });
-    }
-
-    // Modal para cerrar negocio
-    const modalCerrar = document.getElementById('modalCerrarNegocio');
-    if (modalCerrar) {
-        modalCerrar.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const negocioId = button.getAttribute('data-negocio-id');
-            const negocioNombre = button.getAttribute('data-negocio-nombre');
-            
-            const modalBodyInput = modalCerrar.querySelector('#cerrar_negocio_id');
-            const modalBodyText = modalCerrar.querySelector('#textoCerrarNegocio');
-            
-            modalBodyInput.value = negocioId;
-            modalBodyText.textContent = `¿Estás seguro que deseas cerrar permanentemente el negocio "${negocioNombre}"? Esta acción no se puede deshacer y todos los productos asociados serán removidos.`;
         });
     }
 
@@ -156,13 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const checkbox = modalEliminar.querySelector('#confirmarEliminacion');
             
             modalBodyInput.value = negocioId;
-            modalBodyText.textContent = `¿Estás absolutamente seguro que deseas eliminar permanentemente el negocio "${negocioNombre}"? Esta acción eliminará todos los productos, reseñas y datos asociados.`;
+            modalBodyText.textContent = `¿Estás absolutamente seguro que deseas eliminar permanentemente el negocio "${negocioNombre}"?`;
             
             // Resetear checkbox y botón
             checkbox.checked = false;
             btnEliminar.disabled = true;
             
-            // Habilitar botón solo cuando el checkbox esté marcado
             checkbox.addEventListener('change', function() {
                 btnEliminar.disabled = !this.checked;
             });
@@ -171,31 +169,76 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ==================== MEJORAS DE USABILIDAD ====================
     
-    // Efecto hover mejorado en tarjetas
-    const tarjetasNegocio = document.querySelectorAll('.negocio-card');
-    tarjetasNegocio.forEach(tarjeta => {
-        tarjeta.addEventListener('mouseenter', function() {
-            this.style.transform = 'translateY(-4px)';
-            this.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+    // Efectos hover mejorados
+    const cards = document.querySelectorAll('.negocio-card-item, .estadistica-card, .boton-accion');
+    cards.forEach(elemento => {
+        elemento.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
         });
         
-        tarjeta.addEventListener('mouseleave', function() {
+        elemento.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '';
         });
     });
 
-    // Cambiar: Limitar RUT a 11 caracteres en tiempo real
-    const inputsRUT = document.querySelectorAll('input[name="nit_neg"], input[name="editar_nit_neg"]');
-    inputsRUT.forEach(input => {
+    // Limitar NIT a 11 caracteres numéricos
+    const inputsNIT = document.querySelectorAll('input[name="nit_neg"], input[name="editar_nit_neg"]');
+    inputsNIT.forEach(input => {
         input.addEventListener('input', function(e) {
+            this.value = this.value.replace(/\D/g, '');
             if (this.value.length > 11) {
                 this.value = this.value.substring(0, 11);
             }
         });
     });
 
-   
+    // Contador de caracteres para descripción
+    const textareasDescripcion = document.querySelectorAll('#desc_neg, #editar_desc_neg');
+    textareasDescripcion.forEach(textarea => {
+        const contador = document.createElement('div');
+        contador.className = 'form-text text-end';
+        contador.innerHTML = '<span class="contador">0</span>/500 caracteres';
+        textarea.parentNode.appendChild(contador);
+        
+        textarea.addEventListener('input', function() {
+            const contadorSpan = contador.querySelector('.contador');
+            contadorSpan.textContent = this.value.length;
+            
+            if (this.value.length > 500) {
+                contador.classList.add('text-danger');
+            } else {
+                contador.classList.remove('text-danger');
+            }
+        });
+        
+        // Inicializar contador
+        const evento = new Event('input');
+        textarea.dispatchEvent(evento);
+    });
 
-    console.log('Negocios_V.js cargado correctamente');
+    // ==================== FUNCIONES AUXILIARES ====================
+    function mostrarAlerta(mensaje, tipo = 'info') {
+        const alerta = document.createElement('div');
+        alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
+        alerta.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${tipo === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                <div>${mensaje}</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        const tarjetaBienvenida = document.querySelector('.tarjeta-bienvenida');
+        tarjetaBienvenida.parentNode.insertBefore(alerta, tarjetaBienvenida.nextSibling);
+        
+        setTimeout(() => {
+            if (alerta.parentNode) {
+                alerta.remove();
+            }
+        }, 5000);
+    }
+
+    // ==================== INICIALIZACIÓN ====================
+    console.log('Negocios_V.js cargado correctamente - Versión Cards');
+    aplicarFiltros();
 });
