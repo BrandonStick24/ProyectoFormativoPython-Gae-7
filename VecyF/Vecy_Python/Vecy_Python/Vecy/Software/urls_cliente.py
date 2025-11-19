@@ -32,4 +32,9 @@ urlpatterns = [
     path('actualizar-cantidad-carrito/', views.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
     path('eliminar-item-carrito/', views.eliminar_item_carrito, name='eliminar_item_carrito'),
     path('procesar-pedido/', views.procesar_pedido, name='procesar_pedido'),
+    
+    path('productos-filtrados/', views.productos_filtrados_logeado, name='productos_filtrados_logeado'),
+    path('mis-pedidos-data/', views.mis_pedidos_data, name='mis_pedidos_data'),
+    path('cancelar-pedido/', views.cancelar_pedido, name='cancelar_pedido'),
+    
 ]

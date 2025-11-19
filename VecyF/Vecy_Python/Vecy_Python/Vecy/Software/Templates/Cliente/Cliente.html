@@ -6,8 +6,6 @@
 {% block extra_css %}
 <!-- AOS ANIMATION -->
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
-    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous" />
 <!-- FONT AWESOME -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/cliente.css' %}">
@@ -507,6 +505,204 @@
             justify-content: center;
         }
     }
+    /* ==================== ESTILOS PARA PEDIDOS ==================== */
+.vecy-pedidos-offcanvas {
+    width: 400px;
+    max-width: 90vw;
+}
+
+.pedido-card {
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.pedido-card:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.pedido-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.pedido-info {
+    flex: 1;
+}
+
+.pedido-numero {
+    font-weight: bold;
+    color: #2c3e50;
+    font-size: 1rem;
+}
+
+.pedido-fecha {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.pedido-estado {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+.estado-pendiente { background: #fff3cd; color: #856404; }
+.estado-confirmado { background: #d1ecf1; color: #0c5460; }
+.estado-preparando { background: #d1ecf1; color: #0c5460; }
+.estado-enviado { background: #d1edf1; color: #0c5460; }
+.estado-entregado { background: #d4edda; color: #155724; }
+.estado-cancelado { background: #f8d7da; color: #721c24; }
+
+.pedido-negocio {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.pedido-productos {
+    margin-bottom: 1rem;
+}
+
+.producto-pedido {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.producto-pedido:last-child {
+    border-bottom: none;
+}
+
+.producto-pedido-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    object-fit: cover;
+    margin-right: 0.75rem;
+}
+
+.producto-pedido-info {
+    flex: 1;
+}
+
+.producto-pedido-nombre {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.125rem;
+}
+
+.producto-pedido-precio {
+    font-size: 0.75rem;
+    color: #28a745;
+    font-weight: bold;
+}
+
+.producto-pedido-cantidad {
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.pedido-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.75rem;
+    border-top: 2px solid #f1f5f9;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.pedido-acciones {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn-cancelar-pedido {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.btn-cancelar-pedido:hover:not(:disabled) {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.btn-cancelar-pedido:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-ver-detalle {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.btn-ver-detalle:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.tiempo-restante {
+    font-size: 0.75rem;
+    color: #dc3545;
+    font-weight: bold;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.pedido-cancelado {
+    opacity: 0.7;
+    background: #f8f9fa;
+}
+
+.empty-pedidos {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #6c757d;
+}
+
+.empty-pedidos i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #dee2e6;
+}
+
+@media (max-width: 768px) {
+    .vecy-pedidos-offcanvas {
+        width: 100%;
+    }
+    
+    .pedido-acciones {
+        flex-direction: column;
+    }
+}
 </style>
 {% endblock %}
 
@@ -551,8 +747,7 @@
                                 <div class="vecy-price-display">
                                     <span class="vecy-final-price">${{ oferta.precio_final|floatformat:0 }}</span>
                                     <span class="vecy-original-price">${{ oferta.precio_base|floatformat:0 }}</span>
-                                    <span class="vecy-discount-badge">-{{ oferta.porcentaje_descuento|floatformat:0
-                                        }}%</span>
+                                    <span class="vecy-discount-badge">-{{ oferta.porcentaje_descuento|floatformat:0}}%</span>
                                 </div>
                                 <div class="vecy-savings">
                                     <i class="fas fa-piggy-bank me-1"></i>
@@ -657,7 +852,7 @@
                         <p class="vecy-section-subtitle">Descuentos exclusivos y promociones limitadas</p>
                     </div>
                 </div>
-                <a href="#" class="vecy-view-all">
+                <a href="{% url 'productos_filtrados_logeado' %}?filtro=ofertas" class="vecy-view-all">
                     Ver todas <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -748,7 +943,7 @@
                     <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
                 </div>
             </div>
-            <a href="#" class="vecy-view-all">
+            <a href="{% url 'productos_filtrados_logeado' %}?filtro=economicos" class="vecy-view-all">
                 Ver todos <i class="fas fa-arrow-right"></i>
             </a>
         </div>
@@ -843,33 +1038,38 @@
                     </div>
                 </div>
 
-                <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA MEJORADA -->
-                <div class="variantes-reales-data" style="display: none;">
-                    <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
-                    <div data-variant 
-                         data-variant-id="base"
-                         data-variant-name="{{ producto.nom_prod }} - Estándar"
-                         data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}"
-                         data-variant-price="{{ producto_data.precio_final|floatformat:0 }}"
-                         data-variant-stock="{{ producto_data.stock }}"
-                         data-variant-precio-adicional="0"
-                         data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
-                         data-is-base="true">
-                    </div>
-                    
-                    <!-- VARIANTES ADICIONALES -->
-                    {% for variante in producto_data.variantes %}
-                    <div data-variant 
-                         data-variant-id="{{ variante.id_variante }}"
-                         data-variant-name="{{ variante.nombre_variante }}"
-                         data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}{% endif %}"
-                         data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
-                         data-variant-stock="{{ variante.stock_variante }}"
-                         data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
-                         data-variant-precio-final="{% widthratio producto_data.precio_base|add:variante.precio_adicional 1 1 %}"
-                         data-is-base="false">
-                    </div>
-                    {% endfor %}
+                <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
+<div class="variantes-reales-data" style="display: none;">
+    <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+    <div data-variant 
+         data-variant-id="base"
+         data-variant-name="{{ producto.nom_prod }} - Estándar"
+         data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}"
+         data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+         data-variant-stock="{{ producto_data.stock }}"
+         data-variant-precio-adicional="0"
+         data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
+         data-is-base="true">
+    </div>
+    
+    <!-- VARIANTES ADICIONALES -->
+    {% for variante in producto_data.variantes %}
+    {% with precio_base_variante=producto_data.precio_base|add:variante.precio_adicional %}
+    {% with precio_final_variante=producto_data.precio_final|add:variante.precio_adicional %}
+    <div data-variant 
+         data-variant-id="{{ variante.id_variante }}"
+         data-variant-name="{{ variante.nombre_variante }}"
+         data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}{% endif %}"
+         data-variant-price="{{ precio_base_variante|floatformat:0 }}"
+         data-variant-stock="{{ variante.stock_variante }}"
+         data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
+         data-variant-precio-final="{{ precio_final_variante|floatformat:0 }}"
+         data-is-base="false">
+    </div>
+    {% endwith %}
+    {% endwith %}
+    {% endfor %}
+</div>
                 </div>
             </div>
 
@@ -964,7 +1164,7 @@
                         <p class="vecy-section-subtitle">Los productos más populares y mejor valorados</p>
                     </div>
                 </div>
-                <a href="#" class="vecy-view-all">
+                <a href="{% url 'productos_filtrados_logeado' %}?filtro=destacados" class="vecy-view-all">
                     Ver todos <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -1089,7 +1289,7 @@
                         <p class="vecy-section-subtitle">Los mejores negocios con reseñas de 4-5 estrellas</p>
                     </div>
                 </div>
-                <a href="#" class="vecy-view-all">
+                <a href="{% url 'productos_filtrados_logeado' %}?filtro=mas-vendidos" class="vecy-view-all">
                     Ver todos <i class="fas fa-arrow-right"></i>
                 </a>
             </div>
@@ -1119,8 +1319,7 @@
 
                     <div class="vecy-business-content">
                         <h3 class="vecy-business-name">{{ negocio.nom_neg }}</h3>
-                        <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con
-                            la calidad y el servicio"|truncatewords:15 }}</p>
+                        <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con la calidad y el servicio"|truncatewords:15 }}</p>
 
                         <div class="vecy-business-info">
                             <div class="vecy-info-item">
@@ -1168,6 +1367,89 @@
             {% endif %}
         </div>
     </section>
+    <!-- OTROS NEGOCIOS ACTIVOS -->
+{% if otros_negocios %}
+<section id="vecy-other-businesses" class="vecy-section vecy-gradient-bg-5">
+    <div class="container">
+        <div class="vecy-section-header">
+            <div class="vecy-header-content">
+                <div class="vecy-icon-header">
+                    <i class="fas fa-store-alt"></i>
+                </div>
+                <div>
+                    <h2 class="vecy-section-title">Más Negocios</h2>
+                    <p class="vecy-section-subtitle">Descubre otros negocios activos en tu zona</p>
+                </div>
+            </div>
+            <a href="#" class="vecy-view-all">
+                Ver todos <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <div class="vecy-businesses-grid">
+            {% for negocio_data in otros_negocios %}
+            {% with negocio=negocio_data.negocio %}
+            <div class="vecy-business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="vecy-business-header">
+                    <div class="vecy-business-image">
+                        {% if negocio.img_neg %}
+                        <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="vecy-business-img">
+                        {% else %}
+                        <div class="vecy-business-placeholder">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="vecy-rating-badge">
+                            <i class="fas fa-star"></i>
+                            {{ negocio_data.promedio_calificacion|floatformat:1 }}
+                            <small>({{ negocio_data.total_resenas }})</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vecy-business-content">
+                    <h3 class="vecy-business-name">{{ negocio.nom_neg }}</h3>
+                    <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con la calidad y el servicio"|truncatewords:15 }}</p>
+
+                    <div class="vecy-business-info">
+                        <div class="vecy-info-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ negocio.direcc_neg|truncatewords:3 }}</span>
+                        </div>
+                        <div class="vecy-info-item">
+                            <i class="fas fa-tag"></i>
+                            <span>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                        </div>
+                    </div>
+
+                    <div class="vecy-business-stats">
+                        <div class="vecy-stat">
+                            <strong>{{ negocio_data.total_productos }}</strong>
+                            <span>Productos</span>
+                        </div>
+                        <div class="vecy-stat">
+                            <strong>{{ negocio_data.productos_en_oferta }}</strong>
+                            <span>Ofertas</span>
+                        </div>
+                        <div class="vecy-stat">
+                            <strong>{{ negocio_data.total_resenas }}</strong>
+                            <span>Reseñas</span>
+                        </div>
+                    </div>
+
+                    <a href="{% url 'detalle_negocio' id=negocio.pkid_neg %}" class="vecy-visit-btn">
+                        <i class="fas fa-external-link-alt me-2"></i>
+                        Visitar Tienda
+                    </a>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
 </div>
 
 <!-- FLOATING ACTION BUTTONS -->
@@ -1179,6 +1461,13 @@
         {% endif %}
     </div>
     <div class="vecy-fab-menu">
+        <!-- NUEVO BOTÓN DE PEDIDOS -->
+        <button class="vecy-fab-item" onclick="togglePedidos()" title="Mis Pedidos">
+            <i class="fas fa-clipboard-list"></i>
+            {% if pedidos_pendientes_count > 0 %}
+            <span class="vecy-fab-badge">{{ pedidos_pendientes_count }}</span>
+            {% endif %}
+        </button>
         <button class="vecy-fab-item" onclick="toggleFavorites()" title="Favoritos">
             <i class="fas fa-heart"></i>
             {% if favoritos_count > 0 %}
@@ -1258,6 +1547,30 @@
                 <span class="visually-hidden">Cargando...</span>
             </div>
             <p class="mt-2 text-muted">Cargando carrito...</p>
+        </div>
+    </div>
+</div>
+
+<!-- OFFCANVAS PEDIDOS -->
+<div class="offcanvas offcanvas-end vecy-pedidos-offcanvas" tabindex="-1" id="vecyPedidosOffcanvas"
+    aria-labelledby="vecyPedidosOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="vecyPedidosOffcanvasLabel">
+            <i class="fas fa-clipboard-list me-2"></i>
+            Mis Pedidos
+            {% if pedidos_pendientes_count > 0 %}
+            <span class="badge bg-primary ms-2">{{ pedidos_pendientes_count }}</span>
+            {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div id="pedidosContent">
+            <div class="text-center py-3">
+                <div class="spinner-border text-primary" role="status" id="pedidosLoading">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1583,8 +1896,6 @@
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
     // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
@@ -2760,5 +3071,221 @@
 
     // Y ejecutar cuando la ventana se cargue
     window.addEventListener('load', initVecy);
+
+    // ==================== SISTEMA DE PEDIDOS ====================
+
+// Función para abrir el panel de pedidos
+function togglePedidos() {
+    console.log("📋 Abriendo panel de pedidos...");
+    const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
+    pedidosOffcanvas.show();
+    loadPedidosContent();
+}
+
+// Función para cargar los pedidos del usuario
+function loadPedidosContent() {
+    const pedidosContent = document.getElementById('pedidosContent');
+    const pedidosLoading = document.getElementById('pedidosLoading');
+
+    if (!pedidosContent) return;
+
+    console.log("📦 Cargando pedidos del usuario...");
+
+    // Mostrar loading
+    pedidosContent.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando pedidos...</span>
+            </div>
+            <p class="mt-2 text-muted">Cargando tus pedidos...</p>
+        </div>
+    `;
+
+    fetch('/cliente/mis-pedidos-data/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            renderPedidos(data.pedidos);
+        } else {
+            showPedidosEmptyState();
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error cargando pedidos:', error);
+        showPedidosEmptyState('Error al cargar los pedidos');
+    });
+}
+
+// Función para renderizar los pedidos
+function renderPedidos(pedidos) {
+    const pedidosContent = document.getElementById('pedidosContent');
+    
+    if (!pedidos || pedidos.length === 0) {
+        showPedidosEmptyState();
+        return;
+    }
+
+    let html = '';
+
+    pedidos.forEach(pedido => {
+        const puedeCancelar = pedido.puede_cancelar;
+        const tiempoRestante = pedido.tiempo_restante;
+        const esCancelado = pedido.estado_pedido === 'cancelado';
+
+        html += `
+        <div class="pedido-card ${esCancelado ? 'pedido-cancelado' : ''}">
+            <div class="pedido-header">
+                <div class="pedido-info">
+                    <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
+                    <div class="pedido-fecha">${pedido.fecha_pedido}</div>
+                </div>
+                <span class="pedido-estado estado-${pedido.estado_pedido}">
+                    ${pedido.estado_display}
+                </span>
+            </div>
+
+            <div class="pedido-negocio">
+                <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
+            </div>
+
+            <div class="pedido-productos">
+                ${pedido.productos.map(producto => `
+                    <div class="producto-pedido">
+                        <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
+                             alt="${producto.nombre}" class="producto-pedido-img">
+                        <div class="producto-pedido-info">
+                            <div class="producto-pedido-nombre">${producto.nombre}</div>
+                            <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
+                        </div>
+                        <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="pedido-total">
+                <span>Total:</span>
+                <span>$${pedido.total_pedido}</span>
+            </div>
+
+            ${!esCancelado ? `
+                <div class="pedido-acciones">
+                    <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
+                        <i class="fas fa-eye me-1"></i>Ver Detalle
+                    </button>
+                    ${puedeCancelar ? `
+                        <button class="btn-cancelar-pedido" 
+                                onclick="cancelarPedido(${pedido.pkid_pedido})"
+                                data-pedido-id="${pedido.pkid_pedido}">
+                            <i class="fas fa-times me-1"></i>Cancelar Pedido
+                        </button>
+                    ` : `
+                        <button class="btn-cancelar-pedido" disabled>
+                            <i class="fas fa-clock me-1"></i>No Cancelable
+                        </button>
+                    `}
+                </div>
+                ${puedeCancelar && tiempoRestante ? `
+                    <div class="tiempo-restante">
+                        <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
+                    </div>
+                ` : ''}
+            ` : ''}
+        </div>
+        `;
+    });
+
+    pedidosContent.innerHTML = html;
+}
+
+// Función para mostrar estado vacío de pedidos
+function showPedidosEmptyState(mensaje = null) {
+    const pedidosContent = document.getElementById('pedidosContent');
+    
+    const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
+    
+    pedidosContent.innerHTML = `
+        <div class="empty-pedidos">
+            <i class="fas fa-clipboard-list"></i>
+            <h5>No hay pedidos</h5>
+            <p>${mensajeFinal}</p>
+            <button class="btn btn-primary mt-3" onclick="toggleCart()">
+                <i class="fas fa-shopping-bag me-2"></i>
+                Realizar mi primer pedido
+            </button>
+        </div>
+    `;
+}
+
+// Función para cancelar un pedido
+function cancelarPedido(pedidoId) {
+    console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
+    
+    Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Esta acción cancelará tu pedido. ¿Deseas continuar?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, cancelar pedido',
+        cancelButtonText: 'No, mantener pedido'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostrar loading en el botón
+            const btn = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
+            btn.disabled = true;
+
+            fetch('/cliente/cancelar-pedido/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    pedido_id: pedidoId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    vecyShowNotification('Pedido cancelado exitosamente', 'success');
+                    loadPedidosContent(); // Recargar la lista
+                } else {
+                    vecyShowNotification(data.message || 'Error al cancelar el pedido', 'error');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error cancelando pedido:', error);
+                vecyShowNotification('Error de conexión al cancelar el pedido', 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+    });
+}
+
+// Función para ver detalle del pedido
+function verDetallePedido(pedidoId) {
+    console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
+    // Aquí puedes implementar la lógica para mostrar un modal con los detalles completos
+    vecyShowNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
+    
+    // Ejemplo básico - puedes expandir esto
+    Swal.fire({
+        title: `Detalles del Pedido #${pedidoId}`,
+        text: 'Aquí irían los detalles completos del pedido...',
+        icon: 'info',
+        confirmButtonText: 'Cerrar'
+    });
+}
 </script>
 {% endblock %}

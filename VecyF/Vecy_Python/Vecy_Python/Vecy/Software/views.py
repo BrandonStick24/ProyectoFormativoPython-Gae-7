@@ -691,7 +691,7 @@ def detalle_negocio_logeado(request, id):
     
 @login_required
 def cliente_dashboard(request):
-    """Dashboard principal del cliente logueado - VERSIÓN COMPLETAMENTE CORREGIDA"""
+    """Dashboard principal del cliente logueado - VERSIÓN COMPLETAMENTE CORREGIDA CON PEDIDOS"""
     try:
         # Obtener el perfil del cliente
         auth_user = AuthUser.objects.get(username=request.user.username)
@@ -708,7 +708,7 @@ def cliente_dashboard(request):
         # ========== CARRUSEL DE OFERTAS RECIENTES ==========
         ofertas_carrusel_data = []
         try:
-            fecha_limite = hoy - timezone.timedelta(days=2)
+            fecha_limite = hoy - timezone.timedelta(days=5)
             
             with connection.cursor() as cursor:
                 cursor.execute("""
@@ -1095,7 +1095,7 @@ def cliente_dashboard(request):
                 promedio_calificacion=Avg('resenasnegocios__estrellas')
             ).filter(
                 promedio_calificacion__gte=4.0
-            ).order_by('-promedio_calificacion')[:8]
+            ).order_by('-promedio_calificacion')[:6]  # Máximo 6 negocios destacados
             
             print(f"🔄 Negocios destacados encontrados: {negocios_con_resenas.count()}")
             
@@ -1148,6 +1148,72 @@ def cliente_dashboard(request):
 
         print(f"📦 Negocios destacados finales: {len(negocios_destacados_data)}")
 
+        # ========== OTROS NEGOCIOS ACTIVOS ==========
+        otros_negocios_data = []
+        try:
+            # Obtener IDs de negocios destacados para excluirlos
+            negocios_destacados_ids = [neg['negocio'].pkid_neg for neg in negocios_destacados_data]
+            
+            # Obtener negocios activos que NO están en los destacados
+            otros_negocios = Negocios.objects.filter(
+                estado_neg='activo'
+            ).exclude(
+                pkid_neg__in=negocios_destacados_ids
+            ).annotate(
+                promedio_calificacion=Avg('resenasnegocios__estrellas')
+            ).order_by('-promedio_calificacion')[:6]  # Máximo 6 otros negocios
+            
+            print(f"🔄 Otros negocios encontrados: {otros_negocios.count()}")
+            
+            for negocio in otros_negocios:
+                try:
+                    # Contar reseñas únicas
+                    total_resenas = ResenasNegocios.objects.filter(
+                        fknegocio_resena=negocio
+                    ).count()
+                    
+                    # Contar productos disponibles con stock
+                    total_productos_disponibles = Productos.objects.filter(
+                        fknegocioasociado_prod=negocio,
+                        estado_prod='disponible',
+                        stock_prod__gt=0
+                    ).count()
+                    
+                    # Calcular productos en oferta usando SQL
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT COUNT(DISTINCT pr.pkid_prod)
+                            FROM productos pr
+                            INNER JOIN promociones p ON pr.pkid_prod = p.fkproducto_id
+                            WHERE pr.fknegocioasociado_prod = %s
+                            AND pr.estado_prod = 'disponible'
+                            AND pr.stock_prod > 0
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s
+                            AND p.fecha_fin >= %s
+                        """, [negocio.pkid_neg, hoy, hoy])
+                        
+                        productos_en_oferta = cursor.fetchone()[0] or 0
+                    
+                    negocio_data = {
+                        'negocio': negocio,
+                        'promedio_calificacion': float(negocio.promedio_calificacion) if negocio.promedio_calificacion else 0,
+                        'total_resenas': total_resenas,
+                        'total_productos': total_productos_disponibles,
+                        'productos_en_oferta': productos_en_oferta,
+                    }
+                    
+                    otros_negocios_data.append(negocio_data)
+                    print(f"✅ Otro negocio agregado: {negocio.nom_neg} - Reseñas: {total_resenas}, Productos: {total_productos_disponibles}")
+                    
+                except Exception as e:
+                    print(f"❌ Error procesando otro negocio: {e}")
+                    continue
+        except Exception as e:
+            print(f"❌ Error obteniendo otros negocios: {e}")
+
+        print(f"📦 Otros negocios finales: {len(otros_negocios_data)}")
+
         # ========== CARRITO Y FAVORITOS ==========
         carrito_count = 0
         favoritos_count = 0
@@ -1163,14 +1229,27 @@ def cliente_dashboard(request):
         except Exception as e:
             print(f"❌ Error obteniendo carrito/favoritos: {e}")
 
+        # ========== PEDIDOS PENDIENTES ==========
+        pedidos_pendientes_count = 0
+        try:
+            pedidos_pendientes_count = Pedidos.objects.filter(
+                fkusuario_pedido=perfil_cliente,
+                estado_pedido__in=['pendiente', 'confirmado', 'preparando']
+            ).count()
+            print(f"📋 Pedidos pendientes encontrados: {pedidos_pendientes_count}")
+        except Exception as e:
+            print(f"❌ Error contando pedidos pendientes: {e}")
+
         print("=== RESUMEN FINAL ===")
         print(f"🎯 Ofertas carrusel: {len(ofertas_carrusel_data)}")
         print(f"💰 Productos baratos (hasta $50,000): {len(productos_baratos_data)}")
         print(f"⭐ Productos destacados: {len(productos_destacados_data)}")
         print(f"🔥 Productos oferta: {len(productos_oferta_data)}")
         print(f"🏆 Negocios destacados: {len(negocios_destacados_data)}")
+        print(f"🏪 Otros negocios: {len(otros_negocios_data)}")
         print(f"🛒 Carrito: {carrito_count}")
         print(f"❤️ Favoritos: {favoritos_count}")
+        print(f"📋 Pedidos pendientes: {pedidos_pendientes_count}")
         
         # DEBUG DETALLADO: Verificar productos con variantes
         productos_con_variantes = [p for p in productos_baratos_data if p['tiene_variantes']]
@@ -1186,6 +1265,7 @@ def cliente_dashboard(request):
             'perfil': perfil_cliente,
             'carrito_count': carrito_count,
             'favoritos_count': favoritos_count,
+            'pedidos_pendientes_count': pedidos_pendientes_count,  # NUEVO: Contador de pedidos
             
             # Secciones principales
             'ofertas_carrusel': ofertas_carrusel_data,
@@ -1193,10 +1273,12 @@ def cliente_dashboard(request):
             'productos_destacados': productos_destacados_data,
             'productos_oferta': productos_oferta_data,
             'negocios_destacados': negocios_destacados_data,
+            'otros_negocios': otros_negocios_data,
             
             # Flags
             'hay_ofertas_activas': len(ofertas_carrusel_data) > 0,
             'hay_productos_baratos': len(productos_baratos_data) > 0,
+            'hay_otros_negocios': len(otros_negocios_data) > 0,
         }
         
         return render(request, 'Cliente/Cliente.html', context)
@@ -1209,14 +1291,18 @@ def cliente_dashboard(request):
         return render(request, 'Cliente/Cliente.html', {
             'carrito_count': 0,
             'favoritos_count': 0,
+            'pedidos_pendientes_count': 0,  # NUEVO EN ERROR
             'ofertas_carrusel': [],
             'productos_baratos': [],
             'productos_destacados': [],
             'productos_oferta': [],
             'negocios_destacados': [],
+            'otros_negocios': [],
             'hay_ofertas_activas': False,
             'hay_productos_baratos': False,
-        })     
+            'hay_otros_negocios': False,
+        })
+
 @login_required
 @require_POST
 @csrf_exempt
@@ -1277,7 +1363,7 @@ def agregar_al_carrito(request):
                 variante_nombre = variante.nombre_variante
                 
                 # ✅ IMPORTANTE: LAS VARIANTES NO TIENEN DESCUENTO
-                aplicar_descuento = False
+                aplicar_descuento = True
                 print("🚫 DESCUENTO DESACTIVADO para variante")
                 
             except ValueError:
@@ -1804,7 +1890,421 @@ def guardar_resena(request):
             return redirect('detalle_negocio_logeado', id=negocio_id)
         else:
             return redirect('detalle_negocio', id=negocio_id)
-   
+
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db import models
+
+@login_required
+def productos_filtrados_logeado(request):
+    # Obtener parámetros de filtro de la URL
+    filtro_tipo = request.GET.get('filtro', '')
+    categoria_id = request.GET.get('categoria', '')
+    precio_min = request.GET.get('precio_min', '')
+    precio_max = request.GET.get('precio_max', '')
+    ordenar = request.GET.get('ordenar', '')
+    buscar = request.GET.get('buscar', '')
+    
+    # DEBUG: Verificar estados reales
+    print("\n🔍 VERIFICANDO ESTADOS REALES:")
+    estados_reales = Productos.objects.values_list('estado_prod', flat=True).distinct()
+    print(f"Estados encontrados en BD: {list(estados_reales)}")
+    
+    # Query base
+    productos = Productos.objects.filter(estado_prod='disponible')
+    
+    print(f"🔍 Filtro aplicado: {filtro_tipo}")
+    print(f"🔍 Total productos inicial (disponible): {productos.count()}")
+    
+    # Aplicar filtros según el parámetro
+    if filtro_tipo == 'ofertas':
+        # SOLUCIÓN: Consulta directa SQL para evitar problemas con JSONField
+        from django.db import connection
+        from datetime import date
+        
+        hoy = date.today()
+        print(f"📅 Fecha actual: {hoy}")
+        
+        # Consulta directa SQL para evitar problemas de serialización JSON
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT fkproducto_id 
+                FROM promociones 
+                WHERE estado_promo = 'activa' 
+                AND fecha_inicio <= %s 
+                AND fecha_fin >= %s
+            """, [hoy, hoy])
+            
+            resultados = cursor.fetchall()
+            productos_con_ofertas_ids = [row[0] for row in resultados if row[0] is not None]
+        
+        print(f"🎯 IDs de productos con ofertas (SQL directo): {productos_con_ofertas_ids}")
+        
+        # Filtrar productos
+        if productos_con_ofertas_ids:
+            productos = productos.filter(pkid_prod__in=productos_con_ofertas_ids)
+            print(f"🎯 Productos después de filtrar ofertas: {productos.count()}")
+            
+            # Debug: mostrar los productos encontrados
+            for prod in productos:
+                print(f"   📦 Producto en oferta: {prod.nom_prod} (ID: {prod.pkid_prod})")
+        else:
+            print("❌ No se encontraron productos con ofertas activas")
+            productos = productos.none()
+        
+        titulo_filtro = "Ofertas Especiales"
+    
+    elif filtro_tipo == 'destacados':
+        # Filtrar productos destacados (con stock disponible)
+        productos = productos.filter(stock_prod__gt=0)
+        titulo_filtro = "Productos Destacados"
+    
+    elif filtro_tipo == 'economicos':
+        # Filtrar productos económicos (precio más bajo)
+        productos = productos.order_by('precio_prod')
+        titulo_filtro = "Productos Baratos"
+    
+    elif filtro_tipo == 'nuevos':
+        # Filtrar productos nuevos (recientemente agregados)
+        productos = productos.order_by('-fecha_creacion')
+        titulo_filtro = "Nuevos Productos"
+    
+    elif filtro_tipo == 'mas-vendidos':
+        # Filtrar productos con stock disponible
+        productos = productos.filter(stock_prod__gt=0)
+        titulo_filtro = "Productos Disponibles"
+    
+    else:
+        titulo_filtro = "Todos los Productos"
+
+    # Aplicar búsqueda por texto
+    if buscar:
+        productos = productos.filter(
+            models.Q(nom_prod__icontains=buscar) |
+            models.Q(desc_prod__icontains=buscar)
+        )
+
+    # Aplicar filtro por categoría si se especifica
+    if categoria_id:
+        productos = productos.filter(fkcategoria_prod_id=categoria_id)
+    
+    # Aplicar filtro por rango de precios
+    if precio_min:
+        productos = productos.filter(precio_prod__gte=precio_min)
+    if precio_max:
+        productos = productos.filter(precio_prod__lte=precio_max)
+    
+    # Aplicar ordenamiento
+    if ordenar == 'precio_asc':
+        productos = productos.order_by('precio_prod')
+    elif ordenar == 'precio_desc':
+        productos = productos.order_by('-precio_prod')
+    elif ordenar == 'nombre':
+        productos = productos.order_by('nom_prod')
+    elif ordenar == 'nuevos':
+        productos = productos.order_by('-fecha_creacion')
+    elif ordenar == 'stock':
+        productos = productos.order_by('-stock_prod')
+    else:
+        # Orden por defecto
+        productos = productos.order_by('-fecha_creacion')
+    
+    print(f"🔍 Total productos después de filtros: {productos.count()}")
+    
+    # Obtener categorías para el filtro
+    categorias = CategoriaProductos.objects.annotate(
+        num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
+    )
+    
+    # Obtener negocios para el filtro
+    negocios = Negocios.objects.annotate(
+        num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
+    ).filter(estado_neg='activo')
+    
+    # Preparar datos para el template
+    productos_data = []
+    for producto in productos:
+        print(f"\n📦 Procesando producto: {producto.nom_prod} (ID: {producto.pkid_prod})")
+        
+        producto_data = {
+            'producto': producto,
+            'precio_base': float(producto.precio_prod),
+            'precio_final': float(producto.precio_prod),
+            'tiene_descuento': False,
+            'descuento_porcentaje': 0,
+            'ahorro': 0,
+            'stock': producto.stock_prod or 0,
+            'tiene_variantes': False,
+            'variantes': []
+        }
+        
+        # Verificar si tiene variantes
+        variantes = VariantesProducto.objects.filter(
+            producto=producto, 
+            estado_variante='activa'
+        )
+        
+        if variantes.exists():
+            producto_data['tiene_variantes'] = True
+            
+            # Preparar datos detallados de variantes
+            variantes_detalladas = []
+            for variante in variantes:
+                variante_data = {
+                    'id_variante': variante.id_variante,
+                    'nombre_variante': variante.nombre_variante,
+                    'precio_adicional': float(variante.precio_adicional),
+                    'stock_variante': variante.stock_variante,
+                    'imagen_variante': variante.imagen_variante,
+                    'sku_variante': variante.sku_variante
+                }
+                variantes_detalladas.append(variante_data)
+            
+            producto_data['variantes'] = variantes_detalladas
+        
+        # SOLUCIÓN: Consulta directa para promociones también
+        from django.db import connection
+        from datetime import date
+        
+        hoy = date.today()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT porcentaje_descuento, titulo_promo 
+                FROM promociones 
+                WHERE fkproducto_id = %s 
+                AND estado_promo = 'activa' 
+                AND fecha_inicio <= %s 
+                AND fecha_fin >= %s
+                LIMIT 1
+            """, [producto.pkid_prod, hoy, hoy])
+            
+            resultado = cursor.fetchone()
+        
+        if resultado:
+            porcentaje_descuento, titulo_promo = resultado
+            print(f"   🎯 Promoción encontrada: {titulo_promo}")
+            print(f"   💰 Porcentaje descuento: {porcentaje_descuento}")
+            
+            try:
+                # Convertir el descuento
+                descuento = float(porcentaje_descuento)
+                
+                producto_data['precio_final'] = float(producto.precio_prod) * (1 - descuento / 100)
+                producto_data['tiene_descuento'] = True
+                producto_data['descuento_porcentaje'] = descuento
+                producto_data['ahorro'] = float(producto.precio_prod) - producto_data['precio_final']
+                print(f"   🎯 Producto tiene descuento: {descuento}%")
+                print(f"   💰 Precio original: ${producto.precio_prod}")
+                print(f"   💰 Precio con descuento: ${producto_data['precio_final']:.2f}")
+            except (ValueError, TypeError) as e:
+                print(f"   ❌ Error procesando descuento: {e}")
+        
+        productos_data.append(producto_data)
+    
+    print(f"\n📊 RESUMEN FINAL:")
+    print(f"   Total productos procesados: {len(productos_data)}")
+    
+    # Paginación
+    paginator = Paginator(productos_data, 12)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # ==================== OBTENER CARRITO COUNT ====================
+    carrito_count = 0
+    try:
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
+        
+        # Intentar obtener el carrito existente
+        try:
+            carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+            carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
+            print(f"🛒 Carrito encontrado: {carrito_count} items")
+        except Carrito.DoesNotExist:
+            # Si no existe carrito, crear uno vacío
+            carrito = Carrito.objects.create(fkusuario_carrito=perfil_cliente)
+            carrito_count = 0
+            print(f"🛒 Carrito creado nuevo: {carrito_count} items")
+            
+    except Exception as e:
+        print(f"❌ Error obteniendo carrito: {e}")
+        carrito_count = 0
+    
+    print(f"🛒 Carrito count final para template: {carrito_count}")
+    
+    context = {
+        'productos_data': page_obj,
+        'categorias': categorias,
+        'negocios': negocios,
+        'total_productos': paginator.count,
+        'filtros_aplicados': {
+            'buscar': buscar,
+            'categoria': categoria_id,
+            'negocio': request.GET.get('negocio', ''),
+            'precio_min': precio_min,
+            'precio_max': precio_max,
+            'ordenar_por': ordenar,
+        },
+        'filtro_actual': filtro_tipo,
+        'categoria_actual': categoria_id,
+        'precio_min_actual': precio_min,
+        'precio_max_actual': precio_max,
+        'ordenar_actual': ordenar,
+        'titulo_filtro': titulo_filtro,
+        'carrito_count': carrito_count,  # ✅ AÑADIDO
+    }
+    
+    return render(request, 'Cliente/productos_filtros_logeado.html', context)
+
+from django.utils import timezone
+from datetime import timedelta
+from django.http import JsonResponse
+import json
+
+@login_required
+def mis_pedidos_data(request):
+    """Obtener los datos de los pedidos del usuario para el panel lateral"""
+    try:
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
+        
+        # Obtener pedidos del usuario ordenados por fecha más reciente
+        pedidos = Pedidos.objects.filter(
+            fkusuario_pedido=perfil_cliente
+        ).order_by('-fecha_pedido')[:10]  # Últimos 10 pedidos
+        
+        pedidos_data = []
+        
+        for pedido in pedidos:
+            # Obtener detalles del pedido
+            detalles = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
+            
+            productos_data = []
+            for detalle in detalles:
+                productos_data.append({
+                    'nombre': detalle.fkproducto_detalle.nom_prod,
+                    'cantidad': detalle.cantidad_detalle,
+                    'precio_unitario': float(detalle.precio_unitario),
+                    'imagen': detalle.fkproducto_detalle.img_prod.url if detalle.fkproducto_detalle.img_prod else None
+                })
+            
+            # Calcular si se puede cancelar (menos de 1 hora)
+            tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
+            puede_cancelar = (tiempo_transcurrido < timedelta(hours=1) and 
+                            pedido.estado_pedido in ['pendiente', 'confirmado'])
+            
+            # Calcular tiempo restante para cancelar
+            tiempo_restante = None
+            if puede_cancelar:
+                tiempo_restante_segundos = timedelta(hours=1).total_seconds() - tiempo_transcurrido.total_seconds()
+                horas = int(tiempo_restante_segundos // 3600)
+                minutos = int((tiempo_restante_segundos % 3600) // 60)
+                tiempo_restante = f"{minutos} min"
+                if horas > 0:
+                    tiempo_restante = f"{horas}h {minutos}min"
+            
+            # Mapear estados a texto legible
+            estados_display = {
+                'pendiente': 'Pendiente',
+                'confirmado': 'Confirmado', 
+                'preparando': 'Preparando',
+                'enviado': 'Enviado',
+                'entregado': 'Entregado',
+                'cancelado': 'Cancelado'
+            }
+            
+            pedido_data = {
+                'pkid_pedido': pedido.pkid_pedido,
+                'numero_pedido': f"{pedido.pkid_pedido:06d}",
+                'estado_pedido': pedido.estado_pedido,
+                'estado_display': estados_display.get(pedido.estado_pedido, pedido.estado_pedido),
+                'total_pedido': float(pedido.total_pedido),
+                'fecha_pedido': pedido.fecha_pedido.strftime('%d/%m/%Y %H:%M'),
+                'negocio_nombre': pedido.fknegocio_pedido.nom_neg,
+                'productos': productos_data,
+                'puede_cancelar': puede_cancelar,
+                'tiempo_restante': tiempo_restante,
+                'metodo_pago': pedido.metodo_pago_texto or pedido.metodo_pago
+            }
+            
+            pedidos_data.append(pedido_data)
+        
+        return JsonResponse({
+            'success': True,
+            'pedidos': pedidos_data
+        })
+        
+    except Exception as e:
+        print(f"❌ Error en mis_pedidos_data: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Error al cargar los pedidos'
+        })
+
+@login_required
+def cancelar_pedido(request):
+    """Cancelar un pedido si no ha pasado 1 hora"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            pedido_id = data.get('pedido_id')
+            
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
+            
+            # Obtener el pedido
+            pedido = Pedidos.objects.get(
+                pkid_pedido=pedido_id,
+                fkusuario_pedido=perfil_cliente
+            )
+            
+            # Verificar que no haya pasado 1 hora
+            tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
+            if tiempo_transcurrido > timedelta(hours=1):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se puede cancelar el pedido. Ha pasado más de 1 hora desde que se realizó.'
+                })
+            
+            # Verificar que el pedido esté en estado cancelable
+            if pedido.estado_pedido not in ['pendiente', 'confirmado']:
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
+                })
+            
+            # Actualizar estado del pedido
+            pedido.estado_pedido = 'cancelado'
+            pedido.fecha_actualizacion = timezone.now()
+            pedido.save()
+            
+            # Aquí podrías agregar lógica adicional como:
+            # - Reintegrar stock a los productos
+            # - Notificar al negocio
+            # - Registrar en logs, etc.
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Pedido cancelado exitosamente'
+            })
+            
+        except Pedidos.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Pedido no encontrado'
+            })
+        except Exception as e:
+            print(f"❌ Error cancelando pedido: {e}")
+            return JsonResponse({
+                'success': False,
+                'message': 'Error al cancelar el pedido'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+    
 # ==================== CERRAR SESION ====================
 @login_required(login_url='login')
 def cerrar_sesion(request):
