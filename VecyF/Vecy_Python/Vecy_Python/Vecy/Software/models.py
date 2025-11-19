@@ -93,7 +93,8 @@ class CarritoItem(models.Model):
     fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
-
+    variante_seleccionada = models.CharField(max_length=100, blank=True, null=True)
+    variante_id = models.IntegerField(blank=True, null=True)
     class Meta:
         db_table = 'carrito_item'
 
@@ -191,11 +192,15 @@ class Pedidos(models.Model):
     total_pedido = models.DecimalField(max_digits=10, decimal_places=2)
     fecha_pedido = models.DateTimeField()
     fecha_actualizacion = models.DateTimeField()
+    
+    # NUEVOS CAMPOS PARA MÉTODOS DE PAGO
+    metodo_pago = models.CharField(max_length=50, blank=True, null=True)
+    metodo_pago_texto = models.CharField(max_length=100, blank=True, null=True)
+    banco = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'pedidos'
-
 
 class Productos(models.Model):
     pkid_prod = models.AutoField(primary_key=True)
@@ -363,3 +368,39 @@ class PagosNegocios(models.Model):
 
     class Meta:
         db_table = 'pagos_negocios'
+
+class VariantesProducto(models.Model):
+    id_variante = models.AutoField(primary_key=True)
+    producto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='producto_id')
+    nombre_variante = models.CharField(max_length=100)
+    precio_adicional = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    stock_variante = models.IntegerField(default=0)
+    estado_variante = models.CharField(max_length=8, default='activa')
+    sku_variante = models.CharField(max_length=50, blank=True, null=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    imagen_variante = models.ImageField(upload_to='variantes/',max_length=255, blank=True, null=True)
+
+    class Meta:
+        managed = True
+        db_table = 'variantes_producto'
+
+class Favoritos(models.Model):
+    pkid_favorito = models.AutoField(primary_key=True)
+    fkusuario = models.ForeignKey('UsuarioPerfil', models.DO_NOTHING, db_column='fkusuario_id')
+    fkproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_id')
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'favoritos'
+        unique_together = (('fkusuario', 'fkproducto'),)
+
+class MetodoPago(models.Model):
+    pkid_metodo_pago = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=50)
+    descripcion = models.TextField(blank=True, null=True)
+    activo = models.BooleanField(default=True)
+    comision = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    icono = models.CharField(max_length=50, default='fas fa-wallet')
+
+    class Meta:
+        db_table = 'metodo_pago'

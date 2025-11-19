@@ -1,0 +1,520 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}VECY - Todos los Productos{% endblock %}
+
+{% block extra_css %}
+<!-- AOS ANIMATION -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/prods.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="vecy-products-page">
+    <!-- HEADER -->
+    <section class="products-header">
+        <div class="container">
+            <h1 data-aos="fade-up">🎯 Todos los Productos</h1>
+            <p data-aos="fade-up" data-aos-delay="100">
+                Descubre nuestra amplia selección de productos locales con los mejores precios y calidad
+            </p>
+        </div>
+    </section>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div class="products-layout">
+        <!-- FILTROS -->
+        <aside class="filters-sidebar" data-aos="fade-right">
+            <div class="filters-header">
+                <h3 class="filters-title">Filtros</h3>
+                <a href="{% url 'todos_productos' %}" class="clear-filters">
+                    <i class="fas fa-times"></i> Limpiar
+                </a>
+            </div>
+
+            <form method="get" id="filters-form">
+                <!-- BÚSQUEDA -->
+                <div class="filter-group">
+                    <div class="filter-title">
+                        <i class="fas fa-search"></i>
+                        <span>Buscar</span>
+                    </div>
+                    <input type="text" 
+                           name="buscar" 
+                           class="price-input" 
+                           placeholder="Nombre, descripción..."
+                           value="{% if filtros_aplicados.buscar and filtros_aplicados.buscar != 'None' %}{{ filtros_aplicados.buscar }}{% endif %}">
+                </div>
+
+                <!-- CATEGORÍAS -->
+                <div class="filter-group">
+                    <div class="filter-title">
+                        <i class="fas fa-tags"></i>
+                        <span>Categorías</span>
+                    </div>
+                    <div class="filter-options">
+                        {% for categoria in categorias %}
+                        <label class="filter-checkbox">
+                            <input type="radio" 
+                                   name="categoria" 
+                                   value="{{ categoria.pkid_cp }}"
+                                   {% if filtros_aplicados.categoria == categoria.pkid_cp|stringformat:"i" %}checked{% endif %}>
+                            <span>{{ categoria.desc_cp }} ({{ categoria.num_productos }})</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- NEGOCIOS -->
+                <div class="filter-group">
+                    <div class="filter-title">
+                        <i class="fas fa-store"></i>
+                        <span>Negocios</span>
+                    </div>
+                    <div class="filter-options">
+                        {% for negocio in negocios %}
+                        <label class="filter-checkbox">
+                            <input type="radio" 
+                                   name="negocio" 
+                                   value="{{ negocio.pkid_neg }}"
+                                   {% if filtros_aplicados.negocio == negocio.pkid_neg|stringformat:"i" %}checked{% endif %}>
+                            <span>{{ negocio.nom_neg }} ({{ negocio.num_productos }})</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PRECIO -->
+                <div class="filter-group">
+                    <div class="filter-title">
+                        <i class="fas fa-dollar-sign"></i>
+                        <span>Precio</span>
+                    </div>
+                    <div class="price-range">
+                        <input type="number" 
+                               name="precio_min" 
+                               class="price-input" 
+                               placeholder="Mín"
+                               value="{{ filtros_aplicados.precio_min }}">
+                        <input type="number" 
+                               name="precio_max" 
+                               class="price-input" 
+                               placeholder="Máx"
+                               value="{{ filtros_aplicados.precio_max }}">
+                    </div>
+                </div>
+
+                <button type="submit" class="apply-filters">
+                    <i class="fas fa-filter"></i> Aplicar Filtros
+                </button>
+            </form>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="products-main">
+            <!-- BARRA DE HERRAMIENTAS -->
+            <div class="products-toolbar" data-aos="fade-left">
+                <div class="results-count">
+                    {{ total_productos }} producto{{ total_productos|pluralize }} encontrado{{ total_productos|pluralize }}
+                </div>
+                <div class="sort-options">
+                    <span class="sort-label">Ordenar por:</span>
+                    <select name="ordenar_por" class="sort-select" onchange="this.form.submit()" form="filters-form">
+                        <option value="recientes" {% if filtros_aplicados.ordenar_por == 'recientes' %}selected{% endif %}>Más recientes</option>
+                        <option value="precio_asc" {% if filtros_aplicados.ordenar_por == 'precio_asc' %}selected{% endif %}>Precio: menor a mayor</option>
+                        <option value="precio_desc" {% if filtros_aplicados.ordenar_por == 'precio_desc' %}selected{% endif %}>Precio: mayor a menor</option>
+                        <option value="nombre" {% if filtros_aplicados.ordenar_por == 'nombre' %}selected{% endif %}>Nombre A-Z</option>
+                        <option value="stock" {% if filtros_aplicados.ordenar_por == 'stock' %}selected{% endif %}>Más stock</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- GRILLA DE PRODUCTOS -->
+            {% if productos_data %}
+            <div class="vecy-products-grid">
+                {% for producto_data in productos_data %}
+                {% with producto=producto_data.producto %}
+                
+                <!-- COMPONENTE CON VARIANTES -->
+                {% if producto_data.tiene_variantes %}
+                <div class="product-card-with-variants" data-aos="fade-up">
+                    <div class="selection-indicator">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    
+                    <div class="product-image-container">
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/images/placeholder-producto.png{% endif %}" 
+                             alt="{{ producto.nom_prod }}" 
+                             class="product-main-image" 
+                             id="mainProductImage-{{ producto.pkid_prod }}">
+                    </div>
+                    
+                    <div class="product-info-container">
+                        <div>
+                            <h3 class="vecy-product-title" data-product-id="{{ producto.pkid_prod }}">{{ producto.nom_prod }}</h3>
+                            
+                            <div class="vecy-product-store">
+                                <i class="fas fa-store"></i>
+                                {{ producto.fknegocioasociado_prod.nom_neg }}
+                            </div>
+                            
+                            <div class="product-description">
+                                <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
+                                    {{ producto.desc_prod|default:"Producto de alta calidad con múltiples variantes disponibles." }}
+                                </p>
+                            </div>
+                            
+                            <div class="product-details">
+                                <div class="product-detail-item">
+                                    <i class="fas fa-box"></i>
+                                    <span>Stock: {{ producto.stock_prod }}</span>
+                                </div>
+                                <div class="product-detail-item">
+                                    <i class="fas fa-store"></i>
+                                    <span>{{ producto.fkcategoria_prod.desc_cp }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="variants-container">
+                                <div class="variants-label">Selecciona una variante:</div>
+                                <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
+                                    <!-- Las miniaturas se generarán con JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="product-price-section mt-3">
+                            <div class="vecy-product-price">
+                                <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">${{ producto.precio_prod|floatformat:0 }}</span>
+                            </div>
+                            
+                            <button class="vecy-add-to-cart-btn mt-3" onclick="showLoginAlert()">
+                                <i class="fas fa-cart-plus"></i>
+                                Agregar al Carrito
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PRODUCTO SIN VARIANTES -->
+                {% else %}
+                <div class="vecy-product-card" data-aos="fade-up">
+                    <div class="vecy-product-image">
+                        {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" loading="lazy"
+                             onerror="this.src='/static/images/placeholder-producto.png'">
+                        {% else %}
+                        <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-primary bg-opacity-10">
+                            <i class="fas fa-tag fa-2x text-primary opacity-50"></i>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="vecy-product-badges">
+                            {% if producto.stock_prod > 0 %}
+                            <span class="vecy-product-badge vecy-badge-featured">
+                                En stock
+                            </span>
+                            {% else %}
+                            <span class="vecy-product-badge vecy-badge-promo">
+                                Sin stock
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="vecy-product-info">
+                        <h3 class="vecy-product-title">{{ producto.nom_prod }}</h3>
+                        
+                        <div class="vecy-product-store">
+                            <i class="fas fa-store"></i>
+                            {{ producto.fknegocioasociado_prod.nom_neg }}
+                        </div>
+                        
+                        <div class="product-description-small">
+                            <p>{{ producto.desc_prod|default:"Producto de calidad con excelente relación precio-calidad."|truncatewords:15 }}</p>
+                        </div>
+                        
+                        <div class="product-stock-info">
+                            <small class="text-muted">Stock: {{ producto.stock_prod }}</small>
+                        </div>
+                        
+                        <div class="vecy-product-price">
+                            <span class="vecy-current-price">${{ producto.precio_prod|floatformat:0 }}</span>
+                        </div>
+                        
+                        <button class="vecy-add-to-cart-btn" onclick="showLoginAlert()" {% if producto.stock_prod == 0 %}disabled{% endif %}>
+                            <i class="fas fa-cart-plus"></i>
+                            {% if producto.stock_prod > 0 %}Agregar al Carrito{% else %}Sin Stock{% endif %}
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+
+            <!-- PAGINACIÓN -->
+            {% if productos_data.paginator.num_pages > 1 %}
+            <div class="pagination" data-aos="fade-up">
+                {% if productos_data.has_previous %}
+                <a href="?page={{ productos_data.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="page-link">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+
+                {% for num in productos_data.paginator.page_range %}
+                    {% if productos_data.number == num %}
+                    <span class="page-link active">{{ num }}</span>
+                    {% elif num > productos_data.number|add:'-3' and num < productos_data.number|add:'3' %}
+                    <a href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                       class="page-link">{{ num }}</a>
+                    {% endif %}
+                {% endfor %}
+
+                {% if productos_data.has_next %}
+                <a href="?page={{ productos_data.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" 
+                   class="page-link">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <!-- ESTADO VACÍO -->
+            <div class="empty-products" data-aos="fade-up">
+                <div class="empty-products-icon">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h3 class="empty-products-title">No se encontraron productos</h3>
+                <p class="empty-products-text">
+                    No hay productos que coincidan con tus criterios de búsqueda. 
+                    Intenta ajustar los filtros o buscar otros términos.
+                </p>
+                <a href="{% url 'todos_productos' %}" class="vecy-btn-show-more">
+                    <i class="fas fa-refresh"></i> Ver todos los productos
+                </a>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- AOS JS -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Inicializar AOS
+    AOS.init({
+        duration: 600,
+        once: true,
+        offset: 80
+    });
+
+    // Datos para las variantes de productos
+    const productVariantsData = {
+        {% for producto_data in productos_data %}
+            {% if producto_data.tiene_variantes %}
+            "{{ producto_data.producto.pkid_prod }}": [
+                {
+                    id: 1,
+                    name: "{{ producto_data.producto.nom_prod }}",
+                    image: "{% if producto_data.producto.img_prod %}{{ producto_data.producto.img_prod.url }}{% else %}/static/images/placeholder-producto.png{% endif %}",
+                    selected: true,
+                    price: "{{ producto_data.producto.precio_prod }}",
+                    stock: "{{ producto_data.producto.stock_prod }}"
+                },
+                {% for variante in producto_data.variantes %}
+                {
+                    id: {{ forloop.counter|add:1 }},
+                    name: "{{ variante.nombre_variante }}",
+                    image: "{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto_data.producto.img_prod %}{{ producto_data.producto.img_prod.url }}{% else %}/static/images/placeholder-producto.png{% endif %}{% endif %}",
+                    selected: false,
+                    price: "{{ producto_data.producto.precio_prod|add:variante.precio_adicional }}",
+                    stock: "{{ variante.stock_variante }}"
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            {% endif %}
+        {% endfor %}
+    };
+
+    // Función para crear miniaturas de variantes
+    function createVariantThumbnails(productId, variants) {
+        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        if (!variantsGrid) {
+            console.log(`❌ No se encontró variantsGrid-${productId}`);
+            return;
+        }
+        
+        variantsGrid.innerHTML = '';
+        
+        variants.forEach(variant => {
+            const thumbElement = document.createElement('div');
+            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
+            thumbElement.setAttribute('data-variant-id', variant.id);
+            thumbElement.setAttribute('title', variant.name);
+            
+            thumbElement.innerHTML = `
+                <img src="${variant.image}" alt="${variant.name}" loading="lazy"
+                     onerror="this.src='/static/images/placeholder-producto.png'">
+                <div class="variant-name">${variant.name}</div>
+            `;
+            
+            thumbElement.addEventListener('click', () => selectVariant(productId, variant.id, variants));
+            variantsGrid.appendChild(thumbElement);
+        });
+        
+        console.log(`✅ Miniaturas creadas para producto ${productId}`);
+    }
+
+    // Función MEJORADA para seleccionar variante - CON CAMBIO DE TÍTULO
+    function selectVariant(productId, variantId, variants) {
+        console.log(`=== SELECCIONANDO VARIANTE ===`);
+        console.log(`Product ID: ${productId}, Variant ID: ${variantId}`);
+        
+        const selectedVariant = variants.find(v => v.id === variantId);
+        
+        if (selectedVariant) {
+            console.log('✅ Variante seleccionada:', selectedVariant);
+
+            // Buscar el título usando el data attribute
+            const titleElement = document.querySelector(`[data-product-id="${productId}"]`);
+            if (titleElement) {
+                console.log('✅ Encontrado título por data attribute:', titleElement);
+                titleElement.textContent = selectedVariant.name;
+            } else {
+                // Estrategia alternativa: buscar por proximidad
+                const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+                if (variantsGrid) {
+                    const productCard = variantsGrid.closest('.product-card-with-variants');
+                    if (productCard) {
+                        const title = productCard.querySelector('.vecy-product-title');
+                        if (title) {
+                            console.log('✅ Encontrado título por proximidad:', title);
+                            title.textContent = selectedVariant.name;
+                        }
+                    }
+                }
+            }
+
+            // Actualizar la imagen principal
+            const mainImage = document.getElementById(`mainProductImage-${productId}`);
+            if (mainImage) {
+                console.log(`🔄 Actualizando imagen principal`);
+                mainImage.src = selectedVariant.image;
+                mainImage.alt = selectedVariant.name;
+            }
+
+            // Actualizar el precio
+            const priceElement = document.getElementById(`price-${productId}`);
+            if (priceElement && selectedVariant.price) {
+                const formattedPrice = parseFloat(selectedVariant.price).toFixed(0);
+                priceElement.textContent = `$${formattedPrice}`;
+            }
+
+            // Actualizar estado de selección y UI
+            variants.forEach(v => v.selected = v.id === variantId);
+            createVariantThumbnails(productId, variants);
+            
+            showNotification(`Variante seleccionada: ${selectedVariant.name}`, 'success');
+        } else {
+            console.log(`❌ No se encontró la variante ${variantId}`);
+            showNotification('Error al seleccionar variante', 'error');
+        }
+    }
+
+    // Inicializar componentes cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("🚀 Inicializando componentes de productos...");
+        
+        // Inicializar variantes
+        for (const [productId, variants] of Object.entries(productVariantsData)) {
+            console.log(`🔄 Creando variantes para ${productId}`);
+            createVariantThumbnails(productId, variants);
+        }
+
+        // Auto-submit del formulario cuando cambia el ordenamiento
+        const sortSelect = document.querySelector('.sort-select');
+        if (sortSelect) {
+            sortSelect.addEventListener('change', function() {
+                console.log("🔄 Cambiando ordenamiento...");
+                document.getElementById('filters-form').submit();
+            });
+        }
+
+        // Auto-submit cuando cambian los radio buttons
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                console.log("🔄 Cambiando filtro...");
+                document.getElementById('filters-form').submit();
+            });
+        });
+
+        // Configurar fallbacks para imágenes
+        setupImageFallbacks();
+    });
+
+    // Configurar fallbacks para imágenes
+    function setupImageFallbacks() {
+        document.querySelectorAll('img').forEach(img => {
+            img.addEventListener('error', function() {
+                console.log(`🖼️ Imagen no encontrada: ${this.src}`);
+                this.src = '/static/images/placeholder-producto.png';
+            });
+        });
+    }
+
+    // Función para mostrar modal de login
+    function showLoginAlert() {
+        Swal.fire({
+            title: '🔐 Acceso Requerido',
+            html: `
+                <div class="text-center py-3">
+                    <div class="icon-container mb-3">
+                        <i class="fas fa-lock fa-4x text-primary mb-3"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-2">¡Únete a la Comunidad VECY!</h4>
+                    <p class="text-muted mb-4">Accede a todas las funciones y conecta con los mejores negocios locales.</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'iniciar_sesion' %}" class="btn btn-primary btn-lg py-3">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </a>
+                        <a href="{% url 'registro_usuario' %}" class="btn btn-outline-primary py-3">
+                            <i class="fas fa-user-plus me-2"></i>Crear Cuenta Gratis
+                        </a>
+                    </div>
+                </div>
+            `,
+            showCloseButton: true,
+            showConfirmButton: false,
+            width: '420px',
+            background: '#ffffff',
+            customClass: {
+                popup: 'rounded-4 border-0 shadow-lg'
+            }
+        });
+    }
+
+    // Función para notificaciones
+    function showNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+</script>
+{% endblock %}

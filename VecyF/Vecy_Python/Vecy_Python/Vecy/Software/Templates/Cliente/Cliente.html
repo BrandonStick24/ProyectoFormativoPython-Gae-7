@@ -1,525 +1,1577 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}VECY - Dashboard{% endblock %}
+{% block title %}VECY - Tu Mercado Local Digital{% endblock %}
+
+{% block extra_css %}
+<!-- AOS ANIMATION -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous" />
+<!-- FONT AWESOME -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/cliente.css' %}">
+<style>
+    /* ==================== ESTILOS PARA PAGOS ==================== */
+
+    /* Métodos de pago */
+    .metodo-pago-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+        background: white;
+        margin-bottom: 1rem;
+    }
+
+    .metodo-pago-card:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+    }
+
+    .metodo-pago-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+    }
+
+    .metodo-pago-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .metodo-pago-body {
+        min-height: 60px;
+    }
+
+    .resumen-pedido {
+        border-left: 4px solid #007bff;
+        background: #f8f9fa;
+    }
+
+    .resumen-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .resumen-item:last-child {
+        border-bottom: none;
+    }
+
+    .resumen-total {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    /* Estilos específicos para Nequi */
+    .nequi-card {
+        border-color: #DA0081;
+    }
+
+    .nequi-card.selected {
+        border-color: #DA0081;
+        background-color: rgba(218, 0, 129, 0.05);
+    }
+
+    .nequi-color {
+        color: #DA0081;
+    }
+
+    .nequi-bg {
+        background-color: #DA0081;
+    }
+
+    /* Estilos específicos para DaviPlata */
+    .daviplata-card {
+        border-color: #E4002B;
+    }
+
+    .daviplata-card.selected {
+        border-color: #E4002B;
+        background-color: rgba(228, 0, 43, 0.05);
+    }
+
+    .daviplata-color {
+        color: #E4002B;
+    }
+
+    .daviplata-bg {
+        background-color: #E4002B;
+    }
+
+    /* Formularios de pago */
+    .formulario-pago {
+        display: none;
+        margin-top: 1rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #007bff;
+    }
+
+    .formulario-pago.active {
+        display: block;
+    }
+
+    .campo-formulario {
+        margin-bottom: 1rem;
+    }
+
+    .campo-formulario label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #333;
+    }
+
+    .campo-formulario input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+
+    .campo-formulario input:focus {
+        outline: none;
+        border-color: #007bff;
+    }
+
+    .logo-billetera {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        margin-right: 1rem;
+    }
+
+    /* Badges para métodos de pago */
+    .badge {
+        font-size: 0.7rem;
+    }
+
+    /* Información de transferencia */
+    .info-transferencia {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+
+    .datos-banco {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+
+    .dato-banco {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .dato-banco:last-child {
+        border-bottom: none;
+    }
+
+    .btn-copiar {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+
+    .btn-copiar:hover {
+        background: #0056b3;
+    }
+
+    /* ==================== ESTILOS PARA EL CARRITO ==================== */
+    .cart-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #eee;
+        gap: 1rem;
+    }
+
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .cart-item-info {
+        flex: 1;
+    }
+
+    .cart-item-name {
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+    }
+
+    .cart-item-store {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+    }
+
+    .cart-item-price {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .cart-item-current-price {
+        font-weight: bold;
+        color: #28a745;
+    }
+
+    .cart-item-original-price {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    .cart-item-discount {
+        background: #28a745;
+        color: white;
+        padding: 0.125rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+
+    .cart-item-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .cart-quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #dee2e6;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .quantity-btn:hover {
+        background: #f8f9fa;
+    }
+
+    .quantity-display {
+        min-width: 30px;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .cart-remove-btn {
+        background: #dc3545;
+        color: white;
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .cart-remove-btn:hover {
+        background: #c82333;
+    }
+
+    /* Floating Action Button */
+    .vecy-floating-actions {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+
+    .vecy-fab-main {
+        width: 60px;
+        height: 60px;
+        background: #007bff;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .vecy-fab-main:hover {
+        transform: scale(1.1);
+    }
+
+    .vecy-fab-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+
+    .vecy-fab-menu {
+        position: absolute;
+        bottom: 70px;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+    }
+
+    .vecy-fab-menu.active {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .vecy-fab-item {
+        width: 50px;
+        height: 50px;
+        background: #6c757d;
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 10px rgba(108, 117, 125, 0.3);
+        position: relative;
+    }
+
+    .vecy-fab-item:hover {
+        background: #5a6268;
+    }
+
+    /* ==================== ESTILOS PARA VARIANTES REALES ==================== */
+    .variantes-reales-data {
+        display: none !important;
+    }
+
+    .variant-thumb {
+        width: 60px;
+        height: 60px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .variant-thumb:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+
+    .variant-thumb.selected {
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    }
+
+    .variant-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .variant-name {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 10px;
+        padding: 2px 4px;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .selection-indicator {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 30px;
+        height: 30px;
+        background: #28a745;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 12px;
+        z-index: 10;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(40, 167, 69, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .metodo-pago-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .metodo-pago-header .form-check {
+            margin-top: 0.5rem;
+        }
+
+        .dato-banco {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+
+        .btn-copiar {
+            align-self: flex-end;
+        }
+
+        .product-card-with-variants {
+            flex-direction: column;
+        }
+
+        .product-image-container {
+            border-right: none;
+            border-bottom: 1px solid rgba(52, 73, 94, 0.1);
+            padding: 20px;
+        }
+
+        .product-main-image {
+            height: 250px;
+        }
+
+        .variants-grid {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<!-- Hero Carousel Section -->
-<section class="hero-carousel">
-    <div id="mainCarousel" class="carousel slide" data-bs-ride="carousel">
-        <div class="carousel-indicators">
-            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="0" class="active"></button>
-            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="1"></button>
-            <button type="button" data-bs-target="#mainCarousel" data-bs-slide-to="2"></button>
-        </div>
-        <div class="carousel-inner">
-            <!-- Slide 1: Ofertas Destacadas -->
-            <div class="carousel-item active">
-                <div class="carousel-background" style="background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);"></div>
-                <div class="container">
-                    <div class="row align-items-center min-vh-60">
-                        <div class="col-lg-6">
-                            <div class="carousel-content">
-                                <div class="carousel-badge">
-                                    <i class="fas fa-bolt me-2"></i>
-                                    Oferta Especial
-                                </div>
-                                <h1 class="carousel-title">Hasta 50% de Descuento</h1>
-                                <p class="carousel-text">En productos seleccionados de tus negocios favoritos</p>
-                                <div class="carousel-actions">
-                                    <button class="btn-carousel-primary">Ver Ofertas</button>
-                                    <button class="btn-carousel-secondary">Explorar</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="carousel-image">
-                                <div class="placeholder-image">
-                                    <i class="fas fa-tag fa-8x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<div class="vecy-premium-homepage">
+    <!-- HERO SECTION CON CARRUSEL MEJORADO -->
+    <section class="vecy-hero-section">
+        <div class="vecy-hero-container">
+            <!-- CARRUSEL DE OFERTAS RECIENTES -->
+            {% if ofertas_carrusel %}
+            <div id="vecyOffersCarousel" class="carousel slide vecy-hero-carousel" data-bs-ride="carousel">
+                <div class="carousel-indicators">
+                    {% for oferta in ofertas_carrusel %}
+                    <button type="button" data-bs-target="#vecyOffersCarousel" data-bs-slide-to="{{ forloop.counter0 }}"
+                        {% if forloop.first %}class="active" {% endif %}></button>
+                    {% endfor %}
                 </div>
-            </div>
-            
-            <!-- Slide 2: Nuevos Negocios -->
-            <div class="carousel-item">
-                <div class="carousel-background" style="background: linear-gradient(135deg, var(--secondary) 0%, var(--dark) 100%);"></div>
-                <div class="container">
-                    <div class="row align-items-center min-vh-60">
-                        <div class="col-lg-6">
-                            <div class="carousel-content">
-                                <div class="carousel-badge">
-                                    <i class="fas fa-store me-2"></i>
-                                    Nuevos Negocios
-                                </div>
-                                <h1 class="carousel-title">Descubre Locales Nuevos</h1>
-                                <p class="carousel-text">Conoce los establecimientos que se han unido recientemente</p>
-                                <div class="carousel-actions">
-                                    <button class="btn-carousel-primary">Explorar Negocios</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="carousel-image">
-                                <div class="placeholder-image">
-                                    <i class="fas fa-store-alt fa-8x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Slide 3: Envío Gratis -->
-            <div class="carousel-item">
-                <div class="carousel-background" style="background: linear-gradient(135deg, #27ae60 0%, var(--secondary) 100%);"></div>
-                <div class="container">
-                    <div class="row align-items-center min-vh-60">
-                        <div class="col-lg-6">
-                            <div class="carousel-content">
-                                <div class="carousel-badge">
-                                    <i class="fas fa-shipping-fast me-2"></i>
-                                    Envío Gratis
-                                </div>
-                                <h1 class="carousel-title">Envío Sin Costo</h1>
-                                <p class="carousel-text">En compras superiores a $50.000 en negocios participantes</p>
-                                <div class="carousel-actions">
-                                    <button class="btn-carousel-primary">Ver Condiciones</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-6">
-                            <div class="carousel-image">
-                                <div class="placeholder-image">
-                                    <i class="fas fa-shipping-fast fa-8x"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <button class="carousel-control-prev" type="button" data-bs-target="#mainCarousel" data-bs-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-        </button>
-        <button class="carousel-control-next" type="button" data-bs-target="#mainCarousel" data-bs-slide="next">
-            <span class="carousel-control-next-icon"></span>
-        </button>
-    </div>
-</section>
 
-<!-- Quick Stats Section -->
-<section class="quick-stats py-4">
-    <div class="container">
-        <div class="row g-3">
-            <div class="col-md-3">
-                <div class="stat-item-quick">
-                    <div class="stat-icon-quick">
-                        <i class="fas fa-shopping-bag"></i>
+                <div class="carousel-inner">
+                    {% for oferta in ofertas_carrusel %}
+                    <div class="carousel-item vecy-hero-slide {% if forloop.first %}active{% endif %}">
+                        <div class="vecy-hero-background">
+                            <img src="{% if oferta.imagen_promo %}{{ oferta.imagen_promo }}{% else %}{% if oferta.fkproducto.img_prod %}{{ oferta.fkproducto.img_prod.url }}{% else %}https://images.unsplash.com/photo-1607082350899-7e105aa886ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80{% endif %}{% endif %}"
+                                class="vecy-hero-image" alt="{{ oferta.titulo_promo }}">
+                            <div class="vecy-hero-overlay"></div>
+                        </div>
+
+                        <div class="vecy-hero-content">
+                            <div class="vecy-hero-badge">
+                                <span class="vecy-flash-badge">
+                                    <i class="fas fa-bolt me-1"></i>OFERTA ESPECIAL
+                                </span>
+                                <span class="vecy-time-badge">
+                                    <i class="fas fa-clock me-1"></i>Tiempo Limitado
+                                </span>
+                            </div>
+
+                            <h1 class="vecy-hero-title">{{ oferta.titulo_promo }}</h1>
+                            <p class="vecy-hero-description">{{ oferta.descripcion_promo }}</p>
+
+                            <div class="vecy-price-section">
+                                <div class="vecy-price-display">
+                                    <span class="vecy-final-price">${{ oferta.precio_final|floatformat:0 }}</span>
+                                    <span class="vecy-original-price">${{ oferta.precio_base|floatformat:0 }}</span>
+                                    <span class="vecy-discount-badge">-{{ oferta.porcentaje_descuento|floatformat:0
+                                        }}%</span>
+                                </div>
+                                <div class="vecy-savings">
+                                    <i class="fas fa-piggy-bank me-1"></i>
+                                    Ahorras ${{ oferta.ahorro_oferta|floatformat:0 }}
+                                </div>
+                            </div>
+
+                            <div class="vecy-hero-actions">
+                                <button class="vecy-primary-btn vecy-large-btn"
+                                    onclick="addToCart('{{ oferta.fkproducto.pkid_prod }}')">
+                                    <i class="fas fa-shopping-cart me-2"></i>
+                                    Comprar Ahora
+                                </button>
+                                <button class="vecy-secondary-btn vecy-large-btn"
+                                    onclick="addToFavorites('{{ oferta.fkproducto.pkid_prod }}')">
+                                    <i class="fas fa-heart me-2"></i>
+                                    Agregar a Favoritos
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <div class="stat-content-quick">
-                        <span class="stat-number-quick">{{ pedidos_count }}</span>
-                        <span class="stat-label-quick">Pedidos Totales</span>
+                    {% endfor %}
+                </div>
+
+                <button class="carousel-control-prev vecy-carousel-control" type="button"
+                    data-bs-target="#vecyOffersCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Anterior</span>
+                </button>
+                <button class="carousel-control-next vecy-carousel-control" type="button"
+                    data-bs-target="#vecyOffersCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                    <span class="visually-hidden">Siguiente</span>
+                </button>
+            </div>
+            {% else %}
+            <!-- HERO POR DEFECTO -->
+            <div class="vecy-hero-default">
+                <div class="vecy-hero-background">
+                    <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"
+                        class="vecy-hero-image" alt="Bienvenido a VECY">
+                    <div class="vecy-hero-overlay"></div>
+                </div>
+                <div class="vecy-hero-content">
+                    <h1 class="vecy-hero-title">Bienvenido a VECY</h1>
+                    <p class="vecy-hero-description">Tu mercado local digital con los mejores productos y servicios de
+                        tu comunidad</p>
+                    <div class="vecy-hero-actions">
+                        <button class="vecy-primary-btn vecy-large-btn" onclick="window.location.href='#vecy-products'">
+                            <i class="fas fa-shopping-bag me-2"></i>
+                            Explorar Productos
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="stat-item-quick">
-                    <div class="stat-icon-quick">
-                        <i class="fas fa-clock"></i>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- QUICK ACCESS BAR MEJORADO -->
+    <section class="vecy-quick-access">
+        <div class="container">
+            <div class="vecy-quick-grid">
+                <a href="#vecy-budget" class="vecy-quick-item">
+                    <div class="vecy-quick-icon budget">
+                        <i class="fas fa-coins"></i>
                     </div>
-                    <div class="stat-content-quick">
-                        <span class="stat-number-quick">{{ pedidos_pendientes }}</span>
-                        <span class="stat-label-quick">Pendientes</span>
+                    <span class="vecy-quick-text">Productos Baratos</span>
+                </a>
+                <a href="#vecy-featured" class="vecy-quick-item">
+                    <div class="vecy-quick-icon featured">
+                        <i class="fas fa-star"></i>
                     </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item-quick">
-                    <div class="stat-icon-quick">
+                    <span class="vecy-quick-text">Destacados</span>
+                </a>
+                <a href="#vecy-offers" class="vecy-quick-item">
+                    <div class="vecy-quick-icon offers">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <span class="vecy-quick-text">Ofertas</span>
+                </a>
+                <a href="#vecy-businesses" class="vecy-quick-item">
+                    <div class="vecy-quick-icon businesses">
                         <i class="fas fa-store"></i>
                     </div>
-                    <div class="stat-content-quick">
-                        <span class="stat-number-quick">{{ negocios_recientes|length }}</span>
-                        <span class="stat-label-quick">Negocios</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item-quick">
-                    <div class="stat-icon-quick">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                    <div class="stat-content-quick">
-                        <span class="stat-number-quick">{{ carrito_count|default:0 }}</span>
-                        <span class="stat-label-quick">En Carrito</span>
-                    </div>
-                </div>
+                    <span class="vecy-quick-text">Negocios</span>
+                </a>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Recommended Products Section -->
-<section class="recommended-section py-5">
-    <div class="container">
-        <div class="section-header d-flex justify-content-between align-items-center mb-5">
-            <div class="header-text">
-                <h2 class="section-title">Productos Recomendados</h2>
-                <p class="section-subtitle">Seleccionados especialmente para ti</p>
+    <!-- OFERTAS ESPECIALES -->
+    <section id="vecy-offers" class="vecy-section vecy-gradient-bg-3">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h2 class="vecy-section-title">Ofertas Especiales</h2>
+                        <p class="vecy-section-subtitle">Descuentos exclusivos y promociones limitadas</p>
+                    </div>
+                </div>
+                <a href="#" class="vecy-view-all">
+                    Ver todas <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
-            <a href="#" class="btn-view-all">
-                Ver todos <i class="fas fa-arrow-right ms-2"></i>
+
+            {% if productos_oferta %}
+            <div class="vecy-offers-grid">
+                {% for producto_data in productos_oferta|slice:":6" %}
+                {% with producto=producto_data.producto %}
+                {% if producto_data.stock > 0 %}
+                <div class="vecy-offer-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-offer-badge">
+                        <i class="fas fa-fire"></i> Oferta
+                    </div>
+
+                    <div class="vecy-offer-media">
+                        {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-offer-image">
+                        {% else %}
+                        <div class="vecy-offer-placeholder">
+                            <i class="fas fa-tag"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="vecy-offer-content">
+                        <h3 class="vecy-offer-title">{{ producto.nom_prod }}</h3>
+
+                        <div class="vecy-offer-store">
+                            <i class="fas fa-store"></i>
+                            {{ producto.fknegocioasociado_prod.nom_neg }}
+                        </div>
+
+                        <div class="vecy-offer-price">
+                            <div class="vecy-price-comparison">
+                                <span class="vecy-offer-final">${{ producto_data.precio_final|floatformat:0 }}</span>
+                                <span class="vecy-offer-original">${{ producto_data.precio_base|floatformat:0 }}</span>
+                            </div>
+                            <div class="vecy-discount-tag">
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                            </div>
+                        </div>
+
+                        <div class="vecy-offer-savings">
+                            <i class="fas fa-piggy-bank me-1"></i>
+                            Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                        </div>
+
+                        <div class="vecy-offer-stock">
+                            <div class="vecy-stock-bar">
+                                <div class="vecy-stock-progress"
+                                    style="width: {% widthratio producto_data.stock 50 100 %}%"></div>
+                            </div>
+                            <span>{{ producto_data.stock }} disponibles</span>
+                        </div>
+
+                        <button class="vecy-offer-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
+                            <i class="fas fa-cart-plus me-2"></i>
+                            Aprovechar Oferta
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="vecy-empty-state">
+                <div class="vecy-empty-icon">
+                    <i class="fas fa-tag"></i>
+                </div>
+                <h3>Ofertas Especiales</h3>
+                <p>Pronto encontrarás aquí ofertas especiales y promociones limitadas.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+<!-- PRODUCTOS BARATOS CON VARIANTES REALES - VERSIÓN CORREGIDA -->
+<section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
+    <div class="container">
+        <div class="vecy-section-header">
+            <div class="vecy-header-content">
+                <div class="vecy-icon-header">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <div>
+                    <h2 class="vecy-section-title">Productos Baratos</h2>
+                    <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
+                </div>
+            </div>
+            <a href="#" class="vecy-view-all">
+                Ver todos <i class="fas fa-arrow-right"></i>
             </a>
         </div>
 
-        <div class="products-grid">
-            {% for producto in productos_recomendados|slice:":6" %}
-            <div class="product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+        {% if productos_baratos %}
+        <div class="vecy-products-showcase">
+            {% for producto_data in productos_baratos|slice:":8" %}
+            {% with producto=producto_data.producto %}
+            {% if producto_data.stock > 0 %}
+
+            <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN MEJORADA -->
+            {% if producto_data.tiene_variantes and producto_data.variantes %}
+            <div class="product-card-with-variants" data-aos="fade-up" 
+                 data-aos-delay="{{ forloop.counter0|add:1 }}00"
+                 data-product-id="{{ producto.pkid_prod }}">
+                
+                <!-- Indicador de selección -->
+                <div class="selection-indicator">
+                    <i class="fas fa-check"></i>
+                </div>
+
                 <div class="product-image-container">
-                    {% if producto.img_prod %}
-                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="product-image">
-                    {% else %}
-                        <div class="product-image-placeholder">
-                            <i class="fas fa-box"></i>
+                    <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
+                         alt="{{ producto.nom_prod }}" class="product-main-image" 
+                         id="mainProductImage-{{ producto.pkid_prod }}">
+                </div>
+
+                <div class="product-info-container">
+                    <div>
+                        <!-- Título del producto -->
+                        <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
+                            {{ producto.nom_prod }}
+                        </h3>
+
+                        <!-- Información de la tienda -->
+                        <div class="vecy-store-info">
+                            <i class="fas fa-store"></i>
+                            <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
                         </div>
-                    {% endif %}
-                    <div class="product-actions">
-                        <button class="btn-action btn-wishlist" onclick="toggleWishlist({{ producto.pkid_prod }})">
-                            <i class="far fa-heart"></i>
-                        </button>
-                        <button class="btn-action btn-quickview" onclick="quickView({{ producto.pkid_prod }})">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                    <div class="product-badges">
-                        {% if forloop.counter <= 2 %}
-                        <span class="badge badge-featured">Destacado</span>
+
+                        <!-- Información de stock -->
+                        <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                            <i class="fas fa-box"></i>
+                            <span id="stockInfo-{{ producto.pkid_prod }}">{{ producto_data.stock }} disponibles</span>
+                        </div>
+
+                        <!-- Descripción del producto -->
+                        <div class="product-description">
+                            <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
+                                {{ producto.desc_prod|default:"Producto de alta calidad con múltiples opciones disponibles. Excelente relación calidad-precio." }}
+                            </p>
+                        </div>
+
+                        <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
+                        {% if producto_data.variantes %}
+                        <div class="variants-container">
+                            <div class="variants-label">
+                                <i class="fas fa-list-alt me-2"></i>
+                                Opciones disponibles:
+                            </div>
+                            <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
+                                <!-- Las miniaturas se generarán con JavaScript -->
+                            </div>
+                        </div>
                         {% endif %}
-                        <span class="badge badge-discount">-20%</span>
+                    </div>
+
+                    <!-- Sección de precio y botón -->
+                    <div class="product-price-section mt-3">
+                        <div class="vecy-price-section">
+                            <div class="vecy-price-main">
+                                <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
+                                    ${{ producto_data.precio_final|floatformat:0 }}
+                                </span>
+                                {% if producto_data.tiene_descuento %}
+                                <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
+                                {% endif %}
+                            </div>
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-savings-badge">
+                                Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <button class="vecy-add-cart-btn" 
+                                onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
+                                id="addToCartBtn-{{ producto.pkid_prod }}">
+                            <i class="fas fa-cart-plus me-2"></i>
+                            Agregar al Carrito
+                        </button>
                     </div>
                 </div>
-                <div class="product-info">
-                    <h3 class="product-title">{{ producto.nom_prod }}</h3>
-                    <p class="product-vendor">
-                        <i class="fas fa-store me-1"></i>
-                        {{ producto.fknegocioasociado_prod.nom_neg }}
-                    </p>
-                    <div class="product-meta">
-                        <div class="price-info">
-                            <span class="current-price">${{ producto.precio_prod }}</span>
-                            <span class="original-price">${% widthratio producto.precio_prod 0.8 1 %}</span>
-                        </div>
-                        <div class="rating-info">
-                            <div class="stars">
-                                {% for i in "12345" %}
-                                    {% if forloop.counter <= 4 %}
-                                        <i class="fas fa-star"></i>
-                                    {% else %}
-                                        <i class="fas fa-star-half-alt"></i>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                            <span class="rating-count">({{ forloop.counter|add:20 }})</span>
-                        </div>
+
+                <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA MEJORADA -->
+                <div class="variantes-reales-data" style="display: none;">
+                    <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+                    <div data-variant 
+                         data-variant-id="base"
+                         data-variant-name="{{ producto.nom_prod }} - Estándar"
+                         data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}"
+                         data-variant-price="{{ producto_data.precio_final|floatformat:0 }}"
+                         data-variant-stock="{{ producto_data.stock }}"
+                         data-variant-precio-adicional="0"
+                         data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
+                         data-is-base="true">
                     </div>
-                    <button class="btn-add-to-cart" onclick="addToCart({{ producto.pkid_prod }})">
-                        <i class="fas fa-shopping-cart me-2"></i>
+                    
+                    <!-- VARIANTES ADICIONALES -->
+                    {% for variante in producto_data.variantes %}
+                    <div data-variant 
+                         data-variant-id="{{ variante.id_variante }}"
+                         data-variant-name="{{ variante.nombre_variante }}"
+                         data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}{% endif %}"
+                         data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+                         data-variant-stock="{{ variante.stock_variante }}"
+                         data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
+                         data-variant-precio-final="{% widthratio producto_data.precio_base|add:variante.precio_adicional 1 1 %}"
+                         data-is-base="false">
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL SIMPLIFICADA) -->
+            {% else %}
+            <div class="vecy-product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="vecy-product-media">
+                    <div class="vecy-image-container">
+                        {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
+                        {% else %}
+                        <div class="vecy-image-placeholder">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="vecy-product-overlay">
+                            <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="vecy-favorite-btn" onclick="addToFavorites('{{ producto.pkid_prod }}')">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+
+                        {% if producto_data.tiene_descuento %}
+                        <div class="vecy-discount-ribbon">
+                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="vecy-product-badges">
+                        <span class="vecy-badge vecy-budget-badge">
+                            <i class="fas fa-coins me-1"></i>Buen Precio
+                        </span>
+                    </div>
+                </div>
+
+                <div class="vecy-product-content">
+                    <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
+
+                    <div class="vecy-store-info">
+                        <i class="fas fa-store"></i>
+                        <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                    </div>
+
+                    <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                        <i class="fas fa-box"></i>
+                        <span>{{ producto_data.stock }} disponibles</span>
+                    </div>
+
+                    <div class="vecy-price-section">
+                        <div class="vecy-price-main">
+                            <span class="vecy-current-price">${{ producto_data.precio_final|floatformat:0 }}</span>
+                            {% if producto_data.tiene_descuento %}
+                            <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
+                            {% endif %}
+                        </div>
+                        {% if producto_data.tiene_descuento %}
+                        <div class="vecy-savings-badge">
+                            Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
+                        <i class="fas fa-cart-plus me-2"></i>
                         Agregar al Carrito
                     </button>
                 </div>
             </div>
-            {% empty %}
-            <div class="empty-state text-center py-5">
-                <div class="empty-icon mb-3">
-                    <i class="fas fa-search"></i>
-                </div>
-                <h4>No hay productos recomendados</h4>
-                <p class="text-muted">Explora más productos para recibir recomendaciones personalizadas</p>
-            </div>
+            {% endif %}
+            {% endif %}
+            {% endwith %}
             {% endfor %}
         </div>
+        {% endif %}
     </div>
 </section>
 
-<!-- Flash Sales Section -->
-<section class="flash-sales-section py-5">
-    <div class="container">
-        <div class="section-header mb-5">
-            <div class="flash-header-content">
-                <div class="flash-icon">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <div class="flash-text">
-                    <h2 class="section-title">Ofertas Flash</h2>
-                    <p class="section-subtitle">Termina en:</p>
-                </div>
-                <div class="countdown-timer">
-                    <div class="timer-unit">
-                        <span class="time" id="flash-hours">02</span>
-                        <span class="label">Horas</span>
+    <!-- PRODUCTOS DESTACADOS -->
+    <section id="vecy-featured" class="vecy-section vecy-gradient-bg-2">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-star"></i>
                     </div>
-                    <div class="timer-separator">:</div>
-                    <div class="timer-unit">
-                        <span class="time" id="flash-minutes">15</span>
-                        <span class="label">Minutos</span>
-                    </div>
-                    <div class="timer-separator">:</div>
-                    <div class="timer-unit">
-                        <span class="time" id="flash-seconds">30</span>
-                        <span class="label">Segundos</span>
+                    <div>
+                        <h2 class="vecy-section-title">Productos Destacados</h2>
+                        <p class="vecy-section-subtitle">Los productos más populares y mejor valorados</p>
                     </div>
                 </div>
+                <a href="#" class="vecy-view-all">
+                    Ver todos <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
-        </div>
 
-        <div class="flash-products-scroller">
-            {% for producto in productos_oferta %}
-            <div class="flash-product-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0 }}00">
-                <div class="flash-product-image">
-                    {% if producto.img_prod %}
-                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
-                    {% else %}
-                        <div class="flash-image-placeholder">
-                            <i class="fas fa-bolt"></i>
-                        </div>
-                    {% endif %}
-                    <div class="flash-overlay">
-                        <button class="btn-flash-cart" onclick="addToCart({{ producto.pkid_prod }})">
-                            <i class="fas fa-cart-plus"></i>
-                        </button>
-                    </div>
-                    <div class="flash-indicator">
-                        <span class="pulse-dot"></span>
-                        Flash Sale
-                    </div>
-                </div>
-                <div class="flash-product-info">
-                    <h4>{{ producto.nom_prod }}</h4>
-                    <div class="flash-pricing">
-                        <span class="flash-price">${{ producto.precio_prod }}</span>
-                        <span class="flash-original-price">${% widthratio producto.precio_prod 0.8 1 %}</span>
-                    </div>
-                    <div class="sold-progress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: {{ forloop.counter|add:20 }}%"></div>
-                        </div>
-                        <span class="sold-text">{{ forloop.counter|add:10 }} vendidos</span>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="empty-state text-center py-5">
-                <div class="empty-icon mb-3">
-                    <i class="fas fa-bolt"></i>
-                </div>
-                <h4>No hay ofertas flash disponibles</h4>
-                <p class="text-muted">Vuelve pronto para descubrir ofertas especiales</p>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</section>
-
-<!-- Featured Products Section -->
-<section class="featured-section py-5 bg-light">
-    <div class="container">
-        <div class="section-header text-center mb-5">
-            <h2 class="section-title">Productos Destacados</h2>
-            <p class="section-subtitle">Los más populares esta semana</p>
-        </div>
-
-        <div class="featured-grid">
-            {% for producto in productos_destacados %}
-            <div class="featured-card" data-aos="flip-up" data-aos-delay="{{ forloop.counter0 }}50">
-                <div class="card-glass">
-                    <div class="card-header">
-                        <div class="featured-badge">
-                            <i class="fas fa-crown"></i>
-                            Destacado
-                        </div>
-                        <button class="card-wishlist" onclick="toggleWishlist({{ producto.pkid_prod }})">
-                            <i class="far fa-heart"></i>
-                        </button>
-                    </div>
-                    <div class="card-image">
-                        {% if producto.img_prod %}
-                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
-                        {% else %}
-                            <div class="card-image-placeholder">
+            {% if productos_destacados %}
+            <div class="vecy-products-showcase">
+                {% for producto_data in productos_destacados|slice:":8" %}
+                {% with producto=producto_data.producto %}
+                {% if producto_data.stock > 0 %}
+                <div class="vecy-product-card vecy-featured-card" data-aos="fade-up"
+                    data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-product-media">
+                        <div class="vecy-image-container">
+                            {% if producto.img_prod %}
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}"
+                                class="vecy-product-image">
+                            {% else %}
+                            <div class="vecy-image-placeholder">
                                 <i class="fas fa-star"></i>
                             </div>
-                        {% endif %}
-                    </div>
-                    <div class="card-content">
-                        <h3>{{ producto.nom_prod }}</h3>
-                        <p class="card-description">{{ producto.desc_prod|truncatewords:15|default:"Producto de calidad" }}</p>
-                        <div class="card-features">
-                            <span class="feature">
-                                <i class="fas fa-shipping-fast"></i>
-                                Envío gratis
-                            </span>
-                            <span class="feature">
-                                <i class="fas fa-undo"></i>
-                                30 días
-                            </span>
-                        </div>
-                        <div class="card-footer">
-                            <div class="price">
-                                <span class="current">${{ producto.precio_prod }}</span>
-                                <span class="original">${% widthratio producto.precio_prod 0.85 1 %}</span>
+                            {% endif %}
+
+                            <div class="vecy-product-overlay">
+                                <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="vecy-favorite-btn" onclick="addToFavorites('{{ producto.pkid_prod }}')">
+                                    <i class="fas fa-heart"></i>
+                                </button>
                             </div>
-                            <button class="btn-featured-cart" onclick="addToCart({{ producto.pkid_prod }})">
-                                <i class="fas fa-plus"></i>
-                            </button>
+
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-discount-ribbon">
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                            </div>
+                            {% endif %}
+
+                            <div class="vecy-featured-badge">
+                                <i class="fas fa-crown"></i> Destacado
+                            </div>
                         </div>
+
+                        <div class="vecy-product-badges">
+                            <span class="vecy-badge vecy-featured-badge">
+                                <i class="fas fa-star me-1"></i>Popular
+                            </span>
+                            {% if producto_data.total_vendido %}
+                            <span class="vecy-badge vecy-sales-badge">
+                                <i class="fas fa-fire me-1"></i>{{ producto_data.total_vendido }} vendidos
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="vecy-product-content">
+                        <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
+
+                        <div class="vecy-store-info">
+                            <i class="fas fa-store"></i>
+                            <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                        </div>
+
+                        <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                            <i class="fas fa-box"></i>
+                            <span>{{ producto_data.stock }} disponibles</span>
+                        </div>
+
+                        <div class="vecy-price-section">
+                            <div class="vecy-price-main">
+                                <span class="vecy-current-price">${{ producto_data.precio_final|floatformat:0 }}</span>
+                                {% if producto_data.tiene_descuento %}
+                                <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
+                                {% endif %}
+                            </div>
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-savings-badge">
+                                Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
+                            <i class="fas fa-cart-plus me-2"></i>
+                            Agregar al Carrito
+                        </button>
                     </div>
                 </div>
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
             </div>
-            {% empty %}
-            <div class="empty-state text-center py-5">
-                <div class="empty-icon mb-3">
+
+            {% if productos_destacados|length > 8 %}
+            <div class="vecy-show-more-container">
+                <button class="vecy-show-more-btn">
+                    Ver Más Destacados <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="vecy-empty-state">
+                <div class="vecy-empty-icon">
                     <i class="fas fa-star"></i>
                 </div>
-                <h4>No hay productos destacados</h4>
-                <p class="text-muted">Los productos destacados aparecerán aquí</p>
+                <h3>Productos Destacados</h3>
+                <p>Pronto encontrarás aquí los productos más populares y mejor valorados.</p>
             </div>
-            {% endfor %}
+            {% endif %}
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Featured Businesses Section -->
-<section class="businesses-section py-5">
-    <div class="container">
-        <div class="section-header text-center mb-5">
-            <h2 class="section-title">Negocios Destacados</h2>
-            <p class="section-subtitle">Descubre los mejores establecimientos locales</p>
-        </div>
+    <!-- NEGOCIOS DESTACADOS -->
+    <section id="vecy-businesses" class="vecy-section vecy-gradient-bg-4">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div>
+                        <h2 class="vecy-section-title">Negocios Destacados</h2>
+                        <p class="vecy-section-subtitle">Los mejores negocios con reseñas de 4-5 estrellas</p>
+                    </div>
+                </div>
+                <a href="#" class="vecy-view-all">
+                    Ver todos <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
 
-        <div class="businesses-grid">
-            {% for negocio in negocios_mejor_calificados %}
-            <div class="business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0 }}00">
-                <div class="business-header">
-                    <div class="business-image">
-                        {% if negocio.img_neg %}
-                            <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
-                        {% else %}
-                            <div class="business-image-placeholder">
+            {% if negocios_destacados %}
+            <div class="vecy-businesses-grid">
+                {% for negocio_data in negocios_destacados|slice:":6" %}
+                {% with negocio=negocio_data.negocio %}
+                <div class="vecy-business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-business-header">
+                        <div class="vecy-business-image">
+                            {% if negocio.img_neg %}
+                            <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="vecy-business-img">
+                            {% else %}
+                            <div class="vecy-business-placeholder">
                                 <i class="fas fa-store"></i>
                             </div>
-                        {% endif %}
-                        <div class="verified-badge">
-                            <i class="fas fa-check-circle"></i>
+                            {% endif %}
+
+                            <div class="vecy-rating-badge">
+                                <i class="fas fa-star"></i>
+                                {{ negocio_data.promedio_calificacion|floatformat:1 }}
+                                <small>({{ negocio_data.total_resenas }})</small>
+                            </div>
                         </div>
                     </div>
-                    <button class="btn-follow">
-                        <i class="far fa-heart"></i>
-                    </button>
-                </div>
-                <div class="business-info">
-                    <h3>{{ negocio.nom_neg }}</h3>
-                    <p class="business-category">{{ negocio.fktiponeg_neg.desc_tiponeg }}</p>
-                    <div class="business-rating">
-                        <div class="stars">
-                            {% with promedio=negocio.promedio|default:0 %}
-                                {% for i in "12345" %}
-                                    {% if forloop.counter <= promedio %}
-                                        <i class="fas fa-star"></i>
-                                    {% elif forloop.counter <= promedio|add:0.5 %}
-                                        <i class="fas fa-star-half-alt"></i>
-                                    {% else %}
-                                        <i class="far fa-star"></i>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endwith %}
+
+                    <div class="vecy-business-content">
+                        <h3 class="vecy-business-name">{{ negocio.nom_neg }}</h3>
+                        <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con
+                            la calidad y el servicio"|truncatewords:15 }}</p>
+
+                        <div class="vecy-business-info">
+                            <div class="vecy-info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ negocio.direcc_neg|truncatewords:3 }}</span>
+                            </div>
+                            <div class="vecy-info-item">
+                                <i class="fas fa-tag"></i>
+                                <span>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                            </div>
                         </div>
-                        <span class="rating-text">{{ negocio.promedio|floatformat:1 }} ({{ negocio.total_resenas }})</span>
+
+                        <div class="vecy-business-stats">
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.total_productos }}</strong>
+                                <span>Productos</span>
+                            </div>
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.productos_en_oferta }}</strong>
+                                <span>Ofertas</span>
+                            </div>
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.total_resenas }}</strong>
+                                <span>Reseñas</span>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'detalle_negocio' id=negocio.pkid_neg %}" class="vecy-visit-btn">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            Visitar Tienda
+                        </a>
                     </div>
-                    <p class="business-description">{{ negocio.desc_neg|truncatewords:15 }}</p>
-                    <a href="{% url 'detalle_negocio_logeado' negocio.pkid_neg %}" class="btn-visit-store">
-                        Visitar Tienda <i class="fas fa-arrow-right ms-2"></i>
-                    </a>
                 </div>
+                {% endwith %}
+                {% endfor %}
             </div>
-            {% empty %}
-            <div class="empty-state text-center py-5">
-                <div class="empty-icon mb-3">
-                    <i class="fas fa-store"></i>
+            {% else %}
+            <div class="vecy-empty-state">
+                <div class="vecy-empty-icon">
+                    <i class="fas fa-store-slash"></i>
                 </div>
-                <h4>No hay negocios destacados</h4>
-                <p class="text-muted">Pronto descubrirás negocios increíbles</p>
+                <h3>Negocios Destacados</h3>
+                <p>Pronto encontrarás aquí los negocios mejor calificados de tu localidad.</p>
             </div>
-            {% endfor %}
+            {% endif %}
         </div>
-    </div>
-</section>
+    </section>
+</div>
 
-<!-- CTA Section -->
-<section class="cta-section py-5">
-    <div class="container">
-        <div class="cta-content text-center">
-            <h2 class="cta-title">¿Necesitas ayuda con tu compra?</h2>
-            <p class="cta-text">Nuestro equipo de soporte está disponible 24/7 para ayudarte</p>
-            <button class="btn-cta">
-                <i class="fas fa-headset me-2"></i>
-                Contactar Soporte
-            </button>
-        </div>
+<!-- FLOATING ACTION BUTTONS -->
+<div class="vecy-floating-actions">
+    <div class="vecy-fab-main" onclick="toggleCart()">
+        <i class="fas fa-shopping-cart"></i>
+        {% if carrito_count > 0 %}
+        <span class="vecy-fab-badge">{{ carrito_count }}</span>
+        {% endif %}
     </div>
-</section>
-
-<!-- Quick Actions FAB -->
-<div class="fab-container">
-    <input type="checkbox" id="fab-toggle" class="fab-toggle">
-    <label for="fab-toggle" class="fab-button">
-        <i class="fas fa-plus"></i>
-    </label>
-    <div class="fab-actions">
-        <button class="fab-action" onclick="openSupport()" data-tooltip="Soporte">
+    <div class="vecy-fab-menu">
+        <button class="vecy-fab-item" onclick="toggleFavorites()" title="Favoritos">
+            <i class="fas fa-heart"></i>
+            {% if favoritos_count > 0 %}
+            <span class="vecy-fab-badge">{{ favoritos_count }}</span>
+            {% endif %}
+        </button>
+        <button class="vecy-fab-item" onclick="showSupport()" title="Soporte">
             <i class="fas fa-headset"></i>
         </button>
-        <button class="fab-action" onclick="openChatBot()" data-tooltip="ChatBot">
-            <i class="fas fa-robot"></i>
-        </button>
-        <button class="fab-action" onclick="openHelp()" data-tooltip="Ayuda">
-            <i class="fas fa-question-circle"></i>
+        <button class="vecy-fab-item" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Ir arriba">
+            <i class="fas fa-chevron-up"></i>
         </button>
     </div>
 </div>
 
-<!-- ChatBot Modal -->
-<div class="modal fade" id="chatBotModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+<!-- OFFCANVAS CARRITO -->
+<div class="offcanvas offcanvas-end vecy-cart-offcanvas" tabindex="-1" id="vecyCartOffcanvas"
+    aria-labelledby="vecyCartOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="vecyCartOffcanvasLabel">
+            <i class="fas fa-shopping-cart me-2"></i>
+            Mi Carrito
+            <span class="badge bg-primary ms-2" id="cartOffcanvasCount">{{ carrito_count }}</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div id="cartContent">
+            {% if carrito_count > 0 %}
+            <div id="cartItemsContainer">
+                <!-- Contenido cargado dinámicamente -->
+            </div>
+
+            <div class="cart-summary mt-4 p-3 bg-light rounded">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="cartSubtotal">$0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-success" id="cartSavingsContainer"
+                    style="display: none!important;">
+                    <span>Ahorro total:</span>
+                    <span id="cartSavings">$0</span>
+                </div>
+                <div class="d-flex justify-content-between mb-3 fw-bold">
+                    <span>Total:</span>
+                    <span id="cartTotal">$0</span>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary btn-lg" onclick="procederPago()">
+                        <i class="fas fa-credit-card me-2"></i>
+                        Proceder al Pago
+                    </button>
+                    <button class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        Seguir Comprando
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="empty-cart-icon mb-3">
+                    <i class="fas fa-shopping-cart fa-4x text-muted"></i>
+                </div>
+                <h5 class="text-muted">Tu carrito está vacío</h5>
+                <p class="text-muted">Agrega algunos productos increíbles</p>
+                <button class="btn btn-primary mt-3" data-bs-dismiss="offcanvas">
+                    <i class="fas fa-shopping-bag me-2"></i>
+                    Explorar Productos
+                </button>
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="cartLoading" class="text-center py-5" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2 text-muted">Cargando carrito...</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL MÉTODOS DE PAGO PRINCIPAL -->
+<div class="modal fade" id="metodosPagoModal" tabindex="-1" aria-labelledby="metodosPagoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-robot text-primary me-2"></i>
-                    Asistente VECY
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="metodosPagoModalLabel">
+                    <i class="fas fa-credit-card me-2"></i>
+                    Seleccionar Método de Pago
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="chat-interface">
-                    <div class="chat-messages">
-                        <div class="message bot-message">
-                            <div class="message-avatar">
-                                <i class="fas fa-robot"></i>
+                <div class="resumen-pedido mb-4 p-3 bg-light rounded">
+                    <h6 class="fw-bold mb-3">Resumen de tu pedido</h6>
+                    <div id="resumenPedidoContent">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="metodos-pago">
+                    <h6 class="fw-bold mb-3">Selecciona tu método de pago</h6>
+
+                    <div class="row g-3">
+                        <!-- Tarjeta de Crédito/Débito -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card" data-metodo="tarjeta">
+                                <div class="metodo-pago-header">
+                                    <i class="fas fa-credit-card fa-2x text-primary"></i>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="metodoPago"
+                                            id="tarjetaCredito" value="tarjeta">
+                                        <label class="form-check-label fw-bold" for="tarjetaCredito">
+                                            Tarjeta de Crédito/Débito
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Paga con tu tarjeta Visa, Mastercard o American
+                                        Express</p>
+                                    <div class="tarjetas-aceptadas">
+                                        <i class="fab fa-cc-visa text-primary me-2"></i>
+                                        <i class="fab fa-cc-mastercard text-danger me-2"></i>
+                                        <i class="fab fa-cc-amex text-info"></i>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="message-content">
-                                <p>¡Hola {{ user.first_name }}! ¿En qué puedo ayudarte hoy?</p>
+                        </div>
+
+                        <!-- Pago Contra Entrega -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card" data-metodo="contra_entrega">
+                                <div class="metodo-pago-header">
+                                    <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="metodoPago"
+                                            id="contraEntrega" value="contra_entrega">
+                                        <label class="form-check-label fw-bold" for="contraEntrega">
+                                            Pago Contra Entrega
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Paga cuando recibas tu pedido en efectivo o con
+                                        datáfono</p>
+                                    <div class="opciones-pago">
+                                        <span class="badge bg-success me-1">Efectivo</span>
+                                        <span class="badge bg-primary">Datáfono</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transferencia Bancaria -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card" data-metodo="transferencia">
+                                <div class="metodo-pago-header">
+                                    <i class="fas fa-university fa-2x text-info"></i>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="metodoPago"
+                                            id="transferencia" value="transferencia">
+                                        <label class="form-check-label fw-bold" for="transferencia">
+                                            Transferencia Bancaria
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Realiza una transferencia desde tu banco</p>
+                                    <div class="bancos-aceptados">
+                                        <span class="badge bg-secondary me-1">Bancolombia</span>
+                                        <span class="badge bg-secondary">Davivienda</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Nequi -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card nequi-card" data-metodo="nequi">
+                                <div class="metodo-pago-header">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{% static 'img/nequi.jpg' %}" alt="Nequi" class="logo-billetera">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="metodoPago" id="nequi"
+                                                value="nequi">
+                                            <label class="form-check-label fw-bold" for="nequi">
+                                                Nequi
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Paga rápido y seguro con tu billetera Nequi</p>
+                                    <div class="nequi-info">
+                                        <span class="badge nequi-bg text-white">Pago Rápido</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- DaviPlata -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card daviplata-card" data-metodo="daviplata">
+                                <div class="metodo-pago-header">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{% static 'img/daviplata.jpeg' %}" alt="DaviPlata"
+                                            class="logo-billetera">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="metodoPago"
+                                                id="daviplata" value="daviplata">
+                                            <label class="form-check-label fw-bold" for="daviplata">
+                                                DaviPlata
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Paga con tu billetera DaviPlata de forma segura</p>
+                                    <div class="daviplata-info">
+                                        <span class="badge daviplata-bg text-white">Pago Seguro</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="chat-input-container">
-                        <input type="text" class="chat-input" placeholder="Escribe tu mensaje...">
-                        <button class="btn-send">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                </div>
+
+                <!-- Formularios específicos para cada método -->
+                <div class="formularios-pago mt-4">
+                    <!-- Formulario Nequi -->
+                    <div class="formulario-pago" id="formularioNequi">
+                        <h6 class="fw-bold mb-3 nequi-color">
+                            <i class="fas fa-mobile-alt me-2"></i>Información para pago con Nequi
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="campo-formulario">
+                                    <label for="nequiTelefono">Número de Teléfono</label>
+                                    <input type="tel" id="nequiTelefono"
+                                        placeholder="Ingresa tu número de teléfono Nequi" maxlength="10">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="campo-formulario">
+                                    <label for="nequiClave">Clave Dinámica</label>
+                                    <input type="text" id="nequiClave" placeholder="Ingresa la clave dinámica"
+                                        maxlength="6">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> Recibirás una clave dinámica en tu app de Nequi para confirmar el
+                            pago.
+                        </div>
+                    </div>
+
+                    <!-- Formulario DaviPlata -->
+                    <div class="formulario-pago" id="formularioDaviplata">
+                        <h6 class="fw-bold mb-3 daviplata-color">
+                            <i class="fas fa-wallet me-2"></i>Información para pago con DaviPlata
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="campo-formulario">
+                                    <label for="daviplataTelefono">Número de Teléfono</label>
+                                    <input type="tel" id="daviplataTelefono"
+                                        placeholder="Ingresa tu número de teléfono DaviPlata" maxlength="10">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="campo-formulario">
+                                    <label for="daviplataClave">Clave de 4 Dígitos</label>
+                                    <input type="password" id="daviplataClave"
+                                        placeholder="Ingresa tu clave de 4 dígitos" maxlength="4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Nota:</strong> Usa el mismo número y clave que utilizas en tu app de DaviPlata.
+                        </div>
                     </div>
                 </div>
+
+                <div class="mt-4 p-3 bg-light rounded">
+                    <h6 class="fw-bold mb-2">Información importante</h6>
+                    <ul class="small text-muted mb-0">
+                        <li>Tu información de pago está protegida con encriptación SSL</li>
+                        <li>Puedes cancelar tu pedido hasta 1 hora después de realizado</li>
+                        <li>Recibirás confirmación de tu pedido por correo electrónico</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver al Carrito
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmarPagoBtn" onclick="confirmarPago()" disabled>
+                    <i class="fas fa-lock me-2"></i>
+                    Confirmar y Pagar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TRANSFERENCIA BANCARIA -->
+<div class="modal fade" id="transferenciaModal" tabindex="-1" aria-labelledby="transferenciaModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="transferenciaModalLabel">
+                    <i class="fas fa-university me-2"></i>
+                    Transferencia Bancaria
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="resumen-pedido mb-4 p-3 bg-light rounded">
+                    <h6 class="fw-bold mb-3">Resumen de tu pedido</h6>
+                    <div id="resumenTransferenciaContent">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                </div>
+
+                <div class="info-transferencia">
+                    <h6 class="fw-bold mb-3">Información para transferencia</h6>
+
+                    <div class="datos-banco">
+                        <div class="dato-banco">
+                            <span class="fw-medium">Titular:</span>
+                            <span>VECY MARKETPLACE S.A.S.</span>
+                            <button class="btn-copiar" onclick="copiarAlPortapapeles('VECY MARKETPLACE S.A.S.')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="dato-banco">
+                            <span class="fw-medium">NIT:</span>
+                            <span>901.234.567-8</span>
+                            <button class="btn-copiar" onclick="copiarAlPortapapeles('901.234.567-8')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <div class="dato-banco">
+                            <span class="fw-medium">Banco:</span>
+                            <span>Bancolombia</span>
+                        </div>
+                        <div class="dato-banco">
+                            <span class="fw-medium">Tipo de Cuenta:</span>
+                            <span>Cuenta de Ahorros</span>
+                        </div>
+                        <div class="dato-banco">
+                            <span class="fw-medium">Número de Cuenta:</span>
+                            <span>345-789456-12</span>
+                            <button class="btn-copiar" onclick="copiarAlPortapapeles('345-789456-12')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <h6 class="fw-bold">Instrucciones:</h6>
+                        <ol class="small">
+                            <li>Realiza la transferencia por el monto exacto de tu pedido</li>
+                            <li>Usa el número de pedido como concepto/referencia</li>
+                            <li>Guarda el comprobante de la transferencia</li>
+                            <li>Tu pedido será procesado una vez confirmemos el pago</li>
+                        </ol>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> La confirmación del pago puede tomar de 15 a 30 minutos.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="volverAMetodosPago()">
+                    <i class="fas fa-arrow-left me-2"></i>
+                    Volver a Métodos
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmarTransferenciaBtn"
+                    onclick="confirmarTransferencia()">
+                    <i class="fas fa-check me-2"></i>
+                    Confirmar Transferencia
+                </button>
             </div>
         </div>
     </div>
@@ -527,1391 +1579,1186 @@
 {% endblock %}
 
 {% block scripts %}
-<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<!-- AOS JS -->
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-// Initialize AOS
-AOS.init({
-    duration: 800,
-    once: true,
-    offset: 50
-});
+    // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
 
-// Flash Sale Countdown
-function initFlashCountdown() {
-    const hoursElement = document.getElementById('flash-hours');
-    const minutesElement = document.getElementById('flash-minutes');
-    const secondsElement = document.getElementById('flash-seconds');
-    
-    let time = 2 * 60 * 60 + 15 * 60 + 30; // 2 hours, 15 minutes, 30 seconds
-    
-    const timer = setInterval(() => {
-        const hours = Math.floor(time / 3600);
-        const minutes = Math.floor((time % 3600) / 60);
-        const seconds = time % 60;
+    console.log("🎯 VECY SCRIPT INICIADO - Versión Corregida");
+
+    // Variables globales
+    let metodoPagoSeleccionado = null;
+    let datosPago = {};
+    let productVariantsData = {};
+    let selectedVariants = {};
+
+    // ==================== SISTEMA DE VARIANTES MEJORADO ====================
+
+    // Función MEJORADA para inicializar datos de variantes
+    function initializeVariantsData() {
+        console.log("🔄 Inicializando datos de variantes...");
+
+        // Limpiar datos anteriores
+        productVariantsData = {};
+        selectedVariants = {};
+
+        // Buscar todos los productos con variantes en la página
+        const productCards = document.querySelectorAll('.product-card-with-variants');
+
+        productCards.forEach(productCard => {
+            const productId = productCard.getAttribute('data-product-id');
+            if (!productId) return;
+
+            console.log(`🔍 Procesando producto con variantes: ${productId}`);
+
+            // Buscar datos de variantes en el contenedor oculto
+            const variantesDataContainer = productCard.querySelector('.variantes-reales-data');
+            if (!variantesDataContainer) {
+                console.log(`❌ No se encontraron datos de variantes para producto ${productId}`);
+                return;
+            }
+
+            const variantElements = variantesDataContainer.querySelectorAll('[data-variant]');
+            console.log(`📊 Variantes encontradas para producto ${productId}: ${variantElements.length}`);
+
+            if (variantElements.length > 0) {
+                const variants = [];
+                
+                variantElements.forEach((element, index) => {
+                    // Obtener datos de cada variante
+                    const variantId = element.getAttribute('data-variant-id');
+                    const variantName = element.getAttribute('data-variant-name');
+                    const variantImage = element.getAttribute('data-variant-image');
+                    const variantPrice = element.getAttribute('data-variant-precio-final');
+                    const variantStock = parseInt(element.getAttribute('data-variant-stock')) || 0;
+                    const isBase = element.getAttribute('data-is-base') === 'true';
+
+                    // Validar que los datos sean correctos
+                    if (!variantId || !variantName) {
+                        console.log(`❌ Datos incompletos para variante ${index + 1}`);
+                        return;
+                    }
+
+                    const variant = {
+                        id: variantId,
+                        name: variantName,
+                        image: variantImage || '/static/img/placeholder-producto.jpg',
+                        selected: isBase,
+                        price: variantPrice || '0',
+                        stock: variantStock,
+                        isBase: isBase
+                    };
+
+                    console.log(`  📦 Variante ${index + 1}: ID=${variantId}, Nombre=${variantName}, Precio=$${variant.price}, Stock=${variant.stock}, Base=${variant.isBase}`);
+                    variants.push(variant);
+                });
+
+                // Ordenar variantes: base primero
+                variants.sort((a, b) => b.isBase - a.isBase);
+                
+                productVariantsData[productId] = variants;
+                
+                // Establecer la variante base como seleccionada por defecto
+                const baseVariant = variants.find(v => v.isBase);
+                if (baseVariant) {
+                    selectedVariants[productId] = baseVariant.id;
+                    console.log(`✅ Variante base seleccionada por defecto: ${baseVariant.id}`);
+                }
+            }
+        });
+
+        console.log("📦 Datos de variantes inicializados:", productVariantsData);
+        console.log("🎯 Variantes seleccionadas:", selectedVariants);
+    }
+
+    // Función MEJORADA para crear las miniaturas de variantes
+    function createVariantThumbnails(productId, variants) {
+        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        if (!variantsGrid) {
+            console.log(`❌ No se encontró variantsGrid-${productId}`);
+            return;
+        }
+
+        variantsGrid.innerHTML = '';
+
+        variants.forEach(variant => {
+            // Validar que la variante tenga datos mínimos
+            if (!variant.id || !variant.name) {
+                console.log(`❌ Variante inválida:`, variant);
+                return;
+            }
+
+            const thumbElement = document.createElement('div');
+            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
+            thumbElement.setAttribute('data-variant-id', variant.id);
+            thumbElement.setAttribute('title', variant.name);
+
+            // Mostrar badge especial para producto base
+            const baseBadge = variant.isBase ? 
+                '<div class="base-badge">Base</div>' : '';
+
+            // Mostrar información de stock
+            const stockInfo = variant.stock > 0 ? 
+                `<span style="color: #28a745;">(${variant.stock} disp)</span>` : 
+                `<span style="color: #dc3545;">(Sin stock)</span>`;
+
+            thumbElement.innerHTML = `
+                ${baseBadge}
+                <img src="${variant.image}" alt="${variant.name}" loading="lazy"
+                     onerror="this.src='/static/img/placeholder-producto.jpg'">
+                <div class="variant-name">${variant.name} - $${variant.price} ${stockInfo}</div>
+            `;
+
+            thumbElement.addEventListener('click', () => {
+                if (variant.stock > 0) {
+                    selectVariant(productId, variant.id, variants);
+                } else {
+                    showVariantNotification('Esta variante no tiene stock disponible', 'error');
+                }
+            });
+            
+            variantsGrid.appendChild(thumbElement);
+        });
+
+        console.log(`✅ Miniaturas creadas para producto ${productId} (${variants.length} variantes)`);
+    }
+
+    // Función MEJORADA para seleccionar una variante
+    function selectVariant(productId, variantId, variants) {
+        console.log(`🔄 Seleccionando variante: ${productId} -> ${variantId}`);
+
+        const selectedVariant = variants.find(v => v.id === variantId);
+
+        if (selectedVariant) {
+            // Actualizar la variante seleccionada globalmente
+            selectedVariants[productId] = variantId;
+
+            // Actualizar título
+            const titleElement = document.getElementById(`productTitle-${productId}`);
+            if (titleElement) {
+                // Si es el producto base, mostrar nombre original, sino mostrar nombre completo
+                if (selectedVariant.isBase) {
+                    const originalName = selectedVariant.name.replace(' - Estándar', '');
+                    titleElement.textContent = originalName;
+                } else {
+                    titleElement.textContent = selectedVariant.name;
+                }
+            }
+
+            // Actualizar imagen principal
+            const mainImage = document.getElementById(`mainProductImage-${productId}`);
+            if (mainImage && selectedVariant.image) {
+                mainImage.src = selectedVariant.image;
+                mainImage.alt = selectedVariant.name;
+            }
+
+            // Actualizar precio
+            const priceElement = document.getElementById(`price-${productId}`);
+            if (priceElement && selectedVariant.price) {
+                priceElement.textContent = `$${selectedVariant.price}`;
+            }
+
+            // Actualizar estado de selección en todas las variantes
+            variants.forEach(v => {
+                v.selected = v.id === variantId;
+            });
+
+            // Recrear miniaturas con nueva selección
+            createVariantThumbnails(productId, variants);
+
+            // Mostrar notificación
+            const variantType = selectedVariant.isBase ? 'Producto estándar' : 'Variante especial';
+            showVariantNotification(`${variantType} seleccionado: ${selectedVariant.name}`, 'success');
+
+            console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
+        }
+    }
+
+    // Función para notificaciones de variantes
+    function showVariantNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    // Función MEJORADA para inicializar sistema de variantes
+    function initializeVariantsSystem() {
+        console.log("🚀 Inicializando sistema de variantes...");
+
+        try {
+            initializeVariantsData();
+
+            // Crear miniaturas para todos los productos con variantes
+            for (const [productId, variants] of Object.entries(productVariantsData)) {
+                createVariantThumbnails(productId, variants);
+                
+                // Aplicar selección inicial (base)
+                const baseVariant = variants.find(v => v.isBase);
+                if (baseVariant) {
+                    selectVariant(productId, baseVariant.id, variants);
+                }
+            }
+
+            console.log("✅ Sistema de variantes inicializado correctamente");
+        } catch (error) {
+            console.error("❌ Error inicializando sistema de variantes:", error);
+        }
+    }
+
+    // Función para agregar al carrito considerando variantes
+    function addToCartWithVariant(productId) {
+        console.log(`🛒 Agregando producto con variante: ${productId}`);
         
-        hoursElement.textContent = hours.toString().padStart(2, '0');
-        minutesElement.textContent = minutes.toString().padStart(2, '0');
-        secondsElement.textContent = seconds.toString().padStart(2, '0');
+        // Obtener la variante seleccionada para este producto
+        const selectedVariantId = selectedVariants[productId];
         
-        if (time <= 0) {
-            clearInterval(timer);
-            document.querySelector('.countdown-timer').innerHTML = '<div class="timer-ended">Oferta Finalizada</div>';
+        if (!selectedVariantId) {
+            console.log(`❌ No hay variante seleccionada para producto ${productId}`);
+            vecyShowNotification('Por favor selecciona una opción', 'error');
+            return;
         }
         
-        time--;
-    }, 1000);
-}
-
-// Cart functionality
-function addToCart(productId) {
-    const button = event.target.closest('button');
-    const originalContent = button.innerHTML;
-    
-    button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Agregando...';
-    button.disabled = true;
-    
-    setTimeout(() => {
-        button.innerHTML = '<i class="fas fa-check me-2"></i>Agregado';
-        button.classList.add('added');
+        console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
         
-        setTimeout(() => {
-            button.innerHTML = originalContent;
-            button.disabled = false;
-            button.classList.remove('added');
-        }, 2000);
-    }, 1000);
-    
-    showNotification('Producto agregado al carrito', 'success');
-}
-
-// Wishlist functionality
-function toggleWishlist(productId) {
-    const button = event.currentTarget;
-    const icon = button.querySelector('i');
-    
-    if (icon.classList.contains('far')) {
-        icon.classList.replace('far', 'fas');
-        icon.style.color = '#e74c3c';
-        showNotification('Agregado a favoritos', 'success');
-    } else {
-        icon.classList.replace('fas', 'far');
-        icon.style.color = '';
-        showNotification('Removido de favoritos', 'info');
+        // Si es la variante base, usar addToCart normal
+        if (selectedVariantId === 'base') {
+            addToCart(productId);
+        } else {
+            // Si es una variante específica, usar addToCart con variante_id
+            addToCart(productId, selectedVariantId);
+        }
     }
-}
 
-// Quick View functionality
-function quickView(productId) {
-    showNotification('Función de vista rápida en desarrollo', 'info');
-}
+    // ==================== FUNCIONES DEL CARRITO (MANTENIDAS) ====================
 
-// Notification system
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.innerHTML = `
-        <div class="notification-content">
-            <i class="fas fa-${getNotificationIcon(type)}"></i>
-            <span>${message}</span>
+    // Función para abrir el carrito
+    function toggleCart() {
+        console.log("🛒 Abriendo carrito...");
+        const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyCartOffcanvas'));
+        cartOffcanvas.show();
+        loadCartContent();
+    }
+
+    // Función para cargar el contenido del carrito via AJAX
+    function loadCartContent() {
+        const cartItemsContainer = document.getElementById('cartItemsContainer');
+        const cartLoading = document.getElementById('cartLoading');
+        const cartContent = document.getElementById('cartContent');
+
+        if (!cartItemsContainer) return;
+
+        console.log("📦 Cargando contenido del carrito...");
+
+        // Mostrar loading
+        cartContent.style.display = 'none';
+        cartLoading.style.display = 'block';
+
+        fetch('/cliente/carrito-data/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderCartItems(data.items, data.totales);
+                } else {
+                    showCartEmptyState();
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error cargando carrito:', error);
+                showCartEmptyState();
+            })
+            .finally(() => {
+                cartLoading.style.display = 'none';
+                cartContent.style.display = 'block';
+            });
+    }
+
+    // Función para renderizar los items del carrito
+    function renderCartItems(items, totales) {
+        const container = document.getElementById('cartItemsContainer');
+        const cartSubtotal = document.getElementById('cartSubtotal');
+        const cartTotal = document.getElementById('cartTotal');
+        const cartSavings = document.getElementById('cartSavings');
+        const cartSavingsContainer = document.getElementById('cartSavingsContainer');
+        const cartSummary = document.querySelector('.cart-summary');
+
+        if (!items || items.length === 0) {
+            showCartEmptyState();
+            return;
+        }
+
+        let html = '';
+
+        items.forEach(item => {
+            const tieneOferta = item.tiene_oferta;
+            const precioOriginal = item.precio_original;
+            const precioActual = item.precio_unitario;
+            const ahorroItem = (precioOriginal - precioActual) * item.cantidad;
+
+            html += `
+            <div class="cart-item" data-item-id="${item.id}">
+                <img src="${item.imagen || 'https://via.placeholder.com/80x80/f1f5f9/64748b?text=VECY'}" 
+                     alt="${item.nombre}" class="cart-item-image">
+                
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.nombre}</div>
+                    <div class="cart-item-store">
+                        <i class="fas fa-store"></i> ${item.negocio}
+                    </div>
+                    
+                    <div class="cart-item-price">
+                        <span class="cart-item-current-price">$${precioActual.toFixed(0)}</span>
+                        ${tieneOferta ? `
+                            <span class="cart-item-original-price">$${precioOriginal.toFixed(0)}</span>
+                            <span class="cart-item-discount">Ahorras $${ahorroItem.toFixed(0)}</span>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="cart-item-actions">
+                    <div class="cart-quantity-control">
+                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, -1)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                        <span class="quantity-display">${item.cantidad}</span>
+                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, 1)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <button class="cart-remove-btn" onclick="removeCartItem(${item.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        });
+
+        container.innerHTML = html;
+
+        // Mostrar resumen
+        if (cartSummary) cartSummary.style.display = 'block';
+
+        // Actualizar totales
+        if (cartSubtotal) cartSubtotal.textContent = `$${totales.subtotal.toFixed(0)}`;
+        if (cartTotal) cartTotal.textContent = `$${totales.total.toFixed(0)}`;
+
+        if (totales.ahorro_total > 0) {
+            if (cartSavings) cartSavings.textContent = `$${totales.ahorro_total.toFixed(0)}`;
+            if (cartSavingsContainer) cartSavingsContainer.style.display = 'flex';
+        } else {
+            if (cartSavingsContainer) cartSavingsContainer.style.display = 'none';
+        }
+    }
+
+    // Función para estado vacío del carrito
+    function showCartEmptyState() {
+        const container = document.getElementById('cartItemsContainer');
+        const cartSummary = document.querySelector('.cart-summary');
+
+        if (container) {
+            container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="empty-cart-icon mb-3">
+                    <i class="fas fa-shopping-cart fa-4x text-muted"></i>
+                </div>
+                <h5 class="text-muted">Tu carrito está vacío</h5>
+                <p class="text-muted">Agrega algunos productos increíbles</p>
+            </div>
+        `;
+        }
+
+        if (cartSummary) cartSummary.style.display = 'none';
+    }
+
+    // Función para actualizar cantidad
+    function updateCartItemQuantity(itemId, change) {
+        console.log(`🔄 Actualizando cantidad del item ${itemId}, cambio: ${change}`);
+
+        fetch('/cliente/actualizar-cantidad-carrito/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                item_id: itemId,
+                cambio: change
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCartContent();
+                    updateCartCount(data.carrito_count);
+                    vecyShowNotification('Cantidad actualizada', 'success');
+                } else {
+                    vecyShowNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error actualizando cantidad:', error);
+                vecyShowNotification('Error actualizando cantidad', 'error');
+            });
+    }
+
+    // Función para eliminar item
+    function removeCartItem(itemId) {
+        console.log(`🗑️ Eliminando item ${itemId}`);
+
+        fetch('/cliente/eliminar-item-carrito/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                item_id: itemId
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadCartContent();
+                    updateCartCount(data.carrito_count);
+                    vecyShowNotification('Producto eliminado del carrito', 'success');
+                } else {
+                    vecyShowNotification(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error eliminando item:', error);
+                vecyShowNotification('Error eliminando producto', 'error');
+            });
+    }
+
+    // ==================== FUNCIONES DE PAGO (MANTENIDAS) ====================
+
+    // Función para proceder al pago
+    function procederPago() {
+        const cartItemsContainer = document.getElementById('cartItemsContainer');
+        if (!cartItemsContainer || cartItemsContainer.innerHTML.includes('empty-cart-icon')) {
+            vecyShowNotification('Tu carrito está vacío', 'error');
+            return;
+        }
+
+        mostrarModalMetodosPago();
+    }
+
+    // Función para mostrar modal de métodos de pago
+    function mostrarModalMetodosPago() {
+        cargarResumenPedido();
+
+        const modal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
+        modal.show();
+
+        configurarEventosMetodosPago();
+    }
+
+    // Función para cargar el resumen del pedido
+    function cargarResumenPedido() {
+        fetch('/cliente/carrito-data/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarResumenPedido(data.items, data.totales);
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando resumen:', error);
+            });
+    }
+
+    // Función para mostrar el resumen del pedido
+    function mostrarResumenPedido(items, totales) {
+        const resumenContainer = document.getElementById('resumenPedidoContent');
+
+        let html = '';
+
+        items.forEach(item => {
+            html += `
+            <div class="resumen-item">
+                <div class="resumen-producto">
+                    <span class="fw-medium">${item.nombre}</span>
+                    <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
+                </div>
+                <div class="resumen-precio">
+                    $${(item.precio_unitario * item.cantidad).toFixed(0)}
+                </div>
+            </div>
+        `;
+        });
+
+        html += `
+        <div class="resumen-item pt-2 mt-2 border-top">
+            <div class="fw-bold">Subtotal</div>
+            <div>$${totales.subtotal.toFixed(0)}</div>
         </div>
     `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => notification.classList.add('show'), 100);
-    setTimeout(() => {
-        notification.classList.remove('show');
+
+        if (totales.ahorro_total > 0) {
+            html += `
+            <div class="resumen-item text-success">
+                <div>Ahorro</div>
+                <div>-$${totales.ahorro_total.toFixed(0)}</div>
+        </div>
+        `;
+        }
+
+        html += `
+        <div class="resumen-item resumen-total">
+            <div>Total a Pagar</div>
+            <div>$${totales.total.toFixed(0)}</div>
+        </div>
+    `;
+
+        resumenContainer.innerHTML = html;
+    }
+
+    // Función para configurar eventos de métodos de pago
+    function configurarEventosMetodosPago() {
+        const metodoPagoCards = document.querySelectorAll('.metodo-pago-card');
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const formularios = document.querySelectorAll('.formulario-pago');
+
+        // Resetear selección
+        metodoPagoCards.forEach(card => card.classList.remove('selected'));
+        formularios.forEach(form => form.classList.remove('active'));
+        confirmarBtn.disabled = true;
+        metodoPagoSeleccionado = null;
+        datosPago = {};
+
+        // Agregar eventos a cada tarjeta de método de pago
+        metodoPagoCards.forEach(card => {
+            card.addEventListener('click', function () {
+                metodoPagoCards.forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+                metodoPagoSeleccionado = radio.value;
+
+                formularios.forEach(form => form.classList.remove('active'));
+
+                if (metodoPagoSeleccionado === 'nequi') {
+                    document.getElementById('formularioNequi').classList.add('active');
+                } else if (metodoPagoSeleccionado === 'daviplata') {
+                    document.getElementById('formularioDaviplata').classList.add('active');
+                }
+                
+                confirmarBtn.disabled = false;
+            });
+        });
+
+        const radioButtons = document.querySelectorAll('input[name="metodoPago"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', function () {
+                if (this.checked) {
+                    metodoPagoCards.forEach(card => card.classList.remove('selected'));
+                    const card = this.closest('.metodo-pago-card');
+                    card.classList.add('selected');
+                    metodoPagoSeleccionado = this.value;
+
+                    formularios.forEach(form => form.classList.remove('active'));
+
+                    if (metodoPagoSeleccionado === 'nequi') {
+                        document.getElementById('formularioNequi').classList.add('active');
+                    } else if (metodoPagoSeleccionado === 'daviplata') {
+                        document.getElementById('formularioDaviplata').classList.add('active');
+                    }
+                    
+                    confirmarBtn.disabled = false;
+                }
+            });
+        });
+    }
+
+    // Función para validar formularios de billeteras digitales
+    function validarFormularioBilletera() {
+        if (metodoPagoSeleccionado === 'nequi') {
+            const telefono = document.getElementById('nequiTelefono').value.trim();
+            const clave = document.getElementById('nequiClave').value.trim();
+
+            if (!telefono) {
+                vecyShowNotification('Por favor ingresa tu número de teléfono Nequi', 'error');
+                return false;
+            }
+
+            if (!/^\d{10}$/.test(telefono)) {
+                vecyShowNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                return false;
+            }
+
+            if (!clave) {
+                vecyShowNotification('Por favor ingresa la clave dinámica', 'error');
+                return false;
+            }
+
+            if (!/^\d{6}$/.test(clave)) {
+                vecyShowNotification('La clave dinámica debe tener 6 dígitos', 'error');
+                return false;
+            }
+
+            datosPago = { telefono: telefono, clave: clave };
+
+        } else if (metodoPagoSeleccionado === 'daviplata') {
+            const telefono = document.getElementById('daviplataTelefono').value.trim();
+            const clave = document.getElementById('daviplataClave').value.trim();
+
+            if (!telefono) {
+                vecyShowNotification('Por favor ingresa tu número de teléfono DaviPlata', 'error');
+                return false;
+            }
+
+            if (!/^\d{10}$/.test(telefono)) {
+                vecyShowNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                return false;
+            }
+
+            if (!clave) {
+                vecyShowNotification('Por favor ingresa tu clave de 4 dígitos', 'error');
+                return false;
+            }
+
+            if (!/^\d{4}$/.test(clave)) {
+                vecyShowNotification('La clave debe tener 4 dígitos', 'error');
+                return false;
+            }
+
+            datosPago = { telefono: telefono, clave: clave };
+        }
+
+        return true;
+    }
+
+    // Función para confirmar el pago (modal principal)
+    function confirmarPago() {
+        if (!metodoPagoSeleccionado) {
+            vecyShowNotification('Por favor selecciona un método de pago', 'error');
+            return;
+        }
+
+        if ((metodoPagoSeleccionado === 'nequi' || metodoPagoSeleccionado === 'daviplata') && !validarFormularioBilletera()) {
+            return;
+        }
+
+        const metodoTexto = document.querySelector(`label[for="${metodoPagoSeleccionado}"]`).textContent;
+
+        console.log(`💳 Método seleccionado: ${metodoPagoSeleccionado} - ${metodoTexto}`);
+
+        if (metodoPagoSeleccionado === 'transferencia') {
+            mostrarModalTransferencia();
+        } else {
+            procesarPagoDirecto(metodoPagoSeleccionado, metodoTexto);
+        }
+    }
+
+    // Función para mostrar modal de transferencia bancaria
+    function mostrarModalTransferencia() {
+        const modalPrincipal = bootstrap.Modal.getInstance(document.getElementById('metodosPagoModal'));
+        modalPrincipal.hide();
+
+        cargarResumenTransferencia();
+
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
+            const modalTransferencia = new bootstrap.Modal(document.getElementById('transferenciaModal'));
+            modalTransferencia.show();
         }, 300);
-    }, 3000);
-}
+    }
 
-function getNotificationIcon(type) {
-    const icons = {
-        success: 'check-circle',
-        error: 'exclamation-circle',
-        warning: 'exclamation-triangle',
-        info: 'info-circle'
-    };
-    return icons[type] || 'info-circle';
-}
+    // Función para cargar resumen en modal de transferencia
+    function cargarResumenTransferencia() {
+        fetch('/cliente/carrito-data/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarResumenTransferencia(data.items, data.totales);
+                }
+            })
+            .catch(error => {
+                console.error('Error cargando resumen transferencia:', error);
+            });
+    }
 
-// Modal functions
-function openChatBot() {
-    const modal = new bootstrap.Modal(document.getElementById('chatBotModal'));
-    modal.show();
-}
+    // Función para mostrar resumen en modal de transferencia
+    function mostrarResumenTransferencia(items, totales) {
+        const resumenContainer = document.getElementById('resumenTransferenciaContent');
 
-function openSupport() {
-    showNotification('Soporte disponible 24/7', 'info');
-}
+        let html = '';
 
-function openHelp() {
-    showNotification('Centro de ayuda en desarrollo', 'info');
-}
+        items.forEach(item => {
+            html += `
+            <div class="resumen-item">
+                <div class="resumen-producto">
+                    <span class="fw-medium">${item.nombre}</span>
+                    <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
+                </div>
+                <div class="resumen-precio">
+                    $${(item.precio_unitario * item.cantidad).toFixed(0)}
+                </div>
+            </div>
+        `;
+        });
 
-// FAB functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const fabToggle = document.getElementById('fab-toggle');
-    const fabButton = document.querySelector('.fab-button');
-    const fabActions = document.querySelector('.fab-actions');
-    
-    if (fabToggle && fabButton) {
-        fabButton.addEventListener('click', function() {
-            const isActive = fabToggle.checked;
-            
-            if (isActive) {
-                fabToggle.checked = false;
-                fabActions.classList.remove('show');
+        html += `
+        <div class="resumen-item pt-2 mt-2 border-top">
+            <div class="fw-bold">Subtotal</div>
+            <div>$${totales.subtotal.toFixed(0)}</div>
+        </div>
+    `;
+
+        if (totales.ahorro_total > 0) {
+            html += `
+            <div class="resumen-item text-success">
+                <div>Ahorro</div>
+                <div>-$${totales.ahorro_total.toFixed(0)}</div>
+            </div>
+        `;
+        }
+
+        html += `
+        <div class="resumen-item resumen-total">
+            <div>Total a Transferir</div>
+            <div>$${totales.total.toFixed(0)}</div>
+        </div>
+    `;
+
+        resumenContainer.innerHTML = html;
+    }
+
+    // Función para volver al modal de métodos de pago
+    function volverAMetodosPago() {
+        const modalTransferencia = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
+        modalTransferencia.hide();
+
+        setTimeout(() => {
+            const modalPrincipal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
+            modalPrincipal.show();
+        }, 300);
+    }
+
+    // Función para copiar al portapapeles
+    function copiarAlPortapapeles(texto) {
+        navigator.clipboard.writeText(texto).then(() => {
+            vecyShowNotification('Copiado al portapapeles', 'success');
+        }).catch(err => {
+            console.error('Error al copiar: ', err);
+        });
+    }
+
+    // Función para confirmar transferencia
+    function confirmarTransferencia() {
+        const metodoCompleto = 'Transferencia Bancaria - Bancolombia';
+
+        console.log(`🏦 Confirmando transferencia: ${metodoCompleto}`);
+
+        const confirmarBtn = document.getElementById('confirmarTransferenciaBtn');
+        const originalText = confirmarBtn.innerHTML;
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+        confirmarBtn.disabled = true;
+
+        procesarPagoTransferencia(metodoCompleto);
+
+        setTimeout(() => {
+            confirmarBtn.innerHTML = originalText;
+            confirmarBtn.disabled = false;
+        }, 5000);
+    }
+
+    // Función para procesar pago con transferencia
+    function procesarPagoTransferencia(metodoCompleto) {
+        console.log(`🔄 Procesando transferencia: ${metodoCompleto}`);
+
+        fetch('/cliente/procesar-pedido/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                metodo_pago: 'transferencia',
+                metodo_pago_texto: metodoCompleto
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarConfirmacionTransferencia(data, metodoCompleto);
+                } else {
+                    vecyShowNotification(data.message || 'Error al procesar la transferencia', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error procesando transferencia:', error);
+                vecyShowNotification('Error de conexión al procesar la transferencia', 'error');
+            });
+    }
+
+    // Función para mostrar confirmación de transferencia
+    function mostrarConfirmacionTransferencia(data, metodoCompleto) {
+        const modalTransferencia = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
+        modalTransferencia.hide();
+
+        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
+        if (cartOffcanvas) cartOffcanvas.hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: '¡Transferencia Confirmada!',
+            html: `
+            <div class="text-center">
+                <i class="fas fa-university fa-4x text-info mb-3"></i>
+                <h4>¡Tu pedido ha sido confirmado!</h4>
+                <p class="mb-2"><strong>Número de pedido:</strong> #${data.numero_pedido || '0001'}</p>
+                <p class="mb-2"><strong>Total a transferir:</strong> $${data.total || '0'}</p>
+                <p class="mb-3"><strong>Método:</strong> ${metodoCompleto}</p>
+                
+                <div class="alert alert-info mt-3 text-start">
+                    <h6><i class="fas fa-info-circle me-2"></i>Instrucciones importantes:</h6>
+                    <ul class="small mb-0">
+                        <li>Realiza la transferencia por el monto exacto</li>
+                        <li>Usa el número de pedido como referencia</li>
+                        <li>Guarda el comprobante de transferencia</li>
+                        <li>Tu pedido se activará en 15-30 minutos</li>
+                    </ul>
+                </div>
+            </div>
+        `,
+            confirmButtonText: 'Entendido',
+            confirmButtonColor: '#007bff'
+        }).then(() => {
+            location.reload();
+        });
+
+        updateCartCount(0);
+    }
+
+    // Función para procesar pagos directos (sin modal adicional)
+    function procesarPagoDirecto(metodo, metodoTexto) {
+        console.log(`🔄 Procesando pago directo con: ${metodoTexto}`);
+
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const originalText = confirmarBtn.innerHTML;
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+        confirmarBtn.disabled = true;
+
+        const datosEnvio = {
+            metodo_pago: metodo,
+            metodo_pago_texto: metodoTexto
+        };
+
+        if (metodo === 'nequi' || metodo === 'daviplata') {
+            datosEnvio.datos_billetera = datosPago;
+        }
+
+        fetch('/cliente/procesar-pedido/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(datosEnvio)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarConfirmacionPago(data, metodoTexto);
+                } else {
+                    vecyShowNotification(data.message || 'Error al procesar el pago', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error procesando pago:', error);
+                vecyShowNotification('Error de conexión al procesar el pago', 'error');
+            })
+            .finally(() => {
+                confirmarBtn.innerHTML = originalText;
+                confirmarBtn.disabled = false;
+            });
+    }
+
+    // Función para mostrar confirmación de pago
+    function mostrarConfirmacionPago(data, metodoTexto) {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('metodosPagoModal'));
+        modal.hide();
+
+        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
+        if (cartOffcanvas) cartOffcanvas.hide();
+
+        Swal.fire({
+            icon: 'success',
+            title: '¡Pago Exitoso!',
+            html: `
+            <div class="text-center">
+                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                <h4>¡Tu pedido ha sido confirmado!</h4>
+                <p class="mb-2"><strong>Número de pedido:</strong> #${data.numero_pedido || '0001'}</p>
+                <p class="mb-2"><strong>Total pagado:</strong> $${data.total || '0'}</p>
+                <p class="mb-3"><strong>Método:</strong> ${metodoTexto}</p>
+                <p class="text-muted small">Recibirás un correo de confirmación shortly</p>
+            </div>
+        `,
+            confirmButtonText: 'Ver Mis Pedidos',
+            confirmButtonColor: '#007bff',
+            showCancelButton: true,
+            cancelButtonText: 'Seguir Comprando'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/cliente/mis-pedidos/';
             } else {
-                fabToggle.checked = true;
-                fabActions.classList.add('show');
+                location.reload();
             }
         });
+
+        updateCartCount(0);
+    }
+
+    // ==================== FUNCIONES DE PRODUCTOS ====================
+
+    // Función para agregar al carrito
+    function addToCart(productId, varianteId = null) {
+        const numericProductId = productId.split('-').pop();
+        const varianteSeleccionada = varianteId || selectedVariants[numericProductId];
+
+        console.log(`🛒 Intentando agregar producto ${numericProductId} al carrito con variante: ${varianteSeleccionada}`);
+
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+        });
+
+        Toast.fire({
+            icon: 'info',
+            title: 'Agregando al carrito...'
+        });
+
+        const datosEnvio = {
+            producto_id: numericProductId,
+            cantidad: 1
+        };
+
+        if (varianteSeleccionada && varianteSeleccionada !== 'base') {
+            datosEnvio.variante_id = varianteSeleccionada;
+            console.log(`📦 Enviando variante_id: ${varianteSeleccionada}`);
+        } else {
+            console.log(`📦 Producto base, sin variante_id`);
+        }
+
+        fetch('/cliente/agregar-carrito/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(datosEnvio)
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateCartCount(data.carrito_count);
+
+                    const cartOffcanvas = document.getElementById('vecyCartOffcanvas');
+                    if (cartOffcanvas && cartOffcanvas.classList.contains('show')) {
+                        loadCartContent();
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Producto agregado!',
+                        text: `${data.producto_nombre} se agregó al carrito`,
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+
+                    console.log(`✅ Producto agregado al carrito: ${data.producto_nombre}`);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message || 'No se pudo agregar el producto al carrito',
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 4000
+                    });
+
+                    console.log(`❌ Error: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error en fetch:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'No se pudo conectar con el servidor',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000
+                });
+            });
+    }
+
+    // Función para actualizar contador del carrito
+    function updateCartCount(count) {
+        const cartBadges = document.querySelectorAll('.vecy-fab-badge, #cartOffcanvasCount');
+
+        cartBadges.forEach(badge => {
+            if (badge) {
+                badge.textContent = count;
+                if (count > 0) {
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // ==================== FUNCIONES UTILITARIAS ====================
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Función para notificaciones
+    function vecyShowNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    // Otras funciones
+    function addToFavorites(productId) {
+        vecyShowNotification('Producto agregado a favoritos', 'success');
+    }
+
+    function quickView(productId) {
+        vecyShowNotification('Función de vista rápida', 'info');
+    }
+
+    function showSupport() {
+        vecyShowNotification('Redirigiendo a soporte...', 'info');
+    }
+
+    function toggleFavorites() {
+        vecyShowNotification('Abriendo favoritos...', 'info');
+    }
+
+    // ==================== INICIALIZACIÓN COMPLETA ====================
+
+    // Inicializar inmediatamente
+    function initVecy() {
+        console.log("🚀 INICIANDO VECY INMEDIATAMENTE");
         
-        // Close FAB when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.fab-container')) {
-                fabToggle.checked = false;
-                fabActions.classList.remove('show');
+        // 1. AOS
+        if (typeof AOS !== 'undefined') {
+            AOS.init({ duration: 800, once: true, offset: 100 });
+            console.log("✅ AOS inicializado");
+        }
+        
+        // 2. FAB
+        const fabMain = document.querySelector('.vecy-fab-main');
+        const fabMenu = document.querySelector('.vecy-fab-menu');
+        if (fabMain && fabMenu) {
+            fabMain.addEventListener('click', () => fabMenu.classList.toggle('active'));
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.vecy-floating-actions')) {
+                    fabMenu.classList.remove('active');
+                }
+            });
+            console.log("✅ FAB configurado");
+        }
+        
+        // 3. SCROLL SUAVE
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+        console.log("✅ Scroll suave configurado");
+        
+        // 4. SISTEMA DE VARIANTES - CON RETRASO PARA GARANTIZAR QUE EL DOM ESTÉ LISTO
+        setTimeout(() => {
+            console.log("🔄 INICIANDO SISTEMA DE VARIANTES...");
+            try {
+                initializeVariantsSystem();
+                console.log("✅ Sistema de variantes inicializado exitosamente");
+            } catch (error) {
+                console.error("❌ Error inicializando sistema de variantes:", error);
             }
-        });
+        }, 500);
+        
+        console.log("✅ VECY INICIALIZADO");
     }
-    
-    // Initialize carousel
-    const myCarousel = document.getElementById('mainCarousel');
-    if (myCarousel) {
-        const carousel = new bootstrap.Carousel(myCarousel, {
-            interval: 5000,
-            wrap: true
-        });
-    }
-    
-    // Initialize countdown
-    initFlashCountdown();
-});
+
+    // Ejecutar inmediatamente
+    initVecy();
+
+    // También ejecutar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', initVecy);
+
+    // Y ejecutar cuando la ventana se cargue
+    window.addEventListener('load', initVecy);
 </script>
-
-<style>
-:root {
-    --primary: #3598db;
-    --secondary: #34495e;
-    --dark: #2d3e50;
-    --light: #f8f9fb;
-    --white: #ffffff;
-    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    --transition: all 0.3s ease;
-}
-
-/* Hero Carousel */
-.hero-carousel {
-    position: relative;
-    overflow: hidden;
-}
-
-.carousel-item {
-    min-height: 500px;
-    position: relative;
-}
-
-.carousel-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-}
-
-.carousel-content {
-    color: white;
-    padding: 3rem 0;
-}
-
-.carousel-badge {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    display: inline-block;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-    backdrop-filter: blur(10px);
-}
-
-.carousel-title {
-    font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    line-height: 1.2;
-}
-
-.carousel-text {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    margin-bottom: 2rem;
-    max-width: 500px;
-}
-
-.carousel-actions {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.btn-carousel-primary {
-    background: var(--white);
-    color: var(--primary);
-    border: none;
-    padding: 0.8rem 2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.btn-carousel-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
-.btn-carousel-secondary {
-    background: transparent;
-    color: var(--white);
-    border: 2px solid var(--white);
-    padding: 0.8rem 2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.btn-carousel-secondary:hover {
-    background: var(--white);
-    color: var(--primary);
-    transform: translateY(-2px);
-}
-
-.carousel-image {
-    text-align: center;
-    padding: 2rem 0;
-}
-
-.placeholder-image {
-    color: rgba(255, 255, 255, 0.8);
-    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
-}
-
-.carousel-indicators button {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin: 0 5px;
-    background-color: rgba(255, 255, 255, 0.5);
-    border: none;
-}
-
-.carousel-indicators button.active {
-    background-color: var(--white);
-}
-
-.carousel-control-prev,
-.carousel-control-next {
-    width: 50px;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
-    top: 50%;
-    transform: translateY(-50%);
-    margin: 0 1rem;
-    backdrop-filter: blur(10px);
-}
-
-/* Quick Stats */
-.quick-stats {
-    background: var(--white);
-    border-bottom: 1px solid var(--light);
-}
-
-.stat-item-quick {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: var(--white);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
-}
-
-.stat-item-quick:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.stat-icon-quick {
-    width: 50px;
-    height: 50px;
-    background: var(--primary);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white);
-    font-size: 1.2rem;
-}
-
-.stat-content-quick {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-number-quick {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark);
-    line-height: 1;
-}
-
-.stat-label-quick {
-    font-size: 0.8rem;
-    color: var(--secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-/* Products Grid */
-.products-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-}
-
-.product-card {
-    background: var(--white);
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
-    border: 1px solid var(--light);
-}
-
-.product-card:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(53, 152, 219, 0.15);
-}
-
-.product-image-container {
-    position: relative;
-    height: 200px;
-    overflow: hidden;
-}
-
-.product-image, .product-image-placeholder {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: var(--transition);
-}
-
-.product-image-placeholder {
-    background: var(--light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--secondary);
-    font-size: 3rem;
-}
-
-.product-card:hover .product-image {
-    transform: scale(1.1);
-}
-
-.product-actions {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    opacity: 0;
-    transition: var(--transition);
-}
-
-.product-card:hover .product-actions {
-    opacity: 1;
-}
-
-.btn-action {
-    width: 40px;
-    height: 40px;
-    background: var(--white);
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-    box-shadow: var(--shadow);
-}
-
-.btn-action:hover {
-    background: var(--primary);
-    color: var(--white);
-    transform: scale(1.1);
-}
-
-.product-badges {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.badge-featured {
-    background: #f39c12;
-    color: var(--white);
-}
-
-.badge-discount {
-    background: #e74c3c;
-    color: var(--white);
-}
-
-.product-info {
-    padding: 1.5rem;
-}
-
-.product-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--dark);
-}
-
-.product-vendor {
-    color: var(--secondary);
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.product-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.price-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.current-price {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.original-price {
-    font-size: 1rem;
-    color: var(--secondary);
-    text-decoration: line-through;
-}
-
-.rating-info {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.stars {
-    color: #f1c40f;
-}
-
-.rating-count {
-    font-size: 0.8rem;
-    color: var(--secondary);
-}
-
-.btn-add-to-cart {
-    width: 100%;
-    padding: 0.8rem 1.5rem;
-    background: var(--primary);
-    color: var(--white);
-    border: none;
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-add-to-cart:hover {
-    background: var(--dark);
-    transform: translateY(-2px);
-}
-
-.btn-add-to-cart:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-}
-
-.btn-add-to-cart.added {
-    background: #27ae60;
-}
-
-/* Flash Sales */
-.flash-sales-section {
-    background: linear-gradient(135deg, var(--light) 0%, #e8edf5 100%);
-}
-
-.flash-header-content {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.flash-icon {
-    width: 60px;
-    height: 60px;
-    background: var(--primary);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--white);
-    font-size: 1.5rem;
-}
-
-.countdown-timer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--white);
-    padding: 1rem;
-    border-radius: 15px;
-    box-shadow: var(--shadow);
-}
-
-.timer-unit {
-    text-align: center;
-}
-
-.time {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-    display: block;
-}
-
-.label {
-    font-size: 0.8rem;
-    color: var(--secondary);
-    text-transform: uppercase;
-}
-
-.timer-separator {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-    margin: 0 0.5rem;
-}
-
-.flash-products-scroller {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-}
-
-.flash-product-card {
-    background: var(--white);
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
-}
-
-.flash-product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(231, 76, 60, 0.2);
-}
-
-.flash-product-image {
-    position: relative;
-    height: 180px;
-    overflow: hidden;
-}
-
-.flash-product-image img, .flash-image-placeholder {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.flash-image-placeholder {
-    background: #fdf2f2;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #e74c3c;
-    font-size: 2rem;
-}
-
-.flash-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(231, 76, 60, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: var(--transition);
-}
-
-.flash-product-card:hover .flash-overlay {
-    opacity: 1;
-}
-
-.btn-flash-cart {
-    width: 50px;
-    height: 50px;
-    background: var(--white);
-    border: none;
-    border-radius: 50%;
-    color: #e74c3c;
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.btn-flash-cart:hover {
-    transform: scale(1.1);
-}
-
-.flash-indicator {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    background: #e74c3c;
-    color: var(--white);
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.pulse-dot {
-    width: 8px;
-    height: 8px;
-    background: var(--white);
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-.flash-product-info {
-    padding: 1.5rem;
-}
-
-.flash-product-info h4 {
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--dark);
-}
-
-.flash-pricing {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.flash-price {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #e74c3c;
-}
-
-.flash-original-price {
-    font-size: 1rem;
-    color: var(--secondary);
-    text-decoration: line-through;
-}
-
-.sold-progress {
-    margin-top: 1rem;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 6px;
-    background: var(--light);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 0.5rem;
-}
-
-.progress-fill {
-    height: 100%;
-    background: #e74c3c;
-    border-radius: 3px;
-    transition: width 0.3s ease;
-}
-
-.sold-text {
-    font-size: 0.8rem;
-    color: var(--secondary);
-}
-
-/* Featured Products */
-.featured-section {
-    background: linear-gradient(135deg, var(--light) 0%, #e8edf5 100%);
-}
-
-.featured-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-}
-
-.featured-card {
-    perspective: 1000px;
-}
-
-.card-glass {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 1.5rem;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: var(--transition);
-}
-
-.featured-card:hover .card-glass {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-}
-
-.card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-.featured-badge {
-    background: linear-gradient(135deg, #f1c40f, #f39c12);
-    color: var(--white);
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.card-wishlist {
-    background: none;
-    border: none;
-    color: var(--secondary);
-    font-size: 1.2rem;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.card-wishlist:hover {
-    color: #e74c3c;
-    transform: scale(1.1);
-}
-
-.card-image {
-    height: 150px;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.card-image img, .card-image-placeholder {
-    max-height: 100%;
-    max-width: 100%;
-    object-fit: contain;
-}
-
-.card-image-placeholder {
-    color: var(--secondary);
-    font-size: 3rem;
-}
-
-.card-content h3 {
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-}
-
-.card-description {
-    color: var(--secondary);
-    font-size: 0.9rem;
-    margin-bottom: 1rem;
-    line-height: 1.5;
-}
-
-.card-features {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-}
-
-.feature {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8rem;
-    color: var(--secondary);
-}
-
-.feature i {
-    color: var(--primary);
-}
-
-.card-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.price {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.price .current {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-
-.price .original {
-    font-size: 1rem;
-    color: var(--secondary);
-    text-decoration: line-through;
-}
-
-.btn-featured-cart {
-    width: 40px;
-    height: 40px;
-    background: var(--primary);
-    color: var(--white);
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.btn-featured-cart:hover {
-    background: var(--dark);
-    transform: scale(1.1);
-}
-
-/* Businesses Section */
-.businesses-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-}
-
-.business-card {
-    background: var(--white);
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
-    border: 1px solid var(--light);
-}
-
-.business-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
-}
-
-.business-header {
-    position: relative;
-    padding: 1.5rem 1.5rem 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-.business-image {
-    width: 80px;
-    height: 80px;
-    border-radius: 15px;
-    overflow: hidden;
-    position: relative;
-}
-
-.business-image img, .business-image-placeholder {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.business-image-placeholder {
-    background: var(--light);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--secondary);
-    font-size: 1.5rem;
-}
-
-.verified-badge {
-    position: absolute;
-    bottom: -5px;
-    right: -5px;
-    width: 20px;
-    height: 20px;
-    background: #27ae60;
-    color: var(--white);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    border: 2px solid var(--white);
-}
-
-.btn-follow {
-    width: 40px;
-    height: 40px;
-    background: var(--white);
-    border: 1px solid var(--light);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.btn-follow:hover {
-    background: var(--primary);
-    color: var(--white);
-    border-color: var(--primary);
-}
-
-.business-info {
-    padding: 1.5rem;
-}
-
-.business-info h3 {
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--dark);
-}
-
-.business-category {
-    color: var(--primary);
-    font-weight: 500;
-    margin-bottom: 1rem;
-}
-
-.business-rating {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.business-rating .stars {
-    color: #f1c40f;
-}
-
-.rating-text {
-    font-size: 0.9rem;
-    color: var(--secondary);
-}
-
-.business-description {
-    color: var(--secondary);
-    margin-bottom: 1.5rem;
-    line-height: 1.5;
-}
-
-.btn-visit-store {
-    width: 100%;
-    padding: 0.8rem 1.5rem;
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    border-radius: 10px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-}
-
-.btn-visit-store:hover {
-    background: var(--primary);
-    color: var(--white);
-    transform: translateY(-2px);
-}
-
-/* CTA Section */
-.cta-section {
-    background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
-    color: var(--white);
-}
-
-.cta-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-}
-
-.cta-text {
-    font-size: 1.2rem;
-    opacity: 0.9;
-    margin-bottom: 2rem;
-}
-
-.btn-cta {
-    background: var(--white);
-    color: var(--primary);
-    border: none;
-    padding: 1rem 2rem;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 1.1rem;
-    cursor: pointer;
-    transition: var(--transition);
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-cta:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-/* FAB Button */
-.fab-container {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    z-index: 1000;
-}
-
-.fab-toggle {
-    display: none;
-}
-
-.fab-button {
-    width: 60px;
-    height: 60px;
-    background: var(--primary);
-    color: var(--white);
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    cursor: pointer;
-    box-shadow: 0 5px 20px rgba(53, 152, 219, 0.3);
-    transition: var(--transition);
-    z-index: 1001;
-    position: relative;
-}
-
-.fab-button:hover {
-    background: var(--dark);
-    transform: scale(1.1);
-}
-
-.fab-toggle:checked + .fab-button {
-    transform: rotate(45deg);
-    background: #e74c3c;
-}
-
-.fab-actions {
-    position: absolute;
-    bottom: 70px;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    opacity: 0;
-    transform: translateY(20px);
-    pointer-events: none;
-    transition: var(--transition);
-}
-
-.fab-toggle:checked ~ .fab-actions {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: all;
-}
-
-.fab-action {
-    width: 50px;
-    height: 50px;
-    background: var(--white);
-    border: none;
-    border-radius: 50%;
-    color: var(--dark);
-    font-size: 1.2rem;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.fab-action:hover {
-    transform: scale(1.1);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.fab-action:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    right: 60px;
-    background: var(--dark);
-    color: white;
-    padding: 0.5rem 1rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    pointer-events: none;
-}
-
-/* Notifications */
-.notification {
-    position: fixed;
-    top: 2rem;
-    right: 2rem;
-    background: var(--white);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
-    padding: 1rem 1.5rem;
-    transform: translateX(400px);
-    transition: var(--transition);
-    z-index: 1060;
-    max-width: 300px;
-    border-left: 4px solid var(--primary);
-}
-
-.notification.show {
-    transform: translateX(0);
-}
-
-.notification-success {
-    border-left-color: #27ae60;
-}
-
-.notification-error {
-    border-left-color: #e74c3c;
-}
-
-.notification-warning {
-    border-left-color: #f39c12;
-}
-
-.notification-content {
-    display: flex;
-    align-items: center;
-    color: var(--dark);
-}
-
-.notification-content i {
-    margin-right: 0.5rem;
-}
-
-.notification-success .notification-content i {
-    color: #27ae60;
-}
-
-.notification-error .notification-content i {
-    color: #e74c3c;
-}
-
-.notification-warning .notification-content i {
-    color: #f39c12;
-}
-
-/* Buttons */
-.btn-view-all {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    padding: 0.8rem 1.5rem;
-    border-radius: 10px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: var(--transition);
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-view-all:hover {
-    background: var(--primary);
-    color: var(--white);
-    transform: translateY(-2px);
-}
-
-/* Section Headers */
-.section-header {
-    margin-bottom: 3rem;
-}
-
-.section-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 0.5rem;
-}
-
-.section-subtitle {
-    color: var(--secondary);
-    font-size: 1.1rem;
-}
-
-/* Empty States */
-.empty-state {
-    grid-column: 1 / -1;
-    padding: 3rem 2rem;
-}
-
-.empty-icon {
-    font-size: 4rem;
-    color: var(--secondary);
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .carousel-title {
-        font-size: 2rem;
-    }
-    
-    .carousel-text {
-        font-size: 1rem;
-    }
-    
-    .carousel-actions {
-        flex-direction: column;
-    }
-    
-    .min-vh-60 {
-        min-height: 400px;
-    }
-    
-    .stat-item-quick {
-        text-align: center;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .products-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .featured-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .businesses-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .flash-header-content {
-        flex-direction: column;
-        text-align: center;
-        gap: 1rem;
-    }
-    
-    .section-title {
-        font-size: 1.5rem;
-    }
-    
-    .cta-title {
-        font-size: 2rem;
-    }
-}
-
-.min-vh-60 {
-    min-height: 500px;
-}
-
-/* Utility Classes */
-.text-muted {
-    color: var(--secondary) !important;
-}
-
-.border-top {
-    border-top: 1px solid var(--light) !important;
-}
-
-.border-bottom {
-    border-bottom: 1px solid var(--light) !important;
-}
-
-/* Smooth transitions for all interactive elements */
-.btn, .card, .product-card, .featured-card, .business-card, .fab-button, .fab-action {
-    transition: var(--transition);
-}
-
-/* Focus states for accessibility */
-.btn:focus, .form-control:focus, .star-label:focus {
-    outline: 2px solid var(--primary);
-    outline-offset: 2px;
-}
-</style>
 {% endblock %}

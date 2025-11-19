@@ -136,6 +136,15 @@ MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
+# Zona horaria para Colombia
+TIME_ZONE = 'America/Bogota'
+USE_TZ = True
+
+# Idioma y localización
+LANGUAGE_CODE = 'es-co'
+USE_I18N = True
+USE_L10N = True
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587

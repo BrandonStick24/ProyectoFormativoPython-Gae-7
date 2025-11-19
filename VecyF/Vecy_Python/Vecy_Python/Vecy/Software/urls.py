@@ -9,6 +9,7 @@ from django.contrib.auth import views as auth_views
 from django.urls import include
 
 urlpatterns = [
+    
     path('', views.inicio, name='inicio'),
     path('principal/', views.principal, name='principal'),
     path('auth/', include('Software.urls_auth')),  # Cambia el prefijo
@@ -89,8 +90,6 @@ urlpatterns = [
     path('moderador/api/negocio/<int:negocio_id>/eliminar/', moderador_views.eliminar_negocio, name='eliminar_negocio'),
     path('moderador/api/usuario/<int:usuario_id>/', moderador_views.detalle_usuario_json, name='detalle_usuario_json'),
     path('moderador/api/usuario/<int:usuario_id>/cambiar-estado/', moderador_views.cambiar_estado_usuario, name='cambiar_estado_usuario'),
-
+]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    
-]
