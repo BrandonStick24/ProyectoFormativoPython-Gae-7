@@ -1,646 +1,348 @@
-<!-- Templates/Vendedor/gestion_variantes.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
-{% block title %}Gestionar Variantes - {{ producto.nom_prod }}{% endblock %}
-
-{% block extra_css %}
-<style>
-/* Estilos específicos para gestión de variantes */
-.variantes-container {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    padding: 2rem;
-    margin-bottom: 2rem;
-}
-
-.variantes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.variantes-title h2 {
-    color: #4F46E5;
-    margin-bottom: 0.5rem;
-}
-
-.variantes-actions {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.info-card {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.info-label {
-    font-size: 0.9rem;
-    color: #6b7280;
-    margin-bottom: 0.25rem;
-}
-
-.info-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #374151;
-}
-
-.precio-total {
-    color: #10B981;
-    font-weight: bold;
-}
-
-/* Tabla mejorada */
-.variantes-table-container {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    overflow: hidden;
-}
-
-.variantes-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.variantes-table thead {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    color: white;
-}
-
-.variantes-table th {
-    padding: 1rem;
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.95rem;
-}
-
-.variantes-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-    font-size: 0.95rem;
-    color: #374151;
-}
-
-.variantes-table tbody tr {
-    transition: all 0.3s;
-}
-
-.variantes-table tbody tr:hover {
-    background: #f9fafb;
-}
-
-/* Estados de stock mejorados */
-.stock-badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: 500;
-    display: inline-block;
-}
-
-.stock-critico {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-.stock-bajo {
-    background: #fef3c7;
-    color: #d97706;
-}
-
-.stock-normal {
-    background: #d1fae5;
-    color: #065f46;
-}
-
-/* Botones de acción */
-.btn-group-sm .btn {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
-}
-
-/* Modal mejorado */
-.modal-content {
-    border-radius: 15px;
-    border: none;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    color: white;
-    border-radius: 15px 15px 0 0;
-    padding: 1.5rem;
-}
-
-.modal-header .btn-close {
-    filter: invert(1);
-}
-
-.modal-title {
-    font-weight: 600;
-}
-
-/* Preview de precio */
-.precio-preview {
-    background: #f0f9ff;
-    border: 1px solid #e0f2fe;
-    border-radius: 8px;
-    padding: 0.75rem;
-    margin-top: 0.5rem;
-}
-
-.precio-base {
-    color: #6b7280;
-    font-size: 0.9rem;
-}
-
-.precio-total-preview {
-    color: #10B981;
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-
-/* Estado vacío */
-.empty-state {
-    text-align: center;
-    padding: 3rem;
-    color: #6b7280;
-}
-
-.empty-state i {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-}
-
-/* Imágenes de variantes */
-.variante-imagen {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 8px;
-    border: 2px solid #e5e7eb;
-}
-
-.variante-sin-imagen {
-    width: 50px;
-    height: 50px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    border: 2px dashed #d1d5db;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .variantes-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-    
-    .variantes-actions {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .info-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .variantes-table-container {
-        overflow-x: auto;
-    }
-    
-    .variantes-table {
-        min-width: 800px;
-    }
-}
-</style>
-{% endblock %}
+{% block title %}Gestión de Ventas{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header Mejorado -->
-    <div class="variantes-container">
-        <div class="variantes-header">
-            <div class="variantes-title">
-                <h2>
-                    <i class="fas fa-layer-group me-2"></i>
-                    Gestión de Variantes
-                </h2>
-                <p class="text-muted mb-0">Administra las variantes del producto: <strong>{{ producto.nom_prod }}</strong></p>
+    <!-- Header Mejorado con Estadísticas -->
+    <div class="tarjeta-bienvenida">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2>Gestión de Pedidos</h2>
+                <p class="text-muted">Administra y realiza seguimiento a los pedidos de tu negocio</p>
             </div>
-            <div class="variantes-actions">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarVariante">
-                    <i class="fas fa-plus me-1"></i> Agregar Variante
-                </button>
-                <a href="{% url 'Crud_V' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Volver a Productos
-                </a>
+            <div class="col-md-6">
+                <div class="estadisticas-grid">
+                    <div class="estadistica-card total">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ total_pedidos }}</div>
+                        <div class="estadistica-titulo">Total Pedidos</div>
+                    </div>
+                    
+                    <div class="estadistica-card disponibles">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ pedidos_pendientes }}</div>
+                        <div class="estadistica-titulo">Pendientes</div>
+                    </div>
+                    
+                    <div class="estadistica-card oferta">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ pedidos_completados }}</div>
+                        <div class="estadistica-titulo">Completados</div>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
 
-        {% if messages %}
+    <!-- Mensajes -->
+    {% if messages %}
+    <div class="container-fluid mb-3">
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
-                <div>{{ message }}</div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endfor %}
-        {% endif %}
+    </div>
+    {% endif %}
 
-        <!-- Información del Producto Mejorada -->
-        <div class="info-card">
-            <h5 class="mb-3">
-                <i class="fas fa-info-circle me-2"></i>
-                Información del Producto Base
-            </h5>
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Nombre del Producto</span>
-                    <span class="info-value">{{ producto.nom_prod }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Precio Base</span>
-                    <span class="info-value precio-total">${{ producto.precio_prod }}</span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Stock Base</span>
-                    <span class="info-value">
-                        <span class="stock-badge {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                            {{ producto.stock_prod }} unidades
-                        </span>
-                    </span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Categoría</span>
-                    <span class="info-value">{{ producto.fkcategoria_prod.desc_cp }}</span>
+    <!-- Barra de Herramientas Mejorada -->
+    <div class="barra-herramientas">
+        <div class="grupo-botones-accion">
+            <button class="boton-accion boton-primario" onclick="exportarReporteVentas()">
+                <i class="fas fa-download"></i> Exportar Reporte
+            </button>
+            <button class="boton-accion boton-secundario" onclick="mostrarFiltrosAvanzados()">
+                <i class="fas fa-filter"></i> Filtros Avanzados
+            </button>
+        </div>
+
+        <div class="grupo-busqueda-filtros">
+            <div class="contenedor-busqueda">
+                <i class="fas fa-search icono-busqueda"></i>
+                <input type="text" class="input-busqueda" id="filtro-pedidos" placeholder="Buscar por cliente o ID...">
+            </div>
+            
+            <div class="contenedor-filtros">
+                <select class="select-filtro" id="filtro-estado-pedidos">
+                    <option value="todos">Todos los estados</option>
+                    <option value="confirmado">Confirmado</option>
+                    <option value="preparando">Preparando</option>
+                    <option value="enviado">Enviado</option>
+                    <option value="entregado">Entregado</option>
+                    <option value="cancelado">Cancelado</option>
+                </select>
+                
+                <select class="select-filtro" id="filtro-fecha-pedidos">
+                    <option value="todos">Todas las fechas</option>
+                    <option value="hoy">Hoy</option>
+                    <option value="semana">Esta semana</option>
+                    <option value="mes">Este mes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Métricas de Ventas -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada total">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">{{ total_pedidos }}</div>
+                        <div class="metric-label">Total Pedidos</div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Lista de Variantes Mejorada -->
-        <div class="variantes-table-container">
-            <div class="table-responsive">
-                <table class="variantes-table">
-                    <thead>
-                        <tr>
-                            <th>Imagen</th>
-                            <th>Nombre de Variante</th>
-                            <th>Precio Adicional</th>
-                            <th>Precio Total</th>
-                            <th>Stock</th>
-                            <th>Estado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% if variantes %}
-                        {% for variante in variantes %}
-                        <tr>
-                            <td>
-                                {% if variante.imagen %}
-                                <img src="/media/variantes/{{ variante.imagen }}" alt="{{ variante.nombre }}" class="variante-imagen">
-                                {% else %}
-                                <div class="variante-sin-imagen">
-                                    <i class="fas fa-image"></i>
-                                </div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="variante-icon me-3">
-                                        <i class="fas fa-tag text-primary"></i>
-                                    </div>
-                                    <div>
-                                        <strong>{{ variante.nombre }}</strong>
-                                        {% if variante.sku %}
-                                        <br>
-                                        <small class="text-muted">SKU: {{ variante.sku }}</small>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="text-muted">+ ${{ variante.precio_adicional }}</span>
-                            </td>
-                            <td>
-                                <strong class="precio-total">${{ variante.precio_total }}</strong>
-                            </td>
-                            <td>
-                                <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                    {{ variante.stock }} unidades
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge {% if variante.estado == 'activa' %}bg-success{% else %}bg-secondary{% endif %}">
-                                    <i class="fas fa-{% if variante.estado == 'activa' %}check{% else %}pause{% endif %}-circle me-1"></i>
-                                    {{ variante.estado|title }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-warning" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#modalEditarVariante"
-                                            data-variante-id="{{ variante.id }}"
-                                            data-variante-nombre="{{ variante.nombre }}"
-                                            data-variante-precio="{{ variante.precio_adicional }}"
-                                            data-variante-stock="{{ variante.stock }}"
-                                            data-variante-estado="{{ variante.estado }}"
-                                            data-variante-imagen="{% if variante.imagen %}/media/variantes/{{ variante.imagen }}{% endif %}"
-                                            title="Editar variante">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    
-                                    <button class="btn btn-outline-info"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalAjustarStockVariante"
-                                            data-variante-id="{{ variante.id }}"
-                                            data-variante-nombre="{{ variante.nombre }}"
-                                            data-variante-stock="{{ variante.stock }}"
-                                            title="Ajustar stock">
-                                        <i class="fas fa-boxes"></i>
-                                    </button>
-                                    
-                                    <form method="post" action="{% url 'eliminar_variante' variante.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-danger" 
-                                                onclick="return confirm('¿Estás seguro de eliminar la variante \"{{ variante.nombre }}\"?')"
-                                                title="Eliminar variante">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="7">
-                                <div class="empty-state">
-                                    <i class="fas fa-layer-group"></i>
-                                    <h5>No hay variantes registradas</h5>
-                                    <p class="text-muted">Comienza agregando la primera variante para este producto.</p>
-                                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarVariante">
-                                        <i class="fas fa-plus me-1"></i> Crear Primera Variante
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada normal">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">{{ pedidos_pendientes }}</div>
+                        <div class="metric-label">Pendientes</div>
+                    </div>
+                </div>
             </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada bajo">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">{{ pedidos_completados }}</div>
+                        <div class="metric-label">Completados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada critico">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">{{ pedidos_cancelados }}</div>
+                        <div class="metric-label">Cancelados</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada ofertas">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">${{ total_ventas }}</div>
+                        <div class="metric-label">Total Ventas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-2 col-md-4 col-6">
+            <div class="metric-card-estilizada movimientos">
+                <div class="metric-content">
+                    <div class="metric-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="metric-info">
+                        <div class="metric-value">${{ promedio_venta }}</div>
+                        <div class="metric-label">Ticket Promedio</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Pedidos - QUITAMOS EL OVERFLOW HIDDEN -->
+    <div class="seccion-pedidos">
+        <div class="seccion-header">
+            <h3><i class="fas fa-list me-2"></i>Lista de Pedidos</h3>
+            <span class="contador-seccion" id="contador-pedidos">{{ pedidos|length }}</span>
+        </div>
+        
+        <!-- QUITAMOS EL OVERFLOW DEL CONTENEDOR -->
+        <div class="contenedor-pedidos">
+            {% if pedidos %}
+                {% for pedido in pedidos %}
+                <div class="pedido-card" data-estado="{{ pedido.estado }}" data-id="{{ pedido.id }}" data-cliente="{{ pedido.cliente.nombre|lower }}">
+                    <div class="pedido-header">
+                        <div class="pedido-info">
+                            <div class="pedido-id">
+                                <h5>#{{ pedido.id }}</h5>
+                                <span class="pedido-fecha">{{ pedido.fecha_creacion|date:"d/m/Y H:i" }}</span>
+                            </div>
+                            <div class="pedido-cliente">
+                                <i class="fas fa-user"></i>
+                                <span>{{ pedido.cliente.nombre }}</span>
+                            </div>
+                        </div>
+                        <div class="pedido-total">
+                            <span class="total-monto">${{ pedido.total }}</span>
+                            <span class="productos-cantidad">{{ pedido.items.count }} productos</span>
+                        </div>
+                    </div>
+                    
+                    <div class="pedido-detalle">
+                        <div class="pedido-estado">
+                            <span class="estado-badge {{ pedido.estado }}">
+                                <i class="fas {% if pedido.estado == 'entregado' %}fa-check-circle{% elif pedido.estado == 'cancelado' %}fa-times-circle{% elif pedido.estado == 'enviado' %}fa-shipping-fast{% elif pedido.estado == 'preparando' %}fa-clock{% else %}fa-check{% endif %} me-1"></i>
+                                {{ pedido.estado|title }}
+                            </span>
+                        </div>
+                        
+                        <div class="pedido-acciones">
+                            <a href="{% url 'ver_recibo_pedido' pedido.id %}" class="btn-accion btn-recibo" title="Ver Recibo">
+                                <i class="fas fa-receipt"></i>
+                                <span>Recibo</span>
+                            </a>
+                            
+                            <!-- DROPDOWN MEJORADO CON POSITIONING CORRECTO -->
+                            <div class="dropdown dropdown-estado">
+                                <button class="btn-accion btn-estado dropdown-toggle" type="button" id="dropdownEstado{{ pedido.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    <span>Cambiar Estado</span>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownEstado{{ pedido.id }}">
+                                    <li>
+                                        <a class="dropdown-item estado-option {% if pedido.estado == 'confirmado' %}active{% endif %}" href="#" data-pedido-id="{{ pedido.id }}" data-estado="confirmado">
+                                            <i class="fas fa-check me-2"></i>Confirmado
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item estado-option {% if pedido.estado == 'preparando' %}active{% endif %}" href="#" data-pedido-id="{{ pedido.id }}" data-estado="preparando">
+                                            <i class="fas fa-box me-2"></i>Preparando
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item estado-option {% if pedido.estado == 'enviado' %}active{% endif %}" href="#" data-pedido-id="{{ pedido.id }}" data-estado="enviado">
+                                            <i class="fas fa-shipping-fast me-2"></i>Enviado
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item estado-option {% if pedido.estado == 'entregado' %}active{% endif %}" href="#" data-pedido-id="{{ pedido.id }}" data-estado="entregado">
+                                            <i class="fas fa-home me-2"></i>Entregado
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger cancelar-option" href="#" data-pedido-id="{{ pedido.id }}">
+                                            <i class="fas fa-ban me-2"></i>Cancelar Pedido
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <button class="btn-accion btn-eliminar" title="Eliminar Pedido" onclick="mostrarModalEliminacion({{ pedido.id }})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="estado-vacio">
+                <i class="fas fa-shopping-cart fa-3x"></i>
+                <h4>No hay pedidos registrados</h4>
+                <p>Los pedidos de tus clientes aparecerán aquí</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Modal Agregar Variante - Mejorado -->
-<div class="modal fade" id="modalAgregarVariante" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus me-2"></i>
-                    Agregar Nueva Variante
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="{% url 'crear_variante' producto.pkid_prod %}" enctype="multipart/form-data">
-                {% csrf_token %}
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la Variante *</label>
-                                <input type="text" class="form-control" name="nombre_variante" required 
-                                       placeholder="Ej: Color Rojo, Talla Grande, etc.">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Stock Inicial</label>
-                                <input type="number" class="form-control" name="stock_variante" min="0" value="0">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Precio Adicional</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" name="precio_adicional" 
-                                           step="0.01" min="0" value="0" id="precio-adicional-input">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Imagen de la Variante</label>
-                                <input type="file" class="form-control" name="imagen_variante" 
-                                       accept="image/*">
-                                <div class="form-text">Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Preview de Precio -->
-                    <div class="precio-preview">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <span class="precio-base">
-                                    <i class="fas fa-tag me-1"></i>
-                                    Precio base: ${{ producto.precio_prod }}
-                                </span>
-                            </div>
-                            <div class="col-md-6 text-end">
-                                <span class="precio-total-preview">
-                                    <i class="fas fa-calculator me-1"></i>
-                                    Precio total: $<span id="precio-total-preview">{{ producto.precio_prod }}</span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Crear Variante
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Editar Variante -->
-<div class="modal fade" id="modalEditarVariante" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    Editar Variante
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="" id="formEditarVariante" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="variante_id" id="editar_variante_id">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la Variante *</label>
-                                <input type="text" class="form-control" name="nombre_variante" id="editar_nombre_variante" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Precio Adicional</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" name="precio_adicional" 
-                                           id="editar_precio_adicional" step="0.01" min="0">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Stock</label>
-                                <input type="number" class="form-control" name="stock_variante" id="editar_stock_variante" min="0">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Imagen de la Variante</label>
-                                <input type="file" class="form-control" name="imagen_variante" 
-                                       accept="image/*" id="editar_imagen_variante">
-                                <div class="form-text">Dejar vacío para mantener la imagen actual</div>
-                                <div id="imagen-actual-container" class="mt-2">
-                                    <small class="text-muted">Imagen actual:</small>
-                                    <div id="imagen-actual-preview" class="mt-1"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Estado</label>
-                        <select class="form-control" name="estado_variante" id="editar_estado_variante">
-                            <option value="activa">Activa</option>
-                            <option value="inactiva">Inactiva</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Actualizar Variante
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Ajustar Stock Variante -->
-<div class="modal fade" id="modalAjustarStockVariante" tabindex="-1">
+<!-- Modal Cancelación MEJORADO -->
+<div class="modal fade" id="modalCancelacion" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-boxes me-2"></i>
-                    Ajustar Stock de Variante
-                </h5>
+                <h5 class="modal-title">Cancelar Pedido</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="" id="formAjustarStockVariante">
-                {% csrf_token %}
-                <input type="hidden" name="variante_id" id="ajustar_variante_id">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Variante: <strong id="ajustar_nombre_variante"></strong>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Stock Actual:</label>
-                                <input type="number" class="form-control" id="ajustar_stock_actual" readonly>
-                            </div>
+            <div class="modal-body">
+                <div class="campo-modal">
+                    <label class="etiqueta-campo">Selecciona el motivo de cancelación *</label>
+                    <div class="opciones-motivo">
+                        <div class="opcion-motivo" data-motivo="Cliente solicitó cancelación">
+                            <i class="fas fa-user-times"></i>
+                            <span>Cliente solicitó cancelación</span>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Ajuste:</label>
-                                <select class="form-control" name="tipo_ajuste">
-                                    <option value="entrada">Entrada (+)</option>
-                                    <option value="salida">Salida (-)</option>
-                                    <option value="ajuste">Ajuste Manual</option>
-                                </select>
-                            </div>
+                        <div class="opcion-motivo" data-motivo="Producto no disponible">
+                            <i class="fas fa-box-open"></i>
+                            <span>Producto no disponible</span>
+                        </div>
+                        <div class="opcion-motivo" data-motivo="Problemas de stock">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Problemas de stock</span>
+                        </div>
+                        <div class="opcion-motivo" data-motivo="Error en el pedido">
+                            <i class="fas fa-bug"></i>
+                            <span>Error en el pedido</span>
+                        </div>
+                        <div class="opcion-motivo" data-motivo="Problemas de pago">
+                            <i class="fas fa-credit-card"></i>
+                            <span>Problemas de pago</span>
+                        </div>
+                        <div class="opcion-motivo" data-motivo="Otro motivo">
+                            <i class="fas fa-ellipsis-h"></i>
+                            <span>Otro motivo</span>
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Cantidad:</label>
-                        <input type="number" class="form-control" name="cantidad_ajuste" min="0" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Motivo:</label>
-                        <select class="form-control" name="motivo_ajuste">
-                            <option value="compra_proveedor">Compra a Proveedor</option>
-                            <option value="devolucion_cliente">Devolución de Cliente</option>
-                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
-                            <option value="danio_perdida">Daño o Pérdida</option>
-                            <option value="otro">Otro</option>
-                        </select>
+                    <div class="motivo-personalizado" id="motivoPersonalizado" style="display: none; margin-top: 1rem;">
+                        <label class="etiqueta-campo">Especifica el motivo:</label>
+                        <input type="text" class="control-formulario" id="motivo-custom" placeholder="Describe el motivo de cancelación...">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Ajustar Stock
-                    </button>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secundario" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-peligro" id="btnConfirmarCancelacion" disabled>Confirmar Cancelación</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminación -->
+<div class="modal fade" id="modalEliminacion" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Eliminar Pedido</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alerta-peligro">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <h6>¿Estás seguro de eliminar este pedido?</h6>
+                        <p class="mb-0">Esta acción no se puede deshacer y eliminará permanentemente el pedido del sistema.</p>
+                    </div>
                 </div>
-            </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secundario" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-peligro" id="btnConfirmarEliminar">Sí, Eliminar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -648,68 +350,911 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Cálculo de precio total en tiempo real
-    const precioBase = {{ producto.precio_prod }};
-    const inputPrecioAdicional = document.getElementById('precio-adicional-input');
-    const previewPrecioTotal = document.getElementById('precio-total-preview');
-    
-    if (inputPrecioAdicional && previewPrecioTotal) {
-        inputPrecioAdicional.addEventListener('input', function() {
-            const precioAdicional = parseFloat(this.value) || 0;
-            const precioTotal = precioBase + precioAdicional;
-            previewPrecioTotal.textContent = precioTotal.toFixed(2);
-        });
-    }
+// Variables globales
+let pedidoSeleccionado = null;
+let motivoSeleccionado = null;
 
-    // Configurar modal de editar variante
-    const modalEditarVariante = document.getElementById('modalEditarVariante');
-    if (modalEditarVariante) {
-        modalEditarVariante.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const varianteId = button.getAttribute('data-variante-id');
-            const varianteNombre = button.getAttribute('data-variante-nombre');
-            const variantePrecio = button.getAttribute('data-variante-precio');
-            const varianteStock = button.getAttribute('data-variante-stock');
-            const varianteEstado = button.getAttribute('data-variante-estado');
-            const varianteImagen = button.getAttribute('data-variante-imagen');
+// Inicialización cuando el DOM está listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar event listeners para los dropdowns de estado
+    document.querySelectorAll('.estado-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pedidoId = this.getAttribute('data-pedido-id');
+            const nuevoEstado = this.getAttribute('data-estado');
+            cambiarEstado(pedidoId, nuevoEstado);
+        });
+    });
+
+    // Configurar event listeners para cancelar
+    document.querySelectorAll('.cancelar-option').forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pedidoId = this.getAttribute('data-pedido-id');
+            mostrarModalCancelacion(pedidoId);
+        });
+    });
+
+    // Configurar opciones de motivo de cancelación
+    document.querySelectorAll('.opcion-motivo').forEach(opcion => {
+        opcion.addEventListener('click', function() {
+            // Remover selección anterior
+            document.querySelectorAll('.opcion-motivo').forEach(o => {
+                o.classList.remove('seleccionado');
+            });
             
-            document.getElementById('editar_variante_id').value = varianteId;
-            document.getElementById('editar_nombre_variante').value = varianteNombre;
-            document.getElementById('editar_precio_adicional').value = variantePrecio;
-            document.getElementById('editar_stock_variante').value = varianteStock;
-            document.getElementById('editar_estado_variante').value = varianteEstado;
+            // Agregar selección actual
+            this.classList.add('seleccionado');
             
-            // Mostrar imagen actual si existe
-            const imagenPreview = document.getElementById('imagen-actual-preview');
-            if (varianteImagen && varianteImagen !== '') {
-                imagenPreview.innerHTML = `<img src="${varianteImagen}" alt="Imagen actual" class="variante-imagen" style="width: 80px; height: 80px;">`;
+            const motivo = this.getAttribute('data-motivo');
+            motivoSeleccionado = motivo;
+            
+            // Mostrar/ocultar campo personalizado
+            const motivoPersonalizado = document.getElementById('motivoPersonalizado');
+            if (motivo === 'Otro motivo') {
+                motivoPersonalizado.style.display = 'block';
+                document.getElementById('btnConfirmarCancelacion').disabled = true;
             } else {
-                imagenPreview.innerHTML = '<div class="variante-sin-imagen" style="width: 80px; height: 80px;"><i class="fas fa-image"></i></div>';
+                motivoPersonalizado.style.display = 'none';
+                document.getElementById('btnConfirmarCancelacion').disabled = false;
+            }
+        });
+    });
+
+    // Validar campo personalizado
+    document.getElementById('motivo-custom')?.addEventListener('input', function() {
+        const btnConfirmar = document.getElementById('btnConfirmarCancelacion');
+        if (this.value.trim().length > 0) {
+            motivoSeleccionado = this.value.trim();
+            btnConfirmar.disabled = false;
+        } else {
+            btnConfirmar.disabled = true;
+        }
+    });
+
+    // Filtros de búsqueda
+    const filtroPedidos = document.getElementById('filtro-pedidos');
+    const filtroEstado = document.getElementById('filtro-estado-pedidos');
+    const filtroFecha = document.getElementById('filtro-fecha-pedidos');
+    
+    function aplicarFiltros() {
+        const texto = filtroPedidos.value.toLowerCase();
+        const estado = filtroEstado.value;
+        const fecha = filtroFecha.value;
+        
+        const pedidos = document.querySelectorAll('.pedido-card');
+        let pedidosVisibles = 0;
+        
+        pedidos.forEach(pedido => {
+            const idPedido = pedido.getAttribute('data-id').toString();
+            const cliente = pedido.getAttribute('data-cliente');
+            const estadoPedido = pedido.getAttribute('data-estado');
+            
+            let coincideTexto = true;
+            let coincideEstado = true;
+            let coincideFecha = true;
+            
+            // Filtro por texto
+            if (texto) {
+                coincideTexto = idPedido.includes(texto) || cliente.includes(texto);
             }
             
-            const form = document.getElementById('formEditarVariante');
-            form.action = `/vendedor/variantes/editar/${varianteId}/`;
-        });
-    }
-
-    // Configurar modal de ajustar stock variante
-    const modalAjustarStock = document.getElementById('modalAjustarStockVariante');
-    if (modalAjustarStock) {
-        modalAjustarStock.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const varianteId = button.getAttribute('data-variante-id');
-            const varianteNombre = button.getAttribute('data-variante-nombre');
-            const varianteStock = button.getAttribute('data-variante-stock');
+            // Filtro por estado
+            if (estado !== 'todos') {
+                coincideEstado = estadoPedido === estado;
+            }
             
-            document.getElementById('ajustar_variante_id').value = varianteId;
-            document.getElementById('ajustar_nombre_variante').textContent = varianteNombre;
-            document.getElementById('ajustar_stock_actual').value = varianteStock;
+            // Filtro por fecha (implementación básica)
+            if (fecha !== 'todos') {
+                // Aquí iría la lógica de filtrado por fecha
+                coincideFecha = true; // Placeholder
+            }
             
-            const form = document.getElementById('formAjustarStockVariante');
-            form.action = `/vendedor/variantes/ajustar-stock/${varianteId}/`;
+            if (coincideTexto && coincideEstado && coincideFecha) {
+                pedido.style.display = 'block';
+                pedidosVisibles++;
+            } else {
+                pedido.style.display = 'none';
+            }
         });
+        
+        document.getElementById('contador-pedidos').textContent = pedidosVisibles;
     }
+    
+    if (filtroPedidos) filtroPedidos.addEventListener('input', aplicarFiltros);
+    if (filtroEstado) filtroEstado.addEventListener('change', aplicarFiltros);
+    if (filtroFecha) filtroFecha.addEventListener('change', aplicarFiltros);
 });
+
+// Cambiar estado del pedido
+function cambiarEstado(pedidoId, nuevoEstado) {
+    // Mostrar confirmación para estado "entregado" ya que afecta al stock
+    if (nuevoEstado === 'entregado') {
+        if (!confirm('¿Estás seguro de marcar este pedido como ENTREGADO?\n\nEsta acción descontará los productos del stock.')) {
+            return;
+        }
+    }
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/ventas/cambiar-estado/${pedidoId}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
+    
+    const estadoInput = document.createElement('input');
+    estadoInput.type = 'hidden';
+    estadoInput.name = 'nuevo_estado';
+    estadoInput.value = nuevoEstado;
+    form.appendChild(estadoInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Mostrar modal de cancelación
+function mostrarModalCancelacion(pedidoId) {
+    pedidoSeleccionado = pedidoId;
+    motivoSeleccionado = null;
+    
+    // Resetear el modal
+    document.querySelectorAll('.opcion-motivo').forEach(o => {
+        o.classList.remove('seleccionado');
+    });
+    document.getElementById('motivoPersonalizado').style.display = 'none';
+    document.getElementById('motivo-custom').value = '';
+    document.getElementById('btnConfirmarCancelacion').disabled = true;
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalCancelacion'));
+    modal.show();
+}
+
+// Confirmar cancelación
+function confirmarCancelacion() {
+    if (!pedidoSeleccionado || !motivoSeleccionado) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/ventas/cambiar-estado/${pedidoSeleccionado}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
+    
+    const estadoInput = document.createElement('input');
+    estadoInput.type = 'hidden';
+    estadoInput.name = 'nuevo_estado';
+    estadoInput.value = 'cancelado';
+    form.appendChild(estadoInput);
+    
+    const motivoInput = document.createElement('input');
+    motivoInput.type = 'hidden';
+    motivoInput.name = 'motivo_cancelacion';
+    motivoInput.value = motivoSeleccionado;
+    form.appendChild(motivoInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Configurar el botón de confirmar cancelación
+document.getElementById('btnConfirmarCancelacion').addEventListener('click', confirmarCancelacion);
+
+// Mostrar modal de eliminación
+function mostrarModalEliminacion(pedidoId) {
+    pedidoSeleccionado = pedidoId;
+    const modal = new bootstrap.Modal(document.getElementById('modalEliminacion'));
+    modal.show();
+}
+
+// Confirmar eliminación
+document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+    if (!pedidoSeleccionado) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/ventas/eliminar/${pedidoSeleccionado}/`;
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
+    
+    document.body.appendChild(form);
+    form.submit();
+});
+
+// Funciones de utilidad
+function exportarReporteVentas() {
+    alert('Funcionalidad de exportación en desarrollo...');
+}
+
+function mostrarFiltrosAvanzados() {
+    alert('Filtros avanzados en desarrollo...');
+}
 </script>
+
+<style>
+/* Estilos generales mejorados basados en el diseño del CRUD */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #4F46E5, #7C3AED);
+    --success-gradient: linear-gradient(135deg, #10B981, #059669);
+    --warning-gradient: linear-gradient(135deg, #F59E0B, #D97706);
+    --danger-gradient: linear-gradient(135deg, #EF4444, #DC2626);
+}
+
+/* Tarjeta de Bienvenida */
+.tarjeta-bienvenida {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.tarjeta-bienvenida::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.1);
+    transform: rotate(30deg);
+}
+
+.tarjeta-bienvenida h2 {
+    color: white;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.tarjeta-bienvenida p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0;
+    position: relative;
+}
+
+/* Estadísticas Grid */
+.estadisticas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.estadistica-card {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.estadistica-card:hover {
+    transform: translateY(-5px);
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.estadistica-icono {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.estadistica-numero {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: white;
+}
+
+.estadistica-titulo {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Barra de Herramientas */
+.barra-herramientas {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+}
+
+.grupo-botones-accion {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.boton-accion {
+    padding: 0.8rem 1.5rem;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+}
+
+.boton-primario {
+    background: var(--secondary-gradient);
+    color: white;
+}
+
+.boton-primario:hover {
+    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    color: white;
+}
+
+.boton-secundario {
+    background: white;
+    color: #4F46E5;
+    border: 2px solid #4F46E5;
+}
+
+.boton-secundario:hover {
+    background: #4F46E5;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Métricas Estilizadas */
+.metric-card-estilizada {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 4px solid;
+    height: 100%;
+}
+
+.metric-card-estilizada:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+}
+
+.metric-card-estilizada.total { border-left-color: #4F46E5; }
+.metric-card-estilizada.normal { border-left-color: #10B981; }
+.metric-card-estilizada.bajo { border-left-color: #F59E0B; }
+.metric-card-estilizada.critico { border-left-color: #EF4444; }
+.metric-card-estilizada.ofertas { border-left-color: #8B5CF6; }
+.metric-card-estilizada.movimientos { border-left-color: #0EA5E9; }
+
+.metric-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.metric-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.metric-card-estilizada.total .metric-icon { background: #EEF2FF; color: #4F46E5; }
+.metric-card-estilizada.normal .metric-icon { background: #D1FAE5; color: #10B981; }
+.metric-card-estilizada.bajo .metric-icon { background: #FEF3C7; color: #F59E0B; }
+.metric-card-estilizada.critico .metric-icon { background: #FEE2E2; color: #EF4444; }
+.metric-card-estilizada.ofertas .metric-icon { background: #F3E8FF; color: #8B5CF6; }
+.metric-card-estilizada.movimientos .metric-icon { background: #E0F2FE; color: #0EA5E9; }
+
+.metric-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.85rem;
+    color: #6B7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sección de Pedidos - QUITAMOS OVERFLOW HIDDEN */
+.seccion-pedidos {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    /* REMOVEMOS: overflow: hidden; */
+}
+
+.seccion-header {
+    background: #F8FAFC;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.seccion-header h3 {
+    color: #1F2937;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+}
+
+.contador-seccion {
+    background: var(--secondary-gradient);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* Contenedor de Pedidos - QUITAMOS OVERFLOW */
+.contenedor-pedidos {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    /* REMOVEMOS: overflow: hidden; */
+}
+
+.pedido-card {
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    position: relative; /* Añadimos para contexto de posición */
+}
+
+.pedido-card:hover {
+    border-color: #4F46E5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+    transform: translateY(-2px);
+}
+
+.pedido-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.pedido-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.pedido-id h5 {
+    color: #1F2937;
+    margin: 0;
+    font-weight: 700;
+    font-size: 1.2rem;
+}
+
+.pedido-fecha {
+    color: #6B7280;
+    font-size: 0.85rem;
+}
+
+.pedido-cliente {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #374151;
+    font-weight: 500;
+}
+
+.pedido-cliente i {
+    color: #6B7280;
+}
+
+.pedido-total {
+    text-align: right;
+}
+
+.total-monto {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #10B981;
+    margin-bottom: 0.25rem;
+}
+
+.productos-cantidad {
+    font-size: 0.85rem;
+    color: #6B7280;
+}
+
+/* Detalle del Pedido */
+.pedido-detalle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pedido-estado {
+    flex: 1;
+}
+
+.estado-badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.estado-badge.confirmado {
+    background: #DBEAFE;
+    color: #1E40AF;
+}
+
+.estado-badge.preparando {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.estado-badge.enviado {
+    background: #E0F2FE;
+    color: #0C4A6E;
+}
+
+.estado-badge.entregado {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.estado-badge.cancelado {
+    background: #FEE2E2;
+    color: #991B1B;
+}
+
+/* Acciones del Pedido */
+.pedido-acciones {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    position: relative; /* Para el dropdown */
+}
+
+.btn-accion {
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.btn-recibo {
+    background: #D1FAE5;
+    color: #065F46;
+    border: 1px solid #10B981;
+}
+
+.btn-recibo:hover {
+    background: #10B981;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-estado {
+    background: #DBEAFE;
+    color: #1E40AF;
+    border: 1px solid #3B82F6;
+}
+
+.btn-estado:hover {
+    background: #3B82F6;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.btn-eliminar {
+    background: #FEE2E2;
+    color: #DC2626;
+    border: 1px solid #EF4444;
+    padding: 0.6rem;
+}
+
+.btn-eliminar:hover {
+    background: #EF4444;
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* DROPDOWN ESTADO - CORREGIDO COMPLETAMENTE */
+.dropdown-estado {
+    position: relative;
+    display: inline-block;
+}
+
+/* Aseguramos que el dropdown se muestre por encima de todo */
+.dropdown-estado .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 1000;
+    min-width: 200px;
+    padding: 0.5rem;
+    margin: 0.125rem 0 0;
+    font-size: 0.875rem;
+    color: #374151;
+    text-align: left;
+    list-style: none;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-estado .dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    clear: both;
+    font-weight: 400;
+    color: #374151;
+    text-align: inherit;
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: transparent;
+    border: 0;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.dropdown-estado .dropdown-item:hover {
+    background-color: #4F46E5;
+    color: white;
+}
+
+.dropdown-estado .dropdown-item.active {
+    background-color: #4F46E5;
+    color: white;
+}
+
+.dropdown-estado .dropdown-item.text-danger {
+    color: #DC2626;
+}
+
+.dropdown-estado .dropdown-item.text-danger:hover {
+    background-color: #EF4444;
+    color: white;
+}
+
+/* NUEVOS ESTILOS PARA OPCIONES DE MOTIVO */
+.opciones-motivo {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.opcion-motivo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.opcion-motivo:hover {
+    border-color: #4F46E5;
+    background: #F8FAFF;
+}
+
+.opcion-motivo.seleccionado {
+    border-color: #4F46E5;
+    background: #EEF2FF;
+}
+
+.opcion-motivo i {
+    font-size: 1.25rem;
+    color: #6B7280;
+    width: 24px;
+    text-align: center;
+}
+
+.opcion-motivo.seleccionado i {
+    color: #4F46E5;
+}
+
+.opcion-motivo span {
+    font-weight: 500;
+    color: #374151;
+}
+
+.motivo-personalizado {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Estados Vacío */
+.estado-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    color: #6B7280;
+}
+
+.estado-vacio i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.estado-vacio h4 {
+    color: #6B7280;
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.estado-vacio p {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+/* Resto de estilos se mantienen igual... */
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .estadisticas-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .pedido-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .pedido-total {
+        text-align: left;
+    }
+}
+
+@media (max-width: 768px) {
+    .estadisticas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .barra-herramientas {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .grupo-botones-accion {
+        flex-direction: column;
+    }
+    
+    .boton-accion {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .contenedor-busqueda {
+        min-width: 100%;
+    }
+    
+    .contenedor-filtros {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .pedido-detalle {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .pedido-acciones {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    
+    .seccion-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    /* Ajustes responsive para dropdown */
+    .dropdown-estado .dropdown-menu {
+        position: fixed;
+        top: auto !important;
+        left: 50% !important;
+        transform: translateX(-50%);
+        width: 90%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 576px) {
+    .tarjeta-bienvenida {
+        padding: 1.5rem;
+    }
+    
+    .metric-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .contenedor-pedidos {
+        padding: 1rem;
+    }
+    
+    .pedido-card {
+        padding: 1rem;
+    }
+    
+    .opciones-motivo {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 {% endblock %}

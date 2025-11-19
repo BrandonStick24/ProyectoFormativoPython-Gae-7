@@ -102,7 +102,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stats-card border-start border-success border-4">
                 <div class="card-body">
@@ -118,7 +118,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stats-card border-start border-danger border-4">
                 <div class="card-body">
@@ -134,7 +134,7 @@
                 </div>
             </div>
         </div>
-        
+
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stats-card border-start border-warning border-4">
                 <div class="card-body">
@@ -208,6 +208,7 @@
                                 <tr>
                                     <th>Fecha/Hora</th>
                                     <th>Producto</th>
+                                    <th>Variante</th>
                                     <th>Tipo</th>
                                     <th>Motivo</th>
                                     <th>Cantidad</th>
@@ -225,6 +226,13 @@
                                     </td>
                                     <td>
                                         <strong>{{ movimiento.producto }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if movimiento.variante_id != 'N/A' %}
+                                        <span class="badge bg-info">{{ movimiento.variante }}</span>
+                                        {% else %}
+                                        <span class="text-muted">Producto principal</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="badge badge-{{ movimiento.tipo }}">

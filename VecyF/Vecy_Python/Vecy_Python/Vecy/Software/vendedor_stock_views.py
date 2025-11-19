@@ -296,10 +296,18 @@ def reporte_movimientos_stock(request):
         # Consulta de movimientos con filtros
         movimientos = []
         query = """
-            SELECT ms.fecha_movimiento, p.nom_prod, ms.tipo_movimiento, 
-                   ms.motivo, ms.cantidad, ms.stock_anterior, ms.stock_nuevo,
-                   COALESCE(u.first_name, 'Sistema') as usuario_nombre,
-                   COALESCE(ped.pkid_pedido, 'N/A') as pedido_id
+            SELECT 
+                ms.fecha_movimiento, 
+                p.nom_prod, 
+                ms.tipo_movimiento, 
+                ms.motivo, 
+                ms.cantidad, 
+                ms.stock_anterior, 
+                ms.stock_nuevo,
+                COALESCE(u.first_name, 'Sistema') as usuario_nombre,
+                COALESCE(ped.pkid_pedido, 'N/A') as pedido_id,
+                COALESCE(ms.variante_id, 'N/A') as variante_id,
+                COALESCE(ms.descripcion_variante, '') as descripcion_variante
             FROM movimientos_stock ms
             JOIN productos p ON ms.producto_id = p.pkid_prod
             LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
@@ -327,16 +335,24 @@ def reporte_movimientos_stock(request):
             cursor.execute(query, params)
             
             for row in cursor.fetchall():
+                # Determinar si es variante o producto principal
+                variante_info = 'Producto principal'
+                if row[9] != 'N/A' and row[10]:  # Si tiene variante_id y descripción
+                    variante_info = row[10]
+                
                 movimientos.append({
                     'fecha': row[0].strftime('%d/%m/%Y %H:%M') if row[0] else 'N/A',
                     'producto': row[1],
+                    'variante': variante_info,
                     'tipo': row[2],
                     'motivo': row[3],
                     'cantidad': row[4],
                     'stock_anterior': row[5],
                     'stock_nuevo': row[6],
                     'usuario': row[7],
-                    'pedido_id': row[8]
+                    'pedido_id': row[8],
+                    'variante_id': row[9],
+                    'descripcion_variante': row[10]
                 })
         
         # Estadísticas para el reporte
@@ -374,6 +390,7 @@ def reporte_movimientos_stock(request):
         return render(request, 'Vendedor/reporte_stock.html', contexto)
         
     except Exception as e:
+        print(f"ERROR en reporte_movimientos_stock: {str(e)}")
         messages.error(request, f"Error: {str(e)}")
         return redirect('inicio')
 

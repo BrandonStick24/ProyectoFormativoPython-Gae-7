@@ -1,5 +1,4 @@
-// static/javascript_V/Crud_V.js
-// JAVASCRIPT SIMPLIFICADO PARA EL CRUD DE PRODUCTOS - SIN AJAX
+// static/javascript_V/Crud_V.js - VERSIÓN MEJORADA SIN AJAX
 
 document.addEventListener('DOMContentLoaded', function () {
     // Inicializar tooltips de Bootstrap
@@ -8,71 +7,120 @@ document.addEventListener('DOMContentLoaded', function () {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
+    // Funcionalidad de acordeón para variantes
+    const productosHeaders = document.querySelectorAll('.producto-header');
+    
+    productosHeaders.forEach(header => {
+        header.addEventListener('click', function() {
+            const productoCard = this.closest('.producto-card');
+            const variantesSection = productoCard.querySelector('.variantes-section');
+            const flecha = this.querySelector('.flecha-acordeon');
+            
+            // Cerrar otros acordeones
+            document.querySelectorAll('.variantes-section.active').forEach(section => {
+                if (section !== variantesSection) {
+                    section.classList.remove('active');
+                    const otraFlecha = section.closest('.producto-card').querySelector('.flecha-acordeon');
+                    if (otraFlecha) otraFlecha.classList.remove('rotada');
+                }
+            });
+            
+            // Alternar acordeón actual
+            if (variantesSection) {
+                variantesSection.classList.toggle('active');
+                if (flecha) {
+                    flecha.classList.toggle('rotada');
+                }
+            }
+        });
+    });
+
     // Filtros y búsqueda
     const selectFiltro = document.getElementById('selectFiltro');
     const inputBusqueda = document.getElementById('inputBusqueda');
     
     function aplicarFiltros() {
-        const filtro = selectFiltro.value;
-        const texto = inputBusqueda.value.toLowerCase();
-        const filas = document.querySelectorAll('#cuerpoTablaProductos tr');
+        const filtro = selectFiltro ? selectFiltro.value : 'todos';
+        const texto = inputBusqueda ? inputBusqueda.value.toLowerCase() : '';
+        const productosCards = document.querySelectorAll('.producto-card');
         
-        filas.forEach(fila => {
-            if (fila.cells.length < 2) return;
-            
-            const textoFila = fila.textContent.toLowerCase();
-            const esOferta = fila.classList.contains('producto-oferta');
-            const stock = parseInt(fila.cells[3].querySelector('.fw-bold').textContent) || 0;
-            const estado = fila.cells[4].textContent.toLowerCase();
+        productosCards.forEach(card => {
+            const productoNombre = card.querySelector('.producto-details h5').textContent.toLowerCase();
+            const productoDescripcion = card.querySelector('.producto-descripcion').textContent.toLowerCase();
+            const stockElement = card.querySelector('.stock');
+            const stock = stockElement ? parseInt(stockElement.textContent.replace('Stock: ', '')) || 0 : 0;
+            const esOferta = card.querySelector('.badge-oferta') !== null;
+            const textoCompleto = productoNombre + ' ' + productoDescripcion;
             
             let mostrar = true;
             
             // Aplicar filtro seleccionado
-            if (filtro === 'oferta' && !esOferta) {
-                mostrar = false;
-            } else if (filtro === 'disponible' && (stock === 0 || estado.includes('agotado'))) {
-                mostrar = false;
-            } else if (filtro === 'sin-stock' && stock > 0) {
-                mostrar = false;
+            switch (filtro) {
+                case 'oferta':
+                    if (!esOferta) mostrar = false;
+                    break;
+                case 'disponible':
+                    if (stock === 0) mostrar = false;
+                    break;
+                case 'sin-stock':
+                    if (stock > 0) mostrar = false;
+                    break;
+                case 'stock-bajo':
+                    if (stock > 5 || stock === 0) mostrar = false;
+                    break;
             }
             
             // Aplicar búsqueda de texto
-            if (mostrar && texto && !textoFila.includes(texto)) {
+            if (mostrar && texto && !textoCompleto.includes(texto)) {
                 mostrar = false;
             }
             
-            fila.style.display = mostrar ? '' : 'none';
+            card.style.display = mostrar ? 'block' : 'none';
+            
+            // Animación suave
+            if (mostrar) {
+                card.style.animation = 'fadeInUp 0.5s ease';
+            }
         });
+        
+        // Mostrar mensaje si no hay resultados
+        const productosVisibles = document.querySelectorAll('.producto-card[style="display: block"]').length;
+        const mensajeNoResultados = document.getElementById('mensajeNoResultados');
+        
+        if (productosVisibles === 0) {
+            if (!mensajeNoResultados) {
+                const mensaje = document.createElement('div');
+                mensaje.id = 'mensajeNoResultados';
+                mensaje.className = 'text-center py-5';
+                mensaje.innerHTML = `
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4 class="text-muted">No se encontraron productos</h4>
+                    <p class="text-muted">Intenta con otros términos de búsqueda o filtros.</p>
+                `;
+                document.querySelector('.contenedor-productos').appendChild(mensaje);
+            }
+        } else if (mensajeNoResultados) {
+            mensajeNoResultados.remove();
+        }
     }
 
-    if (selectFiltro && inputBusqueda) {
+    // Inicializar filtros si existen
+    if (selectFiltro) {
         selectFiltro.addEventListener('change', aplicarFiltros);
+    }
+    
+    if (inputBusqueda) {
         inputBusqueda.addEventListener('input', aplicarFiltros);
-    }
-
-    // Ordenamiento
-    let ordenAscendente = true;
-    const btnOrdenAsc = document.getElementById('btnOrdenAsc');
-    if (btnOrdenAsc) {
-        btnOrdenAsc.addEventListener('click', function() {
-            ordenAscendente = !ordenAscendente;
-            this.innerHTML = ordenAscendente ? '<i class="fas fa-sort-amount-up"></i>' : '<i class="fas fa-sort-amount-down"></i>';
-        });
-    }
-
-    // Funcionalidad de botones de acción
-    const btnImportarExcel = document.getElementById('btnImportarExcel');
-    if (btnImportarExcel) {
-        btnImportarExcel.addEventListener('click', function() {
-            alert('Funcionalidad de Importar Excel - Aquí se abriría un selector de archivos');
-        });
-    }
-
-    const btnExportar = document.getElementById('btnExportar');
-    if (btnExportar) {
-        btnExportar.addEventListener('click', function() {
-            alert('Funcionalidad de Exportar - Aquí se exportarían los datos a Excel o CSV');
-        });
+        
+        // Limpiar búsqueda con icono
+        const iconoBusqueda = document.querySelector('.icono-busqueda');
+        if (iconoBusqueda) {
+            iconoBusqueda.addEventListener('click', function() {
+                inputBusqueda.value = '';
+                aplicarFiltros();
+                inputBusqueda.focus();
+            });
+        }
     }
 
     // Lógica para calcular stock final en ajuste de stock
@@ -84,6 +132,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const campoStockFinal = document.getElementById('campo_stock_final');
 
     function calcularStockFinal() {
+        if (!tipoAjuste || !cantidadAjuste || !stockActual) return;
+        
         const stockActualVal = parseInt(stockActual.value) || 0;
         const cantidadVal = parseInt(cantidadAjuste.value) || 0;
         const tipo = tipoAjuste.value;
@@ -92,26 +142,38 @@ document.addEventListener('DOMContentLoaded', function () {
         
         if (tipo === 'entrada') {
             stockFinalVal = stockActualVal + cantidadVal;
-            textoAyuda.textContent = `Se sumarán ${cantidadVal} unidades al stock actual`;
+            if (textoAyuda) {
+                textoAyuda.textContent = `Se sumarán ${cantidadVal} unidades al stock actual`;
+                textoAyuda.className = 'form-text text-success';
+            }
         } else if (tipo === 'salida') {
             stockFinalVal = stockActualVal - cantidadVal;
-            textoAyuda.textContent = `Se restarán ${cantidadVal} unidades al stock actual`;
-            if (stockFinalVal < 0) {
-                textoAyuda.innerHTML = `<span class="text-danger">⚠️ El stock final no puede ser negativo</span>`;
+            if (textoAyuda) {
+                textoAyuda.textContent = `Se restarán ${cantidadVal} unidades al stock actual`;
+                textoAyuda.className = stockFinalVal < 0 ? 'form-text text-danger' : 'form-text text-warning';
             }
         } else {
             stockFinalVal = cantidadVal;
-            textoAyuda.textContent = `El stock se establecerá en ${cantidadVal} unidades`;
+            if (textoAyuda) {
+                textoAyuda.textContent = `El stock se establecerá en ${cantidadVal} unidades`;
+                textoAyuda.className = 'form-text text-info';
+            }
         }
 
-        stockFinal.value = stockFinalVal;
+        if (stockFinal) {
+            stockFinal.value = stockFinalVal;
+        }
         
         // Mostrar/ocultar campo de stock final
-        if (cantidadVal > 0) {
-            campoStockFinal.style.display = 'block';
-            stockFinal.className = `form-control ${stockFinalVal < 0 ? 'is-invalid' : (stockFinalVal <= 5 ? 'is-warning' : 'is-valid')}`;
-        } else {
-            campoStockFinal.style.display = 'none';
+        if (campoStockFinal) {
+            if (cantidadVal > 0) {
+                campoStockFinal.style.display = 'block';
+                if (stockFinal) {
+                    stockFinal.className = `form-control ${stockFinalVal < 0 ? 'is-invalid' : (stockFinalVal <= 5 ? 'is-warning' : 'is-valid')}`;
+                }
+            } else {
+                campoStockFinal.style.display = 'none';
+            }
         }
     }
 
@@ -119,4 +181,66 @@ document.addEventListener('DOMContentLoaded', function () {
         tipoAjuste.addEventListener('change', calcularStockFinal);
         cantidadAjuste.addEventListener('input', calcularStockFinal);
     }
+
+    // Efectos visuales mejorados
+    const botonesAccion = document.querySelectorAll('.boton-accion, .btn');
+    botonesAccion.forEach(boton => {
+        boton.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        
+        boton.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Cerrar acordeones al hacer clic fuera
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.producto-card')) {
+            document.querySelectorAll('.variantes-section.active').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.flecha-acordeon.rotada').forEach(flecha => {
+                flecha.classList.remove('rotada');
+            });
+        }
+    });
 });
+
+// Funciones globales para cargar datos en los modales
+function cargarDatosProducto(id, nombre, precio, stock, estado, categoria, descripcion) {
+    document.getElementById('producto_id_editar').value = id;
+    document.getElementById('nom_prod_editar').value = nombre;
+    document.getElementById('precio_prod_editar').value = precio;
+    document.getElementById('stock_prod_editar').value = stock;
+    document.getElementById('estado_prod_editar').value = estado;
+    document.getElementById('categoria_prod_editar').value = categoria;
+    document.getElementById('desc_prod_editar').value = descripcion;
+    
+    // Configurar la acción del formulario
+    document.getElementById('formEditarProducto').action = `/vendedor/productos/editar/${id}/`;
+}
+
+function cargarDatosStock(id, nombre, stock) {
+    document.getElementById('producto_id_stock').value = id;
+    document.getElementById('nombre_producto_stock').textContent = nombre;
+    document.getElementById('stock_actual').value = stock;
+    
+    // Resetear campos
+    document.getElementById('cantidad_ajuste').value = '';
+    document.getElementById('stock_final').value = '';
+    document.getElementById('tipo_ajuste').value = 'entrada';
+    document.getElementById('motivo_ajuste').value = 'compra_proveedor';
+    document.getElementById('campo_stock_final').style.display = 'none';
+    
+    // Configurar la acción del formulario
+    document.getElementById('formAjustarStock').action = `/vendedor/productos/ajustar-stock/${id}/`;
+}
+
+function cargarDatosEliminar(id, nombre) {
+    document.getElementById('producto_id_eliminar').value = id;
+    document.getElementById('nombre_producto_eliminar').textContent = nombre;
+    
+    // Configurar la acción del formulario
+    document.getElementById('formEliminarProducto').action = `/vendedor/productos/eliminar/${id}/`;
+}

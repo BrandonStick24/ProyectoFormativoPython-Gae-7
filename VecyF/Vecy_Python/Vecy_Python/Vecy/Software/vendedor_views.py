@@ -368,18 +368,15 @@ def Stock_V(request):
         
         # Obtener productos del negocio
         productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
-        
-        # Calcular estadísticas de stock (incluyendo variantes)
-        total_productos = productos.count()
-        
+        total_productos = productos.count() 
         # Calcular stock total incluyendo variantes
         stock_total = 0
         productos_stock_bajo = []
-        
+
         for producto in productos:
             # Stock del producto principal
             stock_producto = producto.stock_prod
-            
+    
             # Stock de variantes
             with connection.cursor() as cursor:
                 cursor.execute("""
@@ -389,17 +386,18 @@ def Stock_V(request):
                 """, [producto.pkid_prod])
                 resultado = cursor.fetchone()
                 stock_variantes = resultado[0] if resultado[0] else 0
-            
+    
             stock_total_producto = stock_producto + stock_variantes
-            
+    
             if stock_total_producto <= 5 and stock_total_producto > 0:
-                productos_stock_bajo.append({
+             productos_stock_bajo.append({
                     'producto': producto,
                     'stock_total': stock_total_producto,
-                    'tiene_variantes': stock_variantes > 0
+                    'tiene_variantes': stock_variantes > 0,
+                    'stock_variantes': stock_variantes
                 })
-            
-            stock_total += stock_total_producto
+    
+            stock_total += stock_total_producto     
         
         # Calcular estadísticas
         sin_stock = productos.filter(stock_prod=0).count()
@@ -1211,7 +1209,7 @@ def eliminar_negocio(request):
 # ==================== GESTIÓN DE VENTAS SIMPLIFICADA ====================
 @login_required(login_url='login')
 def gestionar_ventas(request):
-    """Vista simplificada para ver ventas - SIN cambiar estados automáticos"""
+    """Vista para ver ventas con nuevo flujo de estados"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -1220,7 +1218,7 @@ def gestionar_ventas(request):
         
         negocio = datos['negocio_activo']
         
-        # Consulta con información de pagos
+        # Consulta actualizada con nuevos estados
         with connection.cursor() as cursor:
             sql = """
             SELECT 
@@ -1379,7 +1377,7 @@ def ver_recibo_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def cambiar_estado_pedido(request, pedido_id):
-    """Vista para cambiar estado del pedido con manejo de cancelación"""
+    """Vista para cambiar estado del pedido con nuevo flujo de stock"""
     if request.method == 'POST':
         try:
             nuevo_estado = request.POST.get('nuevo_estado')
@@ -1413,25 +1411,88 @@ def cambiar_estado_pedido(request, pedido_id):
                     WHERE pkid_pedido = %s AND fknegocio_pedido = %s
                 """, [nuevo_estado, datetime.now(), pedido_id, negocio.pkid_neg])
                 
-                # 3. MANEJO DE CANCELACIÓN - DEVOLVER STOCK
-                if nuevo_estado == 'cancelado' and estado_actual != 'cancelado':
+                # 3. MANEJO DE STOCK SEGÚN NUEVO FLUJO
+                if nuevo_estado in ['enviado', 'entregado'] and estado_actual not in ['enviado', 'entregado']:
+                    # DESCONTAR STOCK solo cuando se envía o entrega por primera vez
                     cursor.execute("""
                         UPDATE productos p
                         JOIN detalles_pedido dp ON p.pkid_prod = dp.fkproducto_detalle
-                        SET p.stock_prod = p.stock_prod + dp.cantidad_detalle,
+                        SET p.stock_prod = p.stock_prod - dp.cantidad_detalle,
                             p.estado_prod = CASE 
-                                WHEN p.stock_prod + dp.cantidad_detalle > 0 THEN 'disponible'
+                                WHEN p.stock_prod - dp.cantidad_detalle <= 0 THEN 'agotado'
+                                WHEN p.stock_prod - dp.cantidad_detalle > 0 THEN 'disponible'
                                 ELSE p.estado_prod
                             END
                         WHERE dp.fkpedido_detalle = %s 
                         AND p.fknegocioasociado_prod = %s
                     """, [pedido_id, negocio.pkid_neg])
                     
-                    # Registrar motivo de cancelación
-                    print(f"PEDIDO CANCELADO: #{pedido_id} - Motivo: {motivo_cancelacion} - Negocio: {negocio.nom_neg}")
-                    messages.success(request, f"✅ Pedido cancelado. Stock reabastecido. Motivo: {motivo_cancelacion}")
+                    # Registrar movimiento de salida por envío/entrega
+                    cursor.execute("""
+                        INSERT INTO movimientos_stock 
+                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                         stock_anterior, stock_nuevo, usuario_id, pedido_id, fecha_movimiento)
+                        SELECT 
+                            dp.fkproducto_detalle,
+                            %s,
+                            'salida',
+                            'envio_pedido',
+                            dp.cantidad_detalle,
+                            p.stock_prod + dp.cantidad_detalle,  -- Stock anterior (antes de descontar)
+                            p.stock_prod,  -- Stock nuevo (después de descontar)
+                            %s,
+                            %s,
+                            %s
+                        FROM detalles_pedido dp
+                        JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
+                        WHERE dp.fkpedido_detalle = %s
+                    """, [negocio.pkid_neg, datos['perfil'].id, pedido_id, datetime.now(), pedido_id])
+                    
+                    messages.success(request, f"✅ Pedido {nuevo_estado}. Stock descontado.")
+                
+                elif nuevo_estado == 'cancelado' and estado_actual not in ['cancelado']:
+                    # REABASTECER STOCK solo si el pedido estaba en un estado donde ya se había descontado stock
+                    if estado_actual in ['enviado', 'entregado']:
+                        cursor.execute("""
+                            UPDATE productos p
+                            JOIN detalles_pedido dp ON p.pkid_prod = dp.fkproducto_detalle
+                            SET p.stock_prod = p.stock_prod + dp.cantidad_detalle,
+                                p.estado_prod = CASE 
+                                    WHEN p.stock_prod + dp.cantidad_detalle > 0 THEN 'disponible'
+                                    ELSE p.estado_prod
+                                END
+                            WHERE dp.fkpedido_detalle = %s 
+                            AND p.fknegocioasociado_prod = %s
+                        """, [pedido_id, negocio.pkid_neg])
+                        
+                        # Registrar movimiento de entrada por cancelación
+                        cursor.execute("""
+                            INSERT INTO movimientos_stock 
+                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                             stock_anterior, stock_nuevo, usuario_id, pedido_id, fecha_movimiento)
+                            SELECT 
+                                dp.fkproducto_detalle,
+                                %s,
+                                'entrada',
+                                'cancelacion_pedido',
+                                dp.cantidad_detalle,
+                                p.stock_prod - dp.cantidad_detalle,  -- Stock anterior (antes de reabastecer)
+                                p.stock_prod,  -- Stock nuevo (después de reabastecer)
+                                %s,
+                                %s,
+                                %s
+                            FROM detalles_pedido dp
+                            JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
+                            WHERE dp.fkpedido_detalle = %s
+                        """, [negocio.pkid_neg, datos['perfil'].id, pedido_id, datetime.now(), pedido_id])
+                        
+                        messages.success(request, f"✅ Pedido cancelado. Stock reabastecido. Motivo: {motivo_cancelacion}")
+                    else:
+                        # Si se cancela un pedido que no tenía stock descontado
+                        messages.success(request, f"✅ Pedido cancelado. Motivo: {motivo_cancelacion}")
                 
                 else:
+                    # Para otros cambios de estado (confirmado → preparando, etc.)
                     messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}")
             
         except Exception as e:
