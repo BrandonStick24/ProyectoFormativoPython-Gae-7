@@ -1,0 +1,479 @@
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Gestión de Productos{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vendedor/css/crud_V.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Header Mejorado con Gráficas -->
+<div class="tarjeta-bienvenida">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h2>Gestión de Productos</h2>
+            <p class="text-muted">Administra tu inventario de productos y sus variantes.</p>
+        </div>
+        <div class="col-md-6">
+            <div class="estadisticas-grid">
+                <div class="estadistica-card total">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_con_variantes|length }}</div>
+                    <div class="estadistica-titulo">Total Productos</div>
+                </div>
+                
+                <div class="estadistica-card disponibles">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_disponibles.count }}</div>
+                    <div class="estadistica-titulo">Disponibles</div>
+                </div>
+                
+                <div class="estadistica-card oferta">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-tag"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ productos_en_oferta|length }}</div>
+                    <div class="estadistica-titulo">En Oferta</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Barra de Herramientas Mejorada -->
+<div class="barra-herramientas">
+    <div class="grupo-botones-accion">
+        <button class="boton-accion boton-primario" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+            <i class="fas fa-plus"></i> Agregar Producto
+        </button>
+    </div>
+
+    <div class="grupo-busqueda-filtros">
+        <div class="contenedor-busqueda">
+            <i class="fas fa-search icono-busqueda" title="Haz clic para limpiar búsqueda"></i>
+            <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar por nombre, descripción o categoría...">
+        </div>
+        
+        <div class="contenedor-filtros">
+            <select class="select-filtro" id="selectFiltro">
+                <option value="todos">Todos los productos</option>
+                <option value="disponible">Disponibles</option>
+                <option value="sin-stock">Sin stock</option>
+                <option value="stock-bajo">Stock bajo (≤ 5)</option>
+                <option value="oferta">En oferta</option>
+            </select>
+            
+            <button class="boton-accion boton-secundario" id="btnOrdenAsc" title="Ordenar productos">
+                <i class="fas fa-sort-amount-up"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Productos con Variantes -->
+<div class="contenedor-productos">
+    {% for producto_data in productos_con_variantes %}
+    {% with producto=producto_data.producto variantes=producto_data.variantes %}
+    <div class="producto-card">
+        <div class="producto-header">
+            <div class="producto-info">
+                <div class="producto-imagen">
+                    {% if producto.img_prod %}
+                    <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                    {% else %}
+                    <div class="img-placeholder">
+                        <i class="fas fa-box"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="producto-details">
+                    <h5>{{ producto.nom_prod }}</h5>
+                    <p class="producto-descripcion">{{ producto.desc_prod|default:"Sin descripción"|truncatewords:20 }}</p>
+                    <div class="producto-meta">
+                        <span class="precio">${{ producto.precio_prod }}</span>
+                        <span class="categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
+                        <span class="stock {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                            <i class="fas fa-boxes"></i> Stock: {{ producto.stock_prod }}
+                        </span>
+                        {% if producto.pkid_prod in productos_en_oferta %}
+                        <span class="badge-oferta">
+                            <i class="fas fa-tag"></i> Oferta Activa
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="producto-actions">
+                <!-- Botón Editar - Ahora abre directamente el modal con datos -->
+                <button class="btn btn-warning btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalEditarProducto"
+                        onclick="cargarDatosProducto('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}', '{{ producto.precio_prod }}', '{{ producto.stock_prod }}', '{{ producto.estado_prod }}', '{{ producto.fkcategoria_prod.pkid_cp }}', `{{ producto.desc_prod|default:''|escapejs }}`)">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+
+                <!-- Botón Ajustar Stock -->
+                <button class="btn btn-info btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalAjustarStock"
+                        onclick="cargarDatosStock('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}', '{{ producto.stock_prod }}')">
+                    <i class="fas fa-boxes"></i> Stock
+                </button>
+                
+                <!-- Botón Variantes -->
+                <a href="{% url 'gestionar_variantes' producto.pkid_prod %}" class="btn btn-variantes btn-sm">
+                    <i class="fas fa-layer-group"></i> Variantes 
+                    <span class="contador-variantes-boton">{{ variantes|length }}</span>
+                </a>
+                
+                <!-- Botón Eliminar -->
+                <button class="btn btn-danger btn-sm" 
+                        data-bs-toggle="modal" 
+                        data-bs-target="#modalEliminarProducto"
+                        onclick="cargarDatosEliminar('{{ producto.pkid_prod }}', '{{ producto.nom_prod }}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+                
+                <i class="fas fa-chevron-down flecha-acordeon"></i>
+            </div>
+        </div>
+
+        <!-- Sección de Variantes -->
+        <div class="variantes-section">
+            <div class="variantes-header">
+                <h6>
+                    <i class="fas fa-layer-group"></i>
+                    Variantes del Producto
+                    <span class="contador-variantes">{{ variantes|length }} variante{{ variantes|length|pluralize }}</span>
+                </h6>
+            </div>
+            
+            {% if variantes %}
+            <div class="variantes-grid">
+                {% for variante in variantes %}
+                <div class="variante-card">
+                    <div class="variante-header">
+                        <span class="variante-nombre">{{ variante.nombre }}</span>
+                        <span class="variante-precio">${{ variante.precio_total }}</span>
+                    </div>
+                    <div class="variante-detalles">
+                        <div class="variante-info">
+                            <span>Precio adicional: ${{ variante.precio_adicional }}</span>
+                        </div>
+                        <div class="variante-info">
+                            <span class="variante-stock {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-box"></i> Stock: {{ variante.stock }}
+                            </span>
+                        </div>
+                        {% if variante.sku %}
+                        <div class="variante-info">
+                            <span class="text-muted">SKU: {{ variante.sku }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-3">
+                <i class="fas fa-layer-group fa-2x text-muted mb-2"></i>
+                <p class="text-muted mb-0">Este producto no tiene variantes registradas.</p>
+                <a href="{% url 'gestionar_variantes' producto.pkid_prod %}" class="btn btn-variantes btn-sm mt-2">
+                    <i class="fas fa-plus"></i> Agregar primera variante
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div class="text-center py-5">
+        <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No hay productos registrados</h4>
+        <p class="text-muted">Comienza agregando tu primer producto.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
+            <i class="fas fa-plus"></i> Agregar primer producto
+        </button>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Agregar Producto -->
+<div class="modal fade" id="modalAgregarProducto" tabindex="-1" aria-labelledby="modalAgregarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAgregarProductoLabel">Agregar Nuevo Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'crear_producto_P' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_prod" class="form-label">Nombre del Producto *</label>
+                                <input type="text" class="form-control" id="nom_prod" name="nom_prod" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="precio_prod" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precio_prod" name="precio_prod" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria_prod" class="form-label">Categoría *</label>
+                                <select class="form-control" id="categoria_prod" name="categoria_prod" required>
+                                    <option value="">Selecciona una categoría...</option>
+                                    {% for categoria in categorias %}
+                                    <option value="{{ categoria.id }}">{{ categoria.descripcion }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_prod" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="stock_prod" name="stock_prod" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estado_prod" class="form-label">Estado del Producto</label>
+                                <select class="form-control" id="estado_prod" name="estado_prod">
+                                    <option value="disponible">Disponible</option>
+                                    <option value="no_disponible">No Disponible</option>
+                                    <option value="agotado">Agotado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_prod" class="form-label">Imagen del Producto</label>
+                                <input type="file" class="form-control" id="img_prod" name="img_prod" accept="image/*">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_prod" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="desc_prod" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Producto -->
+<div class="modal fade" id="modalEditarProducto" tabindex="-1" aria-labelledby="modalEditarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarProductoLabel">Editar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarProducto" method="post" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_editar" name="producto_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_prod_editar" class="form-label">Nombre del Producto *</label>
+                                <input type="text" class="form-control" id="nom_prod_editar" name="nom_prod" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="precio_prod_editar" class="form-label">Precio *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="precio_prod_editar" name="precio_prod" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="categoria_prod_editar" class="form-label">Categoría *</label>
+                                <select class="form-control" id="categoria_prod_editar" name="categoria_prod" required>
+                                    <option value="">Selecciona una categoría...</option>
+                                    {% for categoria in categorias %}
+                                    <option value="{{ categoria.id }}">{{ categoria.descripcion }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_prod_editar" class="form-label">Stock</label>
+                                <input type="number" class="form-control" id="stock_prod_editar" name="stock_prod" min="0" value="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="estado_prod_editar" class="form-label">Estado del Producto</label>
+                                <select class="form-control" id="estado_prod_editar" name="estado_prod">
+                                    <option value="disponible">Disponible</option>
+                                    <option value="no_disponible">No Disponible</option>
+                                    <option value="agotado">Agotado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_prod_editar" class="form-label">Imagen del Producto</label>
+                                <input type="file" class="form-control" id="img_prod_editar" name="img_prod" accept="image/*">
+                                <div class="form-text">La imagen actual se mantendrá si no se selecciona una nueva</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_prod_editar" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="desc_prod_editar" name="desc_prod" rows="3" placeholder="Describe tu producto..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Ajustar Stock -->
+<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-labelledby="modalAjustarStockLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAjustarStockLabel">Ajustar Stock</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAjustarStock" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_stock" name="producto_id">
+                <div class="modal-body">
+                    <p>Producto: <strong id="nombre_producto_stock"></strong></p>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="stock_actual" class="form-label">Stock Actual:</label>
+                                <input type="number" class="form-control" id="stock_actual" readonly>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="tipo_ajuste" class="form-label">Tipo de Ajuste:</label>
+                                <select class="form-control" id="tipo_ajuste" name="tipo_ajuste">
+                                    <option value="entrada">Entrada (+)</option>
+                                    <option value="salida">Salida (-)</option>
+                                    <option value="ajuste">Ajuste Manual</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cantidad_ajuste" class="form-label">Cantidad:</label>
+                        <input type="number" class="form-control" id="cantidad_ajuste" name="cantidad_ajuste" min="0" required>
+                        <div class="form-text" id="texto_ayuda">
+                            Ingrese la cantidad a sumar o restar
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="campo_stock_final" style="display: none;">
+                        <label for="stock_final" class="form-label">Stock Final:</label>
+                        <input type="number" class="form-control" id="stock_final" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="motivo_ajuste" class="form-label">Motivo del Ajuste:</label>
+                        <select class="form-control" id="motivo_ajuste" name="motivo_ajuste">
+                            <option value="compra_proveedor">Compra a Proveedor</option>
+                            <option value="devolucion_cliente">Devolución de Cliente</option>
+                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
+                            <option value="danio_perdida">Daño o Pérdida</option>
+                            <option value="promocion">Preparación para Promoción</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Producto -->
+<div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarProductoLabel">Eliminar Producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEliminarProducto" method="post" action="">
+                {% csrf_token %}
+                <input type="hidden" id="producto_id_eliminar" name="producto_id">
+                <div class="modal-body">
+                    <p>¿Estás seguro de que deseas eliminar el producto?</p>
+                    <p><strong id="nombre_producto_eliminar"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Esta acción no se puede deshacer.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendedor/js/Crud_V.js' %}"></script>
+{% endblock %}

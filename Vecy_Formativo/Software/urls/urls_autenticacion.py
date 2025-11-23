@@ -2,9 +2,9 @@ from django.urls import path
 from ..views import views_autenticacion
 
 urlpatterns = [
-    path('', views_autenticacion.iniciar_sesion, name='iniciar_sesion'),
+    path('iniciar/sesion', views_autenticacion.iniciar_sesion, name='iniciar_sesion'),
     path('registro/', views_autenticacion.registro_usuario, name='registro_usuario'),
-    path('logout/', views_autenticacion.cerrar_sesion, name='cerrar_sesion'),
+    path('cerrar-sesion/', views_autenticacion.cerrar_sesion, name='cerrar_sesion'),
     
     path('restablecer-contrasena/', views_autenticacion.restablecer_contrasena, name='restablecer_contrasena'),
     path('cambiar-contrasena/', views_autenticacion.cambiar_contrasena, name='cambiar_contrasena'),

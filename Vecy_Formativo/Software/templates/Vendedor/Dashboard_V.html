@@ -1,0 +1,124 @@
+<!-- templates/Vendedor/Dashboard_V.html -->
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vendedor/css/Dashboard_V.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Métricas y Gráficos -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="tarjeta-dashboard">
+            <div class="encabezado-tarjeta">
+                <i class="fas fa-chart-bar"></i>Interacciones de Usuarios
+            </div>
+            <div class="cuerpo-tarjeta">
+                <div class="marcador-grafico">
+                    Gráfico de interacciones de usuarios
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="tarjeta-dashboard">
+            <div class="encabezado-tarjeta">
+                <i class="fas fa-chart-pie"></i>Ventas por Categoría
+            </div>
+            <div class="cuerpo-tarjeta">
+                <div class="marcador-grafico">
+                    Gráfico de ventas por categoría
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Productos y Chats -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="tarjeta-dashboard">
+            <div class="encabezado-tarjeta d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-box"></i>Productos Destacados</span>
+                <a href="{% url 'Crud_V' %}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+            </div>
+            <div class="cuerpo-tarjeta">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Producto Ejemplo 1
+                        <span class="badge bg-success">En stock</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Producto Ejemplo 2
+                        <span class="badge bg-warning text-dark">Poco stock</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Producto Ejemplo 3
+                        <span class="badge bg-success">En stock</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="tarjeta-dashboard">
+            <div class="encabezado-tarjeta d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-comments"></i>Chats Recientes</span>
+                <a href="{% url 'Chats_V' %}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+            </div>
+            <div class="cuerpo-tarjeta">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Cliente 1</strong>
+                            <p class="mb-0 text-muted small">Último mensaje: Hola, tengo una pregunta...</p>
+                        </div>
+                        <span class="badge bg-primary">2 nuevos</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Cliente 2</strong>
+                            <p class="mb-0 text-muted small">Último mensaje: Me interesa el producto...</p>
+                        </div>
+                        <span class="badge bg-primary">1 nuevo</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tarjetas de Métricas -->
+<div class="row mt-4">
+    <div class="col-md-4 mb-4">
+        <div class="card tarjeta-dashboard">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-shopping-cart text-primary"></i> Ventas Hoy</h5>
+                <h3>15</h3>
+                <p class="text-muted mb-0">15 ventas</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card tarjeta-dashboard">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-users text-success"></i> Clientes Activos</h5>
+                <h3>48</h3>
+                <p class="text-muted mb-0">+12% esta semana</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card tarjeta-dashboard">
+            <div class="card-body">
+                <h5 class="card-title"><i class="fas fa-box text-warning"></i> Productos</h5>
+                <h3>156</h3>
+                <p class="text-muted mb-0">8 bajos en stock</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

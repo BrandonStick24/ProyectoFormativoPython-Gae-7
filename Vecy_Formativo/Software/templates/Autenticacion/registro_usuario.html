@@ -48,7 +48,7 @@
                                 <label for="tipo_doc" class="form-label">
                                     <i class="fas fa-id-card me-2"></i>Tipo de Documento
                                 </label>
-                                <select class="form-select {% if form_data.tipo_doc %}selected{% endif %} {% if messages and 'tipo_doc' in message.extra_tags %}error{% endif %}" id="tipo_doc" name="tipo_doc" required>
+                                <select class="form-select {% if form_data.tipo_doc %}selected{% endif %} {% if messages and 'tipo_doc' in message.extra_tags %}error{% endif %}" id="tipo_doc" name="tipo_doc" required onchange="validarDocumento()">
                                     <option value="">Seleccionar...</option>
                                     {% for tipo in tipo_documentos %}
                                         <option value="{{ tipo.pkid_doc }}" {% if form_data.tipo_doc == tipo.pkid_doc|stringformat:"s" %}selected{% endif %}>
@@ -66,7 +66,8 @@
                                 <label for="documento" class="form-label">
                                     <i class="fas fa-id-card me-2"></i>Número
                                 </label>
-                                <input type="text" maxlenght="10"  class="form-control {% if messages and 'documento' in message.extra_tags %}error{% endif %}" id="documento" name="documento" placeholder="123456789" value="{{ form_data.documento|default:'' }}" required>
+                                <input type="text" class="form-control {% if messages and 'documento' in message.extra_tags %}error{% endif %}" id="documento" name="documento" placeholder="Ingresa tu documento" value="{{ form_data.documento|default:'' }}" maxlength="15" oninput="validarDocumento()" required>
+                                <div id="documentoError" style="font-size: 0.8rem; margin-top: 5px; color: #e53e3e;"></div>
                                 {% for message in messages %}
                                     {% if 'documento' in message.extra_tags %}
                                         <span class="field-error">{{ message }}</span>
@@ -115,7 +116,7 @@
                             <label for="rol" class="form-label">
                                 <i class="fas fa-users me-2"></i>Tipo de Cuenta
                             </label>
-                            <select class="form-select {% if form_data.rol %}selected{% endif %} {% if messages and 'rol' in message.extra_tags %}error{% endif %}" id="rol" name="rol" required>
+                                <select class="form-select {% if form_data.rol %}selected{% endif %} {% if messages and 'rol' in message.extra_tags %}error{% endif %}" id="rol" name="rol" required>
                                 <option value="">Seleccionar rol...</option>
                                 {% for rol in roles %}
                                     <option value="{{ rol.pkid_rol }}" {% if form_data.rol == rol.pkid_rol|stringformat:"s" %}selected{% endif %}>
@@ -176,7 +177,7 @@
                                 <label for="nit" class="form-label">
                                     <i class="fas fa-fingerprint me-2"></i>NIT del Negocio
                                 </label>
-                                <input type="text" class="form-control {% if messages and 'nit' in message.extra_tags %}error{% endif %}" id="nit" name="nit" placeholder="123456789-0" value="{{ form_data.nit|default:'' }}" required>
+                                <input type="text" class="form-control {% if messages and 'nit' in message.extra_tags %}error{% endif %}" id="nit" name="nit" placeholder="123456789-0" value="{{ form_data.nit|default:'' }}" maxlength="11" required>
                                 <div id="nitError" style="font-size: 0.8rem; margin-top: 5px; color: #e53e3e;"></div>
                                 {% for message in messages %}
                                     {% if 'nit' in message.extra_tags %}
@@ -185,19 +186,19 @@
                                 {% endfor %}
                             </div>
                             <div class="form-group">
-                                <label for="fktiponeg_neg" class="form-label">
+                                <label for="tipo_negocio" class="form-label">
                                     <i class="fas fa-tags me-2"></i>Tipo de Negocio
                                 </label>
-                                <select class="form-select {% if form_data.fktiponeg_neg %}selected{% endif %} {% if messages and 'fktiponeg_neg' in message.extra_tags %}error{% endif %}" id="fktiponeg_neg" name="fktiponeg_neg" required>
-                                    <option value="">Seleccionar...</option>
+                                <select class="form-select {% if form_data.tipo_negocio %}selected{% endif %} {% if messages and 'tipo_negocio' in message.extra_tags %}error{% endif %}" id="tipo_negocio" name="tipo_negocio" required>
+                                    <option value="">Seleccionar tipo...</option>
                                     {% for tipo in tipo_negocios %}
-                                        <option value="{{ tipo.pkid_tiponeg }}" {% if form_data.fktiponeg_neg == tipo.pkid_tiponeg|stringformat:"s" %}selected{% endif %}>
+                                        <option value="{{ tipo.pkid_tiponeg }}" {% if form_data.tipo_negocio == tipo.pkid_tiponeg|stringformat:"s" %}selected{% endif %}>
                                             {{ tipo.desc_tiponeg }}
                                         </option>
                                     {% endfor %}
                                 </select>
                                 {% for message in messages %}
-                                    {% if 'fktiponeg_neg' in message.extra_tags %}
+                                    {% if 'tipo_negocio' in message.extra_tags %}
                                         <span class="field-error">{{ message }}</span>
                                     {% endif %}
                                 {% endfor %}
@@ -242,7 +243,7 @@
                             <div class="file-upload" onclick="document.getElementById('img_neg').click()">
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <p>Haz clic para subir una imagen</p>
-                                <small>Formatos: JPG, PNG, GIF (Máx. 5MB)</small>
+                                <small>Formatos: JPG, PNG, GIF (Máx. 20MB)</small>
                                 <input type="file" id="img_neg" name="img_neg" accept="image/*" onchange="previewImage(this)">
                             </div>
                             <img id="imagePreview" class="image-preview" alt="Vista previa">
@@ -279,7 +280,7 @@
         // Inicializar el estado del formulario basado en los datos existentes
         document.addEventListener('DOMContentLoaded', function() {
             const today = new Date();
-            const maxDate = new Date(today.getFullYear() - 18, today.getonth(), today.getDate());
+            const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
             document.getElementById('fechan').max = maxDate.toISOString().split('T')[0];
             
             // Verificar si hay datos del negocio para mostrar el paso 2 automáticamente
@@ -295,11 +296,75 @@
             // Restaurar estado de contraseñas
             checkPasswordStrength();
             checkPasswordMatch();
+            
+            // Inicializar validación de documento
+            validarDocumento();
         });
+
+        // Validación de documento en tiempo real
+        function validarDocumento() {
+            const tipoDoc = document.getElementById('tipo_doc').value;
+            const documento = document.getElementById('documento').value;
+            const documentoError = document.getElementById('documentoError');
+            const documentoInput = document.getElementById('documento');
+            
+            if (!documento) {
+                documentoError.textContent = '';
+                clearError(documentoInput);
+                return;
+            }
+            
+            // Validar según el tipo de documento
+            let esValido = true;
+            let mensaje = '';
+            
+            switch(tipoDoc) {
+                case '1': // Cédula de Ciudadanía
+                    if (!/^\d+$/.test(documento)) {
+                        esValido = false;
+                        mensaje = 'La cédula debe contener solo números';
+                    } else if (documento.length < 6 || documento.length > 10) {
+                        esValido = false;
+                        mensaje = 'La cédula debe tener entre 6 y 10 dígitos';
+                    }
+                    break;
+                    
+                case '2': // Tarjeta de Identidad
+                    if (!/^\d+$/.test(documento)) {
+                        esValido = false;
+                        mensaje = 'La tarjeta de identidad debe contener solo números';
+                    } else if (documento.length < 6 || documento.length > 10) {
+                        esValido = false;
+                        mensaje = 'La tarjeta de identidad debe tener entre 6 y 10 dígitos';
+                    }
+                    break;
+                    
+                case '3': // Cédula de Extranjería
+                    if (documento.length < 6) {
+                        esValido = false;
+                        mensaje = 'La cédula de extranjería debe tener al menos 6 caracteres';
+                    }
+                    break;
+                    
+                default:
+                    if (!documento.trim()) {
+                        esValido = false;
+                        mensaje = 'Selecciona un tipo de documento primero';
+                    }
+            }
+            
+            if (!esValido) {
+                documentoError.textContent = mensaje;
+                highlightError(documentoInput);
+            } else {
+                documentoError.textContent = '';
+                clearError(documentoInput);
+            }
+        }
 
         // Verificar si hay errores en campos del negocio
         function hasBusinessErrors() {
-            const businessFields = ['nit', 'fktiponeg_neg', 'nom_neg', 'direcc_neg'];
+            const businessFields = ['nit', 'tipo_negocio', 'nom_neg', 'direcc_neg'];
             return businessFields.some(field => {
                 const element = document.getElementById(field);
                 return element && element.classList.contains('error');
@@ -324,6 +389,15 @@
                     clearError(element);
                 }
             });
+            
+            // Validar documento específicamente
+            const tipoDoc = document.getElementById('tipo_doc').value;
+            const documento = document.getElementById('documento').value;
+            
+            if (!validarDocumentoCompleto(tipoDoc, documento)) {
+                isValid = false;
+                showAlert('Por favor, verifica el número de documento.');
+            }
             
             // Validar contraseñas
             const password = document.getElementById('contrasena').value;
@@ -355,6 +429,23 @@
             } else {
                 // Si no es vendedor, enviar formulario directamente
                 document.getElementById('registroForm').submit();
+            }
+        }
+
+        // Función de validación completa del documento
+        function validarDocumentoCompleto(tipoDoc, documento) {
+            if (!tipoDoc || !documento.trim()) {
+                return false;
+            }
+            
+            switch(tipoDoc) {
+                case '1': // CC
+                case '2': // TI
+                    return /^\d{6,10}$/.test(documento);
+                case '3': // CE
+                    return /^[a-zA-Z0-9]{6,15}$/.test(documento);
+                default:
+                    return false;
             }
         }
 
@@ -440,9 +531,9 @@
             const file = input.files[0];
             
             if (file) {
-                // Validar tamaño del archivo (5MB máximo)
-                if (file.size > 5 * 1024 * 1024) {
-                    showAlert('La imagen debe ser menor a 5MB.', 'error');
+                // Validar tamaño del archivo (20MB máximo)
+                if (file.size > 20 * 1024 * 1024) {
+                    showAlert('La imagen debe ser menor a 20MB.', 'error');
                     input.value = '';
                     return;
                 }
@@ -458,7 +549,7 @@
             }
         }
 
-        // Validación de NIT en tiempo real
+        // Validación de NIT en tiempo real - CORREGIDA
         document.getElementById('nit').addEventListener('input', function() {
             const nit = this.value;
             const nitError = document.getElementById('nitError');
@@ -469,12 +560,12 @@
                 return;
             }
             
-            // Validar formato básico de NIT
-            if (!/^[0-9-]+$/.test(nit)) {
-                nitError.textContent = 'El NIT solo puede contener números y guiones';
+            // VALIDACIÓN CORREGIDA: Formato NIT colombiano (123456789-0)
+            if (!/^\d{0,9}-?\d{0,1}$/.test(nit)) {
+                nitError.textContent = 'Solo números y un guion: 123456789-0';
                 highlightError(this);
-            } else if (nit.length < 8) {
-                nitError.textContent = 'El NIT debe tener al menos 8 caracteres';
+            } else if (nit.length > 11) {
+                nitError.textContent = 'Máximo 11 caracteres (123456789-0)';
                 highlightError(this);
             } else {
                 nitError.textContent = '';
@@ -492,17 +583,17 @@
         }
 
         function showAlert(message, type = 'error') {
-            alert(message); // Puedes reemplazar esto con un toast o modal más elegante
+            alert(message);
         }
 
-        // Validación del formulario completo antes de enviar
+        // Validación del formulario completo antes de enviar - CORREGIDA
         document.getElementById('registroForm').addEventListener('submit', function(e) {
             const rolSelect = document.getElementById('rol');
             const selectedRol = rolSelect.options[rolSelect.selectedIndex].text.toLowerCase();
             
             // Si es vendedor, validar campos del negocio
             if (selectedRol.includes('vendedor') && currentStep === 2) {
-                const businessFields = ['nit', 'fktiponeg_neg', 'nom_neg', 'direcc_neg'];
+                const businessFields = ['nit', 'tipo_negocio', 'nom_neg', 'direcc_neg'];
                 let isValid = true;
                 
                 businessFields.forEach(field => {
@@ -521,11 +612,11 @@
                     return false;
                 }
                 
-                // Validar NIT específicamente
+                // VALIDACIÓN CORREGIDA: NIT colombiano
                 const nit = document.getElementById('nit').value;
-                if (!/^[0-9-]+$/.test(nit) || nit.length < 8) {
+                if (!/^\d{9}-\d{1}$/.test(nit)) {
                     e.preventDefault();
-                    showAlert('Por favor, ingresa un NIT válido.');
+                    showAlert('El NIT debe tener formato: 123456789-0 (9 dígitos + guion + 1 dígito)');
                     return false;
                 }
             }

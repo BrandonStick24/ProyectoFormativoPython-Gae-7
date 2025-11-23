@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard Moderador{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'moderador/css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="contenedor-principal">
+        <!-- HEADER -->
+        <header class="encabezado">
+            <div class="info-usuario">
+                <div class="nombre-usuario">{{ request.user.first_name }} {{ request.user.last_name }}</div>
+                <span class="rol-badge">Moderador</span>
+            </div>
+
+            <div class="acciones-derecha">
+                <div class="dropdown-perfil">
+                    <button class="boton-perfil" onclick="toggleMenu()">
+                        <i class="fas fa-user-circle"></i>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="menu-desplegable" id="menuDesplegable">
+                        <a href="#" class="item-menu">
+                            <i class="fas fa-user-edit"></i>
+                            Editar Perfil
+                        </a>
+                        <a href="{% url 'cerrar_sesion' %}" class="item-menu">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ASIDE -->
+        <aside class="barra-lateral">
+            <nav>
+                <ul class="menu-lateral">
+                    <li class="item-lateral">
+                        <a href="{% url 'moderador_dash' %}"
+                            class="enlace-lateral {% if request.resolver_match.url_name == 'moderador_dash' %}activo{% endif %}">
+                            <i class="fas fa-home"></i>
+                            Inicio
+                        </a>
+                    </li>
+                    <li class="item-lateral">
+                        <a href="{% url 'gestion_usuarios' %}"
+                            class="enlace-lateral {% if request.resolver_match.url_name == 'gestion_usuarios' %}activo{% endif %}">
+                            <i class="fas fa-users"></i>
+                            Gestionar Usuarios
+                        </a>
+                    </li>
+                    <li class="item-lateral">
+                        <a href="{% url 'gestion_negocios' %}"
+                            class="enlace-lateral {% if request.resolver_match.url_name == 'gestion_negocios' %}activo{% endif %}">
+                            <i class="fas fa-store"></i>
+                            Negocios
+                        </a>
+                    </li>
+                    <!-- ELIMINADO EL BOTÓN DE ESTADÍSTICAS -->
+                    <li class="item-lateral">
+                        <a href="{% url 'enviar_correos' %}"
+                            class="enlace-lateral {% if request.resolver_match.url_name == 'enviar_correos' %}activo{% endif %}">
+                            <i class="fas fa-envelope"></i>
+                            Enviar Correos
+                        </a>
+                    </li>
+                    <li class="item-lateral">
+                        <a href="#" class="enlace-lateral">
+                            <i class="fas fa-flag"></i>
+                            Reseñas Reportadas
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <div class="contenido-wrapper">
+            <main class="contenido-principal">
+                {% block content %}
+                {% endblock %}
+            </main>
+
+            <!-- FOOTER -->
+            <footer class="pie-pagina">
+                <p>&copy; 2025 Vecy. Todos los derechos reservados.</p>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menuDesplegable');
+            menu.classList.toggle('activo');
+        }
+
+        // Cerrar el menú al hacer clic fuera
+        document.addEventListener('click', function (event) {
+            const dropdown = document.querySelector('.dropdown-perfil');
+            const menu = document.getElementById('menuDesplegable');
+
+            if (!dropdown.contains(event.target)) {
+                menu.classList.remove('activo');
+            }
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

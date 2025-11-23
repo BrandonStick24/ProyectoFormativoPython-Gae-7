@@ -23,14 +23,17 @@ from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # urls de la app vecy
-    path('', include('Software.urls.urls_autenticacion')),
+    path('auth/', include('Software.urls.urls_moderador')),
     path('', include('Software.urls.urls_cliente')),
+    path('auth/', include('Software.urls.urls_vendedor')),
     
-    # URLs de autenticación de Django
-    path('login/', auth_views.LoginView.as_view(template_name='autenticacion/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
-    path('password-reset/', auth_views.PasswordResetView.as_view(), name='password_reset'),
+    path('auth/', include('Software.urls.urls_autenticacion')),
+    path('auth/login/', auth_views.LoginView.as_view(template_name='autenticacion/login.html'), name='login'),
+    path('auth/logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

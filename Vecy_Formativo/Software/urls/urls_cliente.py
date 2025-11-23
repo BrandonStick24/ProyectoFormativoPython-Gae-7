@@ -1,31 +1,43 @@
 from django.urls import path
+
 from ..views import views_cliente
 
 urlpatterns = [
-    # Página principal del cliente
-    path('cliente/', views_cliente.principal, name='principal'),
+    # ==================== VISTAS PÚBLICAS ====================
+    path('', views_cliente.principal, name='principal'),
     
-    # Dashboard principal del cliente
-    path('cliente/dashboard/', views_cliente.cliente_dashboard, name='cliente_dashboard'),
+    # Productos públicos
+    path('productos/', views_cliente.productos_todos, name='todos_productos'),
+    path('productos/categoria/<int:categoria_id>/', views_cliente.productos_por_categoria, name='productos_categoria'),
     
-    # Detalle de negocio para usuario logueado
-    path('cliente/negocio/<int:id>/', views_cliente.detalle_negocio_logeado, name='detalle_negocio_logeado'),
+    # Negocios públicos
+    path('negocio/<int:id>/', views_cliente.detalle_negocio, name='detalle_negocio'),
     
-    # Carrito y gestión
-    path('cliente/carrito/', views_cliente.ver_carrito, name='ver_carrito'),
-    path('cliente/carrito/data/', views_cliente.carrito_data, name='carrito_data'),
-    path('cliente/carrito/agregar/', views_cliente.agregar_al_carrito, name='agregar_al_carrito'),
-    path('cliente/carrito/actualizar/', views_cliente.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
-    path('cliente/carrito/eliminar/', views_cliente.eliminar_item_carrito, name='eliminar_item_carrito'),
+    # Secciones del principal
+    path('ofertas/', views_cliente.productos_todos, name='ofertas_especiales'),
+    path('destacados/', views_cliente.productos_todos, name='productos_destacados'),
+    path('mas-vendidos/', views_cliente.productos_todos, name='mas_vendidos'),
+    path('nuevos/', views_cliente.productos_todos, name='nuevos_productos'),
+    path('economicos/', views_cliente.productos_todos, name='productos_economicos'),
     
-    # Pedidos
-    path('cliente/pedido/procesar/', views_cliente.procesar_pedido, name='procesar_pedido'),
-    path('cliente/pedidos/data/', views_cliente.mis_pedidos_data, name='mis_pedidos_data'),
-    path('cliente/pedido/cancelar/', views_cliente.cancelar_pedido, name='cancelar_pedido'),
+    # ==================== VISTAS PRIVADAS (logueadas) ====================
+    # Dashboard y negocio logueado
+    path('dashboard/', views_cliente.cliente_dashboard, name='cliente_dashboard'),
+    path('negocio-logeado/<int:id>/', views_cliente.detalle_negocio_logeado, name='detalle_negocio_logeado'),
     
-    # Reseñas
-    path('cliente/resena/guardar/', views_cliente.guardar_resena, name='guardar_resena'),
+    # Carrito y compras
+    path('agregar-carrito/', views_cliente.agregar_al_carrito, name='agregar_carrito'),
+    path('carrito/', views_cliente.ver_carrito, name='ver_carrito'),
+    path('carrito-data/', views_cliente.carrito_data, name='carrito_data'),
+    path('actualizar-cantidad-carrito/', views_cliente.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
+    path('eliminar-item-carrito/', views_cliente.eliminar_item_carrito, name='eliminar_item_carrito'),
+    path('procesar-pedido/', views_cliente.procesar_pedido, name='procesar_pedido'),
     
-    # Productos filtrados
-    path('cliente/productos/filtrados/', views_cliente.productos_filtrados_logeado, name='productos_filtrados_logeado'),
+    # Pedidos y reseñas
+    path('mis-pedidos-data/', views_cliente.mis_pedidos_data, name='mis_pedidos_data'),
+    path('cancelar-pedido/', views_cliente.cancelar_pedido, name='cancelar_pedido'),
+    path('guardar-resena/', views_cliente.guardar_resena, name='guardar_resena'),
+    
+    # Productos filtrados (logueado)
+    path('productos-filtrados/', views_cliente.productos_filtrados_logeado, name='productos_filtrados_logeado'),
 ]

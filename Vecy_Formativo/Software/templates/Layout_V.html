@@ -1,0 +1,232 @@
+<!-- Templates/Layout_V.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>VECY - {% block title %}Dashboard{% endblock %}</title>
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+            rel="stylesheet">
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'vendedor/css/layout_V.css' %}">
+        {% block extra_css %}{% endblock %}
+    </head>
+    <body>
+        <!-- Encabezado -->
+        <header class="encabezado-principal">
+            <div class="encabezado-izquierda">
+                <div class="contenedor-logo">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="nombre-marca">VECY</div>
+            </div>
+
+            <div class="encabezado-centro">
+                <div class="nombre-negocio">
+                    {% if negocio_activo %}
+                    {{ negocio_activo.nom_neg }}
+                    {% else %}
+                    Sin Negocio Activo
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="encabezado-derecha">
+                <button class="boton-notificacion"
+                    id="botonDesplegableNotificaciones">
+                    <i class="fas fa-bell"></i>
+                    <span class="insignia-notificacion">3</span>
+                </button>
+
+                <span class="nombre-usuario">
+                    {% if nombre %}
+                    {{ nombre }}
+                    {% else %}
+                    Usuario
+                    {% endif %}
+                </span>
+
+                <div class="desplegable-usuario">
+                    <button class="boton-usuario" id="botonDesplegableUsuario">
+                        <i class="fas fa-user-circle"></i>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="menu-desplegable-personalizado"
+                        id="menuDesplegableUsuario">
+                        <a href="{% url 'Negocios_V' %}"
+                            class="item-desplegable-personalizado">
+                            <i class="fas fa-store"></i>
+                            Mis Negocios
+                        </a>
+                        <a href="#" class="item-desplegable-personalizado">
+                            <i class="fas fa-user-edit"></i>
+                            Editar Perfil
+                        </a>
+                        <div class="divisor-desplegable-personalizado"></div>
+                        <a href="{% url 'cerrar_sesion' %}"
+                            class="item-desplegable-personalizado">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Cerrar Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Barra Lateral -->
+        <aside class="barra-lateral">
+            <div class="seccion-estado-negocio">
+                <h6><i class="fas fa-store-alt"></i> Estado del Negocio</h6>
+                <div class="alternador-estado">
+                    <span id="textoEstado">Cerrado</span>
+                    <div class="interruptor-alternador" id="alternadorNegocio">
+                        <div class="deslizador-alternador"></div>
+                    </div>
+                </div>
+                <button class="boton-programar" id="botonProgramarHorario">
+                    <i class="fas fa-clock"></i> Programar Horario
+                </button>
+            </div>
+
+            <!-- Orden correcto de los enlaces -->
+            <a href="{% url 'dash_vendedor' %}" class="item-barra-lateral">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="{% url 'Negocios_V' %}" class="item-barra-lateral">
+                <i class="fas fa-store"></i>
+                <span>Mis Negocios</span>
+            </a>
+            <a href="{% url 'Crud_V' %}" class="item-barra-lateral">
+                <i class="fas fa-box"></i>
+                <span>Productos</span>
+            </a>
+            <a href="{% url 'gestionar_ventas' %}" class="item-barra-lateral">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Pedidos</span>
+            </a>
+            <a href="{% url 'Ofertas_V' %}" class="item-barra-lateral">
+                <i class="fas fa-tag"></i>
+                <span>Ofertas</span>
+            </a>
+            <a href="{% url 'ver_resenas_vendedor' %}" class="item-barra-lateral">
+                <i class="fas fa-comments"></i>
+                <span>Reseñas</span>
+            </a>
+            <a href="{% url 'Stock_V' %}" class="item-barra-lateral">
+                <i class="fas fa-chart-line"></i>
+                <span>Stock</span>
+            </a>
+            <button class="item-barra-lateral" id="botonReportarProblema"
+                style="border: none; background: none; width: 100%; text-align: left;">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>Reportar Problema</span>
+            </button>
+        </aside>
+
+        <!-- Contenido Principal -->
+        <main class="contenido-principal">
+            <div class="contenedor-pagina">
+                {% block content %}
+                <!-- El contenido específico de cada página irá aquí -->
+                {% endblock %}
+            </div>
+        </main>
+
+        <!-- Pie de Página -->
+        <footer class="pie-principal">
+            <p class="mb-0">© 2025 VECY - Sistema de Gestión de Negocios. Todos
+                los derechos reservados.</p>
+        </footer>
+
+        <!-- ==================== MODALES DEL LAYOUT ==================== -->
+        
+        <!-- Modal para Programar Horario -->
+        <div class="modal fade" id="modalProgramacion" tabindex="-1"
+            aria-labelledby="modalProgramacionLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalProgramacionLabel">
+                            <i class="fas fa-clock me-2"></i>Programar Horario del Negocio
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formProgramacion">
+                            <div class="mb-3">
+                                <label for="horarioApertura" class="form-label">Hora de Apertura</label>
+                                <input type="time" class="form-control" id="horarioApertura" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="horarioCierre" class="form-label">Hora de Cierre</label>
+                                <input type="time" class="form-control" id="horarioCierre" required>
+                            </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="habilitarProgramacion">
+                                <label class="form-check-label" for="habilitarProgramacion">
+                                    Activar programación automática
+                                </label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="guardarProgramacion">Guardar Horario</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Reportar Problema -->
+        <div class="modal fade" id="modalReportarProblema" tabindex="-1"
+            aria-labelledby="modalReportarProblemaLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalReportarProblemaLabel">
+                            <i class="fas fa-exclamation-circle me-2"></i>Reportar Problema
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formReportarProblema">
+                            <div class="mb-3">
+                                <label for="categoriaProblema" class="form-label">Categoría del Problema</label>
+                                <select class="form-select" id="categoriaProblema" required>
+                                    <option value="">Seleccione una categoría</option>
+                                    <option value="tecnico">Problema Técnico</option>
+                                    <option value="funcionalidad">Funcionalidad</option>
+                                    <option value="seguridad">Seguridad</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="descripcionProblema" class="form-label">Descripción Detallada</label>
+                                <textarea class="form-control" id="descripcionProblema" rows="4" 
+                                          placeholder="Describa el problema en detalle..." required></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="enviarReporte">Enviar Reporte</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bootstrap JS -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+        <!-- JavaScript personalizado del Layout -->
+        <script src="{% static 'vendedor/js/Layout_V.js' %}"></script>
+
+        {% block extra_js %}{% endblock %}
+    </body>
+</html>

@@ -1,0 +1,349 @@
+<!-- templates/Vendedor/Conf_ne_V.html -->
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Configurar Negocio - {{ negocio.nom_neg }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ESTILOS ESPECÍFICOS PARA CONFIGURACIÓN - COMPACTOS */
+    .config-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 0;
+    }
+
+    .config-header {
+        background: linear-gradient(135deg, #55AD9B, #95D2B3);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px 10px 0 0;
+        margin-bottom: 0;
+    }
+
+    .config-card {
+        background: white;
+        border-radius: 0 0 10px 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #55AD9B;
+        box-shadow: 0 0 0 3px rgba(85, 173, 155, 0.1);
+        outline: none;
+    }
+
+    .btn-primary {
+        background: #55AD9B;
+        border: none;
+        border-radius: 6px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary:hover {
+        background: #95D2B3;
+        transform: translateY(-1px);
+    }
+
+    .btn-outline-secondary {
+        border: 1px solid #6b7280;
+        border-radius: 6px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 500;
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #6b7280;
+        color: white;
+    }
+
+    .current-image {
+        max-width: 150px;
+        max-height: 150px;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        object-fit: cover;
+    }
+
+    .image-placeholder {
+        width: 150px;
+        height: 150px;
+        border: 2px dashed #d1d5db;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #9ca3af;
+        background-color: #f9fafb;
+    }
+
+    .alert {
+        border-radius: 6px;
+        border: none;
+        font-size: 0.85rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .section-title {
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+        font-size: 1rem;
+    }
+
+    .form-text {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
+    /* MEJORAS RESPONSIVE */
+    @media (max-width: 768px) {
+        .config-header {
+            padding: 1rem;
+        }
+
+        .config-card {
+            padding: 1rem;
+        }
+
+        .config-header h1 {
+            font-size: 1.3rem;
+        }
+
+        .btn-primary, .btn-outline-secondary {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .config-container {
+            padding: 0.5rem;
+        }
+
+        .config-header {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .config-card {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .d-flex.justify-content-between .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="config-container">
+    <div class="config-header">
+        <div class="d-flex align-items-center gap-3">
+            <i class="fas fa-store fa-2x"></i>
+            <div>
+                <h1 class="h4 mb-1">Configurar Negocio</h1>
+                <p class="mb-0 opacity-90">Editando: "{{ negocio.nom_neg }}"</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="config-card">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                        <span>{{ message }}</span>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <h5 class="section-title">
+                <i class="fas fa-info-circle me-2"></i>Información Básica
+            </h5>
+            
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label for="nom_neg" class="form-label">Nombre del Negocio *</label>
+                    <input type="text" class="form-control" id="nom_neg" name="nom_neg" 
+                           value="{{ negocio.nom_neg }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="nit_neg" class="form-label">NIT *</label>
+                    <input type="text" class="form-control" id="nit_neg" name="nit_neg" 
+                           value="{{ negocio.nit_neg }}" required>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label for="fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
+                    <select class="form-select" id="fktiponeg_neg" name="fktiponeg_neg" required>
+                        <option value="">Selecciona un tipo</option>
+                        {% for tipo in tipos_negocio %}
+                            <option value="{{ tipo.pkid_tiponeg }}" 
+                                    {% if tipo.pkid_tiponeg == negocio.fktiponeg_neg.pkid_tiponeg %}selected{% endif %}>
+                                {{ tipo.desc_tiponeg }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="img_neg" class="form-label">Imagen del Negocio</label>
+                    <input type="file" class="form-control" id="img_neg" name="img_neg" 
+                           accept="image/*">
+                    <div class="form-text">Formatos: JPG, PNG, GIF (máx. 5MB)</div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label for="direcc_neg" class="form-label">Dirección *</label>
+                <input type="text" class="form-control" id="direcc_neg" name="direcc_neg" 
+                       value="{{ negocio.direcc_neg }}" required>
+            </div>
+
+            <div class="mb-4">
+                <label for="desc_neg" class="form-label">Descripción</label>
+                <textarea class="form-control" id="desc_neg" name="desc_neg" 
+                          rows="3" placeholder="Describe tu negocio...">{{ negocio.desc_neg }}</textarea>
+                <div class="form-text">Opcional. Máximo 500 caracteres.</div>
+            </div>
+
+            <h5 class="section-title">
+                <i class="fas fa-image me-2"></i>Imagen Actual
+            </h5>
+            <div class="mb-4 text-center">
+                {% if negocio.img_neg %}
+                    <img src="{{ negocio.img_neg.url }}" alt="Imagen actual" class="current-image mb-2" 
+                         onerror="this.style.display='none'; document.getElementById('no-image').style.display='flex';">
+                    <p class="text-muted small">Imagen actual del negocio</p>
+                {% endif %}
+                <div id="no-image" class="image-placeholder mx-auto {% if negocio.img_neg %}d-none{% endif %}">
+                    <div class="text-center">
+                        <i class="fas fa-store fa-2x mb-2"></i>
+                        <p class="small mb-0">Sin imagen</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                <a href="{% url 'Negocios_V' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Mis Negocios
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Validación del formulario
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const nombre = document.getElementById('nom_neg').value.trim();
+            const nit = document.getElementById('nit_neg').value.trim();
+            const tipo = document.getElementById('fktiponeg_neg').value;
+            const direccion = document.getElementById('direcc_neg').value.trim();
+            
+            let errores = [];
+            
+            if (!nombre) {
+                errores.push('El nombre del negocio es obligatorio');
+            }
+            
+            if (!nit) {
+                errores.push('El NIT es obligatorio');
+            }
+            
+            if (!tipo) {
+                errores.push('Debes seleccionar un tipo de negocio');
+            }
+            
+            if (!direccion) {
+                errores.push('La dirección es obligatoria');
+            }
+            
+            if (errores.length > 0) {
+                e.preventDefault();
+                alert('Por favor, corrige los siguientes errores:\n\n• ' + errores.join('\n• '));
+                return false;
+            }
+        });
+
+        // Vista previa de imagen (opcional)
+        const inputImagen = document.getElementById('img_neg');
+        if (inputImagen) {
+            inputImagen.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    // Validar tamaño (5MB máximo)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('La imagen es demasiado grande. Máximo 5MB permitido.');
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    // Validar tipo
+                    const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+                    if (!tiposPermitidos.includes(file.type)) {
+                        alert('Solo se permiten imágenes JPG, PNG o GIF.');
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    console.log('Imagen válida seleccionada:', file.name);
+                }
+            });
+        }
+
+        // Manejar error de imagen
+        const imagenActual = document.querySelector('.current-image');
+        if (imagenActual) {
+            imagenActual.onerror = function() {
+                this.style.display = 'none';
+                document.getElementById('no-image').classList.remove('d-none');
+            };
+        }
+    });
+</script>
+{% endblock %}

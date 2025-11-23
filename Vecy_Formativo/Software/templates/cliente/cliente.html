@@ -652,7 +652,7 @@
                             </div>
                         </div>
 
-                        <a href="{% url 'detalle_negocio' id=negocio.pkid_neg %}" class="vecy-visit-btn">
+                        <a href="{% url 'detalle_negocio_logeado' id=negocio.pkid_neg %}" class="vecy-visit-btn">
                             <i class="fas fa-external-link-alt me-2"></i>
                             Visitar Tienda
                         </a>
@@ -743,7 +743,7 @@
                         </div>
                     </div>
 
-                    <a href="{% url 'detalle_negocio' id=negocio.pkid_neg %}" class="vecy-visit-btn">
+                    <a href="{% url 'detalle_negocio_logeado' id=negocio.pkid_neg %}" class="vecy-visit-btn">
                         <i class="fas fa-external-link-alt me-2"></i>
                         Visitar Tienda
                     </a>
@@ -1213,6 +1213,19 @@
     let productVariantsData = {};
     let selectedVariants = {};
 
+    // URLs absolutas usando Django template tags
+    const URLS = {
+        AGREGAR_CARRITO: "{% url 'agregar_carrito' %}",
+        CARRITO_DATA: "{% url 'carrito_data' %}",
+        ACTUALIZAR_CANTIDAD: "{% url 'actualizar_cantidad_carrito' %}",
+        ELIMINAR_ITEM: "{% url 'eliminar_item_carrito' %}",
+        PROCESAR_PEDIDO: "{% url 'procesar_pedido' %}",
+        MIS_PEDIDOS_DATA: "{% url 'mis_pedidos_data' %}",
+        CANCELAR_PEDIDO: "{% url 'cancelar_pedido' %}"
+    };
+
+    console.log("🔗 URLs configuradas:", URLS);
+
     // ==================== SISTEMA DE VARIANTES MEJORADO ====================
 
     // Función MEJORADA para inicializar datos de variantes
@@ -1459,7 +1472,7 @@
         }
     }
 
-    // ==================== FUNCIONES DEL CARRITO (MANTENIDAS) ====================
+    // ==================== FUNCIONES DEL CARRITO (URLS ABSOLUTAS) ====================
 
     // Función para abrir el carrito
     function toggleCart() {
@@ -1483,7 +1496,8 @@
         cartContent.style.display = 'none';
         cartLoading.style.display = 'block';
 
-        fetch('/cliente/carrito-data/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -1609,7 +1623,8 @@
     function updateCartItemQuantity(itemId, change) {
         console.log(`🔄 Actualizando cantidad del item ${itemId}, cambio: ${change}`);
 
-        fetch('/cliente/actualizar-cantidad-carrito/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.ACTUALIZAR_CANTIDAD, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1640,7 +1655,8 @@
     function removeCartItem(itemId) {
         console.log(`🗑️ Eliminando item ${itemId}`);
 
-        fetch('/cliente/eliminar-item-carrito/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.ELIMINAR_ITEM, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -1666,7 +1682,7 @@
             });
     }
 
-    // ==================== FUNCIONES DE PAGO (MANTENIDAS) ====================
+    // ==================== FUNCIONES DE PAGO (URLS ABSOLUTAS) ====================
 
     // Función para proceder al pago
     function procederPago() {
@@ -1691,7 +1707,8 @@
 
     // Función para cargar el resumen del pedido
     function cargarResumenPedido() {
-        fetch('/cliente/carrito-data/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -1907,7 +1924,8 @@
 
     // Función para cargar resumen en modal de transferencia
     function cargarResumenTransferencia() {
-        fetch('/cliente/carrito-data/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -2013,7 +2031,8 @@
     function procesarPagoTransferencia(metodoCompleto) {
         console.log(`🔄 Procesando transferencia: ${metodoCompleto}`);
 
-        fetch('/cliente/procesar-pedido/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.PROCESAR_PEDIDO, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2095,7 +2114,8 @@
             datosEnvio.datos_billetera = datosPago;
         }
 
-        fetch('/cliente/procesar-pedido/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.PROCESAR_PEDIDO, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2157,7 +2177,7 @@
         updateCartCount(0);
     }
 
-    // ==================== FUNCIONES DE PRODUCTOS ====================
+    // ==================== FUNCIONES DE PRODUCTOS (URLS ABSOLUTAS) ====================
 
     // Función para agregar al carrito
     function addToCart(productId, varianteId = null) {
@@ -2191,7 +2211,8 @@
             console.log(`📦 Producto base, sin variante_id`);
         }
 
-        fetch('/cliente/agregar-carrito/', {
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.AGREGAR_CARRITO, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2319,6 +2340,224 @@
         vecyShowNotification('Abriendo favoritos...', 'info');
     }
 
+    // ==================== SISTEMA DE PEDIDOS (URLS ABSOLUTAS) ====================
+
+    // Función para abrir el panel de pedidos
+    function togglePedidos() {
+        console.log("📋 Abriendo panel de pedidos...");
+        const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
+        pedidosOffcanvas.show();
+        loadPedidosContent();
+    }
+
+    // Función para cargar los pedidos del usuario
+    function loadPedidosContent() {
+        const pedidosContent = document.getElementById('pedidosContent');
+        const pedidosLoading = document.getElementById('pedidosLoading');
+
+        if (!pedidosContent) return;
+
+        console.log("📦 Cargando pedidos del usuario...");
+
+        // Mostrar loading
+        pedidosContent.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando pedidos...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando tus pedidos...</p>
+            </div>
+        `;
+
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.MIS_PEDIDOS_DATA, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderPedidos(data.pedidos);
+            } else {
+                showPedidosEmptyState();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando pedidos:', error);
+            showPedidosEmptyState('Error al cargar los pedidos');
+        });
+    }
+
+    // Función para renderizar los pedidos
+    function renderPedidos(pedidos) {
+        const pedidosContent = document.getElementById('pedidosContent');
+        
+        if (!pedidos || pedidos.length === 0) {
+            showPedidosEmptyState();
+            return;
+        }
+
+        let html = '';
+
+        pedidos.forEach(pedido => {
+            const puedeCancelar = pedido.puede_cancelar;
+            const tiempoRestante = pedido.tiempo_restante;
+            const esCancelado = pedido.estado_pedido === 'cancelado';
+
+            html += `
+            <div class="pedido-card ${esCancelado ? 'pedido-cancelado' : ''}">
+                <div class="pedido-header">
+                    <div class="pedido-info">
+                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
+                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
+                    </div>
+                    <span class="pedido-estado estado-${pedido.estado_pedido}">
+                        ${pedido.estado_display}
+                    </span>
+                </div>
+
+                <div class="pedido-negocio">
+                    <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
+                </div>
+
+                <div class="pedido-productos">
+                    ${pedido.productos.map(producto => `
+                        <div class="producto-pedido">
+                            <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
+                                 alt="${producto.nombre}" class="producto-pedido-img">
+                            <div class="producto-pedido-info">
+                                <div class="producto-pedido-nombre">${producto.nombre}</div>
+                                <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
+                            </div>
+                            <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="pedido-total">
+                    <span>Total:</span>
+                    <span>$${pedido.total_pedido}</span>
+                </div>
+
+                ${!esCancelado ? `
+                    <div class="pedido-acciones">
+                        <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
+                            <i class="fas fa-eye me-1"></i>Ver Detalle
+                        </button>
+                        ${puedeCancelar ? `
+                            <button class="btn-cancelar-pedido" 
+                                    onclick="cancelarPedido(${pedido.pkid_pedido})"
+                                    data-pedido-id="${pedido.pkid_pedido}">
+                                <i class="fas fa-times me-1"></i>Cancelar Pedido
+                            </button>
+                        ` : `
+                            <button class="btn-cancelar-pedido" disabled>
+                                <i class="fas fa-clock me-1"></i>No Cancelable
+                            </button>
+                        `}
+                    </div>
+                    ${puedeCancelar && tiempoRestante ? `
+                        <div class="tiempo-restante">
+                            <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
+                        </div>
+                    ` : ''}
+                ` : ''}
+            </div>
+            `;
+        });
+
+        pedidosContent.innerHTML = html;
+    }
+
+    // Función para mostrar estado vacío de pedidos
+    function showPedidosEmptyState(mensaje = null) {
+        const pedidosContent = document.getElementById('pedidosContent');
+        
+        const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
+        
+        pedidosContent.innerHTML = `
+            <div class="empty-pedidos">
+                <i class="fas fa-clipboard-list"></i>
+                <h5>No hay pedidos</h5>
+                <p>${mensajeFinal}</p>
+                <button class="btn btn-primary mt-3" onclick="toggleCart()">
+                    <i class="fas fa-shopping-bag me-2"></i>
+                    Realizar mi primer pedido
+                </button>
+            </div>
+        `;
+    }
+
+    // Función para cancelar un pedido
+    function cancelarPedido(pedidoId) {
+        console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
+        
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Esta acción cancelará tu pedido. ¿Deseas continuar?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, cancelar pedido',
+            cancelButtonText: 'No, mantener pedido'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Mostrar loading en el botón
+                const btn = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
+                btn.disabled = true;
+
+                // URL ABSOLUTA usando Django template
+                fetch(URLS.CANCELAR_PEDIDO, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        pedido_id: pedidoId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        vecyShowNotification('Pedido cancelado exitosamente', 'success');
+                        loadPedidosContent(); // Recargar la lista
+                    } else {
+                        vecyShowNotification(data.message || 'Error al cancelar el pedido', 'error');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cancelando pedido:', error);
+                    vecyShowNotification('Error de conexión al cancelar el pedido', 'error');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+            }
+        });
+    }
+
+    // Función para ver detalle del pedido
+    function verDetallePedido(pedidoId) {
+        console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
+        // Aquí puedes implementar la lógica para mostrar un modal con los detalles completos
+        vecyShowNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
+        
+        // Ejemplo básico - puedes expandir esto
+        Swal.fire({
+            title: `Detalles del Pedido #${pedidoId}`,
+            text: 'Aquí irían los detalles completos del pedido...',
+            icon: 'info',
+            confirmButtonText: 'Cerrar'
+        });
+    }
+
     // ==================== INICIALIZACIÓN COMPLETA ====================
 
     // Inicializar inmediatamente
@@ -2376,221 +2615,5 @@
 
     // Y ejecutar cuando la ventana se cargue
     window.addEventListener('load', initVecy);
-
-    // ==================== SISTEMA DE PEDIDOS ====================
-
-// Función para abrir el panel de pedidos
-function togglePedidos() {
-    console.log("📋 Abriendo panel de pedidos...");
-    const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
-    pedidosOffcanvas.show();
-    loadPedidosContent();
-}
-
-// Función para cargar los pedidos del usuario
-function loadPedidosContent() {
-    const pedidosContent = document.getElementById('pedidosContent');
-    const pedidosLoading = document.getElementById('pedidosLoading');
-
-    if (!pedidosContent) return;
-
-    console.log("📦 Cargando pedidos del usuario...");
-
-    // Mostrar loading
-    pedidosContent.innerHTML = `
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando pedidos...</span>
-            </div>
-            <p class="mt-2 text-muted">Cargando tus pedidos...</p>
-        </div>
-    `;
-
-    fetch('/cliente/mis-pedidos-data/', {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            renderPedidos(data.pedidos);
-        } else {
-            showPedidosEmptyState();
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error cargando pedidos:', error);
-        showPedidosEmptyState('Error al cargar los pedidos');
-    });
-}
-
-// Función para renderizar los pedidos
-function renderPedidos(pedidos) {
-    const pedidosContent = document.getElementById('pedidosContent');
-    
-    if (!pedidos || pedidos.length === 0) {
-        showPedidosEmptyState();
-        return;
-    }
-
-    let html = '';
-
-    pedidos.forEach(pedido => {
-        const puedeCancelar = pedido.puede_cancelar;
-        const tiempoRestante = pedido.tiempo_restante;
-        const esCancelado = pedido.estado_pedido === 'cancelado';
-
-        html += `
-        <div class="pedido-card ${esCancelado ? 'pedido-cancelado' : ''}">
-            <div class="pedido-header">
-                <div class="pedido-info">
-                    <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
-                    <div class="pedido-fecha">${pedido.fecha_pedido}</div>
-                </div>
-                <span class="pedido-estado estado-${pedido.estado_pedido}">
-                    ${pedido.estado_display}
-                </span>
-            </div>
-
-            <div class="pedido-negocio">
-                <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
-            </div>
-
-            <div class="pedido-productos">
-                ${pedido.productos.map(producto => `
-                    <div class="producto-pedido">
-                        <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
-                             alt="${producto.nombre}" class="producto-pedido-img">
-                        <div class="producto-pedido-info">
-                            <div class="producto-pedido-nombre">${producto.nombre}</div>
-                            <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
-                        </div>
-                        <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
-                    </div>
-                `).join('')}
-            </div>
-
-            <div class="pedido-total">
-                <span>Total:</span>
-                <span>$${pedido.total_pedido}</span>
-            </div>
-
-            ${!esCancelado ? `
-                <div class="pedido-acciones">
-                    <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
-                        <i class="fas fa-eye me-1"></i>Ver Detalle
-                    </button>
-                    ${puedeCancelar ? `
-                        <button class="btn-cancelar-pedido" 
-                                onclick="cancelarPedido(${pedido.pkid_pedido})"
-                                data-pedido-id="${pedido.pkid_pedido}">
-                            <i class="fas fa-times me-1"></i>Cancelar Pedido
-                        </button>
-                    ` : `
-                        <button class="btn-cancelar-pedido" disabled>
-                            <i class="fas fa-clock me-1"></i>No Cancelable
-                        </button>
-                    `}
-                </div>
-                ${puedeCancelar && tiempoRestante ? `
-                    <div class="tiempo-restante">
-                        <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
-                    </div>
-                ` : ''}
-            ` : ''}
-        </div>
-        `;
-    });
-
-    pedidosContent.innerHTML = html;
-}
-
-// Función para mostrar estado vacío de pedidos
-function showPedidosEmptyState(mensaje = null) {
-    const pedidosContent = document.getElementById('pedidosContent');
-    
-    const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
-    
-    pedidosContent.innerHTML = `
-        <div class="empty-pedidos">
-            <i class="fas fa-clipboard-list"></i>
-            <h5>No hay pedidos</h5>
-            <p>${mensajeFinal}</p>
-            <button class="btn btn-primary mt-3" onclick="toggleCart()">
-                <i class="fas fa-shopping-bag me-2"></i>
-                Realizar mi primer pedido
-            </button>
-        </div>
-    `;
-}
-
-// Función para cancelar un pedido
-function cancelarPedido(pedidoId) {
-    console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
-    
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: "Esta acción cancelará tu pedido. ¿Deseas continuar?",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, cancelar pedido',
-        cancelButtonText: 'No, mantener pedido'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Mostrar loading en el botón
-            const btn = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
-            btn.disabled = true;
-
-            fetch('/cliente/cancelar-pedido/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    pedido_id: pedidoId
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    vecyShowNotification('Pedido cancelado exitosamente', 'success');
-                    loadPedidosContent(); // Recargar la lista
-                } else {
-                    vecyShowNotification(data.message || 'Error al cancelar el pedido', 'error');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                }
-            })
-            .catch(error => {
-                console.error('Error cancelando pedido:', error);
-                vecyShowNotification('Error de conexión al cancelar el pedido', 'error');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            });
-        }
-    });
-}
-
-// Función para ver detalle del pedido
-function verDetallePedido(pedidoId) {
-    console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
-    // Aquí puedes implementar la lógica para mostrar un modal con los detalles completos
-    vecyShowNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
-    
-    // Ejemplo básico - puedes expandir esto
-    Swal.fire({
-        title: `Detalles del Pedido #${pedidoId}`,
-        text: 'Aquí irían los detalles completos del pedido...',
-        icon: 'info',
-        confirmButtonText: 'Cerrar'
-    });
-}
 </script>
 {% endblock %}

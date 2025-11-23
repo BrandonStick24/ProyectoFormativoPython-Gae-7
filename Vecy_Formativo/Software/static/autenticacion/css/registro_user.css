@@ -1,3 +1,12 @@
+:root {
+    --primary: #3598db;
+    --secondary: #34495e;
+    --dark: #2d3e50;
+    --light: #f8f9fb;
+    --white: #ffffff;
+    --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --transition: all 0.3s ease;
+}
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +15,7 @@
 }
 
 body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3598db 0%, #34495e 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -50,13 +59,13 @@ body::before {
 .logo {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #667eea;
+    color: #3598db;
     margin-bottom: 10px;
     display: block;
 }
 
 .logo span {
-    color: #764ba2;
+    color: #3598db;
 }
 
 .auth-header h2 {
@@ -103,7 +112,7 @@ body::before {
 .form-control:focus,
 .form-select:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #3598db;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -121,7 +130,7 @@ body::before {
 }
 
 .btn-primary-custom {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #3598db 0%, #34495e 100%);
     color: white;
     border: none;
     border-radius: 12px;
@@ -166,14 +175,14 @@ body::before {
 }
 
 .auth-footer a {
-    color: #667eea;
+    color: #3598db;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.3s ease;
 }
 
 .auth-footer a:hover {
-    color: #764ba2;
+    color: #3598db;
 }
 
 .alert {
@@ -249,7 +258,7 @@ body::before {
 }
 
 .step.active .step-number {
-    background: #667eea;
+    background: #3598db;
     color: white;
 }
 
@@ -265,7 +274,7 @@ body::before {
 }
 
 .step.active .step-label {
-    color: #667eea;
+    color: #3598db;
     font-weight: 600;
 }
 
@@ -323,13 +332,13 @@ body::before {
 }
 
 .file-upload:hover {
-    border-color: #667eea;
+    border-color: #3598db;
     background: #f7fafc;
 }
 
 .file-upload i {
     font-size: 2rem;
-    color: #667eea;
+    color: #3598db;
     margin-bottom: 10px;
 }
 

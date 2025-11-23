@@ -1,0 +1,544 @@
+<!-- templates/Vendedor/Negocios_V.html -->
+{% extends 'Layout_V.html' %}
+{% load static %}
+
+{% block title %}Mis Negocios{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vendedor/css/Negocios_V.css' %}">
+{% endblock %}
+
+{% block content %}
+<!-- Header Mejorado con Estadísticas -->
+<div class="tarjeta-bienvenida">
+    <div class="row align-items-center">
+        <div class="col-md-6">
+            <h2>Gestión de Negocios</h2>
+            <p class="text-muted">Administra y selecciona el negocio que deseas gestionar.</p>
+        </div>
+        <div class="col-md-6">
+            <div class="estadisticas-grid">
+                <div class="estadistica-card total">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ negocios|length }}</div>
+                    <div class="estadistica-titulo">Total Negocios</div>
+                </div>
+                
+                <div class="estadistica-card disponibles">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="estadistica-numero">{{ negocios_activos.count }}</div>
+                    <div class="estadistica-titulo">Activos</div>
+                </div>
+                
+                <div class="estadistica-card oferta">
+                    <div class="estadistica-icono">
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <div class="estadistica-numero">1</div>
+                    <div class="estadistica-titulo">Seleccionado</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'error' %}times-circle{% else %}info-circle{% endif %} me-2"></i>
+        <div>{{ message }}</div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Barra de Herramientas Unificada -->
+<div class="barra-herramientas">
+    <div class="grupo-botones-accion">
+        <button class="boton-accion boton-primario" data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
+            <i class="fas fa-plus"></i> Agregar Negocio
+        </button>
+    </div>
+
+    <div class="grupo-busqueda-filtros">
+        <div class="contenedor-busqueda">
+            <i class="fas fa-search icono-busqueda" title="Haz clic para limpiar búsqueda"></i>
+            <input type="text" id="inputBusqueda" class="input-busqueda" placeholder="Buscar por nombre, dirección o tipo...">
+        </div>
+        
+        <div class="contenedor-filtros">
+            <select class="select-filtro" id="selectFiltro">
+                <option value="todos">Todos los negocios</option>
+                <option value="activo">Activos</option>
+                <option value="inactivo">Inactivos</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Negocio Activo Destacado -->
+{% if negocio_activo %}
+<div class="negocio-activo-card">
+    <div class="negocio-activo-badge">
+        <i class="fas fa-crown"></i> Negocio Actual
+    </div>
+    <div class="negocio-activo-content">
+        <div class="negocio-activo-imagen">
+            {% if negocio_activo.img_neg %}
+            <img src="{{ negocio_activo.img_neg.url }}" alt="{{ negocio_activo.nom_neg }}">
+            {% else %}
+            <div class="img-placeholder">
+                <i class="fas fa-store"></i>
+            </div>
+            {% endif %}
+        </div>
+        <div class="negocio-activo-info">
+            <h3>{{ negocio_activo.nom_neg }}</h3>
+            <p class="negocio-activo-descripcion">{{ negocio_activo.desc_neg|default:"Sin descripción" }}</p>
+            <div class="negocio-activo-meta">
+                <div class="meta-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ negocio_activo.direcc_neg }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>{{ negocio_activo.fktiponeg_neg.desc_tiponeg }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-id-card"></i>
+                    <span>NIT: {{ negocio_activo.nit_neg }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="negocio-activo-actions">
+            <span class="estado-badge activo">
+                <i class="fas fa-check-circle"></i> Seleccionado
+            </span>
+            <a href="{% url 'configurar_negocio' negocio_activo.pkid_neg %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-edit"></i> Configurar
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <div>
+            <strong>No tienes un negocio seleccionado</strong>
+            <p class="mb-0">Selecciona o crea un negocio para comenzar a gestionar tus productos.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Grid de Negocios -->
+<div class="contenedor-negocios-grid" id="contenedorNegocios">
+    {% if negocios %}
+    {% for negocio in negocios %}
+    {% if negocio.pkid_neg != negocio_activo.pkid_neg %}
+    <div class="negocio-card-item" data-estado="{{ negocio.estado_neg }}">
+        <div class="negocio-card-header">
+            {% if negocio.img_neg %}
+            <img src="{{ negocio.img_neg.url }}" class="negocio-card-img" alt="{{ negocio.nom_neg }}">
+            {% else %}
+            <div class="negocio-card-img-placeholder">
+                <i class="fas fa-store"></i>
+            </div>
+            {% endif %}
+            <div class="negocio-card-badges">
+                <span class="estado-badge {% if negocio.estado_neg == 'activo' %}activo{% else %}inactivo{% endif %}">
+                    {{ negocio.estado_neg|title }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="negocio-card-body">
+            <h5 class="negocio-card-title">{{ negocio.nom_neg }}</h5>
+            <p class="negocio-card-descripcion">{{ negocio.desc_neg|default:"Sin descripción"|truncatewords:12 }}</p>
+            
+            <div class="negocio-card-meta">
+                <div class="meta-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>{{ negocio.direcc_neg|truncatewords:3 }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-tag"></i>
+                    <span>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                </div>
+                <div class="meta-item">
+                    <i class="fas fa-id-card"></i>
+                    <span>{{ negocio.nit_neg }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="negocio-card-footer">
+            <div class="btn-group-vertical w-100">
+                <a href="{% url 'seleccionar_negocio' negocio.pkid_neg %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-check"></i> Seleccionar
+                </a>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100" type="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-cog"></i> Gestionar
+                    </button>
+                    <ul class="dropdown-menu w-100">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'configurar_negocio' negocio.pkid_neg %}">
+                                <i class="fas fa-edit"></i> Editar Negocio
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalEstadoNegocio" 
+                               data-negocio-id="{{ negocio.pkid_neg }}" 
+                               data-negocio-nombre="{{ negocio.nom_neg }}"
+                               data-negocio-estado="{{ negocio.estado_neg }}">
+                                <i class="fas fa-power-off"></i> 
+                                {% if negocio.estado_neg == 'activo' %}Desactivar{% else %}Activar{% endif %}
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-warning" href="#" data-bs-toggle="modal" data-bs-target="#modalCerrarNegocio"
+                               data-negocio-id="{{ negocio.pkid_neg }}" 
+                               data-negocio-nombre="{{ negocio.nom_neg }}">
+                                <i class="fas fa-door-closed"></i> Cerrar Negocio
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#modalEliminarNegocio"
+                                data-negocio-id="{{ negocio.pkid_neg }}" 
+                                data-negocio-nombre="{{ negocio.nom_neg }}">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-5 w-100">
+        <i class="fas fa-store fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">No tienes negocios registrados</h4>
+        <p class="text-muted">Comienza agregando tu primer negocio para gestionar tus productos.</p>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarNegocio">
+            <i class="fas fa-plus"></i> Agregar primer negocio
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Los modales se mantienen igual -->
+<!-- Modal Agregar Negocio -->
+<div class="modal fade" id="modalAgregarNegocio" tabindex="-1" aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAgregarNegocioLabel">
+                    <i class="fas fa-plus-circle me-2"></i>Agregar Nuevo Negocio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAgregarNegocio" method="post" action="{% url 'registrar_negocio_vendedor' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nom_neg" class="form-label">Nombre del Negocio *</label>
+                                <input type="text" class="form-control" id="nom_neg" name="nom_neg" required 
+                                       placeholder="Ej: Mi Tienda Online">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nit_neg" class="form-label">NIT *</label>
+                                <input type="text" class="form-control" id="nit_neg" name="nit_neg" maxlength="11" required
+                                       placeholder="Ej: 12345678901">
+                                <div class="form-text">Máximo 11 caracteres numéricos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
+                                <select class="form-control" id="fktiponeg_neg" name="fktiponeg_neg" required>
+                                    <option value="">Selecciona un tipo</option>
+                                    {% for tipo in tipos_negocio %}
+                                    <option value="{{ tipo.pkid_tiponeg }}">{{ tipo.desc_tiponeg }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="img_neg" class="form-label">Imagen del Negocio</label>
+                                <input type="file" class="form-control" id="img_neg" name="img_neg" accept="image/*">
+                                <div class="form-text">Formatos: JPG, PNG, GIF (Máx. 5MB)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="direcc_neg" class="form-label">Dirección *</label>
+                        <input type="text" class="form-control" id="direcc_neg" name="direcc_neg" required
+                               placeholder="Ej: Calle Principal #123, Ciudad">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="desc_neg" class="form-label">Descripción del Negocio</label>
+                        <textarea class="form-control" id="desc_neg" name="desc_neg" rows="3" 
+                                  placeholder="Describe los productos o servicios que ofrece tu negocio..."></textarea>
+                        <div class="form-text">Máximo 500 caracteres</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Negocio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Negocio -->
+<div class="modal fade" id="modalEditarNegocio" tabindex="-1" aria-labelledby="modalEditarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarNegocioLabel">
+                    <i class="fas fa-edit me-2"></i>Editar Negocio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarNegocio" method="post" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" id="editar_negocio_id" name="negocio_id">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editar_nom_neg" class="form-label">Nombre del Negocio *</label>
+                                <input type="text" class="form-control" id="editar_nom_neg" name="nom_neg" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editar_nit_neg" class="form-label">NIT *</label>
+                                <input type="text" class="form-control" id="editar_nit_neg" name="nit_neg" maxlength="11" required>
+                                <div class="form-text">Máximo 11 caracteres numéricos</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editar_fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
+                                <select class="form-control" id="editar_fktiponeg_neg" name="fktiponeg_neg" required>
+                                    <option value="">Selecciona un tipo</option>
+                                    {% for tipo in tipos_negocio %}
+                                    <option value="{{ tipo.pkid_tiponeg }}">{{ tipo.desc_tiponeg }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editar_img_neg" class="form-label">Imagen del Negocio</label>
+                                <input type="file" class="form-control" id="editar_img_neg" name="img_neg" accept="image/*">
+                                <div class="form-text">Dejar vacío para mantener la imagen actual</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_direcc_neg" class="form-label">Dirección *</label>
+                        <input type="text" class="form-control" id="editar_direcc_neg" name="direcc_neg" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editar_desc_neg" class="form-label">Descripción del Negocio</label>
+                        <textarea class="form-control" id="editar_desc_neg" name="desc_neg" rows="3"></textarea>
+                        <div class="form-text">Máximo 500 caracteres</div>
+                    </div>
+
+                    <!-- Vista previa de imagen actual -->
+                    <div class="mb-3">
+                        <label class="form-label">Imagen Actual</label>
+                        <div class="current-image-preview">
+                            <img id="editar_imagen_actual" src="" class="current-image" style="display: none;">
+                            <div id="editar_no_image" class="image-placeholder">
+                                <i class="fas fa-store fa-2x"></i>
+                                <span class="mt-2">Sin imagen</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Actualizar Negocio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cambiar Estado -->
+<div class="modal fade" id="modalEstadoNegocio" tabindex="-1" aria-labelledby="modalEstadoNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEstadoNegocioLabel">
+                    <i class="fas fa-power-off me-2"></i>Cambiar Estado del Negocio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cambiar_estado_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="estado_negocio_id" name="negocio_id">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exchange-alt fa-3x text-primary mb-3"></i>
+                        <p id="textoEstadoNegocio" class="lead">¿Estás seguro que deseas cambiar el estado de este negocio?</p>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="infoEstadoNegocio">Los clientes podrán ver tu negocio cuando esté activo.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Confirmar Cambio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Cerrar Negocio -->
+<div class="modal fade" id="modalCerrarNegocio" tabindex="-1" aria-labelledby="modalCerrarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCerrarNegocioLabel">
+                    <i class="fas fa-door-closed me-2"></i>Cerrar Negocio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'cerrar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="cerrar_negocio_id" name="negocio_id">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                        <h5 class="text-warning">¡Atención!</h5>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Esta acción es permanente</strong>
+                    </div>
+                    <p id="textoCerrarNegocio" class="mb-3">¿Estás seguro que deseas cerrar este negocio?</p>
+                    <ul class="list-unstyled small text-muted">
+                        <li><i class="fas fa-times-circle text-danger me-2"></i> El negocio será removido permanentemente</li>
+                        <li><i class="fas fa-times-circle text-danger me-2"></i> Todos los productos serán eliminados</li>
+                        <li><i class="fas fa-times-circle text-danger me-2"></i> No podrás recuperar la información</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-door-closed"></i> Cerrar Negocio
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Eliminar Negocio -->
+<div class="modal fade" id="modalEliminarNegocio" tabindex="-1" aria-labelledby="modalEliminarNegocioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarNegocioLabel">
+                    <i class="fas fa-trash-alt me-2"></i>Eliminar Negocio
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'eliminar_negocio' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" id="eliminar_negocio_id" name="negocio_id">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-skull-crossbones fa-3x text-danger mb-3"></i>
+                        <h5 class="text-danger">¡Advertencia Crítica!</h5>
+                    </div>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Esta acción no se puede deshacer</strong>
+                    </div>
+                    <p id="textoEliminarNegocio" class="mb-3">¿Estás absolutamente seguro que deseas eliminar este negocio?</p>
+                    
+                    <div class="consecuencias-eliminacion">
+                        <h6 class="text-danger mb-3">Se eliminará permanentemente:</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="fas fa-times text-danger me-2"></i> Todos los productos del negocio</li>
+                            <li><i class="fas fa-times text-danger me-2"></i> Historial de ventas asociadas</li>
+                            <li><i class="fas fa-times text-danger me-2"></i> Reseñas y calificaciones</li>
+                            <li><i class="fas fa-times text-danger me-2"></i> Configuraciones personalizadas</li>
+                            <li><i class="fas fa-times text-danger me-2"></i> Imágenes y documentos</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" id="confirmarEliminacion" required>
+                        <label class="form-check-label text-danger fw-bold" for="confirmarEliminacion">
+                            Sí, entiendo que esta acción eliminará permanentemente el negocio y todos sus datos asociados.
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="btnEliminarConfirmar" disabled>
+                        <i class="fas fa-trash-alt"></i> Eliminar Permanentemente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendedor/js/Negocios_V.js' %}"></script>
+{% endblock %}

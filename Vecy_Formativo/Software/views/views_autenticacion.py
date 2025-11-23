@@ -190,9 +190,9 @@ def iniciar_sesion(request):
     return render(request, "Autenticacion/login.html")
 
 def registro_usuario(request):
-    roles = Roles.objects.exclude(desc_rol__icontains='admin')
+    roles = Roles.objects.all()
     tipo_documentos = TipoDocumento.objects.all()
-    tipo_negocios = TipoNegocio.objects.all()
+    tipo_negocios = TipoNegocio.objects.all()  # CAMBIO: Usar TipoNegocio en lugar de CategoriaNegocio
     
     if request.method == 'POST':
         tipo_doc_id = request.POST.get("tipo_doc", "").strip()
@@ -208,7 +208,7 @@ def registro_usuario(request):
         nom_neg = request.POST.get("nom_neg", "").strip()
         direcc_neg = request.POST.get("direcc_neg", "").strip()
         desc_neg = request.POST.get("desc_neg", "").strip()
-        fktiponeg_neg = request.POST.get("fktiponeg_neg", "")
+        tipo_negocio_id = request.POST.get("tipo_negocio", "")  # CAMBIO: tipo_negocio en lugar de categoria_negocio
         img_neg = request.FILES.get('img_neg')
         
         errores = False
@@ -290,8 +290,8 @@ def registro_usuario(request):
                     if not nit:
                         messages.error(request, "El NIT del negocio es obligatorio para vendedores.", extra_tags='nit')
                         errores = True
-                    elif not nit.isdigit() or len(nit) < 8 or len(nit) > 15:
-                        messages.error(request, "El NIT debe contener entre 8 y 15 dígitos.", extra_tags='nit')
+                    elif not re.match(r'^\d{9}-\d{1}$', nit):
+                        messages.error(request, "El NIT debe tener formato: 123456789-0 (9 dígitos + guion + 1 dígito)", extra_tags='nit')
                         errores = True
                     elif Negocios.objects.filter(nit_neg=nit).exists():
                         messages.error(request, "Este NIT ya está registrado.", extra_tags='nit')
@@ -305,8 +305,8 @@ def registro_usuario(request):
                         messages.error(request, "La dirección del negocio es obligatoria.", extra_tags='direcc_neg')
                         errores = True
                     
-                    if not fktiponeg_neg:
-                        messages.error(request, "Debes seleccionar un tipo de negocio.", extra_tags='fktiponeg_neg')
+                    if not tipo_negocio_id:  # CAMBIO: Validar tipo_negocio
+                        messages.error(request, "Debes seleccionar un tipo de negocio.", extra_tags='tipo_negocio')
                         errores = True
             except Roles.DoesNotExist:
                 messages.error(request, "Rol seleccionado no válido.", extra_tags='rol')
@@ -316,7 +316,7 @@ def registro_usuario(request):
             return render(request, 'Autenticacion/registro_usuario.html', {
                 'roles': roles,
                 'tipo_documentos': tipo_documentos,
-                'tipo_negocios': tipo_negocios,
+                'tipo_negocios': tipo_negocios,  # CAMBIO: Enviar tipo_negocios al template
                 'form_data': {
                     'tipo_doc': tipo_doc_id,
                     'documento': doc_user,
@@ -328,7 +328,7 @@ def registro_usuario(request):
                     'nom_neg': nom_neg,
                     'direcc_neg': direcc_neg,
                     'desc_neg': desc_neg,
-                    'fktiponeg_neg': fktiponeg_neg
+                    'tipo_negocio': tipo_negocio_id  # CAMBIO
                 }
             })
         
@@ -367,7 +367,7 @@ def registro_usuario(request):
                         nom_neg=nom_neg,
                         direcc_neg=direcc_neg,
                         desc_neg=desc_neg,
-                        fktiponeg_neg_id=fktiponeg_neg,
+                        fktiponeg_neg_id=tipo_negocio_id,  # CAMBIO: Usar fktiponeg_neg
                         fkpropietario_neg=perfil,
                         estado_neg='activo',
                         fechacreacion_neg=timezone.now(),
@@ -388,15 +388,17 @@ def registro_usuario(request):
                     messages.success(request, "Usuario registrado exitosamente. Ahora puedes iniciar sesión.")
                     return redirect('iniciar_sesion')
                     
-        except IntegrityError:
+        except IntegrityError as e:
+            print(f"ERROR DE INTEGRIDAD: {str(e)}")
             messages.error(request, "Error al crear la cuenta. Por favor, intenta nuevamente.", extra_tags='general')
         except Exception as e:
+            print(f"ERROR INESPERADO: {str(e)}")
             messages.error(request, f"Error inesperado: {str(e)}", extra_tags='general')
     
     return render(request, 'Autenticacion/registro_usuario.html', {
         'roles': roles,
         'tipo_documentos': tipo_documentos,
-        'tipo_negocios': tipo_negocios
+        'tipo_negocios': tipo_negocios  # CAMBIO: Enviar tipo_negocios
     })
 
 def recuperar_contrasena(request):
@@ -617,4 +619,4 @@ def verificar_nit(request):
 def cerrar_sesion(request):
     logout(request)
     messages.success(request, 'Has cerrado sesión correctamente')
-    return redirect('iniciar_sesion')
+    return redirect('principal')
