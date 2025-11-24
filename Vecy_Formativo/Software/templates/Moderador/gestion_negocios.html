@@ -1,4 +1,5 @@
 {% extends 'layout_M.html' %}
+{% load static %}  <!-- AÑADE ESTA LÍNEA -->
 
 {% block title %}Gestión de Negocios - Moderador{% endblock %}
 
@@ -52,7 +53,7 @@
                                 <button type="submit" class="btn btn-primary w-100 me-2">
                                     <i class="fas fa-filter me-2"></i>Filtrar
                                 </button>
-                                <a href="{% url 'gestion_negocios' %}" class="btn btn-secondary">
+                                <a href="{% url 'gestion_negocios' %}" class="btn btn-outline-secondary">
                                     <i class="fas fa-sync-alt"></i>
                                 </a>
                             </div>
@@ -94,9 +95,17 @@
                                 <tr class="business-row">
                                     <td>{{ negocio.id }}</td>
                                     <td>
-                                        <img src="{{ negocio.imagen }}" alt="{{ negocio.nombre }}" 
-                                             class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;"
-                                             onerror="this.src='/static/images/default-business.jpg'">
+                                        <div class="business-image-container" data-business-id="{{ negocio.id }}">
+                                            {% if negocio.imagen %}
+                                            <img src="{{ negocio.imagen }}" alt="{{ negocio.nombre }}" 
+                                                 class="business-thumbnail"
+                                                 onerror="handleImageError(this, {{ negocio.id }})">
+                                            {% else %}
+                                            <div class="no-image-placeholder">
+                                                <i class="fas fa-store fa-lg text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
                                     </td>
                                     <td class="business-name">
                                         <strong>{{ negocio.nombre }}</strong><br>
@@ -132,19 +141,19 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button class="btn btn-info" 
+                                            <button class="btn btn-outline-info" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#viewBusinessModal{{ negocio.id }}"
                                                     title="Ver detalles">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="btn btn-warning" 
+                                            <button class="btn btn-outline-warning" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#editStatusModal{{ negocio.id }}"
                                                     title="Cambiar estado">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button class="btn btn-danger" 
+                                            <button class="btn btn-outline-danger" 
                                                     data-bs-toggle="modal" 
                                                     data-bs-target="#deleteBusinessModal{{ negocio.id }}"
                                                     title="Eliminar negocio">
@@ -263,11 +272,17 @@
                         <div class="text-center">
                             <strong>Imagen del Negocio</strong>
                             <div class="mt-2">
+                                {% if negocio.imagen %}
                                 <img src="{{ negocio.imagen }}" 
                                      alt="Imagen de {{ negocio.nombre }}" 
-                                     class="img-fluid rounded" 
-                                     style="max-height: 200px; width: auto;"
-                                     onerror="this.src='/static/images/default-business.jpg'">
+                                     class="img-fluid rounded business-modal-image"
+                                     onerror="handleModalImageError(this, {{ negocio.id }})">
+                                {% else %}
+                                <div class="no-image-modal-placeholder">
+                                    <i class="fas fa-store fa-4x text-muted mb-3"></i>
+                                    <p class="text-muted small">No hay imagen disponible</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -277,7 +292,7 @@
                 <div class="row mt-4">
                     <div class="col-12">
                         {% if negocio.total_reseñas > 0 %}
-                       
+                        <!-- Aquí puedes agregar información específica de reseñas si es necesario -->
                         {% else %}
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle me-2"></i>
@@ -383,6 +398,43 @@
 
 {% block extra_js %}
 <script>
+    // Función para manejar errores de imágenes en la tabla
+    function handleImageError(img, businessId) {
+        console.log(`Imagen no disponible para negocio ${businessId}`);
+        
+        // Reemplazar la imagen con un placeholder
+        const container = img.closest('.business-image-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="no-image-placeholder">
+                    <i class="fas fa-store fa-lg text-muted"></i>
+                </div>
+            `;
+        }
+        
+        // Prevenir futuros intentos de recarga
+        img.onerror = null;
+    }
+
+    // Función para manejar errores de imágenes en modales
+    function handleModalImageError(img, businessId) {
+        console.log(`Imagen modal no disponible para negocio ${businessId}`);
+        
+        // Reemplazar la imagen con un placeholder
+        const parent = img.parentNode;
+        if (parent) {
+            parent.innerHTML = `
+                <div class="no-image-modal-placeholder">
+                    <i class="fas fa-store fa-4x text-muted mb-3"></i>
+                    <p class="text-muted small">No hay imagen disponible</p>
+                </div>
+            `;
+        }
+        
+        // Prevenir futuros intentos de recarga
+        img.onerror = null;
+    }
+
     // Función para filtrar negocios en tiempo real
     function filterBusinesses() {
         const searchText = document.getElementById('searchInput').value.toLowerCase();
@@ -444,7 +496,7 @@
         }
     }
 
-    // Inicializar filtros cuando la página cargue
+    // Inicializar cuando la página cargue
     document.addEventListener('DOMContentLoaded', function() {
         // Aplicar filtros automáticamente si hay valores en los campos
         const searchInput = document.getElementById('searchInput');
@@ -461,15 +513,100 @@
         if (statusFilter) {
             statusFilter.addEventListener('change', filterBusinesses);
         }
-        
-        // También filtrar al hacer clic en el botón de filtrar (por si acaso)
-        const filterButton = document.querySelector('button[type="submit"]');
-        if (filterButton) {
-            filterButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                filterBusinesses();
-            });
-        }
     });
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para las imágenes de negocios */
+    .business-image-container {
+        width: 60px;
+        height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        border: 1px solid #e3e6f0;
+    }
+    
+    .business-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.2s ease;
+    }
+    
+    .business-thumbnail:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Placeholder para imágenes faltantes en tabla */
+    .no-image-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        color: #6c757d;
+    }
+    
+    /* Placeholder para imágenes faltantes en modales */
+    .no-image-modal-placeholder {
+        padding: 2rem;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 2px dashed #dee2e6;
+        text-align: center;
+    }
+    
+    .business-modal-image {
+        max-height: 200px;
+        width: auto;
+        object-fit: contain;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* Mejoras visuales para la tabla */
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    
+    /* Estilos para botones de acción */
+    .btn-group-sm .btn {
+        border-radius: 4px;
+        margin: 0 2px;
+    }
+    
+    /* Mejoras para los badges de estado */
+    .badge {
+        font-size: 0.75em;
+        padding: 0.35em 0.65em;
+    }
+    
+    /* Estilos para las tarjetas */
+    .card {
+        border: none;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    
+    .card-header {
+        border-bottom: 1px solid #e3e6f0;
+        background-color: #f8f9fc;
+    }
+    
+    /* Mejoras para los modales */
+    .modal-header {
+        border-bottom: 1px solid #e3e6f0;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e3e6f0;
+    }
+</style>
 {% endblock %}

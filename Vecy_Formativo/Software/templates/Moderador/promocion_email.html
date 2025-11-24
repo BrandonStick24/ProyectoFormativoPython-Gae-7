@@ -1,119 +1,402 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <style>
-        body {
-            font-family: 'Poppins', Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f7fa;
-        }
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
-        .email-header {
-            background: linear-gradient(to right, #5585D8, #3A6BC8);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-        .email-header h1 {
-            margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-        }
-        .email-body {
-            padding: 30px;
-        }
-        .promo-image {
-            width: 100%;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        .promo-content {
-            color: #353941;
-            line-height: 1.6;
-        }
-        .promo-title {
-            color: #5585D8;
-            font-size: 24px;
-            margin-bottom: 15px;
-        }
-        .cta-button {
-            display: inline-block;
-            background: linear-gradient(to right, #5585D8, #3A6BC8);
-            color: white;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            margin: 20px 0;
-        }
-        .email-footer {
-            background: #353941;
-            color: white;
-            padding: 20px;
-            text-align: center;
-            font-size: 12px;
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .feature-item {
-            text-align: center;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 6px;
-        }
-    </style>
-</head>
-<body>
-    <div class="email-container">
-        <div class="email-header">
-            <h1>🎉 ¡Promoción Especial!</h1>
-            <p>No te pierdas esta increíble oportunidad</p>
-        </div>
-        
-        <div class="email-body">
-            {% if imagen_promocion %}
-            <img src="{{ imagen_promocion }}" alt="Promoción" class="promo-image">
-            {% endif %}
-            
-            <h2 class="promo-title">{{ asunto }}</h2>
-            
-            <div class="promo-content">
-                {{ mensaje|safe }}
+{% extends 'Layout_M.html' %}
+{% load static %}
+
+{% block title %}Reseñas Reportadas - Dashboard Moderador{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-flag me-2 text-danger"></i>Reseñas Reportadas
+        </h1>
+        <div class="d-flex gap-2">
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-filter"></i> Filtrar
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                    <li><a class="dropdown-item" href="?estado=">Todas las reseñas</a></li>
+                    <li><a class="dropdown-item" href="?estado=activa">Pendientes</a></li>
+                    <li><a class="dropdown-item" href="?estado=eliminada">Eliminadas</a></li>
+                </ul>
             </div>
-            
-            {% if features %}
-            <div class="features-grid">
-                {% for feature in features %}
-                <div class="feature-item">
-                    <strong>{{ feature.titulo }}</strong>
-                    <p>{{ feature.descripcion }}</p>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            
-            <div style="text-align: center;">
-                <a href="{{ enlace_accion }}" class="cta-button">¡Aprovechar Oferta!</a>
-            </div>
-        </div>
-        
-        <div class="email-footer">
-            <p>© 2024 Tu Empresa. Todos los derechos reservados.</p>
-            <p><a href="{{ enlace_desuscripcion }}" style="color: #909855;">Desuscribirse</a></p>
+            <a href="{% url 'gestion_resenas_reportadas' %}" class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i> Actualizar
+            </a>
         </div>
     </div>
-</body>
-</html>
+
+    <!-- Mensajes -->
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Estadísticas rápidas -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Reportes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_reportes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-flag fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Reseñas Reportadas
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_resenas_reportadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-star fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Pendientes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ resenas_pendientes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Eliminadas
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ resenas_eliminadas }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-trash fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de reseñas reportadas -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de Reseñas Reportadas</h6>
+            {% if search_query %}
+            <span class="badge bg-info">Búsqueda: "{{ search_query }}"</span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Barra de búsqueda -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <form method="GET" class="d-flex">
+                        <input type="text" name="search" class="form-control me-2" placeholder="Buscar reseñas..." value="{{ search_query }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {% if reseñas %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="30%">Reseña</th>
+                            <th width="15%">Negocio</th>
+                            <th width="15%">Usuario</th>
+                            <th width="10%">Reportes</th>
+                            <th width="15%">Último Reporte</th>
+                            <th width="10%">Estado</th>
+                            <th width="15%">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reseña in reseñas %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0 me-3">
+                                        <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-star {% if reseña.estrellas >= 4 %}text-success{% elif reseña.estrellas >= 3 %}text-warning{% else %}text-danger{% endif %}"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold text-truncate" style="max-width: 200px;">
+                                            {% if reseña.comentario %}
+                                                {{ reseña.comentario|truncatewords:8 }}
+                                            {% else %}
+                                                Sin comentario
+                                            {% endif %}
+                                        </div>
+                                        <div class="mt-1">
+                                            <span class="badge {% if reseña.estrellas >= 4 %}bg-success{% elif reseña.estrellas >= 3 %}bg-warning{% else %}bg-danger{% endif %}">
+                                                <i class="fas fa-star"></i> {{ reseña.estrellas }}/5
+                                            </span>
+                                            <small class="text-muted ms-2">{{ reseña.fecha_resena|date:"d/m/Y H:i" }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ reseña.negocio_nombre }}</div>
+                                <div class="text-muted small">{{ reseña.negocio_categoria }}</div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ reseña.usuario_nombre }}</div>
+                                <div class="text-muted small">{{ reseña.usuario_email }}</div>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger rounded-pill" data-bs-toggle="tooltip" title="{{ reseña.motivos_reportes|join:', ' }}">
+                                    {{ reseña.total_reportes }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if reseña.ultimo_reporte %}
+                                <small class="text-muted">{{ reseña.ultimo_reporte|date:"d/m/Y H:i" }}</small>
+                                {% else %}
+                                <small class="text-muted">-</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if reseña.estado_db == 'activa' %}
+                                <span class="badge bg-warning">Pendiente</span>
+                                {% elif reseña.estado_db == 'eliminada' %}
+                                <span class="badge bg-danger">Eliminada</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ reseña.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#detalleModal{{ reseña.id }}">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    {% if reseña.estado_db == 'activa' %}
+                                    <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="resena_id" value="{{ reseña.id }}">
+                                        <input type="hidden" name="accion" value="aprobar">
+                                        <button type="submit" class="btn btn-sm btn-outline-success" 
+                                                data-bs-toggle="tooltip" 
+                                                title="Aprobar reseña (mantener visible)">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="resena_id" value="{{ reseña.id }}">
+                                        <input type="hidden" name="accion" value="eliminar">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="tooltip" 
+                                                title="Eliminar reseña (ocultar)">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Modal para Detalles de Reseña -->
+                        <div class="modal fade" id="detalleModal{{ reseña.id }}" tabindex="-1" aria-labelledby="detalleModalLabel{{ reseña.id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-primary text-white">
+                                        <h5 class="modal-title" id="detalleModalLabel{{ reseña.id }}">
+                                            <i class="fas fa-info-circle me-2"></i>Detalles de la Reseña
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <h6 class="text-primary mb-3">
+                                                    <i class="fas fa-star me-1 {% if reseña.estrellas >= 4 %}text-success{% elif reseña.estrellas >= 3 %}text-warning{% else %}text-danger{% endif %}"></i>
+                                                    Calificación: {{ reseña.estrellas }}/5
+                                                </h6>
+                                                <div class="card mb-3">
+                                                    <div class="card-header bg-light">
+                                                        <strong>Comentario del Usuario</strong>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <p class="mb-0">
+                                                            {% if reseña.comentario %}
+                                                                {{ reseña.comentario }}
+                                                            {% else %}
+                                                                <em class="text-muted">Sin comentario</em>
+                                                            {% endif %}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="card">
+                                                    <div class="card-header bg-light">
+                                                        <strong>Información</strong>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <p class="mb-2"><strong>Usuario:</strong><br>{{ reseña.usuario_nombre }}</p>
+                                                        <p class="mb-2"><strong>Email:</strong><br>{{ reseña.usuario_email }}</p>
+                                                        <p class="mb-2"><strong>Fecha:</strong><br>{{ reseña.fecha_resena|date:"d/m/Y H:i" }}</p>
+                                                        <p class="mb-0"><strong>Estado:</strong><br>
+                                                            {% if reseña.estado_db == 'activa' %}
+                                                            <span class="badge bg-warning">Pendiente</span>
+                                                            {% elif reseña.estado_db == 'eliminada' %}
+                                                            <span class="badge bg-danger">Eliminada</span>
+                                                            {% else %}
+                                                            <span class="badge bg-secondary">{{ reseña.estado }}</span>
+                                                            {% endif %}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <div class="card">
+                                                    <div class="card-header bg-light">
+                                                        <strong>Información del Negocio</strong>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        <div class="row">
+                                                            <div class="col-md-6">
+                                                                <p class="mb-1"><strong>Nombre:</strong> {{ reseña.negocio_nombre }}</p>
+                                                                <p class="mb-1"><strong>Categoría:</strong> {{ reseña.negocio_categoria }}</p>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <p class="mb-1"><strong>Dirección:</strong> {{ reseña.negocio_direccion }}</p>
+                                                                <p class="mb-0"><strong>ID Negocio:</strong> {{ reseña.negocio_id }}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {% if reseña.reportes_detalles %}
+                                        <div class="row mt-3">
+                                            <div class="col-12">
+                                                <div class="card border-warning">
+                                                    <div class="card-header bg-warning text-dark">
+                                                        <strong><i class="fas fa-flag me-1"></i>Reportes ({{ reseña.total_reportes }})</strong>
+                                                    </div>
+                                                    <div class="card-body">
+                                                        {% for reporte in reseña.reportes_detalles %}
+                                                        <div class="alert alert-warning mb-2">
+                                                            <div class="d-flex justify-content-between align-items-start">
+                                                                <div>
+                                                                    <strong class="text-danger">{{ reporte.motivo }}</strong>
+                                                                    <p class="mb-1 mt-1">{{ reporte.descripcion }}</p>
+                                                                    <small class="text-muted">Reportado el: {{ reporte.fecha_reporte|date:"d/m/Y H:i" }}</small>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                        {% if reseña.estado_db == 'activa' %}
+                                        <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="resena_id" value="{{ reseña.id }}">
+                                            <input type="hidden" name="accion" value="aprobar">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-check me-1"></i>Aprobar Reseña
+                                            </button>
+                                        </form>
+                                        <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="resena_id" value="{{ reseña.id }}">
+                                            <input type="hidden" name="accion" value="eliminar">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-trash me-1"></i>Eliminar Reseña
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <span class="text-muted">No hay acciones disponibles</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="text-muted">
+                    <i class="fas fa-inbox fa-4x mb-3"></i>
+                    <h4>No hay reseñas reportadas</h4>
+                    <p class="mb-0">No se encontraron reseñas con reportes pendientes.</p>
+                    <small>Verifica que existan reportes en la base de datos.</small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Inicializar tooltips de Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
+{% endblock %}
