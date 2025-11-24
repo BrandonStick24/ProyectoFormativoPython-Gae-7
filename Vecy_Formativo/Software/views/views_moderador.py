@@ -15,11 +15,16 @@ from collections import Counter
 from django.contrib.auth.models import User
 from django.db.models.functions import ExtractMonth, ExtractYear
 from Software.email_utils import enviar_notificacion_simple
-from django.urls import reverse
+
+# Importaciones para correos
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.conf import settings
 
 def obtener_datos_moderador(request):
     """Función auxiliar para obtener datos del moderador"""
     try:
+        # CORREGIDO: Convertir request.user (User) a AuthUser
         auth_user = AuthUser.objects.get(username=request.user.username)
         perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
         
@@ -32,46 +37,58 @@ def obtener_datos_moderador(request):
         return None
 
 def is_moderator(user):
-    """Verifica si el usuario es moderador"""
+    """Verifica si el usuario es moderador - CORREGIDO"""
     if not user.is_authenticated:
         return False
         
     try:
-        # Obtener el perfil del usuario
-        perfil = UsuarioPerfil.objects.get(fkuser=user)
+        # CORREGIDO: Convertir user (User) a AuthUser
+        auth_user = AuthUser.objects.get(username=user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
         
         # Verificar si tiene rol de moderador
         return UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
-    except (UsuarioPerfil.DoesNotExist, AuthUser.DoesNotExist):
+    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
         return False
 
-# VISTA PRINCIPAL DEL MODERADOR - AHORA CON ESTADÍSTICAS COMPLETAS
-@login_required(login_url='/auth/login/')
+# VISTA PRINCIPAL DEL MODERADOR - CORREGIDA
+@login_required(login_url='/auth/iniciar_sesion/')
 def moderador_dash(request):
-    """Vista principal del dashboard del moderador con estadísticas completas"""
+    """Vista principal del dashboard del moderador con verificación corregida"""
     try:
-        # Verificar si es moderador
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión para acceder al panel de moderador.")
+            return redirect('iniciar_sesion')
         
-        # Verificar si es moderador
+        # Obtener perfil del usuario - CORREGIDO
+        try:
+            # CORREGIDO: Convertir request.user (User) a AuthUser
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
+        
+        # Verificar si es moderador - FORMA MÁS ROBUSTA
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
             messages.error(request, "No tienes permisos de moderador.")
-            return redirect(reverse('login'))
+            return redirect('principal')
         
         # ============ CÓDIGO DE ESTADÍSTICAS COMPLETAS ============
         # Obtener el rango de tiempo (último año)
         fecha_limite = timezone.now() - timedelta(days=365)
         
-        # 1. REGISTRO DE USUARIOS POR MES
-        usuarios_por_mes = User.objects.filter(
+        # 1. REGISTRO DE USUARIOS POR MES - CORREGIDO: Usar AuthUser en lugar de User
+        usuarios_por_mes = AuthUser.objects.filter(
             date_joined__gte=fecha_limite
         ).annotate(
             mes=ExtractMonth('date_joined'),
@@ -122,9 +139,9 @@ def moderador_dash(request):
         acciones_tipos = [item['tipo_accion'] for item in acciones_moderacion]
         acciones_totales = [item['total'] for item in acciones_moderacion]
         
-        # MÉTRICAS PRINCIPALES
-        total_usuarios = User.objects.count()
-        usuarios_activos = User.objects.filter(is_active=True).count()
+        # MÉTRICAS PRINCIPALES - CORREGIDO: Usar AuthUser en lugar de User
+        total_usuarios = AuthUser.objects.count()
+        usuarios_activos = AuthUser.objects.filter(is_active=1).count()
         total_negocios = Negocios.objects.count()
         negocios_activos = Negocios.objects.filter(estado_neg='activo').count()
         negocios_suspendidos = Negocios.objects.filter(estado_neg='suspendido').count()
@@ -139,7 +156,7 @@ def moderador_dash(request):
         )['avg_rating'] or 0
         
         contexto = {
-            'nombre': request.user.first_name,
+            'nombre': auth_user.first_name or auth_user.username,
             'perfil': perfil,
             
             # Métricas principales para las tarjetas
@@ -167,30 +184,38 @@ def moderador_dash(request):
         
         return render(request, 'Moderador/estadisticas.html', contexto)
         
-    except UsuarioPerfil.DoesNotExist:
-        messages.error(request, "Perfil de usuario no encontrado.")
-        return redirect(reverse('login'))
     except Exception as e:
-        messages.error(request, f"Error: {str(e)}")
-        return redirect(reverse('login'))
+        messages.error(request, f"Error al cargar el dashboard: {str(e)}")
+        return redirect('principal')
 
-# GESTIÓN DE USUARIOS
-@login_required(login_url='/auth/login/')
+# GESTIÓN DE USUARIOS - CORREGIDA
+@login_required(login_url='/auth/iniciar_sesion/')
 def gestion_usuarios(request):
-    """Vista para gestión de usuarios por parte del moderador"""
+    """Vista para gestión de usuarios por parte del moderador - CORREGIDA"""
     try:
-        # Misma verificación que en estadísticas
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión.")
+            return redirect('iniciar_sesion')
+        
+        # Obtener perfil del usuario - CORREGIDO
+        try:
+            # CORREGIDO: Convertir request.user (User) a AuthUser
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
         
         # Verificar si es moderador
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
             messages.error(request, "No tienes permisos de moderador.")
-            return redirect(reverse('login'))
+            return redirect('principal')
         
         # Procesar cambio de estado si viene por POST
         if request.method == 'POST':
@@ -204,7 +229,7 @@ def gestion_usuarios(request):
                 # Verificar que no sea un moderador
                 es_moderador_usuario = UsuariosRoles.objects.filter(
                     fkperfil=perfil_usuario, 
-                    fkrol__desc_rol='MODERADOR'
+                    fkrol__desc_rol__iexact='moderador'
                 ).exists()
                 
                 if es_moderador_usuario:
@@ -218,7 +243,7 @@ def gestion_usuarios(request):
                     perfil_usuario.save()
                     
                     # También actualizar el estado en auth_user
-                    user.is_active = (nuevo_estado == 'activo')
+                    user.is_active = 1 if nuevo_estado == 'activo' else 0
                     user.save()
                     
                     # ENVIAR CORREO DE NOTIFICACIÓN - VERSIÓN SIMPLE
@@ -276,7 +301,7 @@ def gestion_usuarios(request):
         
         # Obtener usuarios EXCLUYENDO MODERADORES usando subquery
         perfiles_moderadores = UsuariosRoles.objects.filter(
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).values_list('fkperfil_id', flat=True)
         
         # Consulta base excluyendo moderadores
@@ -313,7 +338,7 @@ def gestion_usuarios(request):
             if roles.exists():
                 # Buscar el primer rol que no sea MODERADOR
                 for rol in roles:
-                    if rol.fkrol.desc_rol != 'MODERADOR':
+                    if rol.fkrol.desc_rol.lower() != 'moderador':
                         rol_principal = rol.fkrol.desc_rol
                         break
             
@@ -362,7 +387,7 @@ def gestion_usuarios(request):
         total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
         
         context = {
-            'nombre': request.user.first_name,
+            'nombre': auth_user.first_name or auth_user.username,
             'perfil': perfil,
             'usuarios': usuarios_data,
             'total_usuarios': total_usuarios,
@@ -377,30 +402,38 @@ def gestion_usuarios(request):
         
         return render(request, 'Moderador/gestion_usuarios.html', context)
     
-    except UsuarioPerfil.DoesNotExist:
-        messages.error(request, "Perfil de usuario no encontrado.")
-        return redirect(reverse('login'))
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
-        return redirect(reverse('login'))
+        return redirect('principal')
 
-# GESTIÓN DE NEGOCIOS
-@login_required(login_url='/auth/login/')
+# GESTIÓN DE NEGOCIOS - CORREGIDA
+@login_required(login_url='/auth/iniciar_sesion/')
 def gestion_negocios(request):
-    """Vista principal de gestión de negocios para moderadores"""    
+    """Vista principal de gestión de negocios para moderadores - CORREGIDA"""    
     try:
-        # Misma verificación que en estadísticas
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión.")
+            return redirect('iniciar_sesion')
+        
+        # Obtener perfil del usuario - CORREGIDO
+        try:
+            # CORREGIDO: Convertir request.user (User) a AuthUser
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
         
         # Verificar si es moderador
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
             messages.error(request, "No tienes permisos de moderador.")
-            return redirect(reverse('login'))
+            return redirect('principal')
         
         # Procesar acciones por POST
         if request.method == 'POST':
@@ -541,7 +574,7 @@ def gestion_negocios(request):
             })
         
         context = {
-            'nombre': request.user.first_name,
+            'nombre': auth_user.first_name or auth_user.username,
             'perfil': perfil,
             'negocios': negocios_data,
             'titulo_pagina': 'Gestión de Negocios',
@@ -551,19 +584,27 @@ def gestion_negocios(request):
         
         return render(request, 'Moderador/gestion_negocios.html', context)
     
-    except UsuarioPerfil.DoesNotExist:
-        messages.error(request, "Perfil de usuario no encontrado.")
-        return redirect(reverse('login'))
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
-        return redirect(reverse('login'))
+        return redirect('principal')
 
 # ==================== APIs para Gestión de Negocios ====================
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 def detalle_negocio_json(request, negocio_id):
     """API para obtener detalles completos de un negocio (para modal)"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         negocio = Negocios.objects.select_related(
             'fkpropietario_neg__fkuser', 
             'fktiponeg_neg'
@@ -614,10 +655,21 @@ def detalle_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 def resenas_negocio_json(request, negocio_id):
     """API para obtener reseñas de un negocio"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         reseñas = ResenasNegocios.objects.filter(
             fknegocio_resena=negocio_id, 
             estado_resena='activa'
@@ -641,10 +693,21 @@ def resenas_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 def productos_negocio_json(request, negocio_id):
     """API para obtener productos de un negocio"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         productos = Productos.objects.filter(
             fknegocioasociado_prod=negocio_id
         ).select_related('fkcategoria_prod')
@@ -676,12 +739,23 @@ def productos_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_negocio(request, negocio_id):
     """API para cambiar el estado de un negocio"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         
@@ -711,12 +785,23 @@ def cambiar_estado_negocio(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def eliminar_negocio(request, negocio_id):
     """API para eliminar un negocio"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         negocio = Negocios.objects.get(pkid_neg=negocio_id)
         nombre_negocio = negocio.nom_neg
         negocio.delete()
@@ -732,10 +817,22 @@ def eliminar_negocio(request, negocio_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 # ==================== APIs para Gestión de Usuarios ====================
-@login_required(login_url='/auth/login/')
+
+@login_required(login_url='/auth/iniciar_sesion/')
 def detalle_usuario_json(request, usuario_id):
     """API para obtener detalles completos de un usuario (para modal)"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         perfil = UsuarioPerfil.objects.select_related(
             'fkuser', 'fktipodoc_user'
         ).prefetch_related('usuariosroles_set__fkrol').get(id=usuario_id)
@@ -781,12 +878,23 @@ def detalle_usuario_json(request, usuario_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_usuario(request, usuario_id):
     """API para cambiar el estado de un usuario"""
     try:
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
+        
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         
@@ -800,7 +908,7 @@ def cambiar_estado_usuario(request, usuario_id):
         
         # También actualizar el estado en auth_user si es necesario
         user = perfil.fkuser
-        user.is_active = (nuevo_estado == 'activo')
+        user.is_active = 1 if nuevo_estado == 'activo' else 0
         user.save()
         
         return JsonResponse({
@@ -815,44 +923,288 @@ def cambiar_estado_usuario(request, usuario_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 # VISTA DE VERIFICACIÓN DE LOGIN (opcional)
-@login_required(login_url='/auth/login/')
+@login_required(login_url='/auth/iniciar_sesion/')
 def verificar_moderador_login(request):
-    negocios = Negocios.objects.all()
-    t_negocios = TipoNegocio.objects.all()
+    """Vista para verificar el login del moderador - CORREGIDA"""
     try:
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
-    except UsuarioPerfil.DoesNotExist:
-        messages.error(request, "Perfil de usuario no encontrado.")
-        return redirect('inicio')
-    
-    contexto = {
-        'nombre' : request.user.first_name,
-        'perfil' : perfil,
-        'negocios': negocios,
-        't_negocios': t_negocios
-    }
-    return render(request, 'Cliente/Cliente.html', contexto)
-
-# ==================== VISTAS PARA CORREOS ====================
-
-@login_required(login_url='/auth/login/')
-def enviar_correos(request):
-    """Vista para la página de envío de correos"""
-    try:
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar si es moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
         
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
             messages.error(request, "No tienes permisos de moderador.")
-            return redirect(reverse('login'))
+            return redirect('principal')
+        
+        # Si es moderador, redirigir al dashboard
+        return redirect('moderador_dash')
+        
+    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+        messages.error(request, "Perfil de usuario no encontrado.")
+        return redirect('principal')
+
+# ==================== FUNCIONES PARA CORREOS ====================
+
+def obtener_destinatarios_por_ids(usuario_ids):
+    """
+    Obtiene correos de usuarios específicos por sus IDs
+    """
+    try:
+        correos = []
+        for usuario_id in usuario_ids:
+            try:
+                perfil = UsuarioPerfil.objects.get(id=usuario_id)
+                email = perfil.fkuser.email
+                if email and '@' in email:
+                    correos.append(email)
+            except UsuarioPerfil.DoesNotExist:
+                print(f"Usuario con ID {usuario_id} no encontrado")
+                continue
+        
+        return correos
+        
+    except Exception as e:
+        print(f"Error obteniendo destinatarios por IDs: {str(e)}")
+        return []
+
+def obtener_destinatarios_usuarios():
+    """
+    Obtiene todos los correos de usuarios excluyendo moderadores
+    """
+    try:
+        # Obtener perfiles de moderadores
+        perfiles_moderadores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='MODERADOR'
+        ).values_list('fkperfil_id', flat=True)
+        
+        # Obtener usuarios excluyendo moderadores
+        usuarios_perfiles = UsuarioPerfil.objects.select_related('fkuser').exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        # Extraer correos válidos
+        correos = []
+        for perfil in usuarios_perfiles:
+            email = perfil.fkuser.email
+            if email and '@' in email:  # Validación básica de email
+                correos.append(email)
+        
+        return correos
+        
+    except Exception as e:
+        print(f"Error obteniendo destinatarios: {str(e)}")
+        return []
+
+def enviar_correo_promocional(destinatarios, asunto, mensaje_html, imagen_promocion=None, es_test=True):
+    """
+    Función para enviar correos promocionales
+    """
+    try:
+        if es_test:
+            # En modo test, enviar solo al admin
+            destinatarios = [settings.EMAIL_HOST_USER]
+        
+        # Crear versión de texto plano
+        text_content = f"""
+        {asunto}
+        
+        {mensaje_html}
+        
+        Saludos,
+        El equipo de Vecy
+        """
+        
+        # Enviar correo
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        
+        # Adjuntar imagen si se proporciona
+        if imagen_promocion:
+            email.attach(imagen_promocion.name, imagen_promocion.read(), imagen_promocion.content_type)
+        
+        email.send(fail_silently=False)
+        
+        return {
+            'success': True,
+            'enviados_a': destinatarios,
+            'total': len(destinatarios)
+        }
+        
+    except Exception as e:
+        print(f"ERROR enviando correo promocional: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def enviar_correo_simple(destinatarios, asunto, mensaje_html, urgente=False, es_test=True):
+    """
+    Función para enviar correos simples
+    """
+    try:
+        if es_test:
+            # En modo test, enviar solo al admin
+            destinatarios = [settings.EMAIL_HOST_USER]
+        
+        # Agregar prefijo de urgente si es necesario
+        if urgente:
+            asunto = f"🚨 URGENTE: {asunto}"
+        
+        # Crear versión de texto plano
+        text_content = f"""
+        {asunto}
+        
+        {mensaje_html}
+        
+        Saludos,
+        El equipo de Vecy
+        """
+        
+        # Enviar correo
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        email.send(fail_silently=False)
+        
+        return {
+            'success': True,
+            'enviados_a': destinatarios,
+            'total': len(destinatarios),
+            'urgente': urgente
+        }
+        
+    except Exception as e:
+        print(f"ERROR enviando correo simple: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def enviar_notificacion_simple(usuario, accion):
+    """
+    Función para enviar notificaciones usando plantilla HTML
+    """
+    try:
+        # Determinar el correo destino
+        correo_destino = usuario.email
+        
+        # Si no tiene correo o no es válido, enviar al admin
+        if not correo_destino or '@' not in correo_destino:
+            correo_destino = settings.EMAIL_HOST_USER
+        
+        # Determinar el mensaje según la acción
+        if accion == 'bloquear':
+            asunto = '🔒 Tu cuenta ha sido bloqueada'
+            estado_actual = 'Bloqueada'
+            mensaje_personalizado = 'Tu cuenta ha sido bloqueada temporalmente. Si crees que esto es un error, por favor contacta con nuestro equipo de soporte.'
+        elif accion == 'eliminar':
+            asunto = '❌ Tu cuenta ha sido eliminada'
+            estado_actual = 'Eliminada'
+            mensaje_personalizado = 'Tu cuenta ha sido eliminada de nuestro sistema. Si crees que esto es un error, por favor contacta con nuestro equipo de soporte.'
+        else:  # desbloquear
+            asunto = '✅ Tu cuenta ha sido activada'
+            estado_actual = 'Activa'
+            mensaje_personalizado = 'Tu cuenta ha sido activada. Ya puedes acceder nuevamente a todos nuestros servicios.'
+        
+        # Contexto para la plantilla
+        context = {
+            'nombre_usuario': usuario.first_name or usuario.username,
+            'username': usuario.username,
+            'email': usuario.email,
+            'accion': accion,
+            'estado_actual': estado_actual,
+            'fecha_accion': timezone.now().strftime("%d/%m/%Y %H:%M"),
+            'mensaje_personalizado': mensaje_personalizado,
+        }
+        
+        # Renderizar la plantilla HTML
+        html_content = render_to_string('Moderador/bloqueo_usuario.html', context)
+        
+        # Crear versión de texto plano
+        text_content = f"""
+        Hola {usuario.username},
+        
+        {mensaje_personalizado}
+        
+        Detalles:
+        - Usuario: {usuario.username}
+        - Correo: {usuario.email}
+        - Fecha: {context['fecha_accion']}
+        - Estado actual: {estado_actual}
+        
+        Saludos,
+        El equipo de Vecy
+        """
+        
+        # Enviar correo con HTML y texto plano
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[correo_destino],
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        
+        return {
+            'success': True,
+            'enviado_a': correo_destino,
+            'accion': accion
+        }
+        
+    except Exception as e:
+        print(f"ERROR enviando correo: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+# ==================== VISTAS PARA CORREOS ====================
+
+@login_required(login_url='/auth/iniciar_sesion/')
+def enviar_correos(request):
+    """Vista para la página de envío de correos - CORREGIDA"""
+    try:
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión.")
+            return redirect('iniciar_sesion')
+        
+        # Obtener perfil del usuario - CORREGIDO
+        try:
+            # CORREGIDO: Convertir request.user (User) a AuthUser
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
+            return redirect('principal')
         
         # Obtener usuarios EXCLUYENDO MODERADORES
         perfiles_moderadores = UsuariosRoles.objects.filter(
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).values_list('fkperfil_id', flat=True)
         
         usuarios_perfiles = UsuarioPerfil.objects.select_related(
@@ -870,7 +1222,7 @@ def enviar_correos(request):
             rol_principal = 'CLIENTE'
             if roles.exists():
                 for rol in roles:
-                    if rol.fkrol.desc_rol != 'MODERADOR':
+                    if rol.fkrol.desc_rol.lower() != 'moderador':
                         rol_principal = rol.fkrol.desc_rol
                         break
             
@@ -896,92 +1248,250 @@ def enviar_correos(request):
         total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
         
         context = {
-            'nombre': request.user.first_name,
+            'nombre': auth_user.first_name or auth_user.username,
             'perfil': perfil,
             'titulo_pagina': 'Enviar Correos',
             'total_usuarios': total_usuarios,
             'total_vendedores': total_vendedores,
             'total_clientes': total_clientes,
-            'usuarios': usuarios_data,  # Pasar los usuarios al template
+            'usuarios': usuarios_data,
         }
         
         return render(request, 'Moderador/correo.html', context)
     
-    except UsuarioPerfil.DoesNotExist:
-        messages.error(request, "Perfil de usuario no encontrado.")
-        return redirect(reverse('login'))
     except Exception as e:
         messages.error(request, f"Error: {str(e)}")
-        return redirect(reverse('login'))
-    
-@login_required(login_url='/auth/login/')
+        return redirect('principal')
+
+@login_required(login_url='/auth/iniciar_sesion/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def enviar_correo_masivo(request):
-    """API para enviar correos masivos"""
+    """API para enviar correos masivos SOLO a usuarios seleccionados - CORREGIDA"""
     try:
-        # Verificar permisos de moderador
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
             return JsonResponse({'success': False, 'error': 'No tienes permisos de moderador'})
+
+        # CORRECCIÓN: Usar request.POST y request.FILES en lugar de json.loads
+        destinatarios_ids = request.POST.getlist('destinatarios[]')
+        # Si no viene como lista, intentar parsear como JSON
+        if not destinatarios_ids and 'destinatarios' in request.POST:
+            try:
+                destinatarios_data = request.POST.get('destinatarios')
+                if destinatarios_data:
+                    destinatarios_ids = json.loads(destinatarios_data)
+            except:
+                destinatarios_ids = []
         
-        # Obtener datos del formulario
-        data = json.loads(request.body)
-        
-        destinatarios_ids = data.get('destinatarios', [])
-        asunto = data.get('asunto', '')
-        mensaje_html = data.get('mensaje', '')
-        tipo_correo = data.get('tipo_correo', 'promocional')
-        urgente = data.get('urgente', False)
-        
+        asunto = request.POST.get('asunto', '')
+        mensaje_html = request.POST.get('mensaje', '')
+        tipo_correo = request.POST.get('tipo_correo', 'simple')
+        urgente = request.POST.get('urgente', 'false') == 'true'
+        test_mode = request.POST.get('test_mode', 'false') == 'true'
+
         if not asunto or not mensaje_html:
             return JsonResponse({'success': False, 'error': 'Asunto y mensaje son requeridos'})
         
-        # Obtener correos de destinatarios usando la nueva función
-        from Software.email_utils import obtener_destinatarios_usuarios, enviar_correo_promocional, enviar_correo_simple
+        # CORRECCIÓN: Obtener SOLO los correos de los usuarios seleccionados
+        correos_destinatarios = []
         
-        todos_correos = obtener_destinatarios_usuarios()
-        
-        if not todos_correos:
-            return JsonResponse({'success': False, 'error': 'No se encontraron destinatarios válidos'})
-        
-        # Enviar correo según el tipo
-        if tipo_correo == 'promocional':
-            resultado = enviar_correo_promocional(
-                destinatarios=todos_correos,
-                asunto=asunto,
-                mensaje_html=mensaje_html,
-                es_test=False  # Cambiar a False cuando estés en producción
-            )
+        if test_mode:
+            # En modo prueba, enviar solo al admin
+            correos_destinatarios = [settings.EMAIL_HOST_USER]
         else:
-            resultado = enviar_correo_simple(
-                destinatarios=todos_correos,
-                asunto=asunto,
-                mensaje_html=mensaje_html,
-                urgente=urgente,
-                es_test=False  # Cambiar a False cuando estés en producción
-            )
+            # Obtener los correos de los usuarios específicamente seleccionados
+            if destinatarios_ids and destinatarios_ids != ['admin']:
+                correos_destinatarios = obtener_destinatarios_por_ids(destinatarios_ids)
+            
+            # Si no hay destinatarios seleccionados, retornar error
+            if not correos_destinatarios:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'No se encontraron destinatarios válidos seleccionados'
+                })
         
-        return JsonResponse(resultado)
+        try:
+            # CORRECCIÓN: Enviar correo según el tipo con manejo de archivos
+            if tipo_correo == 'promocional':
+                resultado = enviar_correo_promocional_masivo(
+                    destinatarios=correos_destinatarios,
+                    asunto=asunto,
+                    mensaje_html=mensaje_html,
+                    archivos_adjuntos=request.FILES.getlist('archivos'),
+                    es_test=test_mode
+                )
+            else:
+                resultado = enviar_correo_simple_masivo(
+                    destinatarios=correos_destinatarios,
+                    asunto=asunto,
+                    mensaje_html=mensaje_html,
+                    archivos_adjuntos=request.FILES.getlist('archivos'),
+                    urgente=urgente,
+                    es_test=test_mode
+                )
+            
+            # Agregar información adicional al resultado
+            if resultado['success']:
+                resultado['enviados'] = len(correos_destinatarios)
+                resultado['destinatarios'] = correos_destinatarios
+            
+            return JsonResponse(resultado)
+            
+        except Exception as email_error:
+            return JsonResponse({'success': False, 'error': f'Error al enviar correo: {str(email_error)}'})
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# En views.py - agregar esta vista
-@login_required(login_url='/auth/login/')
+# NUEVAS FUNCIONES CORREGIDAS PARA MANEJAR ARCHIVOS ADJUNTOS
+def enviar_correo_promocional_masivo(destinatarios, asunto, mensaje_html, archivos_adjuntos=None, es_test=True):
+    """
+    Función CORREGIDA para enviar correos promocionales con archivos adjuntos
+    """
+    try:
+        if es_test:
+            # En modo test, enviar solo al admin
+            destinatarios = [settings.EMAIL_HOST_USER]
+        
+        # Crear versión de texto plano
+        text_content = f"""
+        {asunto}
+        
+        {mensaje_html}
+        
+        Saludos,
+        El equipo de Vecy
+        """
+        
+        # Enviar correo
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        
+        # CORRECCIÓN: Adjuntar archivos de manera segura
+        if archivos_adjuntos:
+            for archivo in archivos_adjuntos:
+                try:
+                    # Leer el archivo en modo binario
+                    archivo.seek(0)  # Asegurarse de estar al inicio del archivo
+                    contenido = archivo.read()
+                    
+                    # Adjuntar el archivo
+                    email.attach(
+                        filename=archivo.name,
+                        content=contenido,
+                        mimetype=archivo.content_type or 'application/octet-stream'
+                    )
+                except Exception as attach_error:
+                    print(f"Error adjuntando archivo {archivo.name}: {str(attach_error)}")
+                    continue
+        
+        email.send(fail_silently=False)
+        
+        return {
+            'success': True,
+            'enviados_a': destinatarios,
+            'total': len(destinatarios),
+            'archivos_adjuntos': len(archivos_adjuntos) if archivos_adjuntos else 0
+        }
+        
+    except Exception as e:
+        print(f"ERROR enviando correo promocional: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_adjuntos=None, urgente=False, es_test=True):
+    """
+    Función CORREGIDA para enviar correos simples con archivos adjuntos
+    """
+    try:
+        if es_test:
+            # En modo test, enviar solo al admin
+            destinatarios = [settings.EMAIL_HOST_USER]
+        
+        # Agregar prefijo de urgente si es necesario
+        if urgente:
+            asunto = f"🚨 URGENTE: {asunto}"
+        
+        # Crear versión de texto plano
+        text_content = f"""
+        {asunto}
+        
+        {mensaje_html}
+        
+        Saludos,
+        El equipo de Vecy
+        """
+        
+        # Enviar correo
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=destinatarios,
+        )
+        email.attach_alternative(mensaje_html, "text/html")
+        
+        # CORRECCIÓN: Adjuntar archivos de manera segura
+        if archivos_adjuntos:
+            for archivo in archivos_adjuntos:
+                try:
+                    # Leer el archivo en modo binario
+                    archivo.seek(0)  # Asegurarse de estar al inicio del archivo
+                    contenido = archivo.read()
+                    
+                    # Adjuntar el archivo
+                    email.attach(
+                        filename=archivo.name,
+                        content=contenido,
+                        mimetype=archivo.content_type or 'application/octet-stream'
+                    )
+                except Exception as attach_error:
+                    print(f"Error adjuntando archivo {archivo.name}: {str(attach_error)}")
+                    continue
+        
+        email.send(fail_silently=False)
+        
+        return {
+            'success': True,
+            'enviados_a': destinatarios,
+            'total': len(destinatarios),
+            'urgente': urgente,
+            'archivos_adjuntos': len(archivos_adjuntos) if archivos_adjuntos else 0
+        }
+        
+    except Exception as e:
+        print(f"ERROR enviando correo simple: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+# API para obtener usuarios para correos
+@login_required(login_url='/auth/iniciar_sesion/')
 def api_usuarios_correos(request):
     """API para obtener usuarios para el sistema de correos"""
     try:
-        # Verificar permisos de moderador
-        perfil = UsuarioPerfil.objects.get(fkuser__username=request.user.username)
+        # Verificar permisos de moderador - CORREGIDO
+        auth_user = AuthUser.objects.get(username=request.user.username)
+        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).exists()
         
         if not es_moderador:
@@ -989,7 +1499,7 @@ def api_usuarios_correos(request):
         
         # Obtener usuarios EXCLUYENDO MODERADORES
         perfiles_moderadores = UsuariosRoles.objects.filter(
-            fkrol__desc_rol='MODERADOR'
+            fkrol__desc_rol__iexact='moderador'
         ).values_list('fkperfil_id', flat=True)
         
         usuarios_perfiles = UsuarioPerfil.objects.select_related(
@@ -1007,7 +1517,7 @@ def api_usuarios_correos(request):
             rol_principal = 'CLIENTE'
             if roles.exists():
                 for rol in roles:
-                    if rol.fkrol.desc_rol != 'MODERADOR':
+                    if rol.fkrol.desc_rol.lower() != 'moderador':
                         rol_principal = rol.fkrol.desc_rol
                         break
             
@@ -1036,4 +1546,231 @@ def api_usuarios_correos(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
+ 
+# VISTA PARA RESEÑAS REPORTADAS - CORREGIDA (ERROR DE ESTADO)
+@login_required(login_url='/auth/iniciar_sesion/')
+def gestion_resenas_reportadas(request):
+    """Vista para gestión de reseñas reportadas por parte del moderador - CORREGIDA"""
+    try:
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión.")
+            return redirect('iniciar_sesion')
+        
+        # Obtener perfil del usuario - CORREGIDO
+        try:
+            # CORREGIDO: Convertir request.user (User) a AuthUser
+            auth_user = AuthUser.objects.get(username=request.user.username)
+            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
+            return redirect('principal')
+        
+        # Procesar acciones por POST
+        if request.method == 'POST':
+            resena_id = request.POST.get('resena_id')
+            accion = request.POST.get('accion')
+            
+            try:
+                resena = ResenasNegocios.objects.get(pkid_resena=resena_id)
+                
+                if accion == 'aprobar':
+                    # Aprobar la reseña (mantenerla activa)
+                    resena.estado_resena = 'activa'
+                    resena.save()
+                    
+                    # CORRECCIÓN: Usar 'revisado' en lugar de 'atendido'
+                    Reportes.objects.filter(
+                        fknegocio_reportado=resena.fknegocio_resena_id,
+                        estado_reporte='pendiente'
+                    ).update(estado_reporte='revisado')
+                    
+                    messages.success(request, 'Reseña aprobada correctamente')
+                
+                elif accion == 'eliminar':
+                    # Eliminar la reseña (cambiar estado a eliminada)
+                    resena.estado_resena = 'eliminada'
+                    resena.save()
+                    
+                    # CORRECCIÓN: Usar 'revisado' en lugar de 'atendido'
+                    Reportes.objects.filter(
+                        fknegocio_reportado=resena.fknegocio_resena_id,
+                        estado_reporte='pendiente'
+                    ).update(estado_reporte='revisado')
+                    
+                    messages.success(request, 'Reseña eliminada correctamente')
+                
+                else:
+                    messages.error(request, 'Acción no válida')
+                    
+            except ResenasNegocios.DoesNotExist:
+                messages.error(request, 'Reseña no encontrada')
+            except Exception as e:
+                messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+            
+            return redirect('gestion_resenas_reportadas')
+        
+        # Obtener parámetros de filtrado
+        search_query = request.GET.get('search', '')
+        estado_filter = request.GET.get('estado', '')
+        
+        # Obtener IDs de negocios que tienen reportes pendientes
+        negocios_con_reportes = Reportes.objects.filter(
+            estado_reporte='pendiente'
+        ).values_list('fknegocio_reportado', flat=True).distinct()
+        
+        # Obtener todas las reseñas de esos negocios
+        reseñas_query = ResenasNegocios.objects.filter(
+            fknegocio_resena__in=negocios_con_reportes
+        )
+        
+        # Aplicar filtros
+        if search_query:
+            reseñas_query = reseñas_query.filter(
+                Q(comentario__icontains=search_query) |
+                Q(fknegocio_resena__nom_neg__icontains=search_query) |
+                Q(fkusuario_resena__fkuser__first_name__icontains=search_query) |
+                Q(fkusuario_resena__fkuser__last_name__icontains=search_query) |
+                Q(fkusuario_resena__fkuser__username__icontains=search_query) |
+                Q(fkusuario_resena__fkuser__email__icontains=search_query)
+            )
+        
+        if estado_filter:
+            reseñas_query = reseñas_query.filter(estado_resena=estado_filter)
+        
+        # Seleccionar datos relacionados para optimizar
+        reseñas_reportadas = reseñas_query.select_related(
+            'fknegocio_resena',
+            'fknegocio_resena__fktiponeg_neg',
+            'fkusuario_resena__fkuser'
+        ).order_by('-fecha_resena')
+        
+        # Preparar datos para el template
+        reseñas_data = []
+        for resena in reseñas_reportadas:
+            # Obtener información del negocio
+            negocio = resena.fknegocio_resena
+            
+            # Obtener información del usuario
+            usuario = resena.fkusuario_resena.fkuser
+            nombre_usuario = f"{usuario.first_name} {usuario.last_name}".strip()
+            if not nombre_usuario:
+                nombre_usuario = usuario.username
+            
+            # Obtener reportes pendientes para este negocio
+            reportes_pendientes_negocio = Reportes.objects.filter(
+                fknegocio_reportado=negocio.pkid_neg,
+                estado_reporte='pendiente'
+            )
+            
+            # Contar reportes y obtener motivos
+            total_reportes = reportes_pendientes_negocio.count()
+            motivos_reportes = list(reportes_pendientes_negocio.values_list('motivo', flat=True).distinct())
+            
+            # Obtener usuarios que reportaron
+            usuarios_reportan_ids = reportes_pendientes_negocio.values_list('fkusuario_reporta', flat=True).distinct()
+            usuarios_reportan = UsuarioPerfil.objects.filter(
+                id__in=usuarios_reportan_ids
+            ).select_related('fkuser')
+            
+            usuarios_reportan_info = []
+            for usuario_reporter in usuarios_reportan:
+                user_reporter = usuario_reporter.fkuser
+                nombre_reporter = f"{user_reporter.first_name} {user_reporter.last_name}".strip()
+                if not nombre_reporter:
+                    nombre_reporter = user_reporter.username
+                usuarios_reportan_info.append({
+                    'nombre': nombre_reporter,
+                    'email': user_reporter.email
+                })
+            
+            # Manejar imagen del usuario
+            imagen_usuario = ''
+            try:
+                perfil_usuario = UsuarioPerfil.objects.get(fkuser=usuario)
+                if perfil_usuario.img_user:
+                    imagen_usuario = perfil_usuario.img_user.url
+            except UsuarioPerfil.DoesNotExist:
+                pass
+            
+            # Mapear estados de reseña
+            estado_map = {
+                'activa': 'Activa',
+                'inactiva': 'Inactiva',
+                'eliminada': 'Eliminada',
+                'pendiente': 'Pendiente'
+            }
+            
+            estado_display = estado_map.get(resena.estado_resena, resena.estado_resena)
+            
+            # Obtener el último reporte
+            ultimo_reporte_obj = reportes_pendientes_negocio.order_by('-fecha_reporte').first()
+            ultimo_reporte = ultimo_reporte_obj.fecha_reporte if ultimo_reporte_obj else None
+            
+            # Obtener detalles de reportes para el modal
+            reportes_detalles = list(reportes_pendientes_negocio.values('motivo', 'descripcion', 'fecha_reporte'))
+            
+            reseñas_data.append({
+                'id': resena.pkid_resena,
+                'comentario': resena.comentario or 'Sin comentario',
+                'estrellas': resena.estrellas,
+                'fecha_resena': resena.fecha_resena,
+                'estado': estado_display,
+                'estado_db': resena.estado_resena,
+                
+                # Información del negocio
+                'negocio_id': negocio.pkid_neg,
+                'negocio_nombre': negocio.nom_neg,
+                'negocio_categoria': negocio.fktiponeg_neg.desc_tiponeg,
+                'negocio_direccion': negocio.direcc_neg,
+                
+                # Información del usuario
+                'usuario_id': usuario.id,
+                'usuario_nombre': nombre_usuario,
+                'usuario_email': usuario.email,
+                'usuario_imagen': imagen_usuario,
+                'usuario_username': usuario.username,
+                
+                # Información de reportes
+                'total_reportes': total_reportes,
+                'motivos_reportes': motivos_reportes,
+                'usuarios_reportan': usuarios_reportan_info,
+                'ultimo_reporte': ultimo_reporte,
+                'reportes_detalles': reportes_detalles
+            })
+        
+        # Estadísticas para las tarjetas
+        total_resenas_reportadas = len(reseñas_data)
+        resenas_pendientes = len([r for r in reseñas_data if r['estado_db'] == 'activa'])
+        resenas_eliminadas = len([r for r in reseñas_data if r['estado_db'] == 'eliminada'])
+        total_reportes = sum([r['total_reportes'] for r in reseñas_data])
+        
+        context = {
+            'nombre': auth_user.first_name or auth_user.username,
+            'perfil': perfil,
+            'reseñas': reseñas_data,
+            'titulo_pagina': 'Reseñas Reportadas',
+            'search_query': search_query,
+            'estado_filter': estado_filter,
+            'total_resenas_reportadas': total_resenas_reportadas,
+            'resenas_pendientes': resenas_pendientes,
+            'resenas_eliminadas': resenas_eliminadas,
+            'total_reportes': total_reportes
+        }
+        
+        return render(request, 'Moderador/reporte_resenas.html', context)
+    
+    except Exception as e:
+        print(f"ERROR en vista: {str(e)}")
+        messages.error(request, f"Error: {str(e)}")
+        return redirect('principal')

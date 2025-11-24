@@ -150,25 +150,30 @@
                         </div>
                         <div class="character-count" id="characterCount">0 caracteres</div>
                     </div>
+
+                    <!-- Sección de Archivos Adjuntos -->
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-paperclip"></i>
+                            <span>Archivos Adjuntos</span>
+                        </label>
+                        <div class="file-upload-section">
+                            <input type="file" class="file-input" id="fileInput" multiple 
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.xls,.xlsx">
+                            <label for="fileInput" class="file-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>Haga clic para seleccionar archivos o arrástrelos aquí</span>
+                                <small>Formatos permitidos: PDF, DOC, DOCX, JPG, PNG, GIF, TXT, XLS, XLSX</small>
+                            </label>
+                            <div class="file-list" id="fileList">
+                                <!-- Los archivos seleccionados aparecerán aquí -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="send-actions">
-                    <div class="additional-options">
-                        <label class="option-checkbox">
-                            <input type="checkbox" id="urgentCheckbox">
-                            <span>Marcar como urgente</span>
-                        </label>
-                        <label class="option-checkbox">
-                            <input type="checkbox" id="testModeCheckbox" checked>
-                            <span>Modo prueba (solo admin)</span>
-                        </label>
-                    </div>
-
                     <div class="send-buttons">
-                        <button class="btn-send btn-send-test" id="sendTestButton">
-                            <i class="fas fa-vial"></i>
-                            <span>Enviar Prueba</span>
-                        </button>
                         <button class="btn-send" id="sendButton" disabled>
                             <i class="fas fa-paper-plane"></i>
                             <span>Enviar a Seleccionados</span>
@@ -725,9 +730,125 @@
         color: white;
     }
 
+    /* File Upload Styles */
+    .file-upload-section {
+        border: 2px dashed #e0e0e0;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        transition: all 0.3s;
+        background: #fafafa;
+        position: relative;
+    }
+
+    .file-upload-section:hover {
+        border-color: var(--primary);
+        background: #f8f9fa;
+    }
+
+    .file-upload-section.dragover {
+        border-color: var(--primary);
+        background: var(--hover);
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-upload-label {
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: var(--dark);
+        transition: all 0.3s;
+        pointer-events: none; /* IMPORTANTE: Evita conflictos de eventos */
+    }
+
+    .file-upload-label:hover {
+        color: var(--primary);
+    }
+
+    .file-upload-label i {
+        font-size: 48px;
+        color: var(--primary);
+        margin-bottom: 10px;
+    }
+
+    .file-upload-label small {
+        color: #666;
+        font-size: 12px;
+    }
+
+    .file-list {
+        margin-top: 15px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        transition: all 0.2s;
+    }
+
+    .file-item:hover {
+        border-color: var(--primary);
+        background: var(--hover);
+    }
+
+    .file-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .file-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+    }
+
+    .file-name {
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--text-dark);
+    }
+
+    .file-size {
+        font-size: 12px;
+        color: #666;
+    }
+
+    .file-remove {
+        background: none;
+        border: none;
+        color: var(--danger);
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .file-remove:hover {
+        background: var(--danger);
+        color: white;
+    }
+
     .send-actions {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
         margin-top: 20px;
         padding-top: 15px;
@@ -758,10 +879,6 @@
         position: relative;
     }
 
-    .btn-send-test {
-        background: linear-gradient(to right, var(--secondary), #a8b16d);
-    }
-
     .btn-send:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(85, 133, 216, 0.4);
@@ -780,26 +897,6 @@
         border-radius: 10px;
         font-size: 12px;
         margin-left: 5px;
-    }
-
-    .additional-options {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .option-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 13px;
-        color: var(--dark);
-        cursor: pointer;
-    }
-
-    .option-checkbox input {
-        cursor: pointer;
-        accent-color: var(--primary);
     }
 
     /* Responsive para portátiles pequeños y tablets */
@@ -920,12 +1017,6 @@
             font-size: 14px;
         }
 
-        .additional-options {
-            flex-direction: column;
-            gap: 10px;
-            align-items: flex-start;
-        }
-
         .send-buttons {
             flex-direction: column;
         }
@@ -937,17 +1028,41 @@
     let currentFilter = 'all';
     let currentSearch = '';
     let selectedUsers = new Set();
+    let selectedFiles = [];
 
     // Elementos DOM
     const recipientsList = document.getElementById('recipientsList');
     const selectedCount = document.getElementById('selectedCount');
     const sendCount = document.getElementById('sendCount');
     const characterCount = document.getElementById('characterCount');
+    const fileInput = document.getElementById('fileInput');
+    const fileList = document.getElementById('fileList');
+    const fileUploadSection = document.querySelector('.file-upload-section');
+
+    // FUNCIÓN CORREGIDA: Contador de caracteres
+    function updateCharacterCount() {
+        const messageDiv = document.getElementById('emailMessage');
+        let text = '';
+        
+        // Manejar tanto innerHTML como textContent para contenteditable
+        if (messageDiv.innerHTML === '<br>' || messageDiv.innerHTML.trim() === '') {
+            text = '';
+        } else {
+            // Crear un elemento temporal para extraer solo el texto
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = messageDiv.innerHTML;
+            text = tempDiv.textContent || tempDiv.innerText || '';
+        }
+        
+        characterCount.textContent = `${text.length} caracteres`;
+    }
 
     // Inicializar la aplicación
     document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners();
         setupFiltering();
+        setupFileUpload();
+        updateCharacterCount(); // Inicializar contador
     });
 
     // Configurar event listeners
@@ -1016,14 +1131,8 @@
         document.getElementById('emailSubject').addEventListener('input', updateSendButton);
         document.getElementById('emailMessage').addEventListener('input', function() {
             updateSendButton();
-            updateCharacterCount();
+            updateCharacterCount(); // CORREGIDO: Llamar a la función definida
         });
-
-        // Contador de caracteres
-        function updateCharacterCount() {
-            const text = this.textContent || '';
-            characterCount.textContent = `${text.length} caracteres`;
-        }
 
         // Barra de herramientas de formato
         document.querySelectorAll('.format-btn').forEach(button => {
@@ -1031,15 +1140,168 @@
                 const command = this.getAttribute('data-command');
                 document.execCommand(command, false, null);
                 document.getElementById('emailMessage').focus();
+                updateCharacterCount(); // Actualizar contador después de formato
             });
         });
 
         // Envío de correos
         document.getElementById('sendButton').addEventListener('click', sendEmail);
-        document.getElementById('sendTestButton').addEventListener('click', sendTestEmail);
 
         // Configurar eventos de selección para los usuarios
         setupUserSelection();
+    }
+
+    // Configurar carga de archivos - VERSIÓN CORREGIDA
+    function setupFileUpload() {
+        // Click en el área de carga - VERSIÓN CORREGIDA
+        fileUploadSection.addEventListener('click', (e) => {
+            // Solo activar el input de archivo si se hace clic directamente en el área de carga
+            // y no en elementos hijos (especialmente el label)
+            if (e.target === fileUploadSection) {
+                fileInput.click();
+            }
+        });
+
+        // Cambio en la selección de archivos
+        fileInput.addEventListener('change', handleFileSelect);
+
+        // Drag and drop
+        fileUploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadSection.classList.add('dragover');
+        });
+
+        fileUploadSection.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileUploadSection.classList.remove('dragover');
+        });
+
+        fileUploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        // CORRECCIÓN: Permitir que el label funcione correctamente
+        const fileUploadLabel = document.querySelector('.file-upload-label');
+        fileUploadLabel.addEventListener('click', (e) => {
+            // Prevenir que el evento se propague al contenedor padre
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+
+    // Manejar selección de archivos
+    function handleFileSelect(e) {
+        const files = e.target.files;
+        handleFiles(files);
+    }
+
+    // Procesar archivos
+    function handleFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
+            // Validar tamaño máximo (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                showAlert(`El archivo "${file.name}" es demasiado grande. Máximo 10MB.`, 'error');
+                continue;
+            }
+
+            // Validar tipo de archivo
+            const allowedTypes = [
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'image/jpeg',
+                'image/jpg',
+                'image/png',
+                'image/gif',
+                'text/plain',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ];
+
+            if (!allowedTypes.includes(file.type)) {
+                showAlert(`El tipo de archivo "${file.name}" no está permitido.`, 'error');
+                continue;
+            }
+
+            // Agregar archivo a la lista
+            if (!selectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                selectedFiles.push(file);
+                addFileToList(file);
+            }
+        }
+
+        // Limpiar input
+        fileInput.value = '';
+    }
+
+    // Agregar archivo a la lista visual
+    function addFileToList(file) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        
+        const fileSize = formatFileSize(file.size);
+        const fileIcon = getFileIcon(file.type);
+        
+        fileItem.innerHTML = `
+            <div class="file-info">
+                <div class="file-icon">
+                    <i class="${fileIcon}"></i>
+                </div>
+                <div>
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-size">${fileSize}</div>
+                </div>
+            </div>
+            <button class="file-remove" type="button">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        // Evento para eliminar archivo
+        const removeBtn = fileItem.querySelector('.file-remove');
+        removeBtn.addEventListener('click', () => {
+            removeFile(file, fileItem);
+        });
+
+        fileList.appendChild(fileItem);
+    }
+
+    // Eliminar archivo de la lista
+    function removeFile(file, fileItem) {
+        selectedFiles = selectedFiles.filter(f => f !== file);
+        fileItem.remove();
+    }
+
+    // Obtener icono según tipo de archivo
+    function getFileIcon(fileType) {
+        const iconMap = {
+            'application/pdf': 'fas fa-file-pdf',
+            'application/msword': 'fas fa-file-word',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'fas fa-file-word',
+            'image/jpeg': 'fas fa-file-image',
+            'image/jpg': 'fas fa-file-image',
+            'image/png': 'fas fa-file-image',
+            'image/gif': 'fas fa-file-image',
+            'text/plain': 'fas fa-file-alt',
+            'application/vnd.ms-excel': 'fas fa-file-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'fas fa-file-excel'
+        };
+
+        return iconMap[fileType] || 'fas fa-file';
+    }
+
+    // Formatear tamaño de archivo
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     // Configurar selección de usuarios
@@ -1154,46 +1416,17 @@
         }
     }
 
-    // Enviar correo de prueba
-    async function sendTestEmail() {
-        const subject = document.getElementById('emailSubject').value.trim();
-        const message = document.getElementById('emailMessage').innerHTML;
-
-        if (!subject) {
-            showAlert('Por favor, ingrese un asunto para el correo.', 'error');
-            return;
-        }
-
-        if (!message || message === '<br>') {
-            showAlert('Por favor, ingrese un mensaje para el correo.', 'error');
-            return;
-        }
-
-        const testData = {
-            destinatarios: ['admin'],
-            asunto: subject,
-            mensaje: message,
-            tipo_correo: 'simple',
-            urgente: document.getElementById('urgentCheckbox').checked,
-            test_mode: true
-        };
-
-        await sendEmailRequest(testData, 'prueba');
-    }
-
     // Enviar correo a los seleccionados
     async function sendEmail() {
         const subject = document.getElementById('emailSubject').value.trim();
         const message = document.getElementById('emailMessage').innerHTML;
-        const isUrgent = document.getElementById('urgentCheckbox').checked;
-        const testMode = document.getElementById('testModeCheckbox').checked;
 
         if (!subject) {
             showAlert('Por favor, ingrese un asunto para el correo.', 'error');
             return;
         }
 
-        if (!message || message === '<br>') {
+        if (!message || message === '<br>' || message.trim() === '') {
             showAlert('Por favor, ingrese un mensaje para el correo.', 'error');
             return;
         }
@@ -1204,12 +1437,17 @@
         }
 
         // Mostrar confirmación
+        const filesInfo = selectedFiles.length > 0 ? 
+            `<div class="mt-3">
+                <strong>Archivos adjuntos:</strong> ${selectedFiles.length} archivo(s)
+            </div>` : '';
+
         const modalBody = `
             <p>¿Está seguro de que desea enviar este correo a <strong>${selectedUsers.size}</strong> destinatario(s)?</p>
             <div class="mt-3">
                 <strong>Asunto:</strong> ${subject}
             </div>
-            ${testMode ? '<div class="alert alert-warning mt-3">Modo prueba activado - Solo se enviará al administrador</div>' : ''}
+            ${filesInfo}
         `;
 
         document.getElementById('confirmationModalBody').innerHTML = modalBody;
@@ -1220,70 +1458,53 @@
         // Configurar el botón de confirmación
         document.getElementById('confirmSendButton').onclick = async () => {
             modal.hide();
-            
-            const emailData = {
-                destinatarios: testMode ? ['admin'] : Array.from(selectedUsers),
-                asunto: subject,
-                mensaje: message,
-                tipo_correo: 'simple',
-                urgente: isUrgent,
-                test_mode: testMode
-            };
-
-            await sendEmailRequest(emailData, 'masivo');
+            await sendEmailRequest();
         };
     }
 
-    // Realizar petición de envío de correo
-    async function sendEmailRequest(data, type) {
-        const sendButton = type === 'masivo' ? 
-            document.getElementById('sendButton') : 
-            document.getElementById('sendTestButton');
-            
+    // Realizar petición de envío de correo - VERSIÓN CORREGIDA
+    async function sendEmailRequest() {
+        const sendButton = document.getElementById('sendButton');
         const originalText = sendButton.innerHTML;
         
         sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Enviando...</span>';
         sendButton.disabled = true;
 
         try {
+            const subject = document.getElementById('emailSubject').value.trim();
+            const message = document.getElementById('emailMessage').innerHTML;
+
+            // Crear FormData para enviar archivos
+            const formData = new FormData();
+            formData.append('destinatarios', JSON.stringify(Array.from(selectedUsers)));
+            formData.append('asunto', subject);
+            formData.append('mensaje', message);
+            formData.append('tipo_correo', 'simple');
+            formData.append('urgente', 'false');
+            formData.append('test_mode', 'false');
+
+            // Agregar archivos
+            selectedFiles.forEach(file => {
+                formData.append('archivos', file);
+            });
+
             const response = await fetch('/moderador/enviar-correo-masivo/', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify(data)
+                body: formData
             });
 
             const result = await response.json();
 
             if (result.success) {
-                let successMessage = '';
+                const successMessage = `¡Correo enviado exitosamente a ${result.enviados || selectedUsers.size} destinatario(s)!`;
                 
-                if (type === 'prueba') {
-                    successMessage = 'Correo de prueba enviado exitosamente al administrador.';
-                } else if (data.test_mode) {
-                    successMessage = 'Correo de prueba enviado exitosamente (modo prueba activado).';
-                } else {
-                    successMessage = `¡Correo enviado exitosamente a ${result.enviados || selectedUsers.size} destinatario(s)!`;
-                    
-                    // Limpiar selección después del envío exitoso
-                    if (!data.test_mode) {
-                        selectedUsers.clear();
-                        updateSelectionCount();
-                        updateSendButton();
-                        updateRecipientItems();
-                    }
-                }
+                // Limpiar todo después del envío exitoso
+                resetForm();
                 
                 showAlert(successMessage, 'success');
-                
-                // Limpiar formulario si no es prueba
-                if (type === 'masivo' && !data.test_mode) {
-                    document.getElementById('emailSubject').value = '';
-                    document.getElementById('emailMessage').innerHTML = '';
-                    updateCharacterCount();
-                }
                 
             } else {
                 showAlert(`Error al enviar correo: ${result.error}`, 'error');
@@ -1298,9 +1519,31 @@
         }
     }
 
-    // Función para obtener el token CSRF - VERSIÓN MEJORADA
+    // Limpiar formulario
+    function resetForm() {
+        // Limpiar selección de usuarios
+        selectedUsers.clear();
+        updateSelectionCount();
+        updateSendButton();
+        updateRecipientItems();
+        
+        // Limpiar formulario
+        document.getElementById('emailSubject').value = '';
+        
+        // Limpiar mensaje
+        const messageDiv = document.getElementById('emailMessage');
+        messageDiv.innerHTML = '';
+        messageDiv.textContent = '';
+        
+        // Limpiar archivos
+        selectedFiles = [];
+        fileList.innerHTML = '';
+        
+        updateCharacterCount(); // Actualizar contador
+    }
+
+    // Función para obtener el token CSRF
     function getCsrfToken() {
-        // Buscar el token CSRF de diferentes formas
         let csrfToken = '';
         
         // 1. Buscar en el input hidden generado por Django

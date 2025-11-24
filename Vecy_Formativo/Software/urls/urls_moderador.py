@@ -23,6 +23,10 @@ urlpatterns = [
     
     # ==================== APIs MODERADOR - CORREOS ====================
     path('moderador/enviar-correo-masivo/', views_moderador.enviar_correo_masivo, name='enviar_correo_masivo'),
+
+    # ==================== APIs MODERADOR - RESEÑAS ====================
+   path('moderador/gestion-resenas/', views_moderador.gestion_resenas_reportadas, name='gestion_resenas_reportadas'),
+
 ]
 
 if settings.DEBUG:
