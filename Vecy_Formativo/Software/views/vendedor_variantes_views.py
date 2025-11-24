@@ -16,8 +16,8 @@ from Software.models import (
 def obtener_datos_vendedor_variantes(request):
     """Función específica para variantes que valida que exista un negocio activo"""
     try:
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        nombre_usuario = request.user.first_name or request.user.username
         
         negocio_seleccionado_id = request.session.get('negocio_seleccionado_id')
         negocio_seleccionado = None
@@ -47,7 +47,7 @@ def obtener_datos_vendedor_variantes(request):
                 return None
         
         return {
-            'nombre_usuario': auth_user.first_name,
+            'nombre_usuario': nombre_usuario,
             'perfil': perfil,
             'negocio_activo': negocio_seleccionado,
         }

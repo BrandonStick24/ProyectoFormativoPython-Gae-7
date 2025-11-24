@@ -1812,7 +1812,8 @@ def guardar_resena(request):
 
 @login_required(login_url='/auth/login/')
 def productos_filtrados_logeado(request):
-    """Vista de productos filtrados para usuarios logueados"""
+    """Vista de productos filtrados para usuarios logueados - VERSIÓN CORREGIDA"""
+    
     # Obtener parámetros de filtro de la URL
     filtro_tipo = request.GET.get('filtro', '')
     categoria_id = request.GET.get('categoria', '')
@@ -1998,8 +1999,8 @@ def productos_filtrados_logeado(request):
     # ==================== OBTENER CARRITO COUNT ====================
     carrito_count = 0
     try:
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
+        # Obtener perfil del usuario
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
         # Intentar obtener el carrito existente
         try:
@@ -2011,6 +2012,7 @@ def productos_filtrados_logeado(request):
             carrito_count = 0
             
     except Exception as e:
+        print(f"❌ Error obteniendo carrito count: {e}")
         carrito_count = 0
     
     context = {
@@ -2032,7 +2034,7 @@ def productos_filtrados_logeado(request):
         'precio_max_actual': precio_max,
         'ordenar_actual': ordenar,
         'titulo_filtro': titulo_filtro,
-        'carrito_count': carrito_count,  # ✅ AÑADIDO
+        'carrito_count': carrito_count,  # ✅ AÑADIDO - ESTO ES LO QUE FALTABA
     }
     
     return render(request, 'Cliente/productos_filtros_logeado.html', context)

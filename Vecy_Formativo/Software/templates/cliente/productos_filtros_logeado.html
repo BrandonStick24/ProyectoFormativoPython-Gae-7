@@ -1938,47 +1938,92 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // Inicializar AOS
-    AOS.init({
-        duration: 600,
-        once: true,
-        offset: 80
-    });
+    // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
 
-    // Variables globales para manejar variantes y pagos
-    let selectedVariants = {};
+    console.log("🎯 VECY PRODUCTOS FILTRADOS - Script inicializado");
+
+    // Variables globales
     let metodoPagoSeleccionado = null;
     let datosPago = {};
+    let productVariantsData = {};
+    let selectedVariants = {};
 
-    // ==================== SISTEMA DE VARIANTES ====================
+    // URLs absolutas usando Django template tags
+    const URLS = {
+        AGREGAR_CARRITO: "{% url 'agregar_carrito' %}",
+        CARRITO_DATA: "{% url 'carrito_data' %}",
+        ACTUALIZAR_CANTIDAD: "{% url 'actualizar_cantidad_carrito' %}",
+        ELIMINAR_ITEM: "{% url 'eliminar_item_carrito' %}",
+        PROCESAR_PEDIDO: "{% url 'procesar_pedido' %}",
+        MIS_PEDIDOS_DATA: "{% url 'mis_pedidos_data' %}",
+        CANCELAR_PEDIDO: "{% url 'cancelar_pedido' %}"
+    };
 
-    // Función para inicializar datos de variantes desde HTML
+    console.log("🔗 URLs configuradas:", URLS);
+
+    // ==================== SISTEMA DE VARIANTES MEJORADO ====================
+
+    // Función MEJORADA para inicializar datos de variantes
     function initializeVariantsData() {
         console.log("🔄 Inicializando datos de variantes...");
-        
-        const productVariantsData = {};
+
+        // Limpiar datos anteriores
+        productVariantsData = {};
+        selectedVariants = {};
+
+        // Buscar todos los productos con variantes en la página
         const productCards = document.querySelectorAll('.product-card-with-variants');
-        
+
         productCards.forEach(productCard => {
             const productId = productCard.getAttribute('data-product-id');
-            const variantsContainer = productCard.querySelector('.variantes-reales-data');
-            
-            if (variantsContainer) {
-                const variantElements = variantsContainer.querySelectorAll('[data-variant]');
+            if (!productId) return;
+
+            console.log(`🔍 Procesando producto con variantes: ${productId}`);
+
+            // Buscar datos de variantes en el contenedor oculto
+            const variantesDataContainer = productCard.querySelector('.variantes-reales-data');
+            if (!variantesDataContainer) {
+                console.log(`❌ No se encontraron datos de variantes para producto ${productId}`);
+                return;
+            }
+
+            const variantElements = variantesDataContainer.querySelectorAll('[data-variant]');
+            console.log(`📊 Variantes encontradas para producto ${productId}: ${variantElements.length}`);
+
+            if (variantElements.length > 0) {
                 const variants = [];
                 
-                variantElements.forEach(element => {
+                variantElements.forEach((element, index) => {
+                    // Obtener datos de cada variante
+                    const variantId = element.getAttribute('data-variant-id');
+                    const variantName = element.getAttribute('data-variant-name');
+                    const variantImage = element.getAttribute('data-variant-image');
+                    const variantPrice = element.getAttribute('data-variant-price');
+                    const variantStock = parseInt(element.getAttribute('data-variant-stock')) || 0;
+                    const isBase = element.getAttribute('data-is-base') === 'true';
+
+                    // Validar que los datos sean correctos
+                    if (!variantId || !variantName) {
+                        console.log(`❌ Datos incompletos para variante ${index + 1}`);
+                        return;
+                    }
+
                     const variant = {
-                        id: element.getAttribute('data-variant-id'),
-                        name: element.getAttribute('data-variant-name'),
-                        image: element.getAttribute('data-variant-image'),
-                        price: element.getAttribute('data-variant-price'),
-                        stock: parseInt(element.getAttribute('data-variant-stock')) || 0,
-                        isBase: element.getAttribute('data-is-base') === 'true',
-                        selected: element.getAttribute('data-is-base') === 'true'
+                        id: variantId,
+                        name: variantName,
+                        image: variantImage || '{% static "images/placeholder-producto.png" %}',
+                        selected: isBase,
+                        price: variantPrice || '0',
+                        stock: variantStock,
+                        isBase: isBase
                     };
+
+                    console.log(`  📦 Variante ${index + 1}: ID=${variantId}, Nombre=${variantName}, Precio=$${variant.price}, Stock=${variant.stock}, Base=${variant.isBase}`);
                     variants.push(variant);
                 });
+
+                // Ordenar variantes: base primero
+                variants.sort((a, b) => b.isBase - a.isBase);
                 
                 productVariantsData[productId] = variants;
                 
@@ -1986,74 +2031,82 @@
                 const baseVariant = variants.find(v => v.isBase);
                 if (baseVariant) {
                     selectedVariants[productId] = baseVariant.id;
+                    console.log(`✅ Variante base seleccionada por defecto: ${baseVariant.id}`);
                 }
             }
         });
-        
-        console.log("📦 Datos de variantes cargados:", productVariantsData);
-        return productVariantsData;
+
+        console.log("📦 Datos de variantes inicializados:", productVariantsData);
+        console.log("🎯 Variantes seleccionadas:", selectedVariants);
     }
 
-    // Función para crear miniaturas de variantes
+    // Función MEJORADA para crear las miniaturas de variantes
     function createVariantThumbnails(productId, variants) {
         const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
         if (!variantsGrid) {
             console.log(`❌ No se encontró variantsGrid-${productId}`);
             return;
         }
-        
+
         variantsGrid.innerHTML = '';
-        
+
         variants.forEach(variant => {
+            // Validar que la variante tenga datos mínimos
+            if (!variant.id || !variant.name) {
+                console.log(`❌ Variante inválida:`, variant);
+                return;
+            }
+
             const thumbElement = document.createElement('div');
             thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
             thumbElement.setAttribute('data-variant-id', variant.id);
             thumbElement.setAttribute('title', variant.name);
-            
+
+            // Mostrar badge especial para producto base
+            const baseBadge = variant.isBase ? 
+                '<div class="base-badge">Base</div>' : '';
+
+            // Mostrar información de stock
             const stockInfo = variant.stock > 0 ? 
-                `<span style="color: #28a745;">(${variant.stock})</span>` : 
-                `<span style="color: #dc3545;">(0)</span>`;
-            
+                `<span style="color: #28a745;">(${variant.stock} disp)</span>` : 
+                `<span style="color: #dc3545;">(Sin stock)</span>`;
+
             thumbElement.innerHTML = `
-                ${variant.isBase ? '<div style="position: absolute; top: 2px; left: 2px; background: #2563eb; color: white; padding: 1px 4px; border-radius: 4px; font-size: 8px;">Base</div>' : ''}
+                ${baseBadge}
                 <img src="${variant.image}" alt="${variant.name}" loading="lazy"
                      onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
-                <div class="variant-name">${variant.name} ${stockInfo}</div>
+                <div class="variant-name">${variant.name} - $${variant.price} ${stockInfo}</div>
             `;
-            
+
             thumbElement.addEventListener('click', () => {
                 if (variant.stock > 0) {
                     selectVariant(productId, variant.id, variants);
                 } else {
-                    showNotification('Esta variante no tiene stock disponible', 'error');
+                    showVariantNotification('Esta variante no tiene stock disponible', 'error');
                 }
             });
             
             variantsGrid.appendChild(thumbElement);
         });
-        
-        console.log(`✅ Miniaturas creadas para producto ${productId}`);
+
+        console.log(`✅ Miniaturas creadas para producto ${productId} (${variants.length} variantes)`);
     }
 
-    // Función para seleccionar variante
+    // Función MEJORADA para seleccionar una variante
     function selectVariant(productId, variantId, variants) {
-        console.log(`=== SELECCIONANDO VARIANTE ===`);
-        console.log(`Product ID: ${productId}, Variant ID: ${variantId}`);
-        
-        const selectedVariant = variants.find(v => v.id === variantId);
-        
-        if (selectedVariant) {
-            console.log('✅ Variante seleccionada:', selectedVariant);
+        console.log(`🔄 Seleccionando variante: ${productId} -> ${variantId}`);
 
-            // Guardar la variante seleccionada
+        const selectedVariant = variants.find(v => v.id === variantId);
+
+        if (selectedVariant) {
+            // Actualizar la variante seleccionada globalmente
             selectedVariants[productId] = variantId;
 
-            // Buscar y actualizar el título
+            // Actualizar título
             const titleElement = document.getElementById(`productTitle-${productId}`);
             if (titleElement) {
-                console.log('✅ Encontrado título:', titleElement);
+                // Si es el producto base, mostrar nombre original, sino mostrar nombre completo
                 if (selectedVariant.isBase) {
-                    // Si es base, mostrar solo el nombre original
                     const originalName = selectedVariant.name.replace(' - Estándar', '');
                     titleElement.textContent = originalName;
                 } else {
@@ -2061,40 +2114,76 @@
                 }
             }
 
-            // Actualizar la imagen principal
+            // Actualizar imagen principal
             const mainImage = document.getElementById(`mainProductImage-${productId}`);
-            if (mainImage) {
-                console.log(`🔄 Actualizando imagen principal`);
+            if (mainImage && selectedVariant.image) {
                 mainImage.src = selectedVariant.image;
                 mainImage.alt = selectedVariant.name;
             }
 
-            // Actualizar el precio
+            // Actualizar precio
             const priceElement = document.getElementById(`price-${productId}`);
             if (priceElement && selectedVariant.price) {
                 priceElement.textContent = `$${selectedVariant.price}`;
             }
 
-            // Actualizar stock info
-            const stockElement = document.getElementById(`stockInfo-${productId}`);
-            if (stockElement) {
-                stockElement.textContent = `Stock: ${selectedVariant.stock}`;
-            }
+            // Actualizar estado de selección en todas las variantes
+            variants.forEach(v => {
+                v.selected = v.id === variantId;
+            });
 
-            // Actualizar estado de selección y UI
-            variants.forEach(v => v.selected = v.id === variantId);
+            // Recrear miniaturas con nueva selección
             createVariantThumbnails(productId, variants);
-            
-            showNotification(`Variante seleccionada: ${selectedVariant.isBase ? 'Producto estándar' : selectedVariant.name}`, 'success');
-        } else {
-            console.log(`❌ No se encontró la variante ${variantId}`);
-            showNotification('Error al seleccionar variante', 'error');
+
+            // Mostrar notificación
+            const variantType = selectedVariant.isBase ? 'Producto estándar' : 'Variante especial';
+            showVariantNotification(`${variantType} seleccionado: ${selectedVariant.name}`, 'success');
+
+            console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
         }
     }
 
-    // ==================== SISTEMA DE CARRITO ====================
+    // Función para notificaciones de variantes
+    function showVariantNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+        });
 
-    // Función para agregar al carrito con variante
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    // Función MEJORADA para inicializar sistema de variantes
+    function initializeVariantsSystem() {
+        console.log("🚀 Inicializando sistema de variantes...");
+
+        try {
+            initializeVariantsData();
+
+            // Crear miniaturas para todos los productos con variantes
+            for (const [productId, variants] of Object.entries(productVariantsData)) {
+                createVariantThumbnails(productId, variants);
+                
+                // Aplicar selección inicial (base)
+                const baseVariant = variants.find(v => v.isBase);
+                if (baseVariant) {
+                    selectVariant(productId, baseVariant.id, variants);
+                }
+            }
+
+            console.log("✅ Sistema de variantes inicializado correctamente");
+        } catch (error) {
+            console.error("❌ Error inicializando sistema de variantes:", error);
+        }
+    }
+
+    // Función para agregar al carrito considerando variantes
     function addToCartWithVariant(productId) {
         console.log(`🛒 Agregando producto con variante: ${productId}`);
         
@@ -2103,7 +2192,7 @@
         
         if (!selectedVariantId) {
             console.log(`❌ No hay variante seleccionada para producto ${productId}`);
-            showNotification('Por favor selecciona una opción', 'error');
+            vecyShowNotification('Por favor selecciona una opción', 'error');
             return;
         }
         
@@ -2118,141 +2207,46 @@
         }
     }
 
-    // Función para agregar al carrito
-    function addToCart(productId, varianteId = null) {
-        console.log(`🛒 Intentando agregar producto ${productId} al carrito con variante: ${varianteId}`);
+    // ==================== FUNCIONES DEL CARRITO (URLS ABSOLUTAS) ====================
 
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-        });
-
-        Toast.fire({
-            icon: 'info',
-            title: 'Agregando al carrito...'
-        });
-
-        const datosEnvio = {
-            producto_id: productId,
-            cantidad: 1
-        };
-
-        if (varianteId && varianteId !== 'base') {
-            datosEnvio.variante_id = varianteId;
-            console.log(`📦 Enviando variante_id: ${varianteId}`);
-        }
-
-        fetch('/cliente/agregar-carrito/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(datosEnvio)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                updateCartCount(data.carrito_count);
-
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Producto agregado!',
-                    text: `${data.producto_nombre} se agregó al carrito`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-
-                console.log(`✅ Producto agregado al carrito: ${data.producto_nombre}`);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.message || 'No se pudo agregar el producto al carrito',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 4000
-                });
-
-                console.log(`❌ Error: ${data.message}`);
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error en fetch:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de conexión',
-                text: 'No se pudo conectar con el servidor',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 4000
-            });
-        });
-    }
-
-    // Función para actualizar contador del carrito
-    function updateCartCount(count) {
-        const cartBadges = document.querySelectorAll('.vecy-fab-badge, #cartOffcanvasCount, #cartFabBadge');
-        cartBadges.forEach(badge => {
-            if (badge) {
-                badge.textContent = count;
-                if (count > 0) {
-                    badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        });
-    }
-
-    // Función para obtener cookie CSRF
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Función para abrir/cerrar el carrito
+    // Función para abrir el carrito
     function toggleCart() {
+        console.log("🛒 Abriendo carrito...");
         const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyCartOffcanvas'));
         cartOffcanvas.show();
         loadCartContent();
     }
 
-    // Función para cargar contenido del carrito
+    // Función para cargar el contenido del carrito via AJAX
     function loadCartContent() {
         const cartItemsContainer = document.getElementById('cartItemsContainer');
         const cartLoading = document.getElementById('cartLoading');
         const cartContent = document.getElementById('cartContent');
 
-        if (!cartItemsContainer) return;
+        if (!cartItemsContainer) {
+            console.log('❌ No se encontró cartItemsContainer');
+            return;
+        }
 
+        console.log("📦 Cargando contenido del carrito...");
+
+        // Mostrar loading
         cartContent.style.display = 'none';
         cartLoading.style.display = 'block';
 
-        fetch('/cliente/carrito-data/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 renderCartItems(data.items, data.totales);
@@ -2261,7 +2255,7 @@
             }
         })
         .catch(error => {
-            console.error('Error cargando carrito:', error);
+            console.error('❌ Error cargando carrito:', error);
             showCartEmptyState();
         })
         .finally(() => {
@@ -2270,7 +2264,7 @@
         });
     }
 
-    // Función para renderizar items del carrito
+    // Función para renderizar los items del carrito
     function renderCartItems(items, totales) {
         const container = document.getElementById('cartItemsContainer');
         const cartSubtotal = document.getElementById('cartSubtotal');
@@ -2333,7 +2327,10 @@
 
         container.innerHTML = html;
 
+        // Mostrar resumen
         if (cartSummary) cartSummary.style.display = 'block';
+
+        // Actualizar totales
         if (cartSubtotal) cartSubtotal.textContent = `$${totales.subtotal.toFixed(0)}`;
         if (cartTotal) cartTotal.textContent = `$${totales.total.toFixed(0)}`;
 
@@ -2367,7 +2364,10 @@
 
     // Función para actualizar cantidad
     function updateCartItemQuantity(itemId, change) {
-        fetch('/cliente/actualizar-cantidad-carrito/', {
+        console.log(`🔄 Actualizando cantidad del item ${itemId}, cambio: ${change}`);
+
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.ACTUALIZAR_CANTIDAD, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2378,25 +2378,33 @@
                 cambio: change
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 loadCartContent();
                 updateCartCount(data.carrito_count);
-                showNotification('Cantidad actualizada', 'success');
+                vecyShowNotification('Cantidad actualizada', 'success');
             } else {
-                showNotification(data.message, 'error');
+                vecyShowNotification(data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error actualizando cantidad:', error);
-            showNotification('Error actualizando cantidad', 'error');
+            vecyShowNotification('Error actualizando cantidad', 'error');
         });
     }
 
     // Función para eliminar item
     function removeCartItem(itemId) {
-        fetch('/cliente/eliminar-item-carrito/', {
+        console.log(`🗑️ Eliminando item ${itemId}`);
+
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.ELIMINAR_ITEM, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2406,79 +2414,176 @@
                 item_id: itemId
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 loadCartContent();
                 updateCartCount(data.carrito_count);
-                showNotification('Producto eliminado del carrito', 'success');
+                vecyShowNotification('Producto eliminado del carrito', 'success');
             } else {
-                showNotification(data.message, 'error');
+                vecyShowNotification(data.message, 'error');
             }
         })
         .catch(error => {
             console.error('Error eliminando item:', error);
-            showNotification('Error eliminando producto', 'error');
+            vecyShowNotification('Error eliminando producto', 'error');
         });
     }
 
-    // ==================== SISTEMA DE PAGOS ====================
+    // ==================== FUNCIONES DE PRODUCTOS (URLS ABSOLUTAS) ====================
 
-    // Función para proceder al pago - VERSIÓN MEJORADA
+    // Función para agregar al carrito
+    function addToCart(productId, varianteId = null) {
+        const numericProductId = productId;
+        const varianteSeleccionada = varianteId || selectedVariants[numericProductId];
+
+        console.log(`🛒 Intentando agregar producto ${numericProductId} al carrito con variante: ${varianteSeleccionada}`);
+
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+        });
+
+        Toast.fire({
+            icon: 'info',
+            title: 'Agregando al carrito...'
+        });
+
+        const datosEnvio = {
+            producto_id: numericProductId,
+            cantidad: 1
+        };
+
+        if (varianteSeleccionada && varianteSeleccionada !== 'base') {
+            datosEnvio.variante_id = varianteSeleccionada;
+            console.log(`📦 Enviando variante_id: ${varianteSeleccionada}`);
+        } else {
+            console.log(`📦 Producto base, sin variante_id`);
+        }
+
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.AGREGAR_CARRITO, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(datosEnvio)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                updateCartCount(data.carrito_count);
+
+                // Recargar el carrito si está abierto
+                const cartOffcanvas = document.getElementById('vecyCartOffcanvas');
+                if (cartOffcanvas && cartOffcanvas.classList.contains('show')) {
+                    loadCartContent();
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Producto agregado!',
+                    text: `${data.producto_nombre} se agregó al carrito`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+
+                console.log(`✅ Producto agregado al carrito: ${data.producto_nombre}`);
+            } else {
+                throw new Error(data.message || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en fetch:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'No se pudo agregar el producto al carrito',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000
+            });
+        });
+    }
+
+    // Función para actualizar contador del carrito
+    function updateCartCount(count) {
+        const cartBadges = document.querySelectorAll('.vecy-fab-badge, #cartOffcanvasCount, #cartFabBadge');
+
+        cartBadges.forEach(badge => {
+            if (badge) {
+                badge.textContent = count;
+                if (count > 0) {
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // ==================== FUNCIONES DE PAGO (URLS ABSOLUTAS) ====================
+
+    // Función para proceder al pago
     function procederPago() {
-        console.log("🔄 Iniciando proceso de pago...");
-        
-        // Verificar que el carrito tenga items
         const cartItemsContainer = document.getElementById('cartItemsContainer');
         if (!cartItemsContainer || cartItemsContainer.innerHTML.includes('empty-cart-icon')) {
-            showNotification('Tu carrito está vacío', 'error');
+            vecyShowNotification('Tu carrito está vacío', 'error');
             return;
         }
 
-        // Cerrar el offcanvas del carrito
-        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
-        if (cartOffcanvas) {
-            cartOffcanvas.hide();
-        }
-
-        // Mostrar modal de métodos de pago
         mostrarModalMetodosPago();
     }
 
     // Función para mostrar modal de métodos de pago
     function mostrarModalMetodosPago() {
-        console.log("💰 Mostrando modal de métodos de pago...");
-        
-        // Cargar resumen del pedido
         cargarResumenPedido();
 
-        // Mostrar el modal
         const modal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
         modal.show();
 
-        // Configurar eventos
         configurarEventosMetodosPago();
     }
 
     // Función para cargar el resumen del pedido
     function cargarResumenPedido() {
-        fetch('/cliente/carrito-data/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 mostrarResumenPedido(data.items, data.totales);
-            } else {
-                showNotification('Error cargando resumen del pedido', 'error');
             }
         })
         .catch(error => {
             console.error('Error cargando resumen:', error);
-            showNotification('Error de conexión', 'error');
         });
     }
 
@@ -2593,22 +2698,22 @@
             const clave = document.getElementById('nequiClave').value.trim();
 
             if (!telefono) {
-                showNotification('Por favor ingresa tu número de teléfono Nequi', 'error');
+                vecyShowNotification('Por favor ingresa tu número de teléfono Nequi', 'error');
                 return false;
             }
 
             if (!/^\d{10}$/.test(telefono)) {
-                showNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                vecyShowNotification('El número de teléfono debe tener 10 dígitos', 'error');
                 return false;
             }
 
             if (!clave) {
-                showNotification('Por favor ingresa la clave dinámica', 'error');
+                vecyShowNotification('Por favor ingresa la clave dinámica', 'error');
                 return false;
             }
 
             if (!/^\d{6}$/.test(clave)) {
-                showNotification('La clave dinámica debe tener 6 dígitos', 'error');
+                vecyShowNotification('La clave dinámica debe tener 6 dígitos', 'error');
                 return false;
             }
 
@@ -2619,22 +2724,22 @@
             const clave = document.getElementById('daviplataClave').value.trim();
 
             if (!telefono) {
-                showNotification('Por favor ingresa tu número de teléfono DaviPlata', 'error');
+                vecyShowNotification('Por favor ingresa tu número de teléfono DaviPlata', 'error');
                 return false;
             }
 
             if (!/^\d{10}$/.test(telefono)) {
-                showNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                vecyShowNotification('El número de teléfono debe tener 10 dígitos', 'error');
                 return false;
             }
 
             if (!clave) {
-                showNotification('Por favor ingresa tu clave de 4 dígitos', 'error');
+                vecyShowNotification('Por favor ingresa tu clave de 4 dígitos', 'error');
                 return false;
             }
 
             if (!/^\d{4}$/.test(clave)) {
-                showNotification('La clave debe tener 4 dígitos', 'error');
+                vecyShowNotification('La clave debe tener 4 dígitos', 'error');
                 return false;
             }
 
@@ -2647,7 +2752,7 @@
     // Función para confirmar el pago (modal principal)
     function confirmarPago() {
         if (!metodoPagoSeleccionado) {
-            showNotification('Por favor selecciona un método de pago', 'error');
+            vecyShowNotification('Por favor selecciona un método de pago', 'error');
             return;
         }
 
@@ -2681,13 +2786,19 @@
 
     // Función para cargar resumen en modal de transferencia
     function cargarResumenTransferencia() {
-        fetch('/cliente/carrito-data/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 mostrarResumenTransferencia(data.items, data.totales);
@@ -2758,7 +2869,7 @@
     // Función para copiar al portapapeles
     function copiarAlPortapapeles(texto) {
         navigator.clipboard.writeText(texto).then(() => {
-            showNotification('Copiado al portapapeles', 'success');
+            vecyShowNotification('Copiado al portapapeles', 'success');
         }).catch(err => {
             console.error('Error al copiar: ', err);
         });
@@ -2787,7 +2898,8 @@
     function procesarPagoTransferencia(metodoCompleto) {
         console.log(`🔄 Procesando transferencia: ${metodoCompleto}`);
 
-        fetch('/cliente/procesar-pedido/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.PROCESAR_PEDIDO, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2798,17 +2910,22 @@
                 metodo_pago_texto: metodoCompleto
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 mostrarConfirmacionTransferencia(data, metodoCompleto);
             } else {
-                showNotification(data.message || 'Error al procesar la transferencia', 'error');
+                vecyShowNotification(data.message || 'Error al procesar la transferencia', 'error');
             }
         })
         .catch(error => {
             console.error('Error procesando transferencia:', error);
-            showNotification('Error de conexión al procesar la transferencia', 'error');
+            vecyShowNotification('Error de conexión al procesar la transferencia', 'error');
         });
     }
 
@@ -2869,7 +2986,8 @@
             datosEnvio.datos_billetera = datosPago;
         }
 
-        fetch('/cliente/procesar-pedido/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.PROCESAR_PEDIDO, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2877,17 +2995,22 @@
             },
             body: JSON.stringify(datosEnvio)
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 mostrarConfirmacionPago(data, metodoTexto);
             } else {
-                showNotification(data.message || 'Error al procesar el pago', 'error');
+                vecyShowNotification(data.message || 'Error al procesar el pago', 'error');
             }
         })
         .catch(error => {
             console.error('Error procesando pago:', error);
-            showNotification('Error de conexión al procesar el pago', 'error');
+            vecyShowNotification('Error de conexión al procesar el pago', 'error');
         })
         .finally(() => {
             confirmarBtn.innerHTML = originalText;
@@ -2931,14 +3054,36 @@
         updateCartCount(0);
     }
 
+    // ==================== FUNCIONES UTILITARIAS ====================
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     // Función para notificaciones
-    function showNotification(message, type = 'info') {
+    function vecyShowNotification(message, type = 'info') {
         const Toast = Swal.mixin({
             toast: true,
             position: 'top-end',
             showConfirmButton: false,
             timer: 3000,
             timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
         });
 
         Toast.fire({
@@ -2947,87 +3092,110 @@
         });
     }
 
-    // ==================== INICIALIZACIÓN ====================
+    // Otras funciones
+    function addToFavorites(productId) {
+        vecyShowNotification('Producto agregado a favoritos', 'success');
+    }
 
-    // Inicializar componentes cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("🚀 Inicializando componentes de productos...");
+    function quickView(productId) {
+        vecyShowNotification('Función de vista rápida', 'info');
+    }
+
+    function showSupport() {
+        vecyShowNotification('Redirigiendo a soporte...', 'info');
+    }
+
+    function toggleFavorites() {
+        vecyShowNotification('Abriendo favoritos...', 'info');
+    }
+
+    // ==================== INICIALIZACIÓN COMPLETA ====================
+
+    // Inicializar inmediatamente
+    function initVecy() {
+        console.log("🚀 INICIANDO VECY PRODUCTOS FILTRADOS");
         
-        // Inicializar variantes
-        const productVariantsData = initializeVariantsData();
-        for (const [productId, variants] of Object.entries(productVariantsData)) {
-            console.log(`🔄 Creando variantes para ${productId}`);
-            createVariantThumbnails(productId, variants);
-            
-            // Establecer la variante base como seleccionada por defecto
-            const baseVariant = variants.find(v => v.isBase);
-            if (baseVariant) {
-                selectedVariants[productId] = baseVariant.id;
-                selectVariant(productId, baseVariant.id, variants);
-            }
+        // 1. AOS
+        if (typeof AOS !== 'undefined') {
+            AOS.init({ duration: 800, once: true, offset: 100 });
+            console.log("✅ AOS inicializado");
         }
-
-        // Configurar FAB
+        
+        // 2. FAB
         const fabMain = document.querySelector('.vecy-fab-main');
         const fabMenu = document.querySelector('.vecy-fab-menu');
         if (fabMain && fabMenu) {
-            fabMain.addEventListener('click', () => {
-                fabMenu.classList.toggle('active');
-            });
-            
-            // Cerrar menú al hacer clic fuera
+            fabMain.addEventListener('click', () => fabMenu.classList.toggle('active'));
             document.addEventListener('click', (e) => {
                 if (!e.target.closest('.vecy-floating-actions')) {
                     fabMenu.classList.remove('active');
                 }
             });
+            console.log("✅ FAB configurado");
         }
-
-        // Auto-submit del formulario cuando cambia el ordenamiento
-        const sortSelect = document.querySelector('.sort-select');
-        if (sortSelect) {
-            sortSelect.addEventListener('change', function() {
-                document.getElementById('filters-form').submit();
-            });
-        }
-
-        // Auto-submit cuando cambian los radio buttons
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                document.getElementById('filters-form').submit();
+        
+        // 3. SCROLL SUAVE
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
         });
-
-        // Cargar contador inicial del carrito
+        console.log("✅ Scroll suave configurado");
+        
+        // 4. SISTEMA DE VARIANTES - CON RETRASO PARA GARANTIZAR QUE EL DOM ESTÉ LISTO
+        setTimeout(() => {
+            console.log("🔄 INICIANDO SISTEMA DE VARIANTES...");
+            try {
+                initializeVariantsSystem();
+                console.log("✅ Sistema de variantes inicializado exitosamente");
+            } catch (error) {
+                console.error("❌ Error inicializando sistema de variantes:", error);
+            }
+        }, 500);
+        
+        // 5. CARGAR CONTADOR INICIAL DEL CARRITO
         loadInitialCartCount();
-    });
+        
+        console.log("✅ VECY PRODUCTOS FILTRADOS INICIALIZADO");
+    }
 
-    // Cargar contador inicial del carrito
+    // Función para cargar contador inicial del carrito
     function loadInitialCartCount() {
-        fetch('/cliente/carrito-data/', {
+        // ✅ USAR URL ABSOLUTA
+        fetch(URLS.CARRITO_DATA, {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 updateCartCount(data.carrito_count);
+            } else {
+                updateCartCount(0);
             }
         })
         .catch(error => {
-            console.error('Error cargando contador del carrito:', error);
+            console.error('❌ Error cargando contador del carrito:', error);
+            updateCartCount(0);
         });
     }
 
-    // Funciones del FAB
-    function toggleFavorites() {
-        showNotification('Funcionalidad de favoritos en desarrollo', 'info');
-    }
+    // Ejecutar inmediatamente
+    initVecy();
 
-    function showSupport() {
-        showNotification('Redirigiendo a soporte...', 'info');
-    }
+    // También ejecutar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', initVecy);
+
+    // Y ejecutar cuando la ventana se cargue
+    window.addEventListener('load', initVecy);
 </script>
 {% endblock %}
