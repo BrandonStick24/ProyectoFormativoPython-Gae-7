@@ -34,7 +34,7 @@
                         <div class="estadistica-icono">
                             <i class="fas fa-percentage"></i>
                         </div>
-                        <div class="estadistica-numero">{{ productos_con_variantes|length }}</div>
+                        <div class="estadistica-numero" id="contadorVariantes">0</div>
                         <div class="estadistica-titulo">Con Variantes</div>
                     </div>
                 </div>
@@ -95,6 +95,9 @@
             <a href="{% url 'verificar_estado_ofertas' %}" class="boton-accion boton-primario">
                 <i class="fas fa-sync-alt"></i> Actualizar Estado
             </a>
+            <button class="boton-accion boton-info" onclick="mostrarDebugInfo()">
+                <i class="fas fa-bug"></i> Info Debug
+            </button>
         </div>
 
         <div class="grupo-busqueda-filtros">
@@ -109,6 +112,13 @@
                     {% for producto in productos %}
                         <option value="{{ producto.categoria }}">{{ producto.categoria }}</option>
                     {% endfor %}
+                </select>
+                
+                <select class="select-filtro" id="filtroStock">
+                    <option value="">Todo el stock</option>
+                    <option value="con_stock">Con stock</option>
+                    <option value="solo_variantes">Solo con variantes</option>
+                    <option value="sin_stock">Sin stock principal</option>
                 </select>
                 
                 <button class="boton-accion boton-secundario" onclick="limpiarFiltros()">
@@ -129,7 +139,11 @@
             {% for producto in productos %}
             <div class="producto-card-oferta producto-item" 
                  data-nombre="{{ producto.nombre|lower }}" 
-                 data-categoria="{{ producto.categoria }}">
+                 data-categoria="{{ producto.categoria }}"
+                 data-stock="{{ producto.stock }}"
+                 data-stock-principal="{{ producto.stock_principal }}"
+                 data-tiene-variantes="{{ producto.tiene_variantes_activas|yesno:'true,false' }}"
+                 data-stock-variantes="{{ producto.stock_variantes_total }}">
                 <div class="producto-header-oferta">
                     <div class="producto-info-basica">
                         <h5 class="producto-nombre">{{ producto.nombre }}</h5>
@@ -138,25 +152,40 @@
                             <span class="producto-categoria">{{ producto.categoria }}</span>
                         </div>
                         <div class="producto-stock-info">
+                            <!-- Stock total corregido que incluye variantes -->
                             <span class="badge-stock {% if producto.stock == 0 %}stock-critico{% elif producto.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                <i class="fas fa-box"></i> Stock: {{ producto.stock }}
+                                <i class="fas fa-box"></i> Stock Total: {{ producto.stock }}
                             </span>
+                            {% if producto.stock_principal == 0 and producto.tiene_variantes_activas %}
+                                <small class="text-info">
+                                    <i class="fas fa-layer-group"></i> Stock en variantes: {{ producto.stock_variantes_total }}
+                                </small>
+                            {% elif producto.stock_principal > 0 and producto.tiene_variantes_activas %}
+                                <small class="text-muted">
+                                    <i class="fas fa-box"></i> Principal: {{ producto.stock_principal }} | 
+                                    <i class="fas fa-layer-group"></i> Variantes: {{ producto.stock_variantes_total }}
+                                </small>
+                            {% endif %}
                             <small class="producto-id">ID: {{ producto.id }}</small>
                         </div>
                     </div>
                 </div>
                 
                 <div class="producto-acciones-oferta">
-                    <!-- Botón principal para producto base -->
-                    <button type="button" class="btn btn-producto-base seleccionar-producto"
+                    <!-- Botón principal para producto base - MOSTRAR SIEMPRE PERO VALIDAR STOCK -->
+                    <button type="button" class="btn btn-producto-base seleccionar-producto {% if producto.stock_principal == 0 %}sin-stock-principal{% endif %}"
                             data-producto-id="{{ producto.id }}"
                             data-producto-nombre="{{ producto.nombre }}"
                             data-producto-precio="{{ producto.precio }}"
-                            data-producto-stock="{{ producto.stock }}"
+                            data-producto-stock="{{ producto.stock_principal }}"
                             data-producto-categoria="{{ producto.categoria }}"
-                            data-variante-id="">
+                            data-variante-id=""
+                            {% if producto.stock_principal == 0 %}disabled title="Producto base sin stock"{% endif %}>
                         <i class="fas fa-tag"></i>
                         <span>Producto Base</span>
+                        <span class="stock-badge {% if producto.stock_principal == 0 %}stock-critico{% elif producto.stock_principal <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                            {{ producto.stock_principal }} disp.
+                        </span>
                     </button>
                     
                     <!-- Botón desplegable para variantes -->
@@ -170,21 +199,42 @@
                         
                         <div class="variantes-lista">
                             {% for variante in producto.variantes %}
-                            <button type="button" class="btn btn-variante seleccionar-producto"
+                            <button type="button" class="btn btn-variante seleccionar-producto {% if variante.stock == 0 %}sin-stock-variante{% endif %}"
                                     data-producto-id="{{ producto.id }}"
                                     data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
                                     data-producto-precio="{{ variante.precio_total }}"
                                     data-producto-stock="{{ variante.stock }}"
                                     data-producto-categoria="{{ producto.categoria }}"
-                                    data-variante-id="{{ variante.id }}">
+                                    data-variante-id="{{ variante.id }}"
+                                    {% if variante.stock == 0 %}disabled title="Variante sin stock"{% endif %}>
                                 <i class="fas fa-cube"></i>
                                 <span class="variante-nombre">{{ variante.nombre }}</span>
                                 <span class="variante-precio">${{ variante.precio_total }}</span>
+                                <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                    {{ variante.stock }} disp.
+                                </span>
                             </button>
                             {% endfor %}
                         </div>
                     </div>
+                    {% else %}
+                    <!-- Indicador cuando no hay variantes -->
+                    <div class="sin-variantes">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle"></i> No tiene variantes configuradas
+                        </small>
+                    </div>
                     {% endif %}
+                </div>
+                
+                <!-- Debug info (solo visible en desarrollo) -->
+                <div class="debug-info" style="display: none;">
+                    <small class="text-muted">
+                        Debug: Principal:{{ producto.stock_principal }} | 
+                        Variantes:{{ producto.stock_variantes_total }} | 
+                        Total:{{ producto.stock }} | 
+                        TieneVar:{{ producto.tiene_variantes_activas }}
+                    </small>
                 </div>
             </div>
             {% empty %}
@@ -192,19 +242,23 @@
                 <i class="fas fa-box-open fa-3x"></i>
                 <h4>No hay productos disponibles</h4>
                 <p>No hay productos disponibles para crear ofertas en este momento.</p>
+                <button class="btn btn-primary mt-2" onclick="recargarPagina()">
+                    <i class="fas fa-sync-alt"></i> Recargar Página
+                </button>
             </div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- Configuración de Ofertas - Diseño Mejorado -->
+    <!-- Configuración de Ofertas - CORREGIDO CON SCROLL FUNCIONAL -->
     <div class="seccion-configuracion">
         <div class="seccion-header">
             <h3><i class="fas fa-cog me-2"></i>Configurar Ofertas</h3>
             <span class="contador-seccion" id="contadorProductosSeleccionados">0</span>
         </div>
         
-        <div class="contenedor-configuraciones" id="configuracionesProductos">
+        <!-- CONTENEDOR CORREGIDO CON SCROLL -->
+        <div class="contenedor-configuraciones-scroll" id="configuracionesProductos">
             <div class="estado-vacio" id="mensajeVacio">
                 <i class="fas fa-tags fa-3x"></i>
                 <h4>Sin productos seleccionados</h4>
@@ -236,6 +290,9 @@
                             <div class="oferta-meta">
                                 <span class="oferta-fecha">Creada: {{ oferta.fecha_creacion }}</span>
                                 <span class="badge-tipo-oferta">{{ oferta.tipo_oferta|title }}</span>
+                                {% if oferta.variante_id %}
+                                <span class="badge-variante">Variante</span>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -258,12 +315,14 @@
                         
                         <div class="detalle-stock">
                             <div class="progreso-stock">
-                                <div class="progreso-bar" style="width: {{ oferta.stock_disponible|divisibleby:oferta.stock_oferta }}%"></div>
+                                {% if oferta.stock_oferta > 0 %}
+                                <div class="progreso-bar" style="width: {{ oferta.stock_actual_oferta|floatformat:0|default:0|divisibleby:oferta.stock_oferta }}%"></div>
+                                {% endif %}
                             </div>
                             <div class="stock-info">
-                                <span>Stock: {{ oferta.stock_disponible }}/{{ oferta.stock_oferta }}</span>
+                                <span>Stock: {{ oferta.stock_actual_oferta }}/{{ oferta.stock_oferta }}</span>
                                 {% if oferta.tipo_oferta == 'stock' %}
-                                <small>Actual: {{ oferta.stock_actual_oferta }}</small>
+                                <small>Disponible: {{ oferta.stock_disponible }}</small>
                                 {% endif %}
                             </div>
                         </div>
@@ -318,10 +377,56 @@ document.addEventListener('DOMContentLoaded', function() {
     let productosSeleccionados = [];
     const buscarInput = document.getElementById('buscarProductos');
     const filtroCategoria = document.getElementById('filtroCategoria');
+    const filtroStock = document.getElementById('filtroStock');
     const productosItems = document.querySelectorAll('.producto-item');
     const configuraciones = document.getElementById('configuracionesProductos');
     const mensajeVacio = document.getElementById('mensajeVacio');
     const contador = document.getElementById('contadorProductosSeleccionados');
+    const contadorVariantes = document.getElementById('contadorVariantes');
+
+    // Calcular contador de productos con variantes
+    function calcularContadorVariantes() {
+        let contador = 0;
+        productosItems.forEach(item => {
+            const tieneVariantes = item.getAttribute('data-tiene-variantes') === 'true';
+            if (tieneVariantes) {
+                contador++;
+            }
+        });
+        contadorVariantes.textContent = contador;
+    }
+
+    // Cargar productos seleccionados desde sessionStorage al iniciar
+    function cargarSeleccionGuardada() {
+        const seleccionGuardada = sessionStorage.getItem('productosSeleccionadosOfertas');
+        if (seleccionGuardada) {
+            try {
+                productosSeleccionados = JSON.parse(seleccionGuardada);
+                actualizarConfiguraciones();
+                actualizarContador();
+                
+                // Restaurar estado de botones seleccionados
+                productosSeleccionados.forEach(producto => {
+                    const [productoId, varianteId] = producto.key.split('-');
+                    const buttons = document.querySelectorAll(
+                        `.seleccionar-producto[data-producto-id="${productoId}"][data-variante-id="${varianteId}"]`
+                    );
+                    buttons.forEach(button => {
+                        button.disabled = true;
+                        button.classList.add('seleccionado');
+                    });
+                });
+            } catch (e) {
+                console.error('Error al cargar selección guardada:', e);
+                sessionStorage.removeItem('productosSeleccionadosOfertas');
+            }
+        }
+    }
+
+    // Guardar productos seleccionados en sessionStorage
+    function guardarSeleccion() {
+        sessionStorage.setItem('productosSeleccionadosOfertas', JSON.stringify(productosSeleccionados));
+    }
 
     // Obtener fecha y hora actual
     const now = new Date();
@@ -351,21 +456,36 @@ document.addEventListener('DOMContentLoaded', function() {
     // Búsqueda en tiempo real
     buscarInput.addEventListener('input', filtrarProductos);
     filtroCategoria.addEventListener('change', filtrarProductos);
+    filtroStock.addEventListener('change', filtrarProductos);
 
     function filtrarProductos() {
         const busqueda = buscarInput.value.toLowerCase();
         const categoria = filtroCategoria.value;
+        const filtroStockVal = filtroStock.value;
         
         let productosVisibles = 0;
         
         productosItems.forEach(item => {
             const nombre = item.getAttribute('data-nombre');
             const cat = item.getAttribute('data-categoria');
+            const stock = parseInt(item.getAttribute('data-stock'));
+            const stockPrincipal = parseInt(item.getAttribute('data-stock-principal'));
+            const tieneVariantes = item.getAttribute('data-tiene-variantes') === 'true';
+            const stockVariantes = parseInt(item.getAttribute('data-stock-variantes'));
             
             const coincideBusqueda = nombre.includes(busqueda);
             const coincideCategoria = !categoria || cat === categoria;
             
-            if (coincideBusqueda && coincideCategoria) {
+            let coincideFiltroStock = true;
+            if (filtroStockVal === 'con_stock') {
+                coincideFiltroStock = stock > 0;
+            } else if (filtroStockVal === 'solo_variantes') {
+                coincideFiltroStock = tieneVariantes && stockVariantes > 0;
+            } else if (filtroStockVal === 'sin_stock') {
+                coincideFiltroStock = stockPrincipal === 0 && tieneVariantes;
+            }
+            
+            if (coincideBusqueda && coincideCategoria && coincideFiltroStock) {
                 item.style.display = 'block';
                 productosVisibles++;
             } else {
@@ -380,7 +500,22 @@ document.addEventListener('DOMContentLoaded', function() {
     window.limpiarFiltros = function() {
         buscarInput.value = '';
         filtroCategoria.value = '';
+        filtroStock.value = '';
         filtrarProductos();
+    };
+
+    // Mostrar información de debug
+    window.mostrarDebugInfo = function() {
+        const debugElements = document.querySelectorAll('.debug-info');
+        debugElements.forEach(el => {
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+        });
+        mostrarNotificacion('Información de debug ' + (debugElements[0].style.display === 'none' ? 'oculta' : 'visible'), 'info');
+    };
+
+    // Recargar página
+    window.recargarPagina = function() {
+        window.location.reload();
     };
 
     // Seleccionar producto
@@ -406,9 +541,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 variante_id: varianteId
             };
 
+            // Validar que tenga stock disponible
+            if (producto.stock <= 0) {
+                mostrarNotificacion('Este producto/variante no tiene stock disponible', 'error');
+                return;
+            }
+
             productosSeleccionados.push(producto);
             actualizarConfiguraciones();
             actualizarContador();
+            guardarSeleccion(); // Guardar en sessionStorage
             
             // Deshabilitar el botón
             this.disabled = true;
@@ -426,10 +568,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (productosSeleccionados.length === 0) {
             mensajeVacio.style.display = 'flex';
             configuraciones.innerHTML = '';
+            configuraciones.classList.remove('con-scroll-activo');
             return;
         }
 
         mensajeVacio.style.display = 'none';
+        
+        // Activar scroll cuando hay 2 o más productos
+        if (productosSeleccionados.length >= 2) {
+            configuraciones.classList.add('con-scroll-activo');
+        } else {
+            configuraciones.classList.remove('con-scroll-activo');
+        }
         
         configuraciones.innerHTML = productosSeleccionados.map((producto, index) => `
             <div class="configuracion-oferta-card" data-key="${producto.key}">
@@ -454,12 +604,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 
                 <div class="configuracion-body">
-                    <form method="POST" action="{% url 'crear_oferta' %}" class="form-configuracion-oferta">
+                    <form method="POST" action="{% url 'crear_oferta' %}" class="form-configuracion-oferta" data-producto-key="${producto.key}">
                         {% csrf_token %}
                         <input type="hidden" name="producto_id" value="${producto.id}">
                         <input type="hidden" name="variante_id" value="${producto.variante_id}">
                         
-                        <div class="fila-configuracion">
+                        <div class="configuracion-grid-compacto">
                             <div class="campo-configuracion">
                                 <label class="etiqueta-campo">Descuento % *</label>
                                 <div class="grupo-input">
@@ -474,9 +624,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             <div class="campo-configuracion">
                                 <label class="etiqueta-campo">Stock oferta *</label>
-                                <input type="number" class="control-formulario" name="stock_oferta" 
-                                       value="1" min="1" max="${producto.stock}" required>
-                                <small class="texto-ayuda-campo">Máximo disponible: ${producto.stock}</small>
+                                <input type="number" class="control-formulario stock-oferta-input" 
+                                       name="stock_oferta" value="1" min="1" max="${producto.stock}" 
+                                       required data-stock-max="${producto.stock}">
+                                <small class="texto-ayuda-campo">Máximo: ${producto.stock}</small>
                             </div>
                             
                             <div class="campo-configuracion">
@@ -487,9 +638,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <option value="stock">Por stock</option>
                                 </select>
                             </div>
-                        </div>
-                        
-                        <div class="fila-configuracion">
+                            
                             <div class="campo-configuracion">
                                 <label class="etiqueta-campo">Fecha inicio *</label>
                                 <input type="date" class="control-formulario" name="fecha_inicio" 
@@ -515,27 +664,27 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>
                         
-                        <!-- Resumen de precios -->
-                        <div class="resumen-precios">
+                        <!-- Resumen de precios compacto -->
+                        <div class="resumen-precios-compacto">
                             <h6><i class="fas fa-calculator me-2"></i>Resumen de Precios</h6>
-                            <div class="grid-precios">
-                                <div class="item-precio">
-                                    <span class="etiqueta-precio">Precio original</span>
-                                    <span class="valor-precio">$${producto.precio}</span>
+                            <div class="precios-lista">
+                                <div class="precio-item">
+                                    <span>Precio original:</span>
+                                    <strong>$${producto.precio}</strong>
                                 </div>
-                                <div class="item-precio">
-                                    <span class="etiqueta-precio">Precio con descuento</span>
-                                    <span class="valor-precio precio-final" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</span>
+                                <div class="precio-item">
+                                    <span>Precio con descuento:</span>
+                                    <strong class="precio-final" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</strong>
                                 </div>
-                                <div class="item-precio">
-                                    <span class="etiqueta-precio">Ahorro para el cliente</span>
-                                    <span class="valor-precio ahorro-cliente" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</span>
+                                <div class="precio-item">
+                                    <span>Ahorro para el cliente:</span>
+                                    <strong class="ahorro-cliente" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</strong>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Información según tipo de oferta -->
-                        <div class="info-oferta" id="info-oferta-${index}">
+                        <div class="info-oferta-compacta" id="info-oferta-${index}">
                             <i class="fas fa-info-circle"></i>
                             <div class="info-contenido">
                                 <span id="info-tiempo-${index}">
@@ -549,7 +698,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         <!-- Botón de crear oferta -->
                         <div class="acciones-configuracion">
-                            <button type="submit" class="btn btn-crear-oferta">
+                            <button type="submit" class="btn btn-crear-oferta" 
+                                    data-producto-key="${producto.key}"
+                                    data-producto-nombre="${producto.nombre}">
                                 <i class="fas fa-tag me-2"></i>
                                 Crear Oferta para "${producto.nombre}"
                             </button>
@@ -573,6 +724,12 @@ document.addEventListener('DOMContentLoaded', function() {
             actualizarTipoOferta(select);
         });
 
+        document.querySelectorAll('.stock-oferta-input').forEach(input => {
+            input.addEventListener('input', function() {
+                validarStockOferta(this);
+            });
+        });
+
         document.querySelectorAll('.quitar-producto').forEach(btn => {
             btn.addEventListener('click', function() {
                 const productoKey = this.getAttribute('data-key');
@@ -580,11 +737,65 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
+        // Manejar envío de formularios - VERSIÓN CORREGIDA
         document.querySelectorAll('.form-configuracion-oferta').forEach(form => {
             form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
                 if (!validarFormularioOferta(this)) {
-                    e.preventDefault();
+                    return;
                 }
+
+                const productoKey = this.getAttribute('data-producto-key');
+                const productoNombre = this.querySelector('.btn-crear-oferta').getAttribute('data-producto-nombre');
+                const boton = this.querySelector('.btn-crear-oferta');
+                
+                // Mostrar loading
+                const textoOriginal = boton.innerHTML;
+                boton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creando oferta...';
+                boton.disabled = true;
+
+                // CORRECCIÓN: Remover el producto ANTES de enviar el formulario
+                quitarProducto(productoKey);
+                
+                // Enviar formulario normalmente
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        // Oferta creada exitosamente - ya removimos el producto
+                        mostrarNotificacion(`Oferta creada exitosamente para "${productoNombre}"`, 'success');
+                        
+                        // Recargar después de un breve delay
+                        setTimeout(() => {
+                            window.location.href = response.url;
+                        }, 1000);
+                        return;
+                    }
+                    
+                    // Si no hay redirección, asumir éxito
+                    mostrarNotificacion(`Oferta creada exitosamente para "${productoNombre}"`, 'success');
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacion('Error al crear la oferta. Recargando página...', 'error');
+                    
+                    // En caso de error, recargar la página
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                });
             });
         });
 
@@ -592,6 +803,16 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.descuento-input').forEach(input => {
             calcularPrecioFinal(input);
         });
+
+        // Hacer scroll al último elemento agregado si hay scroll activo
+        if (productosSeleccionados.length >= 2) {
+            setTimeout(() => {
+                const lastCard = configuraciones.lastElementChild;
+                if (lastCard) {
+                    lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }, 100);
+        }
     }
 
     function calcularPrecioFinal(input) {
@@ -621,13 +842,34 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function validarStockOferta(input) {
+        const stockMax = parseInt(input.getAttribute('data-stock-max'));
+        const stockValue = parseInt(input.value) || 0;
+        
+        if (stockValue > stockMax) {
+            input.value = stockMax;
+            mostrarNotificacion(`El stock de oferta no puede ser mayor a ${stockMax}`, 'warning');
+        }
+        
+        if (stockValue <= 0) {
+            input.value = 1;
+            mostrarNotificacion('El stock de oferta debe ser al menos 1', 'warning');
+        }
+    }
+
     function validarFormularioOferta(form) {
-        const stockInput = form.querySelector('input[name="stock_oferta"]');
-        const maxStock = parseInt(stockInput.max);
+        const stockInput = form.querySelector('.stock-oferta-input');
+        const maxStock = parseInt(stockInput.getAttribute('data-stock-max'));
         const stockValue = parseInt(stockInput.value);
         
         if (stockValue > maxStock) {
             mostrarNotificacion(`El stock de oferta no puede ser mayor a ${maxStock}`, 'error');
+            stockInput.focus();
+            return false;
+        }
+
+        if (stockValue <= 0) {
+            mostrarNotificacion('El stock de oferta debe ser mayor a 0', 'error');
             stockInput.focus();
             return false;
         }
@@ -671,7 +913,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         actualizarConfiguraciones();
         actualizarContador();
-        mostrarNotificacion('Producto removido de la configuración', 'info');
+        guardarSeleccion(); // Actualizar sessionStorage
     }
 
     // Limpiar toda la selección
@@ -695,6 +937,7 @@ document.addEventListener('DOMContentLoaded', function() {
             productosSeleccionados = [];
             actualizarConfiguraciones();
             actualizarContador();
+            sessionStorage.removeItem('productosSeleccionadosOfertas'); // Limpiar sessionStorage
             mostrarNotificacion('Todas las configuraciones han sido limpiadas', 'success');
         }
     };
@@ -752,6 +995,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 4000);
     }
+
+    // Cargar selección guardada al iniciar la página
+    cargarSeleccionGuardada();
+    calcularContadorVariantes();
 });
 </script>
 
@@ -1108,6 +1355,8 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .badge-stock {
@@ -1164,6 +1413,7 @@ document.addEventListener('DOMContentLoaded', function() {
     text-decoration: none;
     font-size: 0.9rem;
     justify-content: center;
+    position: relative;
 }
 
 .btn-producto-base {
@@ -1172,10 +1422,16 @@ document.addEventListener('DOMContentLoaded', function() {
     box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
 }
 
-.btn-producto-base:hover {
+.btn-producto-base:hover:not(:disabled) {
     background: linear-gradient(135deg, #4338CA, #6D28D9);
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+}
+
+.btn-producto-base:disabled {
+    background: #9CA3AF;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .btn-producto-base.seleccionado {
@@ -1229,12 +1485,19 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #374151;
     border: 1px solid #E5E7EB;
     justify-content: space-between;
+    align-items: center;
 }
 
-.btn-variante:hover {
+.btn-variante:hover:not(:disabled) {
     background: #E5E7EB;
     border-color: #4F46E5;
     transform: translateX(5px);
+}
+
+.btn-variante:disabled {
+    background: #F3F4F6;
+    color: #9CA3AF;
+    cursor: not-allowed;
 }
 
 .btn-variante.seleccionado {
@@ -1251,24 +1514,46 @@ document.addEventListener('DOMContentLoaded', function() {
 .variante-precio {
     font-weight: 600;
     color: #10B981;
+    margin-right: 0.5rem;
 }
 
-/* Configuración de Ofertas */
-.contenedor-configuraciones {
-    padding: 1.5rem;
+.stock-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 10px;
+    font-weight: 600;
+    min-width: 50px;
+    text-align: center;
+}
+
+/* CONFIGURACIÓN DE OFERTAS - CORREGIDO COMPLETAMENTE */
+.contenedor-configuraciones-scroll {
+    padding: 1rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-    max-height: 600px;
+    gap: 1rem;
+    max-height: 500px; /* Altura base */
     overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 200px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+}
+
+/* Cuando hay 2 o más productos, activar scroll con altura reducida */
+.contenedor-configuraciones-scroll.con-scroll-activo {
+    max-height: 400px; /* Altura reducida para scroll */
 }
 
 .configuracion-oferta-card {
-    background: #F8FAFC;
+    background: white;
     border: 1px solid #E5E7EB;
     border-radius: 12px;
-    overflow: hidden;
+    overflow: visible;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    min-height: auto;
+    flex-shrink: 0;
 }
 
 .configuracion-oferta-card:hover {
@@ -1277,8 +1562,8 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .configuracion-header {
-    background: white;
-    padding: 1.25rem;
+    background: #F8FAFC;
+    padding: 1rem;
     border-bottom: 1px solid #E5E7EB;
     display: flex;
     justify-content: space-between;
@@ -1287,33 +1572,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .configuracion-info {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     align-items: flex-start;
     flex: 1;
 }
 
 .configuracion-info i {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     margin-top: 0.25rem;
 }
 
 .configuracion-detalles h5 {
     color: #1F2937;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
     font-weight: 600;
+    font-size: 0.95rem;
 }
 
 .configuracion-meta {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     align-items: center;
     flex-wrap: wrap;
 }
 
 .configuracion-meta span {
-    padding: 0.3rem 0.6rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 500;
 }
 
@@ -1337,12 +1623,27 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #92400E;
 }
 
+.badge-variante {
+    background: #E0E7FF;
+    color: #3730A3;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
 .btn-quitar {
     background: #FEE2E2;
     color: #DC2626;
-    padding: 0.5rem;
-    border-radius: 8px;
+    padding: 0.4rem;
+    border-radius: 6px;
     transition: all 0.3s;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
 }
 
 .btn-quitar:hover {
@@ -1350,28 +1651,36 @@ document.addEventListener('DOMContentLoaded', function() {
     color: white;
 }
 
-/* Formulario de Configuración */
+/* DISEÑO COMPACTO DEL FORMULARIO */
 .configuracion-body {
-    padding: 1.5rem;
+    padding: 1rem;
+    min-height: auto;
 }
 
-.fila-configuracion {
+.form-configuracion-oferta {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.configuracion-grid-compacto {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 .campo-configuracion {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.25rem;
+    min-height: auto;
 }
 
 .etiqueta-campo {
     font-weight: 600;
     color: #374151;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .grupo-input {
@@ -1381,127 +1690,148 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .control-formulario {
     width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid #E5E7EB;
-    border-radius: 8px;
-    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    font-size: 0.85rem;
     transition: all 0.3s;
     background: white;
+    min-height: 38px;
+    box-sizing: border-box;
 }
 
 .control-formulario:focus {
     outline: none;
     border-color: #4F46E5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
 }
 
 .sufijo-input {
     position: absolute;
-    right: 1rem;
+    right: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
     color: #6B7280;
     font-weight: 500;
+    font-size: 0.8rem;
 }
 
 .texto-ayuda-campo {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     color: #6B7280;
 }
 
-/* Resumen de Precios */
-.resumen-precios {
-    background: white;
-    padding: 1.25rem;
-    border-radius: 10px;
+/* Resumen de precios compacto */
+.resumen-precios-compacto {
+    background: #F8FAFC;
+    padding: 0.75rem;
+    border-radius: 6px;
     border: 1px solid #E5E7EB;
-    margin: 1.5rem 0;
+    margin-bottom: 1rem;
+    min-height: auto;
 }
 
-.resumen-precios h6 {
+.resumen-precios-compacto h6 {
     color: #374151;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     font-weight: 600;
+    font-size: 0.85rem;
     display: flex;
     align-items: center;
 }
 
-.grid-precios {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
-}
-
-.item-precio {
+.precios-lista {
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.4rem;
 }
 
-.etiqueta-precio {
+.precio-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-size: 0.8rem;
+}
+
+.precio-item span {
     color: #6B7280;
 }
 
-.valor-precio {
-    font-weight: 700;
-    font-size: 1.1rem;
+.precio-item strong {
+    color: #1F2937;
+    font-size: 0.85rem;
 }
 
 .precio-final {
-    color: #10B981;
+    color: #10B981 !important;
 }
 
 .ahorro-cliente {
-    color: #EF4444;
+    color: #EF4444 !important;
 }
 
-/* Información de Oferta */
-.info-oferta {
+/* Información compacta de oferta */
+.info-oferta-compacta {
     background: #DBEAFE;
-    padding: 1rem;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border-radius: 6px;
     display: flex;
-    gap: 0.75rem;
+    gap: 0.5rem;
     align-items: flex-start;
-    margin: 1rem 0;
+    margin-bottom: 1rem;
+    min-height: auto;
 }
 
-.info-oferta i {
+.info-oferta-compacta i {
     color: #1E40AF;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     margin-top: 0.1rem;
+    flex-shrink: 0;
 }
 
 .info-contenido {
     flex: 1;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     color: #374151;
+    line-height: 1.3;
 }
 
-/* Botón Crear Oferta */
+/* Botón Crear Oferta - SIEMPRE VISIBLE */
 .acciones-configuracion {
     text-align: center;
-    margin-top: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #E5E7EB;
 }
 
 .btn-crear-oferta {
     background: var(--success-gradient);
     color: white;
-    padding: 1rem 2rem;
+    padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.9rem;
     transition: all 0.3s;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
     width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 48px;
 }
 
-.btn-crear-oferta:hover {
+.btn-crear-oferta:hover:not(:disabled) {
     background: linear-gradient(135deg, #059669, #047857);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-crear-oferta:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 
 /* Ofertas Activas */
@@ -1727,6 +2057,8 @@ document.addEventListener('DOMContentLoaded', function() {
     padding: 3rem;
     text-align: center;
     color: #6B7280;
+    height: 100%;
+    min-height: 200px;
 }
 
 .estado-vacio i {
@@ -1748,14 +2080,84 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #9CA3AF;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-    .contenedor-cards-grid {
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+/* SCROLLBAR MEJORADO - MÁS VISIBLE */
+.contenedor-configuraciones-scroll::-webkit-scrollbar {
+    width: 12px;
+}
+
+.contenedor-configuraciones-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 6px;
+    border: 1px solid #E5E7EB;
+}
+
+.contenedor-configuraciones-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+    border: 2px solid #f1f5f9;
+}
+
+.contenedor-configuraciones-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.contenedor-configuraciones-scroll::-webkit-scrollbar-thumb:active {
+    background: #64748b;
+}
+
+/* Para Firefox */
+.contenedor-configuraciones-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.boton-info {
+    background: #0EA5E9;
+    color: white;
+}
+
+.boton-info:hover {
+    background: #0284C7;
+    color: white;
+}
+
+.sin-stock-principal {
+    opacity: 0.6;
+}
+
+.sin-stock-variante {
+    opacity: 0.6;
+}
+
+.debug-info {
+    background: #FEF3C7;
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: #92400E;
+}
+
+.sin-variantes {
+    text-align: center;
+    padding: 0.5rem;
+    background: #F8FAFC;
+    border-radius: 6px;
+    border: 1px dashed #E5E7EB;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1200px) {
+    .configuracion-grid-compacto {
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .fila-configuracion {
-        grid-template-columns: 1fr;
+    .contenedor-configuraciones-scroll {
+        max-height: 450px;
+    }
+    
+    .contenedor-configuraciones-scroll.con-scroll-activo {
+        max-height: 350px;
     }
 }
 
@@ -1791,6 +2193,10 @@ document.addEventListener('DOMContentLoaded', function() {
         grid-template-columns: 1fr;
     }
     
+    .configuracion-grid-compacto {
+        grid-template-columns: 1fr;
+    }
+    
     .oferta-header {
         flex-direction: column;
         gap: 1rem;
@@ -1802,12 +2208,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     .configuracion-header {
         flex-direction: column;
-        gap: 1rem;
+        gap: 0.75rem;
     }
     
     .configuracion-meta {
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .configuracion-info {
+        width: 100%;
+    }
+    
+    .btn-quitar {
+        align-self: flex-end;
+    }
+    
+    .contenedor-configuraciones-scroll {
+        max-height: 400px;
+    }
+    
+    .contenedor-configuraciones-scroll.con-scroll-activo {
+        max-height: 300px;
     }
 }
 
@@ -1824,7 +2247,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     .contenedor-cards-grid,
-    .contenedor-configuraciones,
+    .contenedor-configuraciones-scroll,
     .contenedor-ofertas-activas {
         padding: 1rem;
     }
@@ -1835,6 +2258,37 @@ document.addEventListener('DOMContentLoaded', function() {
     .oferta-activa-card {
         padding: 1rem;
     }
+    
+    .configuracion-detalles h5 {
+        font-size: 0.9rem;
+    }
+    
+    .configuracion-meta span {
+        font-size: 0.7rem;
+        padding: 0.15rem 0.4rem;
+    }
+    
+    .contenedor-configuraciones-scroll {
+        max-height: 350px;
+    }
+    
+    .contenedor-configuraciones-scroll.con-scroll-activo {
+        max-height: 250px;
+    }
+    
+    .btn-crear-oferta {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+        min-height: 44px;
+    }
+    
+    .control-formulario {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        min-height: 36px;
+    }
+    
+    
 }
 </style>
 {% endblock %}

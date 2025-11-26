@@ -1,4 +1,4 @@
-# Software/vendedor_stock_views.py
+# Software/views/vendedor_stock_views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -146,78 +146,12 @@ def Stock_V(request):
         messages.error(request, f"Error al cargar el stock: {str(e)}")
         return redirect('inicio')
 
-@login_required(login_url='login')
-def ajustar_stock_producto(request, producto_id):
-    """Vista para ajustar manualmente el stock de un producto"""
-    if request.method == 'POST':
-        try:
-            nuevo_stock = int(request.POST.get('nuevo_stock'))
-            motivo = request.POST.get('motivo_ajuste', 'ajuste manual')
-            
-            datos = obtener_datos_vendedor(request)
-            if not datos or not datos.get('negocio_activo'):
-                messages.error(request, "No tienes un negocio activo.")
-                return redirect('inicio')
-            
-            negocio = datos['negocio_activo']
-            
-            with connection.cursor() as cursor:
-                # Verificar que el producto pertenece al negocio
-                cursor.execute("""
-                    SELECT stock_prod, nom_prod FROM productos 
-                    WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
-                """, [producto_id, negocio.pkid_neg])
-                
-                resultado = cursor.fetchone()
-                if not resultado:
-                    messages.error(request, "Producto no encontrado")
-                    return redirect('Crud_V')
-                
-                stock_anterior, nombre_producto = resultado
-                diferencia = nuevo_stock - stock_anterior
-                
-                # Actualizar stock
-                cursor.execute("""
-                    UPDATE productos 
-                    SET stock_prod = %s,
-                        estado_prod = CASE 
-                            WHEN %s <= 0 THEN 'agotado'
-                            WHEN %s > 0 THEN 'disponible'
-                            ELSE estado_prod
-                        END
-                    WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
-                """, [nuevo_stock, nuevo_stock, nuevo_stock, producto_id, negocio.pkid_neg])
-                
-                # Determinar tipo de movimiento
-                tipo_movimiento = 'ajuste'
-                if diferencia > 0:
-                    tipo_movimiento = 'entrada'
-                elif diferencia < 0:
-                    tipo_movimiento = 'salida'
-                
-                # Registrar movimiento de stock
-                cursor.execute("""
-                    INSERT INTO movimientos_stock 
-                    (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                     stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                """, [
-                    producto_id, negocio.pkid_neg, tipo_movimiento, motivo, 
-                    abs(diferencia), stock_anterior, nuevo_stock,
-                    datos['perfil'].id, datetime.now()
-                ])
-                
-                messages.success(request, f"✅ Stock de '{nombre_producto}' actualizado: {stock_anterior} → {nuevo_stock}")
-                
-        except Exception as e:
-            print(f"ERROR al ajustar stock: {str(e)}")
-            messages.error(request, f"Error al ajustar stock: {str(e)}")
-    
-    return redirect('Stock_V')
+# ==================== ELIMINAR LA FUNCIÓN DUPLICADA ajustar_stock_producto ====================
+# Esta función ahora está solo en vendedor_views.py
 
 @login_required(login_url='login')
 def entrada_stock_producto(request, producto_id):
-    """Vista para registrar entrada de stock (compra a proveedor)"""
+    """Vista para registrar entrada de stock (compra a proveedor) - REDIRIGE A STOCK"""
     if request.method == 'POST':
         try:
             cantidad_entrada = int(request.POST.get('cantidad_entrada'))
@@ -275,6 +209,7 @@ def entrada_stock_producto(request, producto_id):
             print(f"ERROR al registrar entrada: {str(e)}")
             messages.error(request, f"Error al registrar entrada: {str(e)}")
     
+    # IMPORTANTE: Esta función redirige a Stock_V porque se usa desde el dashboard de stock
     return redirect('Stock_V')
 
 @login_required(login_url='login')
