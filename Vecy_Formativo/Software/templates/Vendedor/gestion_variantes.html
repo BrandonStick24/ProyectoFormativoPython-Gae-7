@@ -600,7 +600,7 @@
                 </div>
                 <div class="info-item">
                     <span class="info-label">Precio Base</span>
-                    <span class="info-value precio-total">${{ producto.precio_prod }}</span>
+                    <span class="info-value precio-total">${{ producto.precio_prod|floatformat:2 }}</span>
                 </div>
                 <div class="info-item">
                     <span class="info-label">Stock Base</span>
@@ -612,7 +612,7 @@
                 </div>
                 <div class="info-item">
                     <span class="info-label">Categoría</span>
-                    <span class="info-value">{{ producto.fkcategoria_prod.desc_cp }}</span>
+                    <span class="info-value">{{ producto.categoria_nombre }}</span>
                 </div>
             </div>
         </div>
@@ -650,15 +650,38 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="text-muted">+ ${{ variante.precio_adicional }}</span>
+                                <span class="text-muted">+ ${{ variante.precio_adicional|floatformat:2 }}</span>
                             </td>
                             <td>
-                                <strong class="precio-total">${{ variante.precio_total }}</strong>
+                                <strong class="precio-total">${{ variante.precio_total|floatformat:2 }}</strong>
                             </td>
                             <td>
                                 <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
                                     <i class="fas fa-box"></i> {{ variante.stock }} unidades
                                 </span>
+                                
+                                <!-- Botones rápidos de ajuste de stock -->
+                                <div class="mt-2">
+                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="tipo_ajuste" value="entrada">
+                                        <input type="hidden" name="motivo_ajuste" value="ajuste_rapido">
+                                        <input type="hidden" name="cantidad_ajuste" value="1">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Agregar 1 unidad">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </form>
+
+                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="tipo_ajuste" value="salida">
+                                        <input type="hidden" name="motivo_ajuste" value="ajuste_rapido">
+                                        <input type="hidden" name="cantidad_ajuste" value="1">
+                                        <button type="submit" class="btn btn-sm btn-warning" title="Quitar 1 unidad">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                             <td>
                                 <span class="badge {% if variante.estado == 'activa' %}bg-success{% else %}bg-secondary{% endif %}">
@@ -668,40 +691,197 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-warning" 
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#modalEditarVariante"
-                                            data-variante-id="{{ variante.id }}"
-                                            data-variante-nombre="{{ variante.nombre }}"
-                                            data-variante-precio="{{ variante.precio_adicional }}"
-                                            data-variante-stock="{{ variante.stock }}"
-                                            data-variante-sku="{{ variante.sku|default:'' }}"
-                                            data-variante-estado="{{ variante.estado }}"
-                                            title="Editar variante">
+                                    <!-- Botón Editar - MODIFICADO para usar modal específico -->
+                                    <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalEditarVariante{{ variante.id }}" title="Editar variante">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    
-                                    <button class="btn btn-outline-info"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#modalAjustarStockVariante"
-                                            data-variante-id="{{ variante.id }}"
-                                            data-variante-nombre="{{ variante.nombre }}"
-                                            data-variante-stock="{{ variante.stock }}"
-                                            title="Ajustar stock">
+
+                                    <!-- Botón Ajustar Stock -->
+                                    <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalAjustarStockVariante{{ variante.id }}" title="Ajustar stock">
                                         <i class="fas fa-boxes"></i>
                                     </button>
-                                    
+
+                                    <!-- Botón Eliminar -->
                                     <form method="post" action="{% url 'eliminar_variante' variante.id %}" class="d-inline">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn btn-outline-danger" 
-                                                onclick="return confirm('¿Estás seguro de eliminar la variante \"{{ variante.nombre }}\"?')"
-                                                title="Eliminar variante">
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('¿Estás seguro de eliminar la variante \'{{ variante.nombre }}\'?')" title="Eliminar variante">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
                                 </div>
                             </td>
                         </tr>
+                        
+                        <!-- Modal Editar Variante para esta variante específica - NUEVO -->
+                        <div class="modal fade" id="modalEditarVariante{{ variante.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-edit me-2"></i>
+                                            Editar Variante - {{ variante.nombre }}
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="post" action="{% url 'editar_variante' %}" enctype="multipart/form-data">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="variante_id" value="{{ variante.id }}">
+                                        <div class="modal-body">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Editando: <strong>{{ variante.nombre }}</strong>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Nombre de la Variante *</label>
+                                                        <input type="text" class="form-control" name="nombre_variante" value="{{ variante.nombre }}" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Precio Adicional</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" class="form-control" name="precio_adicional" value="{{ variante.precio_adicional }}" step="0.01" min="0">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Stock</label>
+                                                        <input type="number" class="form-control" name="stock_variante" value="{{ variante.stock }}" min="0">
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Estado</label>
+                                                        <select class="form-control" name="estado_variante">
+                                                            <option value="activa" {% if variante.estado == 'activa' %}selected{% endif %}>Activa</option>
+                                                            <option value="inactiva" {% if variante.estado == 'inactiva' %}selected{% endif %}>Inactiva</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Imagen de la Variante</label>
+                                                <input type="file" class="form-control" name="imagen_variante" accept="image/*">
+                                                <div class="form-text">
+                                                    {% if variante.imagen %}
+                                                        Imagen actual: {{ variante.imagen }}
+                                                    {% else %}
+                                                        No hay imagen actual
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+
+                                            <!-- Preview de precio actualizado -->
+                                            <div class="precio-preview">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-6">
+                                                        <span class="precio-base">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            Precio base: ${{ producto.precio_prod|floatformat:2 }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="col-md-6 text-end">
+                                                        <span class="precio-total-preview">
+                                                            <i class="fas fa-calculator me-1"></i>
+                                                            Precio total: $<span class="precio-total-editar">{{ variante.precio_total|floatformat:2 }}</span>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-1"></i> Cancelar
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-save me-1"></i> Actualizar Variante
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modal Ajustar Stock para esta variante específica -->
+                        <div class="modal fade" id="modalAjustarStockVariante{{ variante.id }}" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-boxes me-2"></i>
+                                            Ajustar Stock de Variante
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="variante_id" value="{{ variante.id }}">
+                                        <div class="modal-body">
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                Variante: <strong>{{ variante.nombre }}</strong>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Stock Actual:</label>
+                                                        <input type="number" class="form-control" value="{{ variante.stock }}" readonly>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Tipo de Ajuste:</label>
+                                                        <select class="form-control" name="tipo_ajuste" required>
+                                                            <option value="entrada">Entrada (+)</option>
+                                                            <option value="salida">Salida (-)</option>
+                                                            <option value="ajuste">Ajuste Manual</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Cantidad:</label>
+                                                <input type="number" class="form-control" name="cantidad_ajuste" min="1" required placeholder="Ingrese la cantidad">
+                                                <div class="form-text">
+                                                    Ingrese la cantidad a sumar, restar o establecer
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Motivo:</label>
+                                                <select class="form-control" name="motivo_ajuste" required>
+                                                    <option value="compra_proveedor">Compra a Proveedor</option>
+                                                    <option value="devolucion_cliente">Devolución de Cliente</option>
+                                                    <option value="inventario_fisico">Ajuste por Inventario Físico</option>
+                                                    <option value="danio_perdida">Daño o Pérdida</option>
+                                                    <option value="promocion">Preparación para Promoción</option>
+                                                    <option value="otro">Otro</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                                <i class="fas fa-times me-1"></i> Cancelar
+                                            </button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-save me-1"></i> Ajustar Stock
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
                         {% endfor %}
                         {% else %}
                         <tr>
@@ -724,7 +904,7 @@
     </div>
 </div>
 
-<!-- Modal Agregar Variante - MEJORADO -->
+<!-- Modal Agregar Variante -->
 <div class="modal fade" id="modalAgregarVariante" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -742,8 +922,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Nombre de la Variante *</label>
-                                <input type="text" class="form-control" name="nombre_variante" required 
-                                       placeholder="Ej: Color Rojo, Talla Grande, etc.">
+                                <input type="text" class="form-control" name="nombre_variante" required placeholder="Ej: Color Rojo, Talla Grande, etc.">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -760,16 +939,14 @@
                                 <label class="form-label">Precio Adicional</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" name="precio_adicional" 
-                                           step="0.01" min="0" value="0" id="precio-adicional-input">
+                                    <input type="number" class="form-control" name="precio_adicional" step="0.01" min="0" value="0" id="precio-adicional-input">
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Imagen de la Variante (Opcional)</label>
-                                <input type="file" class="form-control" name="imagen_variante" 
-                                       accept="image/*">
+                                <input type="file" class="form-control" name="imagen_variante" accept="image/*">
                                 <div class="form-text">
                                     Formatos: JPG, PNG, GIF. Máx: 5MB
                                 </div>
@@ -783,13 +960,13 @@
                             <div class="col-md-6">
                                 <span class="precio-base">
                                     <i class="fas fa-tag me-1"></i>
-                                    Precio base: ${{ producto.precio_prod }}
+                                    Precio base: ${{ producto.precio_prod|floatformat:2 }}
                                 </span>
                             </div>
                             <div class="col-md-6 text-end">
                                 <span class="precio-total-preview">
                                     <i class="fas fa-calculator me-1"></i>
-                                    Precio total: $<span id="precio-total-preview">{{ producto.precio_prod }}</span>
+                                    Precio total: $<span id="precio-total-preview">{{ producto.precio_prod|floatformat:2 }}</span>
                                 </span>
                             </div>
                         </div>
@@ -807,154 +984,14 @@
         </div>
     </div>
 </div>
-
-<!-- Modal Editar Variante - MEJORADO -->
-<div class="modal fade" id="modalEditarVariante" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    Editar Variante
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="" id="formEditarVariante" enctype="multipart/form-data">
-                {% csrf_token %}
-                <input type="hidden" name="variante_id" id="editar_variante_id">
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Nombre de la Variante *</label>
-                                <input type="text" class="form-control" name="nombre_variante" id="editar_nombre_variante" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Precio Adicional</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control" name="precio_adicional" 
-                                           id="editar_precio_adicional" step="0.01" min="0">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Stock</label>
-                                <input type="number" class="form-control" name="stock_variante" id="editar_stock_variante" min="0">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Imagen de la Variante</label>
-                                <input type="file" class="form-control" name="imagen_variante" 
-                                       accept="image/*">
-                                <div class="form-text">
-                                    Dejar vacío para mantener la imagen actual
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Estado</label>
-                        <select class="form-control" name="estado_variante" id="editar_estado_variante">
-                            <option value="activa">Activa</option>
-                            <option value="inactiva">Inactiva</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Actualizar Variante
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Ajustar Stock Variante - MEJORADO -->
-<div class="modal fade" id="modalAjustarStockVariante" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-boxes me-2"></i>
-                    Ajustar Stock de Variante
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="" id="formAjustarStockVariante">
-                {% csrf_token %}
-                <input type="hidden" name="variante_id" id="ajustar_variante_id">
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        Variante: <strong id="ajustar_nombre_variante"></strong>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Stock Actual:</label>
-                                <input type="number" class="form-control" id="ajustar_stock_actual" readonly>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Tipo de Ajuste:</label>
-                                <select class="form-control" name="tipo_ajuste">
-                                    <option value="entrada">Entrada (+)</option>
-                                    <option value="salida">Salida (-)</option>
-                                    <option value="ajuste">Ajuste Manual</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Cantidad:</label>
-                        <input type="number" class="form-control" name="cantidad_ajuste" min="0" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Motivo:</label>
-                        <select class="form-control" name="motivo_ajuste">
-                            <option value="compra_proveedor">Compra a Proveedor</option>
-                            <option value="devolucion_cliente">Devolución de Cliente</option>
-                            <option value="inventario_fisico">Ajuste por Inventario Físico</option>
-                            <option value="danio_perdida">Daño o Pérdida</option>
-                            <option value="otro">Otro</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i> Ajustar Stock
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Cálculo de precio total en tiempo real
+    console.log('=== INICIANDO SCRIPT DE GESTIÓN DE VARIANTES ===');
+    
+    // ========== CÁLCULO PRECIO TOTAL PARA AGREGAR VARIANTE ==========
     const precioBase = {{ producto.precio_prod }};
     const inputPrecioAdicional = document.getElementById('precio-adicional-input');
     const previewPrecioTotal = document.getElementById('precio-total-preview');
@@ -967,47 +1004,65 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Configurar modal de editar variante
-    const modalEditarVariante = document.getElementById('modalEditarVariante');
-    if (modalEditarVariante) {
-        modalEditarVariante.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const varianteId = button.getAttribute('data-variante-id');
-            const varianteNombre = button.getAttribute('data-variante-nombre');
-            const variantePrecio = button.getAttribute('data-variante-precio');
-            const varianteStock = button.getAttribute('data-variante-stock');
-            const varianteSku = button.getAttribute('data-variante-sku');
-            const varianteEstado = button.getAttribute('data-variante-estado');
+    // ========== VALIDACIÓN FORMULARIO AJUSTAR STOCK ==========
+    const formsAjustarStock = document.querySelectorAll('form[action*="ajustar-stock"]');
+    formsAjustarStock.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            const cantidadInput = this.querySelector('input[name="cantidad_ajuste"]');
+            const tipoSelect = this.querySelector('select[name="tipo_ajuste"]');
+            const stockActual = this.querySelector('input[readonly]').value;
             
-            document.getElementById('editar_variante_id').value = varianteId;
-            document.getElementById('editar_nombre_variante').value = varianteNombre;
-            document.getElementById('editar_precio_adicional').value = variantePrecio;
-            document.getElementById('editar_stock_variante').value = varianteStock;
-            document.getElementById('editar_sku_variante').value = varianteSku;
-            document.getElementById('editar_estado_variante').value = varianteEstado;
+            if (!cantidadInput || !tipoSelect) {
+                event.preventDefault();
+                alert('❌ Error: Datos del formulario incompletos');
+                return false;
+            }
             
-            const form = document.getElementById('formEditarVariante');
-            form.action = `/vendedor/variantes/editar/${varianteId}/`;
+            const cantidad = parseInt(cantidadInput.value) || 0;
+            const tipoAjuste = tipoSelect.value;
+            
+            if (cantidad <= 0) {
+                event.preventDefault();
+                alert('❌ Error: La cantidad debe ser mayor a 0');
+                cantidadInput.focus();
+                return false;
+            }
+            
+            let stockFinal;
+            if (tipoAjuste === 'entrada') {
+                stockFinal = parseInt(stockActual) + cantidad;
+            } else if (tipoAjuste === 'salida') {
+                stockFinal = parseInt(stockActual) - cantidad;
+            } else if (tipoAjuste === 'ajuste') {
+                stockFinal = cantidad;
+            }
+            
+            if (stockFinal < 0) {
+                event.preventDefault();
+                alert('❌ Error: No puedes tener stock negativo. Stock resultante: ' + stockFinal);
+                cantidadInput.focus();
+                return false;
+            }
+            
+            console.log('✅ Formulario válido, enviando...');
+            return true;
         });
-    }
+    });
 
-    // Configurar modal de ajustar stock variante
-    const modalAjustarStock = document.getElementById('modalAjustarStockVariante');
-    if (modalAjustarStock) {
-        modalAjustarStock.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const varianteId = button.getAttribute('data-variante-id');
-            const varianteNombre = button.getAttribute('data-variante-nombre');
-            const varianteStock = button.getAttribute('data-variante-stock');
-            
-            document.getElementById('ajustar_variante_id').value = varianteId;
-            document.getElementById('ajustar_nombre_variante').textContent = varianteNombre;
-            document.getElementById('ajustar_stock_actual').value = varianteStock;
-            
-            const form = document.getElementById('formAjustarStockVariante');
-            form.action = `/vendedor/productos/variantes/ajustar-stock/${varianteId}/`;
+    // ========== VALIDACIÓN FORMULARIO ELIMINAR VARIANTE ==========
+    const formsEliminar = document.querySelectorAll('form[action*="eliminar"]');
+    formsEliminar.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            const confirmed = confirm('¿Estás seguro de que deseas eliminar esta variante? Esta acción no se puede deshacer.');
+            if (!confirmed) {
+                event.preventDefault();
+                return false;
+            }
+            return true;
         });
-    }
+    });
+
+    console.log('✅ Script de gestión de variantes cargado correctamente');
 });
 </script>
 {% endblock %}

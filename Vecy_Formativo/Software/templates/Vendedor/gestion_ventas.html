@@ -4,6 +4,7 @@
 {% block title %}Gestión de Ventas{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid">
     <!-- Header Mejorado con Estadísticas -->
     <div class="tarjeta-bienvenida">
@@ -75,6 +76,7 @@
             <div class="contenedor-filtros">
                 <select class="select-filtro" id="filtro-estado-pedidos">
                     <option value="todos">Todos los estados</option>
+                    <option value="pendiente">Pendiente</option>
                     <option value="confirmado">Confirmado</option>
                     <option value="preparando">Preparando</option>
                     <option value="enviado">Enviado</option>
@@ -174,14 +176,13 @@
         </div>
     </div>
 
-    <!-- Lista de Pedidos - QUITAMOS EL OVERFLOW HIDDEN -->
+    <!-- Lista de Pedidos -->
     <div class="seccion-pedidos">
         <div class="seccion-header">
             <h3><i class="fas fa-list me-2"></i>Lista de Pedidos</h3>
             <span class="contador-seccion" id="contador-pedidos">{{ pedidos|length }}</span>
         </div>
         
-        <!-- QUITAMOS EL OVERFLOW DEL CONTENEDOR -->
         <div class="contenedor-pedidos">
             {% if pedidos %}
                 {% for pedido in pedidos %}
@@ -195,10 +196,15 @@
                             <div class="pedido-cliente">
                                 <i class="fas fa-user"></i>
                                 <span>{{ pedido.cliente.nombre }}</span>
+                                <small class="text-muted ms-2">{{ pedido.cliente.documento }}</small>
+                            </div>
+                            <div class="pedido-metodo-pago">
+                                <i class="fas fa-credit-card"></i>
+                                <span>{{ pedido.metodo_pago_texto|default:pedido.metodo_pago }}</span>
                             </div>
                         </div>
                         <div class="pedido-total">
-                            <span class="total-monto">${{ pedido.total }}</span>
+                            <span class="total-monto">${{ pedido.total|floatformat:0 }}</span>
                             <span class="productos-cantidad">{{ pedido.items.count }} productos</span>
                         </div>
                     </div>
@@ -206,7 +212,7 @@
                     <div class="pedido-detalle">
                         <div class="pedido-estado">
                             <span class="estado-badge {{ pedido.estado }}">
-                                <i class="fas {% if pedido.estado == 'entregado' %}fa-check-circle{% elif pedido.estado == 'cancelado' %}fa-times-circle{% elif pedido.estado == 'enviado' %}fa-shipping-fast{% elif pedido.estado == 'preparando' %}fa-clock{% else %}fa-check{% endif %} me-1"></i>
+                                <i class="fas {% if pedido.estado == 'entregado' %}fa-check-circle{% elif pedido.estado == 'cancelado' %}fa-times-circle{% elif pedido.estado == 'enviado' %}fa-shipping-fast{% elif pedido.estado == 'preparando' %}fa-clock{% elif pedido.estado == 'confirmado' %}fa-check{% else %}fa-hourglass-half{% endif %} me-1"></i>
                                 {{ pedido.estado|title }}
                             </span>
                         </div>
@@ -217,8 +223,8 @@
                                 <span>Recibo</span>
                             </a>
                             
-                            <!-- DROPDOWN MEJORADO CON POSITIONING CORRECTO -->
-                            <div class="dropdown dropdown-estado">
+                            <!-- CAMBIO PRINCIPAL: Cambiado de dropdown a dropup -->
+                            <div class="dropup dropdown-estado">
                                 <button class="btn-accion btn-estado dropdown-toggle" type="button" id="dropdownEstado{{ pedido.id }}" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="fas fa-exchange-alt"></i>
                                     <span>Cambiar Estado</span>
@@ -271,7 +277,7 @@
     </div>
 </div>
 
-<!-- Modal Cancelación MEJORADO -->
+<!-- Modal Cancelación -->
 <div class="modal fade" id="modalCancelacion" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -354,14 +360,23 @@
 let pedidoSeleccionado = null;
 let motivoSeleccionado = null;
 
+// Función para obtener CSRF token
+function getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    return csrfToken ? csrfToken.value : '';
+}
+
 // Inicialización cuando el DOM está listo
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DEBUG: Inicializando gestión de ventas');
+    
     // Configurar event listeners para los dropdowns de estado
     document.querySelectorAll('.estado-option').forEach(option => {
         option.addEventListener('click', function(e) {
             e.preventDefault();
             const pedidoId = this.getAttribute('data-pedido-id');
             const nuevoEstado = this.getAttribute('data-estado');
+            console.log('DEBUG: Cambiando estado pedido', pedidoId, 'a', nuevoEstado);
             cambiarEstado(pedidoId, nuevoEstado);
         });
     });
@@ -371,6 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
         option.addEventListener('click', function(e) {
             e.preventDefault();
             const pedidoId = this.getAttribute('data-pedido-id');
+            console.log('DEBUG: Mostrando modal cancelación para pedido', pedidoId);
             mostrarModalCancelacion(pedidoId);
         });
     });
@@ -388,6 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const motivo = this.getAttribute('data-motivo');
             motivoSeleccionado = motivo;
+            console.log('DEBUG: Motivo seleccionado:', motivo);
             
             // Mostrar/ocultar campo personalizado
             const motivoPersonalizado = document.getElementById('motivoPersonalizado');
@@ -446,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Filtro por fecha (implementación básica)
             if (fecha !== 'todos') {
-                // Aquí iría la lógica de filtrado por fecha
                 coincideFecha = true; // Placeholder
             }
             
@@ -466,8 +482,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (filtroFecha) filtroFecha.addEventListener('change', aplicarFiltros);
 });
 
-// Cambiar estado del pedido
+// Cambiar estado del pedido - FUNCIÓN CORREGIDA
 function cambiarEstado(pedidoId, nuevoEstado) {
+    console.log('DEBUG: Ejecutando cambiarEstado', pedidoId, nuevoEstado);
+    
     // Mostrar confirmación para estado "entregado" ya que afecta al stock
     if (nuevoEstado === 'entregado') {
         if (!confirm('¿Estás seguro de marcar este pedido como ENTREGADO?\n\nEsta acción descontará los productos del stock.')) {
@@ -475,28 +493,56 @@ function cambiarEstado(pedidoId, nuevoEstado) {
         }
     }
     
+    // Mostrar confirmación para estado "cancelado"
+    if (nuevoEstado === 'cancelado') {
+        mostrarModalCancelacion(pedidoId);
+        return;
+    }
+    
+    // Para otros estados, proceder directamente
+    enviarCambioEstado(pedidoId, nuevoEstado);
+}
+
+// Función para enviar el cambio de estado - RUTAS CORREGIDAS CON /auth/
+function enviarCambioEstado(pedidoId, nuevoEstado, motivo = '') {
+    console.log('DEBUG: Enviando cambio de estado', pedidoId, nuevoEstado, motivo);
+    
+    // RUTA CORREGIDA: Agregar /auth/ al inicio
     const form = document.createElement('form');
     form.method = 'POST';
-    form.action = `/ventas/cambiar-estado/${pedidoId}/`;
+    form.action = `/auth/ventas/cambiar-estado/${pedidoId}/`;
     
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = 'csrfmiddlewaretoken';
-    csrf.value = '{{ csrf_token }}';
-    form.appendChild(csrf);
+    // CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = getCSRFToken();
+    form.appendChild(csrfInput);
     
+    // Estado
     const estadoInput = document.createElement('input');
     estadoInput.type = 'hidden';
     estadoInput.name = 'nuevo_estado';
     estadoInput.value = nuevoEstado;
     form.appendChild(estadoInput);
     
+    // Motivo si es cancelación
+    if (nuevoEstado === 'cancelado' && motivo) {
+        const motivoInput = document.createElement('input');
+        motivoInput.type = 'hidden';
+        motivoInput.name = 'motivo_cancelacion';
+        motivoInput.value = motivo;
+        form.appendChild(motivoInput);
+    }
+    
     document.body.appendChild(form);
+    console.log('DEBUG: Enviando formulario a:', form.action);
     form.submit();
 }
 
 // Mostrar modal de cancelación
 function mostrarModalCancelacion(pedidoId) {
+    console.log('DEBUG: Mostrando modal de cancelación para pedido', pedidoId);
     pedidoSeleccionado = pedidoId;
     motivoSeleccionado = null;
     
@@ -514,60 +560,69 @@ function mostrarModalCancelacion(pedidoId) {
 
 // Confirmar cancelación
 function confirmarCancelacion() {
-    if (!pedidoSeleccionado || !motivoSeleccionado) return;
+    console.log('DEBUG: Confirmando cancelación para pedido', pedidoSeleccionado);
     
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/ventas/cambiar-estado/${pedidoSeleccionado}/`;
+    if (!pedidoSeleccionado) {
+        alert('Error: No se ha seleccionado un pedido');
+        return;
+    }
     
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = 'csrfmiddlewaretoken';
-    csrf.value = '{{ csrf_token }}';
-    form.appendChild(csrf);
+    if (!motivoSeleccionado) {
+        alert('Por favor selecciona un motivo de cancelación');
+        return;
+    }
     
-    const estadoInput = document.createElement('input');
-    estadoInput.type = 'hidden';
-    estadoInput.name = 'nuevo_estado';
-    estadoInput.value = 'cancelado';
-    form.appendChild(estadoInput);
+    console.log('DEBUG: Cancelando pedido', pedidoSeleccionado, 'con motivo:', motivoSeleccionado);
+    enviarCambioEstado(pedidoSeleccionado, 'cancelado', motivoSeleccionado);
     
-    const motivoInput = document.createElement('input');
-    motivoInput.type = 'hidden';
-    motivoInput.name = 'motivo_cancelacion';
-    motivoInput.value = motivoSeleccionado;
-    form.appendChild(motivoInput);
-    
-    document.body.appendChild(form);
-    form.submit();
+    // Cerrar modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalCancelacion'));
+    modal.hide();
 }
 
 // Configurar el botón de confirmar cancelación
-document.getElementById('btnConfirmarCancelacion').addEventListener('click', confirmarCancelacion);
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btnConfirmarCancelacion').addEventListener('click', confirmarCancelacion);
+});
 
 // Mostrar modal de eliminación
 function mostrarModalEliminacion(pedidoId) {
+    console.log('DEBUG: Mostrando modal de eliminación para pedido', pedidoId);
     pedidoSeleccionado = pedidoId;
     const modal = new bootstrap.Modal(document.getElementById('modalEliminacion'));
     modal.show();
 }
 
-// Confirmar eliminación
-document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
-    if (!pedidoSeleccionado) return;
-    
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = `/ventas/eliminar/${pedidoSeleccionado}/`;
-    
-    const csrf = document.createElement('input');
-    csrf.type = 'hidden';
-    csrf.name = 'csrfmiddlewaretoken';
-    csrf.value = '{{ csrf_token }}';
-    form.appendChild(csrf);
-    
-    document.body.appendChild(form);
-    form.submit();
+// Confirmar eliminación - RUTA CORREGIDA CON /auth/
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('btnConfirmarEliminar').addEventListener('click', function() {
+        console.log('DEBUG: Confirmando eliminación para pedido', pedidoSeleccionado);
+        
+        if (!pedidoSeleccionado) {
+            alert('Error: No se ha seleccionado un pedido');
+            return;
+        }
+        
+        // RUTA CORREGIDA: Agregar /auth/ al inicio
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/auth/ventas/eliminar/${pedidoSeleccionado}/`;
+        
+        // CSRF token
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCSRFToken();
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        console.log('DEBUG: Enviando formulario de eliminación a:', form.action);
+        form.submit();
+        
+        // Cerrar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalEliminacion'));
+        modal.hide();
+    });
 });
 
 // Funciones de utilidad
@@ -577,6 +632,25 @@ function exportarReporteVentas() {
 
 function mostrarFiltrosAvanzados() {
     alert('Filtros avanzados en desarrollo...');
+}
+
+// Función para eliminar directamente desde la consola (para debugging)
+function eliminarPedidoDirecto(pedidoId) {
+    if (confirm(`¿ESTÁS SEGURO de eliminar PERMANENTEMENTE el pedido #${pedidoId}?\n\nEsta acción NO se puede deshacer.`)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/auth/ventas/eliminar/${pedidoId}/`;
+        
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCSRFToken();
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        console.log('DEBUG: Eliminando pedido directamente:', pedidoId);
+        form.submit();
+    }
 }
 </script>
 

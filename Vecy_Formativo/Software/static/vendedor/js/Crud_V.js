@@ -1,6 +1,8 @@
-// static/javascript_V/Crud_V.js - VERSIÓN MEJORADA SIN AJAX
+// static/vendedor/js/Crud_V.js - VERSIÓN MEJORADA SIN AJAX - CORREGIDA
 
 document.addEventListener('DOMContentLoaded', function () {
+    console.log("=== DEBUG: Crud_V.js cargado correctamente ===");
+    
     // Inicializar tooltips de Bootstrap
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -205,10 +207,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+
+    // Debug: Verificar que los modales se cargan correctamente
+    console.log("=== DEBUG: Modales disponibles ===");
+    console.log("Modal Editar:", document.getElementById('modalEditarProducto'));
+    console.log("Modal Stock:", document.getElementById('modalAjustarStock'));
+    console.log("Modal Eliminar:", document.getElementById('modalEliminarProducto'));
 });
 
 // Funciones globales para cargar datos en los modales
 function cargarDatosProducto(id, nombre, precio, stock, estado, categoria, descripcion) {
+    console.log(`=== DEBUG: Cargando datos producto ID ${id} ===`);
+    console.log(`Nombre: ${nombre}, Precio: ${precio}, Stock: ${stock}, Estado: ${estado}, Categoria: ${categoria}`);
+    
     document.getElementById('producto_id_editar').value = id;
     document.getElementById('nom_prod_editar').value = nombre;
     document.getElementById('precio_prod_editar').value = precio;
@@ -217,11 +228,15 @@ function cargarDatosProducto(id, nombre, precio, stock, estado, categoria, descr
     document.getElementById('categoria_prod_editar').value = categoria;
     document.getElementById('desc_prod_editar').value = descripcion;
     
-    // Configurar la acción del formulario
-    document.getElementById('formEditarProducto').action = `/vendedor/productos/editar/${id}/`;
+    // Configurar la acción del formulario - CORREGIDO
+    document.getElementById('formEditarProducto').action = `/auth/vendedor/productos/editar/${id}/`;
+    console.log(`Form action edit: ${document.getElementById('formEditarProducto').action}`);
 }
 
 function cargarDatosStock(id, nombre, stock) {
+    console.log(`=== DEBUG: Cargando datos stock ID ${id} ===`);
+    console.log(`Nombre: ${nombre}, Stock actual: ${stock}`);
+    
     document.getElementById('producto_id_stock').value = id;
     document.getElementById('nombre_producto_stock').textContent = nombre;
     document.getElementById('stock_actual').value = stock;
@@ -231,16 +246,39 @@ function cargarDatosStock(id, nombre, stock) {
     document.getElementById('stock_final').value = '';
     document.getElementById('tipo_ajuste').value = 'entrada';
     document.getElementById('motivo_ajuste').value = 'compra_proveedor';
-    document.getElementById('campo_stock_final').style.display = 'none';
+    if (document.getElementById('campo_stock_final')) {
+        document.getElementById('campo_stock_final').style.display = 'none';
+    }
     
-    // Configurar la acción del formulario
-    document.getElementById('formAjustarStock').action = `/vendedor/productos/ajustar-stock/${id}/`;
+    // Configurar la acción del formulario - CORREGIDO
+    document.getElementById('formAjustarStock').action = `/auth/vendedor/stock/ajustar/${id}/`;
+    console.log(`Form action stock: ${document.getElementById('formAjustarStock').action}`);
+    
+    // Recalcular stock final
+    if (typeof calcularStockFinal === 'function') {
+        setTimeout(calcularStockFinal, 100);
+    }
 }
 
 function cargarDatosEliminar(id, nombre) {
+    console.log(`=== DEBUG: Cargando datos eliminar ID ${id} ===`);
+    
     document.getElementById('producto_id_eliminar').value = id;
     document.getElementById('nombre_producto_eliminar').textContent = nombre;
     
-    // Configurar la acción del formulario
-    document.getElementById('formEliminarProducto').action = `/vendedor/productos/eliminar/${id}/`;
+    // Configurar la acción del formulario - CORREGIDO
+    document.getElementById('formEliminarProducto').action = `/auth/vendedor/productos/eliminar/${id}/`;
+    console.log(`Form action delete: ${document.getElementById('formEliminarProducto').action}`);
 }
+
+// Función para debug adicional
+function debugForms() {
+    console.log("=== DEBUG FORMS ===");
+    const forms = document.querySelectorAll('form');
+    forms.forEach((form, index) => {
+        console.log(`Form ${index}:`, form.action, form.method);
+    });
+}
+
+// Ejecutar debug al cargar
+setTimeout(debugForms, 1000);
