@@ -12,6 +12,10 @@ from datetime import datetime
 import json
 import os
 from django.conf import settings
+import pandas as pd
+from django.http import HttpResponse
+from django.core.files.storage import FileSystemStorage
+from django.utils.text import slugify
 
 # Importar modelos
 from Software.models import (
@@ -767,9 +771,15 @@ def obtener_datos_producto_P(request, producto_id):
 # ==================== VISTAS VENDEDOR - ELIMINAR PRODUCTO ====================
 @login_required(login_url='login')
 def eliminar_producto_P(request, producto_id):
-    """Vista para eliminar producto - CON REGISTRO DE STOCK"""
+    """Vista para eliminar producto - ELIMINACIÓN COMPLETA SIN RESTRICCIONES"""
     if request.method == 'POST':
         try:
+            print(f"=== DEBUG ELIMINAR_PRODUCTO: Iniciando eliminación producto {producto_id} ===")
+            
+            # Obtener el motivo de eliminación del formulario
+            motivo_eliminacion = request.POST.get('motivo_eliminacion', 'Sin motivo especificado')
+            print(f"DEBUG: Motivo de eliminación: {motivo_eliminacion}")
+            
             # Verificar permisos y obtener negocio seleccionado
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
             
@@ -792,41 +802,97 @@ def eliminar_producto_P(request, producto_id):
             
             nombre_producto = producto.nom_prod
             stock_eliminado = producto.stock_prod
+
+            with connection.cursor() as cursor:
+                print(f"DEBUG: Iniciando eliminación completa para producto {producto_id}")
+                
+                # 1. OBTENER INFORMACIÓN DE VARIANTES
+                cursor.execute("""
+                    SELECT id_variante, nombre_variante, stock_variante 
+                    FROM variantes_producto 
+                    WHERE producto_id = %s
+                """, [producto_id])
+                variantes_info = cursor.fetchall()
+                print(f"DEBUG: Variantes encontradas: {len(variantes_info)}")
+                
+                # 2. ELIMINAR TODOS LOS MOVIMIENTOS DE STOCK RELACIONADOS CON LAS VARIANTES
+                for variante_id, nombre_variante, stock_variante in variantes_info:
+                    cursor.execute("""
+                        DELETE FROM movimientos_stock 
+                        WHERE variante_id = %s
+                    """, [variante_id])
+                    print(f"✅ DEBUG: Movimientos de variante {variante_id} eliminados: {cursor.rowcount}")
+                
+                # 3. ELIMINAR LAS VARIANTES
+                cursor.execute("""
+                    DELETE FROM variantes_producto 
+                    WHERE producto_id = %s
+                """, [producto_id])
+                print(f"✅ DEBUG: Variantes eliminadas: {cursor.rowcount}")
+                
+                # 4. ELIMINAR TODOS LOS MOVIMIENTOS DE STOCK DEL PRODUCTO PRINCIPAL
+                cursor.execute("""
+                    DELETE FROM movimientos_stock 
+                    WHERE producto_id = %s AND negocio_id = %s
+                """, [producto_id, negocio.pkid_neg])
+                print(f"✅ DEBUG: Movimientos del producto eliminados: {cursor.rowcount}")
+                
+                # 5. ELIMINAR PROMOCIONES RELACIONADAS
+                cursor.execute("""
+                    DELETE FROM promociones 
+                    WHERE fkproducto_id = %s AND fknegocio_id = %s
+                """, [producto_id, negocio.pkid_neg])
+                print(f"✅ DEBUG: Promociones eliminadas: {cursor.rowcount}")
+                
+                # 6. VERIFICAR SI HAY PEDIDOS RELACIONADOS
+                cursor.execute("""
+                    SELECT COUNT(*) FROM detalles_pedido 
+                    WHERE fkproducto_detalle = %s
+                """, [producto_id])
+                tiene_pedidos = cursor.fetchone()[0]
+                
+                if tiene_pedidos > 0:
+                    # Si tiene pedidos, no podemos eliminar, mejor desactivar
+                    print(f"⚠️ DEBUG: Producto tiene {tiene_pedidos} pedidos relacionados, desactivando en lugar de eliminar")
+                    
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET estado_prod = 'no_disponible', stock_prod = 0
+                        WHERE pkid_prod = %s
+                    """, [producto_id])
+                    
+                    messages.success(request, f"✅ Producto '{nombre_producto}' ha sido desactivado (tiene pedidos históricos). Motivo: {motivo_eliminacion}")
+                    return redirect('Crud_V')
             
-            # REGISTRAR MOVIMIENTO DE STOCK POR ELIMINACIÓN DEL PRODUCTO
-            if stock_eliminado > 0:
-                try:
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            INSERT INTO movimientos_stock 
-                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                             stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, [
-                            producto_id, 
-                            negocio.pkid_neg, 
-                            'salida', 
-                            'eliminacion_producto', 
-                            stock_eliminado, 
-                            stock_eliminado,  # Stock anterior
-                            0,  # Stock nuevo es 0 (producto eliminado)
-                            perfil.id, 
-                            datetime.now()
-                        ])
-                except Exception as e:
-                    print(f"Error registrando movimiento al eliminar producto (puede ignorarse): {e}")
+            # 7. FINALMENTE: Eliminar el producto (si no tiene pedidos)
+            # Usar SQL directo para evitar problemas con Django ORM
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM productos WHERE pkid_prod = %s", [producto_id])
+                print(f"✅ DEBUG: Producto {producto_id} eliminado físicamente")
             
-            # Ahora eliminar el producto
-            producto.delete()
-            
-            messages.success(request, f"Producto '{nombre_producto}' eliminado exitosamente.")
+            messages.success(request, f"✅ Producto '{nombre_producto}' eliminado exitosamente. Motivo: {motivo_eliminacion}")
             
         except Productos.DoesNotExist:
             messages.error(request, "El producto no existe o no tienes permisos para eliminarlo.")
         except Negocios.DoesNotExist:
             messages.error(request, "El negocio seleccionado no existe o no tienes permisos.")
         except Exception as e:
-            messages.error(request, f"Error al eliminar producto: {str(e)}")
+            print(f"❌ ERROR al eliminar producto: {str(e)}")
+            import traceback
+            print(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
+            
+            # Si hay error de constraint, desactivar el producto
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET estado_prod = 'no_disponible', stock_prod = 0
+                        WHERE pkid_prod = %s
+                    """, [producto_id])
+                messages.success(request, f"✅ Producto '{nombre_producto}' ha sido desactivado debido a restricciones de base de datos. Motivo: {motivo_eliminacion}")
+            except Exception as e2:
+                print(f"❌ ERROR al desactivar producto: {str(e2)}")
+                messages.error(request, f"Error al eliminar/desactivar producto: {str(e)}")
     
     return redirect('Crud_V')
 
@@ -2151,3 +2217,300 @@ def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
     except Exception as e:
         print(f"❌ Error enviando correo: {e}")
         return False
+    
+# ==================== FIN DE CÓDIGO PARA GESTIÓN DE VENTAS VENDEDOR ====================
+
+# En la función descargar_plantilla_productos en vendedor_views.py
+
+@login_required(login_url='login')
+def descargar_plantilla_productos(request):
+    """Vista para descargar plantilla Excel de productos"""
+    try:
+        # Crear un libro de Excel con pandas
+        with pd.ExcelWriter('plantilla_productos.xlsx', engine='openpyxl') as writer:
+            
+            # Hoja de INSTRUCCIONES MEJORADA
+            instrucciones_data = {
+                'SECCIÓN': [
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE', 
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE'
+                ],
+                'COLUMNA': [
+                    'nombre*',
+                    'precio*',
+                    'descripcion',
+                    'stock_inicial', 
+                    'categoria*',
+                    'estado',
+                    '',
+                    'producto_base*',
+                    'nombre_variante*',
+                    'precio_adicional',
+                    'stock',
+                    'estado',
+                    '',
+                    'FORMATO',
+                    'OBLIGATORIOS',
+                    'CATEGORÍAS',
+                    'VINCULACIÓN'
+                ],
+                'DESCRIPCIÓN': [
+                    'Nombre único del producto (Ej: "Helado de Vainilla")',
+                    'Precio base del producto (Ej: 4000)',
+                    'Descripción opcional del producto',
+                    'Stock inicial (Ej: 10). Por defecto: 0',
+                    'Nombre de la categoría (Ej: "Helado"). Se crea automáticamente si no existe',
+                    'Estado: "disponible", "no_disponible" o "agotado". Por defecto: "disponible"',
+                    '',
+                    'Nombre EXACTO del producto base (debe existir en la hoja PRODUCTOS_BASE)',
+                    'Nombre único de la variante (Ej: "Vaso Grande")',
+                    'Precio adicional sobre el precio base (Ej: 1000). Por defecto: 0',
+                    'Stock de la variante (Ej: 5). Por defecto: 0',
+                    'Estado: "activa" o "inactiva". Por defecto: "activa"',
+                    '',
+                    'Los campos con * son obligatorios',
+                    'Los nombres de productos deben ser únicos',
+                    'Las categorías se crearán automáticamente si no existen',
+                    'Las variantes se vinculan por nombre EXACTO del producto base'
+                ]
+            }
+            df_instrucciones = pd.DataFrame(instrucciones_data)
+            df_instrucciones.to_excel(writer, sheet_name='INSTRUCCIONES', index=False)
+            
+            # Hoja de PRODUCTOS_BASE VACÍA con solo los encabezados
+            productos_data = {
+                'nombre*': [],
+                'precio*': [], 
+                'descripcion': [],
+                'stock_inicial': [],
+                'categoria*': [],
+                'estado': []
+            }
+            df_productos = pd.DataFrame(productos_data)
+            df_productos.to_excel(writer, sheet_name='PRODUCTOS_BASE', index=False)
+            
+            # Hoja de VARIANTES VACÍA con solo los encabezados
+            variantes_data = {
+                'producto_base*': [],
+                'nombre_variante*': [],
+                'precio_adicional': [],
+                'stock': [],
+                'estado': []
+            }
+            df_variantes = pd.DataFrame(variantes_data)
+            df_variantes.to_excel(writer, sheet_name='VARIANTES', index=False)
+        
+        # Leer el archivo generado y enviarlo como respuesta
+        with open('plantilla_productos.xlsx', 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="plantilla_productos.xlsx"'
+        
+        # Eliminar el archivo temporal
+        os.remove('plantilla_productos.xlsx')
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'Error al generar plantilla: {str(e)}')
+        return redirect('Crud_V')
+
+@login_required(login_url='login')
+def importar_productos_excel(request):
+    """Vista para importar productos desde Excel"""
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+        try:
+            archivo = request.FILES['archivo_excel']
+            sobrescribir = request.POST.get('sobrescribir_existentes') == 'on'
+            crear_categorias = request.POST.get('crear_categorias') == 'on'
+            
+            # Validar extensión
+            if not archivo.name.endswith(('.xlsx', '.xls')):
+                messages.error(request, '❌ Solo se permiten archivos Excel (.xlsx, .xls)')
+                return redirect('Crud_V')
+            
+            # Obtener datos del vendedor
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('Crud_V')
+            
+            negocio = datos['negocio_activo']
+            
+            # Leer el archivo Excel
+            try:
+                # Leer todas las hojas
+                df_productos = pd.read_excel(archivo, sheet_name='PRODUCTOS_BASE')
+                df_variantes = pd.read_excel(archivo, sheet_name='VARIANTES')
+            except Exception as e:
+                messages.error(request, f'❌ Error al leer el archivo Excel: {str(e)}')
+                return redirect('Crud_V')
+            
+            # Contadores para resultados
+            productos_creados = 0
+            productos_actualizados = 0
+            variantes_creadas = 0
+            errores = []
+            
+            # ========== PROCESAR PRODUCTOS BASE ==========
+            for index, row in df_productos.iterrows():
+                try:
+                    # Validar campos obligatorios
+                    if pd.isna(row['nombre*']) or pd.isna(row['precio*']) or pd.isna(row['categoria*']):
+                        errores.append(f"Fila {index+2}: Campos obligatorios faltantes")
+                        continue
+                    
+                    nombre = str(row['nombre*']).strip()
+                    precio = float(row['precio*'])
+                    descripcion = str(row['descripcion']) if not pd.isna(row['descripcion']) else ""
+                    stock = int(row['stock_inicial']) if not pd.isna(row['stock_inicial']) else 0
+                    categoria_nombre = str(row['categoria*']).strip()
+                    estado = str(row['estado']).lower() if not pd.isna(row['estado']) else 'disponible'
+                    
+                    # Buscar o crear categoría
+                    try:
+                        categoria = CategoriaProductos.objects.get(desc_cp__iexact=categoria_nombre)
+                    except CategoriaProductos.DoesNotExist:
+                        if crear_categorias:
+                            categoria = CategoriaProductos.objects.create(desc_cp=categoria_nombre)
+                        else:
+                            errores.append(f"'{nombre}': Categoría '{categoria_nombre}' no existe")
+                            continue
+                    
+                    # Verificar si el producto ya existe
+                    producto_existente = Productos.objects.filter(
+                        nom_prod__iexact=nombre,
+                        fknegocioasociado_prod=negocio
+                    ).first()
+                    
+                    if producto_existente and sobrescribir:
+                        # Actualizar producto existente
+                        producto_existente.precio_prod = precio
+                        producto_existente.desc_prod = descripcion
+                        producto_existente.stock_prod = stock
+                        producto_existente.fkcategoria_prod = categoria
+                        producto_existente.estado_prod = estado
+                        producto_existente.save()
+                        productos_actualizados += 1
+                        producto = producto_existente
+                    elif producto_existente:
+                        errores.append(f"'{nombre}': Ya existe (usar sobrescribir)")
+                        producto = producto_existente
+                    else:
+                        # Crear nuevo producto
+                        producto = Productos.objects.create(
+                            nom_prod=nombre,
+                            precio_prod=precio,
+                            desc_prod=descripcion,
+                            stock_prod=stock,
+                            fkcategoria_prod=categoria,
+                            estado_prod=estado,
+                            fknegocioasociado_prod=negocio
+                        )
+                        productos_creados += 1
+                    
+                except Exception as e:
+                    nombre_producto = str(row['nombre*'])[:50] if not pd.isna(row['nombre*']) else f"Fila {index+2}"
+                    errores.append(f"'{nombre_producto}': {str(e)}")
+                    continue
+            
+            # ========== PROCESAR VARIANTES ==========
+            for index, row in df_variantes.iterrows():
+                try:
+                    # Validar campos obligatorios
+                    if pd.isna(row['producto_base*']) or pd.isna(row['nombre_variante*']):
+                        continue  # Saltar variantes incompletas
+                    
+                    producto_base_nombre = str(row['producto_base*']).strip()
+                    nombre_variante = str(row['nombre_variante*']).strip()
+                    precio_adicional = float(row['precio_adicional']) if not pd.isna(row['precio_adicional']) else 0
+                    stock_variante = int(row['stock']) if not pd.isna(row['stock']) else 0
+                    estado_variante = str(row['estado']).lower() if not pd.isna(row['estado']) else 'activa'
+                    
+                    # Buscar producto base
+                    try:
+                        producto_base = Productos.objects.get(
+                            nom_prod__iexact=producto_base_nombre,
+                            fknegocioasociado_prod=negocio
+                        )
+                    except Productos.DoesNotExist:
+                        errores.append(f"Variante '{nombre_variante}': Producto base '{producto_base_nombre}' no encontrado")
+                        continue
+                    
+                    # Verificar si la variante ya existe
+                    variante_existente = None
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT id_variante FROM variantes_producto 
+                            WHERE producto_id = %s AND nombre_variante = %s
+                        """, [producto_base.pkid_prod, nombre_variante])
+                        resultado = cursor.fetchone()
+                        if resultado:
+                            variante_existente = resultado[0]
+                    
+                    if variante_existente and sobrescribir:
+                        # Actualizar variante existente
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                UPDATE variantes_producto 
+                                SET precio_adicional = %s, stock_variante = %s, estado_variante = %s
+                                WHERE id_variante = %s
+                            """, [precio_adicional, stock_variante, estado_variante, variante_existente])
+                    elif not variante_existente:
+                        # Crear nueva variante
+                        sku_unico = f"VAR-{producto_base.pkid_prod}-{int(timezone.now().timestamp())}"
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                INSERT INTO variantes_producto 
+                                (producto_id, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante, fecha_creacion)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            """, [
+                                producto_base.pkid_prod,
+                                nombre_variante,
+                                precio_adicional,
+                                stock_variante,
+                                estado_variante,
+                                sku_unico,
+                                timezone.now()
+                            ])
+                        variantes_creadas += 1
+                    
+                except Exception as e:
+                    nombre_var = str(row['nombre_variante*'])[:50] if not pd.isna(row['nombre_variante*']) else f"Variante fila {index+2}"
+                    errores.append(f"'{nombre_var}': {str(e)}")
+                    continue
+            
+            # ========== PREPARAR MENSAJE DE RESULTADO ==========
+            mensaje = f"✅ Importación completada: "
+            if productos_creados > 0:
+                mensaje += f"{productos_creados} productos creados, "
+            if productos_actualizados > 0:
+                mensaje += f"{productos_actualizados} productos actualizados, "
+            if variantes_creadas > 0:
+                mensaje += f"{variantes_creadas} variantes creadas."
+            
+            if errores:
+                mensaje += f" ❌ Errores: {len(errores)}"
+                # Guardar errores en sesión para mostrarlos
+                request.session['importacion_errores'] = errores[:10]  # Máximo 10 errores
+            
+            messages.success(request, mensaje)
+            
+        except Exception as e:
+            messages.error(request, f'❌ Error en importación: {str(e)}')
+    
+    return redirect('Crud_V')

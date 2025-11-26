@@ -78,7 +78,6 @@
                     <option value="normal">Stock Normal</option>
                     <option value="bajo">Stock Bajo</option>
                     <option value="critico">Sin Stock</option>
-                    <option value="oferta">En Oferta</option>
                 </select>
             </div>
         </div>
@@ -237,7 +236,7 @@
                                 <td>
                                     <div class="producto-info-tabla">
                                         <strong>{{ producto.nom_prod }}</strong>
-                                        {% if producto.pkid_prod in productos_oferta_ids %}
+                                        {% if producto.pkid_prod in productos_en_oferta_ids %}
                                         <span class="badge-oferta-tabla">
                                             <i class="fas fa-tag"></i> Oferta
                                         </span>
@@ -273,7 +272,7 @@
                                                 title="Agregar Stock">
                                             <i class="fas fa-plus"></i>
                                         </button>
-                                        <a href="{% url 'Crud_V' %}#producto-{{ producto.pkid_prod }}" 
+                                        <a href="{% url 'Crud_V' %}" 
                                            class="btn-accion btn-editar" title="Editar Producto">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -296,26 +295,37 @@
 
         <!-- Columna Derecha - Información -->
         <div class="col-lg-4">
-            <!-- Movimientos Recientes -->
+            <!-- Movimientos Recientes - MEJORADO -->
             <div class="seccion-movimientos">
                 <div class="seccion-header">
                     <h3><i class="fas fa-history me-2"></i>Movimientos Recientes</h3>
-                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-secundario btn-sm">Ver Todos</a>
+                    <!-- ✅ CORREGIDO: Botón que lleva al reporte de movimientos -->
+                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-secundario btn-sm">Ver Reportes</a>
                 </div>
                 <div class="contenedor-movimientos">
                     {% if movimientos_recientes %}
                         {% for movimiento in movimientos_recientes %}
-                        <div class="movimiento-item {% if movimiento.tipo == 'entrada' %}movimiento-entrada{% else %}movimiento-salida{% endif %}">
+                        <div class="movimiento-item {% if movimiento.tipo == 'eliminacion' %}movimiento-eliminacion{% elif movimiento.tipo == 'entrada' %}movimiento-entrada{% else %}movimiento-salida{% endif %}">
                             <div class="movimiento-header">
                                 <span class="movimiento-producto">{{ movimiento.producto }}</span>
-                                <span class="movimiento-cantidad {% if movimiento.tipo == 'entrada' %}entrada{% else %}salida{% endif %}">
-                                    {% if movimiento.tipo == 'entrada' %}+{% else %}-{% endif %}{{ movimiento.cantidad }}
+                                <span class="movimiento-cantidad {% if movimiento.tipo == 'entrada' %}entrada{% elif movimiento.tipo == 'eliminacion' %}eliminacion{% else %}salida{% endif %}">
+                                    {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'eliminacion' %}🗑️{% else %}-{% endif %}{{ movimiento.cantidad }}
                                 </span>
                             </div>
                             <div class="movimiento-detalle">
                                 <span class="movimiento-motivo">{{ movimiento.motivo }}</span>
                                 <span class="movimiento-fecha">{{ movimiento.fecha }}</span>
                             </div>
+                            {% if movimiento.variante != 'Producto principal' %}
+                            <div class="movimiento-variante">
+                                <small class="text-muted">{{ movimiento.variante }}</small>
+                            </div>
+                            {% endif %}
+                            {% if movimiento.usuario %}
+                            <div class="movimiento-usuario">
+                                <small class="text-muted">Por: {{ movimiento.usuario }}</small>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
@@ -340,11 +350,11 @@
                             <div class="oferta-info">
                                 <h6>{{ oferta.producto_nombre }}</h6>
                                 <div class="precios-oferta">
-                                    <span class="precio-original">${{ oferta.precio_original }}</span>
-                                    <span class="precio-actual">${{ oferta.precio_oferta }}</span>
+                                    <span class="precio-original">${{ oferta.precio_original|floatformat:0 }}</span>
+                                    <span class="precio-actual">${{ oferta.precio_oferta|floatformat:0 }}</span>
                                 </div>
                                 <div class="oferta-meta">
-                                    <span class="descuento">-{{ oferta.descuento }}%</span>
+                                    <span class="descuento">-{{ oferta.descuento|floatformat:0 }}%</span>
                                     <span class="stock-oferta">{{ oferta.stock_oferta }} uds</span>
                                 </div>
                             </div>
@@ -373,6 +383,7 @@
                         <i class="fas fa-tag"></i>
                         <span>Gestionar Ofertas</span>
                     </a>
+                    <!-- ✅ CORREGIDO: Botón que lleva al reporte de movimientos -->
                     <a href="{% url 'reporte_movimientos_stock' %}" class="accion-rapida">
                         <i class="fas fa-chart-bar"></i>
                         <span>Ver Reportes</span>
@@ -395,7 +406,7 @@
                 <h5 class="modal-title">Entrada de Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="#">
+            <form method="post" action="{% url 'entrada_stock_producto' 0 %}" id="formEntradaStock">
                 {% csrf_token %}
                 <div class="modal-body">
                     <input type="hidden" id="producto_id_entrada" name="producto_id">
@@ -535,19 +546,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Modal de entrada de stock
+    // Modal de entrada de stock - CORREGIDO
     const modalEntrada = document.getElementById('modalEntradaStock');
-    modalEntrada.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        const productoId = button.getAttribute('data-producto-id');
-        const productoNombre = button.getAttribute('data-producto-nombre');
-        
-        document.getElementById('producto_id_entrada').value = productoId;
-        document.getElementById('nombre_producto_entrada').textContent = productoNombre;
-        
-        const form = this.querySelector('form');
-        form.action = "{% url 'entrada_stock_producto' 0 %}".replace('0', productoId);
-    });
+    if (modalEntrada) {
+        modalEntrada.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            
+            document.getElementById('producto_id_entrada').value = productoId;
+            document.getElementById('nombre_producto_entrada').textContent = productoNombre;
+            
+            // Actualizar el action del formulario con el ID correcto
+            const form = document.getElementById('formEntradaStock');
+            form.action = "{% url 'entrada_stock_producto' 0 %}".replace('0', productoId);
+        });
+    }
 
     // Filtros de búsqueda
     const filtroStock = document.getElementById('filtro-stock');
@@ -570,6 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
 
 <style>
 /* Estilos generales mejorados basados en el diseño del CRUD */
@@ -1341,6 +1356,27 @@ document.addEventListener('DOMContentLoaded', function() {
 .btn-sm {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+}
+
+.movimiento-eliminacion {
+    border-left: 3px solid #DC2626;
+    background: #FEF2F2;
+}
+
+.movimiento-cantidad.eliminacion {
+    background: #DC2626;
+    color: white;
+}
+
+.movimiento-eliminacion .movimiento-producto {
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.movimiento-usuario {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6B7280;
 }
 
 /* Optimizaciones para portátiles */

@@ -10,7 +10,7 @@ from .vendedor_views import obtener_datos_vendedor
 # ==================== VISTAS DE STOCK ====================
 @login_required(login_url='login')
 def Stock_V(request):
-    """Vista principal de gestión de stock con gráficas"""
+    """Vista principal de gestión de stock con gráficas - CORREGIDA PARA MOSTRAR ELIMINACIONES"""
     try:
         print("=== DEBUG STOCK_V: INICIANDO ===")
         datos = obtener_datos_vendedor(request)
@@ -18,15 +18,18 @@ def Stock_V(request):
         
         if not datos or not datos.get('negocio_activo'):
             messages.error(request, "No tienes un negocio activo.")
-            return redirect('inicio')
+            return redirect('principal')
         
         negocio = datos['negocio_activo']
         print(f"DEBUG: Negocio activo: {negocio.nom_neg} (ID: {negocio.pkid_neg})")
         
+        # Obtener productos del negocio
+        productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
+        
         # Obtener productos con stock bajo usando el ORM de Django
         try:
             productos_stock_bajo = Productos.objects.filter(
-                fknegocioasociado_prod=negocio.pkid_neg,
+                fknegocioasociado_prod=negocio,
                 stock_prod__lte=5
             ).select_related('fkcategoria_prod')
             print(f"DEBUG: Productos stock bajo: {productos_stock_bajo.count()}")
@@ -36,24 +39,10 @@ def Stock_V(request):
 
         # Estadísticas usando el ORM de Django
         try:
-            total_productos = Productos.objects.filter(
-                fknegocioasociado_prod=negocio.pkid_neg
-            ).count()
-            
-            sin_stock = Productos.objects.filter(
-                fknegocioasociado_prod=negocio.pkid_neg,
-                stock_prod=0
-            ).count()
-            
-            stock_bajo = Productos.objects.filter(
-                fknegocioasociado_prod=negocio.pkid_neg,
-                stock_prod__range=(1, 5)
-            ).count()
-            
-            stock_normal = Productos.objects.filter(
-                fknegocioasociado_prod=negocio.pkid_neg,
-                stock_prod__gt=5
-            ).count()
+            total_productos = productos.count()
+            sin_stock = productos.filter(stock_prod=0).count()
+            stock_bajo = productos.filter(stock_prod__range=(1, 5)).count()
+            stock_normal = productos.filter(stock_prod__gt=5).count()
             
             print(f"DEBUG: Estadísticas - Total: {total_productos}, Normal: {stock_normal}, Bajo: {stock_bajo}, Sin: {sin_stock}")
             
@@ -61,71 +50,120 @@ def Stock_V(request):
             print(f"DEBUG: Error en estadísticas: {e}")
             total_productos = sin_stock = stock_bajo = stock_normal = 0
 
-        # Movimientos recientes - adaptado para MySQL
-        movimientos_recientes = []
+        # Obtener productos en oferta
+        productos_oferta = []
+        productos_oferta_count = 0
+        productos_en_oferta_ids = set()
+        
         try:
             with connection.cursor() as cursor:
-                # Verificar si la tabla existe
                 cursor.execute("""
-                    SELECT COUNT(*) FROM information_schema.tables 
-                    WHERE table_schema = DATABASE() AND table_name = 'movimientos_stock'
-                """)
-                tabla_existe = cursor.fetchone()[0]
+                    SELECT 
+                        p.nom_prod as producto_nombre,
+                        pr.porcentaje_descuento,
+                        p.precio_prod as precio_original,
+                        (p.precio_prod * (1 - pr.porcentaje_descuento / 100)) as precio_oferta,
+                        pr.stock_oferta,
+                        p.pkid_prod
+                    FROM promociones pr
+                    JOIN productos p ON pr.fkproducto_id = p.pkid_prod
+                    WHERE pr.fknegocio_id = %s 
+                    AND pr.estado_promo = 'activa'
+                    AND pr.fecha_fin >= CURDATE()
+                """, [negocio.pkid_neg])
                 
-                if tabla_existe:
-                    cursor.execute("""
-                        SELECT ms.fecha_movimiento, p.nom_prod, ms.tipo_movimiento, 
-                               ms.motivo, ms.cantidad, ms.stock_anterior, ms.stock_nuevo,
-                               COALESCE(u.first_name, 'Sistema') as usuario_nombre
-                        FROM movimientos_stock ms
-                        JOIN productos p ON ms.producto_id = p.pkid_prod
-                        LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
-                        LEFT JOIN auth_user u ON up.fkuser_id = u.id
-                        WHERE ms.negocio_id = %s
-                        ORDER BY ms.fecha_movimiento DESC
-                        LIMIT 10
-                    """, [negocio.pkid_neg])
+                for row in cursor.fetchall():
+                    productos_oferta.append({
+                        'producto_nombre': row[0],
+                        'descuento': float(row[1]),
+                        'precio_original': float(row[2]),
+                        'precio_oferta': float(row[3]),
+                        'stock_oferta': row[4]
+                    })
+                    productos_en_oferta_ids.add(row[5])
+                    productos_oferta_count += 1
+        except Exception as e:
+            print(f"Error obteniendo ofertas: {e}")
+
+        # ✅ MOVIMIENTOS RECIENTES - CONSULTA CORREGIDA PARA MOSTRAR ELIMINACIONES
+        movimientos_recientes = []
+        movimientos_hoy = 0
+        
+        try:
+            with connection.cursor() as cursor:
+                # ✅ CONSULTA MEJORADA: Incluye productos eliminados y maneja mejor los tipos
+                cursor.execute("""
+                    SELECT 
+                        ms.fecha_movimiento,
+                        COALESCE(p.nom_prod, 'PRODUCTO ELIMINADO') as producto,
+                        COALESCE(v.nombre_variante, 'Producto principal') as variante,
+                        ms.tipo_movimiento,
+                        ms.cantidad,
+                        ms.motivo,
+                        ms.descripcion_variante,
+                        COALESCE(u.first_name, 'Sistema') as usuario_nombre,
+                        ms.variante_id
+                    FROM movimientos_stock ms
+                    LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
+                    LEFT JOIN variantes_producto v ON ms.variante_id = v.id_variante
+                    LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
+                    LEFT JOIN auth_user u ON up.fkuser_id = u.id
+                    WHERE ms.negocio_id = %s
+                    ORDER BY ms.fecha_movimiento DESC
+                    LIMIT 8
+                """, [negocio.pkid_neg])
+                
+                resultados = cursor.fetchall()
+                print(f"DEBUG: Movimientos encontrados: {len(resultados)}")
+                
+                for row in resultados:
+                    fecha, producto, variante, tipo, cantidad, motivo, descripcion, usuario, variante_id = row
                     
-                    resultados = cursor.fetchall()
-                    print(f"DEBUG: Movimientos encontrados: {len(resultados)}")
+                    # ✅ MEJORAR LA VISUALIZACIÓN DE MOTIVOS DE ELIMINACIÓN
+                    if 'eliminacion_producto:' in motivo:
+                        motivo_display = f"🚫 ELIMINACIÓN: {motivo.replace('eliminacion_producto:', '')}"
+                        tipo_display = "eliminacion"
+                        icono = "🗑️"
+                    elif 'eliminacion_variante:' in motivo:
+                        motivo_display = f"🗑️ VARIANTE ELIMINADA: {motivo.replace('eliminacion_variante:', '')}"
+                        tipo_display = "eliminacion"
+                        icono = "🗑️"
+                    else:
+                        motivo_display = motivo
+                        tipo_display = tipo
+                        if tipo == 'entrada':
+                            icono = "📥"
+                        elif tipo == 'salida':
+                            icono = "📤"
+                        else:
+                            icono = "⚙️"
                     
-                    for row in resultados:
-                        movimientos_recientes.append({
-                            'fecha': row[0].strftime('%d/%m/%Y %H:%M') if row[0] else 'N/A',
-                            'producto': row[1] or 'Producto Desconocido',
-                            'tipo': row[2] or 'ajuste',
-                            'motivo': row[3] or 'Sin motivo',
-                            'cantidad': row[4] or 0,
-                            'stock_anterior': row[5] or 0,
-                            'stock_nuevo': row[6] or 0,
-                            'usuario': row[7] or 'Sistema'
-                        })
-                else:
-                    print("DEBUG: Tabla movimientos_stock no existe")
-                    # Crear tabla si no existe
-                    cursor.execute("""
-                        CREATE TABLE IF NOT EXISTS movimientos_stock (
-                            id_movimiento INT AUTO_INCREMENT PRIMARY KEY,
-                            producto_id INT NOT NULL,
-                            negocio_id INT NOT NULL,
-                            tipo_movimiento ENUM('entrada', 'salida', 'ajuste') NOT NULL,
-                            motivo VARCHAR(50) NOT NULL,
-                            cantidad INT NOT NULL,
-                            stock_anterior INT NOT NULL,
-                            stock_nuevo INT NOT NULL,
-                            usuario_id INT NOT NULL,
-                            fecha_movimiento DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            pedido_id INT NULL,
-                            FOREIGN KEY (producto_id) REFERENCES productos(pkid_prod),
-                            FOREIGN KEY (negocio_id) REFERENCES negocios(pkid_neg),
-                            FOREIGN KEY (usuario_id) REFERENCES usuario_perfil(id),
-                            FOREIGN KEY (pedido_id) REFERENCES pedidos(pkid_pedido)
-                        )
-                    """)
-                    print("DEBUG: Tabla movimientos_stock creada")
+                    movimientos_recientes.append({
+                        'fecha': fecha.strftime('%H:%M'),
+                        'producto': producto,
+                        'variante': variante,
+                        'tipo': tipo_display,
+                        'cantidad': cantidad,
+                        'motivo': f"{icono} {motivo_display}",
+                        'descripcion': descripcion or '',
+                        'usuario': usuario,
+                        'variante_id': variante_id
+                    })
+                
+                # Movimientos de hoy
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM movimientos_stock 
+                    WHERE negocio_id = %s 
+                    AND DATE(fecha_movimiento) = CURDATE()
+                """, [negocio.pkid_neg])
+                resultado_movimientos_hoy = cursor.fetchone()
+                movimientos_hoy = resultado_movimientos_hoy[0] if resultado_movimientos_hoy else 0
                     
         except Exception as e:
             print(f"DEBUG: Error en movimientos: {e}")
+            movimientos_recientes = []
+            movimientos_hoy = 0
 
         contexto = {
             'nombre': datos['nombre_usuario'],
@@ -137,6 +175,10 @@ def Stock_V(request):
             'stock_bajo': stock_bajo,
             'stock_normal': stock_normal,
             'movimientos_recientes': movimientos_recientes,
+            'movimientos_hoy': movimientos_hoy,
+            'productos_oferta': productos_oferta,
+            'productos_oferta_count': productos_oferta_count,
+            'productos_en_oferta_ids': productos_en_oferta_ids,
         }
         
         return render(request, 'Vendedor/Stock_V.html', contexto)
@@ -144,10 +186,9 @@ def Stock_V(request):
     except Exception as e:
         print(f"DEBUG: ERROR en Stock_V: {str(e)}")
         messages.error(request, f"Error al cargar el stock: {str(e)}")
-        return redirect('inicio')
+        return redirect('principal')
 
-# ==================== ELIMINAR LA FUNCIÓN DUPLICADA ajustar_stock_producto ====================
-# Esta función ahora está solo en vendedor_views.py
+
 
 @login_required(login_url='login')
 def entrada_stock_producto(request, producto_id):
@@ -160,7 +201,7 @@ def entrada_stock_producto(request, producto_id):
             datos = obtener_datos_vendedor(request)
             if not datos or not datos.get('negocio_activo'):
                 messages.error(request, "No tienes un negocio activo.")
-                return redirect('inicio')
+                return redirect('Stock_V')
             
             negocio = datos['negocio_activo']
             
@@ -214,12 +255,12 @@ def entrada_stock_producto(request, producto_id):
 
 @login_required(login_url='login')
 def reporte_movimientos_stock(request):
-    """Vista para ver reporte completo de movimientos de stock"""
+    """Vista para ver reporte completo de movimientos de stock - CORREGIDA PARA ELIMINACIONES Y REDIRECCIONES"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
             messages.error(request, "No tienes un negocio activo.")
-            return redirect('inicio')
+            return redirect('Stock_V')  # ✅ CORREGIDO: Redirigir a Stock_V en lugar de 'inicio'
         
         negocio = datos['negocio_activo']
         
@@ -228,12 +269,12 @@ def reporte_movimientos_stock(request):
         fecha_hasta = request.GET.get('fecha_hasta', '')
         tipo_movimiento = request.GET.get('tipo_movimiento', '')
         
-        # Consulta de movimientos con filtros
+        # ✅ CONSULTA DE MOVIMIENTOS CON FILTROS - MEJORADA
         movimientos = []
         query = """
             SELECT 
                 ms.fecha_movimiento, 
-                p.nom_prod, 
+                COALESCE(p.nom_prod, 'PRODUCTO ELIMINADO') as producto_nombre,
                 ms.tipo_movimiento, 
                 ms.motivo, 
                 ms.cantidad, 
@@ -242,9 +283,11 @@ def reporte_movimientos_stock(request):
                 COALESCE(u.first_name, 'Sistema') as usuario_nombre,
                 COALESCE(ped.pkid_pedido, 'N/A') as pedido_id,
                 COALESCE(ms.variante_id, 'N/A') as variante_id,
-                COALESCE(ms.descripcion_variante, '') as descripcion_variante
+                COALESCE(ms.descripcion_variante, '') as descripcion_variante,
+                COALESCE(v.nombre_variante, 'Producto principal') as nombre_variante
             FROM movimientos_stock ms
-            JOIN productos p ON ms.producto_id = p.pkid_prod
+            LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
+            LEFT JOIN variantes_producto v ON ms.variante_id = v.id_variante
             LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
             LEFT JOIN auth_user u ON up.fkuser_id = u.id
             LEFT JOIN pedidos ped ON ms.pedido_id = ped.pkid_pedido
@@ -270,34 +313,44 @@ def reporte_movimientos_stock(request):
             cursor.execute(query, params)
             
             for row in cursor.fetchall():
-                # Determinar si es variante o producto principal
+                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, descripcion_variante, nombre_variante = row
+                
+                # ✅ DETERMINAR SI ES VARIANTE O PRODUCTO PRINCIPAL
                 variante_info = 'Producto principal'
-                if row[9] != 'N/A' and row[10]:  # Si tiene variante_id y descripción
-                    variante_info = row[10]
+                if variante_id != 'N/A' and nombre_variante:
+                    variante_info = nombre_variante
+                
+                # ✅ MEJORAR VISUALIZACIÓN DE MOTIVOS DE ELIMINACIÓN
+                motivo_display = motivo
+                if 'eliminacion_producto:' in motivo:
+                    motivo_display = f"ELIMINACIÓN PRODUCTO: {motivo.replace('eliminacion_producto:', '')}"
+                elif 'eliminacion_variante:' in motivo:
+                    motivo_display = f"ELIMINACIÓN VARIANTE: {motivo.replace('eliminacion_variante:', '')}"
                 
                 movimientos.append({
-                    'fecha': row[0].strftime('%d/%m/%Y %H:%M') if row[0] else 'N/A',
-                    'producto': row[1],
+                    'fecha': fecha.strftime('%d/%m/%Y %H:%M') if fecha else 'N/A',
+                    'producto': producto,
                     'variante': variante_info,
-                    'tipo': row[2],
-                    'motivo': row[3],
-                    'cantidad': row[4],
-                    'stock_anterior': row[5],
-                    'stock_nuevo': row[6],
-                    'usuario': row[7],
-                    'pedido_id': row[8],
-                    'variante_id': row[9],
-                    'descripcion_variante': row[10]
+                    'tipo': tipo,
+                    'motivo': motivo_display,
+                    'cantidad': cantidad,
+                    'stock_anterior': stock_anterior,
+                    'stock_nuevo': stock_nuevo,
+                    'usuario': usuario,
+                    'pedido_id': pedido_id,
+                    'variante_id': variante_id,
+                    'descripcion_variante': descripcion_variante
                 })
         
-        # Estadísticas para el reporte
+        # ✅ ESTADÍSTICAS PARA EL REPORTE - INCLUYENDO ELIMINACIONES
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT 
                     COUNT(*) as total_movimientos,
                     SUM(CASE WHEN tipo_movimiento = 'entrada' THEN cantidad ELSE 0 END) as total_entradas,
                     SUM(CASE WHEN tipo_movimiento = 'salida' THEN cantidad ELSE 0 END) as total_salidas,
-                    SUM(CASE WHEN tipo_movimiento = 'ajuste' THEN cantidad ELSE 0 END) as total_ajustes
+                    SUM(CASE WHEN tipo_movimiento = 'ajuste' THEN cantidad ELSE 0 END) as total_ajustes,
+                    SUM(CASE WHEN motivo LIKE '%eliminacion%' THEN 1 ELSE 0 END) as total_eliminaciones
                 FROM movimientos_stock 
                 WHERE negocio_id = %s
             """, [negocio.pkid_neg])
@@ -308,6 +361,7 @@ def reporte_movimientos_stock(request):
                 'total_entradas': stats[1] or 0,
                 'total_salidas': stats[2] or 0,
                 'total_ajustes': stats[3] or 0,
+                'total_eliminaciones': stats[4] or 0,
             }
         
         contexto = {
@@ -327,7 +381,7 @@ def reporte_movimientos_stock(request):
     except Exception as e:
         print(f"ERROR en reporte_movimientos_stock: {str(e)}")
         messages.error(request, f"Error: {str(e)}")
-        return redirect('inicio')
+        return redirect('Stock_V')  # ✅ CORREGIDO: Redirigir a Stock_V en caso de error
 
 # Función para registrar movimientos automáticos por pedidos
 def registrar_movimiento_pedido(pedido_id, tipo_movimiento, motivo):
