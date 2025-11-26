@@ -2,6 +2,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.core.mail import EmailMultiAlternatives
 from django.utils import timezone
 from django.http import JsonResponse
 from django.db import transaction, connection
@@ -1504,13 +1507,13 @@ def ver_recibo_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def cambiar_estado_pedido(request, pedido_id):
-    """Vista para cambiar estado del pedido con manejo CORREGIDO de stock para variantes"""
+    """Vista para cambiar estado del pedido con manejo CORREGIDO de stock para variantes Y ENVÍO DE CORREOS"""
     if request.method == 'POST':
         try:
             nuevo_estado = request.POST.get('nuevo_estado')
             motivo_cancelacion = request.POST.get('motivo_cancelacion', 'Sin motivo especificado')
             
-            print(f"DEBUG CAMBIAR_ESTADO_PEDIDO: Pedido {pedido_id} a {nuevo_estado}")
+            print(f"🔄 DEBUG CAMBIAR_ESTADO_PEDIDO: Pedido {pedido_id} a {nuevo_estado}")
 
             datos = obtener_datos_vendedor(request)
             if not datos or not datos.get('negocio_activo'):
@@ -1533,7 +1536,7 @@ def cambiar_estado_pedido(request, pedido_id):
                     return redirect('gestionar_ventas')
                 
                 estado_actual = resultado[0]
-                print(f"DEBUG: Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}")
+                print(f"🔄 DEBUG: Estado actual: {estado_actual}, Nuevo estado: {nuevo_estado}")
                 
                 # 2. Actualizar el estado del pedido
                 cursor.execute("""
@@ -1544,7 +1547,7 @@ def cambiar_estado_pedido(request, pedido_id):
                 
                 # 3. ✅ CORRECCIÓN CRÍTICA: OBTENER DETALLES DEL PEDIDO CON VARIANTES DESDE CARRITO_ITEM
                 if nuevo_estado in ['enviado', 'entregado'] and estado_actual not in ['enviado', 'entregado']:
-                    print("DEBUG: Descontando stock por envío/entrega - CON VARIANTES")
+                    print("🔄 DEBUG: Descontando stock por envío/entrega - CON VARIANTES")
                     
                     # ✅ NUEVA CONSULTA: Obtener productos con sus variantes desde carrito_item usando los nombres REALES de columnas
                     cursor.execute("""
@@ -1560,11 +1563,11 @@ def cambiar_estado_pedido(request, pedido_id):
                     """, [pedido_id])
                     
                     items_carrito = cursor.fetchall()
-                    print(f"DEBUG: Items encontrados en carrito: {len(items_carrito)}")
+                    print(f"🔄 DEBUG: Items encontrados en carrito: {len(items_carrito)}")
                     
                     for (producto_id, cantidad, variante_id, variante_nombre) in items_carrito:
                         
-                        print(f"DEBUG: Procesando producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
+                        print(f"🔄 DEBUG: Procesando producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
                         
                         if variante_id:
                             # ✅ ES UNA VARIANTE - Descontar de la variante
@@ -1579,10 +1582,10 @@ def cambiar_estado_pedido(request, pedido_id):
                                 stock_variante, nombre_variante = resultado_variante
                                 nuevo_stock_variante = stock_variante - cantidad
                                 
-                                print(f"DEBUG: Variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
+                                print(f"🔄 DEBUG: Variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
                                 
                                 if nuevo_stock_variante < 0:
-                                    print(f"ADVERTENCIA: Stock negativo para variante {nombre_variante}, ajustando a 0")
+                                    print(f"⚠️ ADVERTENCIA: Stock negativo para variante {nombre_variante}, ajustando a 0")
                                     nuevo_stock_variante = 0
                                 
                                 # Actualizar stock de la variante
@@ -1604,11 +1607,11 @@ def cambiar_estado_pedido(request, pedido_id):
                                         cantidad, stock_variante, nuevo_stock_variante,
                                         perfil_id, pedido_id, variante_id, nombre_variante, datetime.now()
                                     ])
-                                    print(f"DEBUG: Movimiento registrado para variante {nombre_variante}")
+                                    print(f"🔄 DEBUG: Movimiento registrado para variante {nombre_variante}")
                                 except Exception as e:
-                                    print(f"DEBUG: Error registrando movimiento de variante: {e}")
+                                    print(f"🔄 DEBUG: Error registrando movimiento de variante: {e}")
                             else:
-                                print(f"ERROR: Variante {variante_id} no encontrada para producto {producto_id}")
+                                print(f"❌ ERROR: Variante {variante_id} no encontrada para producto {producto_id}")
                         
                         else:
                             # ✅ ES PRODUCTO BASE - Descontar del producto base
@@ -1621,10 +1624,10 @@ def cambiar_estado_pedido(request, pedido_id):
                             if resultado_producto:
                                 stock_actual, nombre_producto = resultado_producto
                                 nuevo_stock = stock_actual - cantidad
-                                print(f"DEBUG: Producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
+                                print(f"🔄 DEBUG: Producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
                                 
                                 if nuevo_stock < 0:
-                                    print(f"ADVERTENCIA: Stock negativo para {nombre_producto}, ajustando a 0")
+                                    print(f"⚠️ ADVERTENCIA: Stock negativo para {nombre_producto}, ajustando a 0")
                                     nuevo_stock = 0
                                 
                                 # Actualizar stock del producto base
@@ -1650,14 +1653,14 @@ def cambiar_estado_pedido(request, pedido_id):
                                         cantidad, stock_actual, nuevo_stock,
                                         perfil_id, pedido_id, datetime.now()
                                     ])
-                                    print(f"DEBUG: Movimiento registrado para producto base {nombre_producto}")
+                                    print(f"🔄 DEBUG: Movimiento registrado para producto base {nombre_producto}")
                                 except Exception as e:
-                                    print(f"DEBUG: Error registrando movimiento: {e}")
+                                    print(f"🔄 DEBUG: Error registrando movimiento: {e}")
                     
                     messages.success(request, f"✅ Pedido {nuevo_estado}. Stock descontado correctamente.")
                 
                 elif nuevo_estado == 'cancelado' and estado_actual not in ['cancelado']:
-                    print("DEBUG: Procesando cancelación - reabasteciendo stock CON VARIANTES")
+                    print("🔄 DEBUG: Procesando cancelación - reabasteciendo stock CON VARIANTES")
                     
                     # ✅ CORRECCIÓN: Obtener items del carrito para reabastecer variantes
                     cursor.execute("""
@@ -1677,7 +1680,7 @@ def cambiar_estado_pedido(request, pedido_id):
                     stock_reabastecido = False
                     for (producto_id, cantidad, variante_id, variante_nombre) in items_carrito:
                         
-                        print(f"DEBUG: Reabasteciendo producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
+                        print(f"🔄 DEBUG: Reabasteciendo producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
                         
                         if variante_id:
                             # ✅ ES UNA VARIANTE - Reabastecer la variante
@@ -1691,7 +1694,7 @@ def cambiar_estado_pedido(request, pedido_id):
                             if resultado_variante:
                                 stock_variante, nombre_variante = resultado_variante
                                 nuevo_stock_variante = stock_variante + cantidad
-                                print(f"DEBUG: Reabasteciendo variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
+                                print(f"🔄 DEBUG: Reabasteciendo variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
                                 
                                 # Actualizar stock de la variante
                                 cursor.execute("""
@@ -1713,7 +1716,7 @@ def cambiar_estado_pedido(request, pedido_id):
                                         perfil_id, pedido_id, variante_id, nombre_variante, datetime.now()
                                     ])
                                 except Exception as e:
-                                    print(f"DEBUG: Error registrando movimiento de variante: {e}")
+                                    print(f"🔄 DEBUG: Error registrando movimiento de variante: {e}")
                         
                         else:
                             # ✅ ES PRODUCTO BASE - Reabastecer producto base
@@ -1726,7 +1729,7 @@ def cambiar_estado_pedido(request, pedido_id):
                             if resultado_producto:
                                 stock_actual, nombre_producto = resultado_producto
                                 nuevo_stock = stock_actual + cantidad
-                                print(f"DEBUG: Reabasteciendo producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
+                                print(f"🔄 DEBUG: Reabasteciendo producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
                                 
                                 # Actualizar stock del producto base
                                 cursor.execute("""
@@ -1752,7 +1755,7 @@ def cambiar_estado_pedido(request, pedido_id):
                                         perfil_id, pedido_id, datetime.now()
                                     ])
                                 except Exception as e:
-                                    print(f"DEBUG: Error registrando movimiento: {e}")
+                                    print(f"🔄 DEBUG: Error registrando movimiento: {e}")
                         
                         stock_reabastecido = True
                     
@@ -1765,10 +1768,30 @@ def cambiar_estado_pedido(request, pedido_id):
                     # Para otros cambios de estado
                     messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}")
                 
+                # 4. ✅ ENVIAR CORREO DE ACTUALIZACIÓN DE ESTADO - VERSIÓN MEJORADA
+                try:
+                    print(f"📧 INTENTANDO ENVIAR CORREO: Pedido #{pedido_id}, Estado: {nuevo_estado}")
+                    correo_enviado = enviar_correo_estado_pedido(pedido_id, nuevo_estado)
+                    if correo_enviado:
+                        print(f"✅ CORREO ENVIADO EXITOSAMENTE para pedido #{pedido_id}")
+                        messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}. Correo enviado al cliente.")
+                    else:
+                        print(f"⚠️ NO SE PUDO ENVIAR EL CORREO para pedido #{pedido_id}")
+                        messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}.")
+                        
+                except Exception as e:
+                    print(f"❌ ERROR EN EL PROCESO DE ENVÍO DE CORREO: {e}")
+                    import traceback
+                    print(f"TRACEBACK CORREO:")
+                    print(f"{traceback.format_exc()}")
+                    # No fallar la operación si hay error en el correo
+                    messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}.")
+                
         except Exception as e:
-            print(f"ERROR al cambiar estado: {str(e)}")
+            print(f"❌ ERROR al cambiar estado: {str(e)}")
             import traceback
-            print(f"Traceback completo: {traceback.format_exc()}")
+            print(f"TRACEBACK COMPLETO:")
+            print(f"{traceback.format_exc()}")
             messages.error(request, f"Error al cambiar el estado del pedido: {str(e)}")
     
     return redirect('gestionar_ventas')
@@ -2010,3 +2033,121 @@ def corregir_stock_pedido(request, pedido_id):
     
     return redirect('gestionar_ventas')
 
+# ==================== FUNCIÓN SIMPLIFICADA PARA ENVIAR CORREOS DE ESTADO ====================
+def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
+    """Enviar correo electrónico al cliente cuando cambia el estado de un pedido - VERSIÓN SIMPLE"""
+    try:
+        print(f"📧 Enviando correo para pedido #{pedido_id}, estado: {nuevo_estado}")
+        
+        with connection.cursor() as cursor:
+            # Obtener información básica del pedido
+            cursor.execute("""
+                SELECT 
+                    p.pkid_pedido,
+                    p.total_pedido,
+                    p.fecha_pedido,
+                    u.email,
+                    u.first_name,
+                    n.nom_neg
+                FROM pedidos p
+                JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
+                JOIN auth_user u ON up.fkuser_id = u.id
+                JOIN negocios n ON p.fknegocio_pedido = n.pkid_neg
+                WHERE p.pkid_pedido = %s
+            """, [pedido_id])
+            
+            pedido_info = cursor.fetchone()
+            
+            if not pedido_info:
+                print(f"❌ No se encontró el pedido #{pedido_id}")
+                return False
+            
+            # Obtener detalles del pedido
+            cursor.execute("""
+                SELECT 
+                    p.nom_prod,
+                    dp.cantidad_detalle,
+                    dp.precio_unitario
+                FROM detalles_pedido dp
+                JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
+                WHERE dp.fkpedido_detalle = %s
+            """, [pedido_id])
+            
+            detalles = cursor.fetchall()
+
+        # Verificar email del cliente
+        email_cliente = pedido_info[3]
+        if not email_cliente:
+            print(f"⚠️ El cliente no tiene email")
+            return False
+
+        # Procesar items del pedido
+        items_detallados = []
+        for detalle in detalles:
+            items_detallados.append({
+                'nombre': detalle[0],
+                'cantidad': detalle[1],
+                'precio': float(detalle[2]),
+                'subtotal': float(detalle[1]) * float(detalle[2])
+            })
+
+        # Textos según el estado
+        estados_texto = {
+            'confirmado': '✅ Confirmado',
+            'preparando': '👨‍🍳 En Preparación', 
+            'enviado': '🚚 En Camino',
+            'entregado': '🎉 Entregado',
+            'cancelado': '❌ Cancelado'
+        }
+
+        mensajes_estado = {
+            'confirmado': 'El negocio ha confirmado tu pedido.',
+            'preparando': 'Tu pedido está siendo preparado.',
+            'enviado': '¡Tu pedido está en camino!',
+            'entregado': '¡Pedido entregado exitosamente!',
+            'cancelado': 'Tu pedido ha sido cancelado.'
+        }
+
+        # Formatear fecha
+        fecha_pedido = pedido_info[2]
+        if hasattr(fecha_pedido, 'strftime'):
+            fecha_formateada = fecha_pedido.strftime("%d/%m/%Y a las %I:%M %p").lower()
+        else:
+            fecha_formateada = "Fecha no disponible"
+
+        # Preparar datos para el template
+        context = {
+            'numero_pedido': f"VECY-{pedido_id:06d}",
+            'estado_display': estados_texto.get(nuevo_estado, nuevo_estado),
+            'mensaje_estado': mensajes_estado.get(nuevo_estado, ''),
+            'fecha_pedido': fecha_formateada,
+            'total_pedido': float(pedido_info[1]),
+            'cliente_nombre': pedido_info[4] or "Cliente",
+            'negocio_nombre': pedido_info[5],
+            'items': items_detallados,
+        }
+
+        # Asunto del correo
+        asunto = f"Actualización de Pedido - {estados_texto.get(nuevo_estado, 'Estado Actualizado')}"
+
+        # Renderizar y enviar correo
+        html_content = render_to_string('emails/estado_pedido.html', context)
+        text_content = strip_tags(html_content)
+
+        email = EmailMultiAlternatives(
+            subject=asunto,
+            body=text_content,
+            from_email='soportevecy@gmail.com',
+            to=[email_cliente],
+            reply_to=['soportevecy@gmail.com']
+        )
+        
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+        
+        print(f"✅ Correo enviado a {email_cliente}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error enviando correo: {e}")
+        return False

@@ -197,18 +197,18 @@
                         <div class="card-body">
                             <div class="row g-2">
                                 <div class="col-md-4">
-                                    <button type="button" class="btn btn-warning w-100" id="btnCierre5Min">
-                                        <i class="fas fa-stopwatch me-1"></i>Cerrar en 5 min
+                                    <button type="button" class="btn btn-success w-100" id="btnApertura1Hora">
+                                        <i class="fas fa-play me-1"></i>Abrir en 1 hora
                                     </button>
                                 </div>
                                 <div class="col-md-4">
-                                    <button type="button" class="btn btn-warning w-100" id="btnCierre15Min">
-                                        <i class="fas fa-stopwatch me-1"></i>Cerrar en 15 min
+                                    <button type="button" class="btn btn-success w-100" id="btnApertura2Horas">
+                                        <i class="fas fa-play me-1"></i>Abrir en 2 horas
                                     </button>
                                 </div>
                                 <div class="col-md-4">
-                                    <button type="button" class="btn btn-success w-100" id="btnApertura5Min">
-                                        <i class="fas fa-play me-1"></i>Abrir en 5 min
+                                    <button type="button" class="btn btn-warning w-100" id="btnCierre1Hora">
+                                        <i class="fas fa-stop me-1"></i>Cerrar en 1 hora
                                     </button>
                                 </div>
                             </div>
@@ -227,13 +227,19 @@
                         </div>
                         <div class="card-body">
                             <div class="row align-items-end">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="mb-3">
-                                        <label for="horaProgramacion" class="form-label">Seleccionar Hora</label>
+                                        <label for="fechaProgramacion" class="form-label">Fecha</label>
+                                        <input type="date" class="form-control" id="fechaProgramacion">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="horaProgramacion" class="form-label">Hora</label>
                                         <input type="time" class="form-control" id="horaProgramacion">
                                     </div>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <div class="d-grid gap-2">
                                         <button type="button" class="btn btn-success" id="btnProgramarApertura">
                                             <i class="fas fa-play me-1"></i>Programar Apertura
@@ -245,7 +251,7 @@
                                 </div>
                             </div>
                             <small class="text-muted">
-                                Programa una apertura o cierre específico para una hora determinada.
+                                Programa una apertura o cierre específico para una fecha y hora determinada.
                             </small>
                         </div>
                     </div>

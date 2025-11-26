@@ -1,7 +1,5 @@
-// static/vendedor/js/Layout_V.js 
-
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Layout VECY inicializado - CON GESTIÓN COMPLETA DE HORARIOS CORREGIDA');
+    console.log('🚀 Layout VECY inicializado - SISTEMA COMPLETO CORREGIDO');
 
     // ==================== ELEMENTOS DEL DOM ====================
     const elementos = {
@@ -15,7 +13,9 @@ document.addEventListener('DOMContentLoaded', function() {
         habilitarProgramacion: document.getElementById('habilitarProgramacion'),
         btnProgramarCierre: document.getElementById('btnProgramarCierre'),
         btnProgramarApertura: document.getElementById('btnProgramarApertura'),
-        // NUEVOS ELEMENTOS AGREGADOS
+        btnApertura1Hora: document.getElementById('btnApertura1Hora'),
+        btnApertura2Horas: document.getElementById('btnApertura2Horas'),
+        btnCierre1Hora: document.getElementById('btnCierre1Hora'),
         botonDesplegableUsuario: document.getElementById('botonDesplegableUsuario'),
         menuDesplegableUsuario: document.getElementById('menuDesplegableUsuario'),
         botonDesplegableNotificaciones: document.getElementById('botonDesplegableNotificaciones'),
@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
         horarioCierre: '18:00',
         programacionAutomatica: false,
         estadoActual: 'cerrado',
-        programaciones: [] // Array para programaciones específicas
+        programaciones: []
     };
 
     // ==================== FUNCIONES PRINCIPALES ====================
@@ -41,12 +41,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 configuracionHorarios = {
                     ...configuracionHorarios,
                     ...configCargada,
-                    // Asegurar que las programaciones pendientes se mantengan
                     programaciones: configCargada.programaciones || []
                 };
-                console.log('Configuración cargada:', configuracionHorarios);
+                console.log('✅ Configuración cargada:', configuracionHorarios);
             } catch (e) {
-                console.error('Error al cargar configuración:', e);
+                console.error('❌ Error al cargar configuración:', e);
                 configuracionHorarios = {
                     horarioApertura: '08:00',
                     horarioCierre: '18:00',
@@ -62,24 +61,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function guardarConfiguracion() {
         localStorage.setItem('configuracionHorariosNegocio', JSON.stringify(configuracionHorarios));
-        console.log('Configuración guardada:', configuracionHorarios);
+        console.log('💾 Configuración guardada:', configuracionHorarios);
     }
 
     function actualizarUIEstadoNegocio() {
         if (elementos.textoEstado && elementos.alternadorNegocio) {
             const estaAbierto = configuracionHorarios.estadoActual === 'abierto';
             
+            // Actualizar texto
             elementos.textoEstado.textContent = estaAbierto ? 'Abierto' : 'Cerrado';
-            elementos.textoEstado.className = estaAbierto ? 'estado-abierto' : 'estado-cerrado';
             
-            // Actualizar correctamente la clase del interruptor
+            // Actualizar clases CSS
             if (estaAbierto) {
+                elementos.textoEstado.classList.add('estado-abierto');
+                elementos.textoEstado.classList.remove('estado-cerrado');
                 elementos.alternadorNegocio.classList.add('activo');
             } else {
+                elementos.textoEstado.classList.add('estado-cerrado');
+                elementos.textoEstado.classList.remove('estado-abierto');
                 elementos.alternadorNegocio.classList.remove('activo');
             }
             
-            console.log('UI actualizada - Estado:', configuracionHorarios.estadoActual, 'Clase activo:', elementos.alternadorNegocio.classList.contains('activo'));
+            console.log('🔄 UI actualizada - Estado:', configuracionHorarios.estadoActual);
         }
     }
 
@@ -90,15 +93,14 @@ document.addEventListener('DOMContentLoaded', function() {
         guardarConfiguracion();
         actualizarUIEstadoNegocio();
         
-        // Registrar en historial
         registrarEnHistorial(nuevoEstado ? 'abierto' : 'cerrado', motivo);
         
         const mensaje = nuevoEstado ? 
-            '✅ Negocio abierto al público' : 
-            '🔒 Negocio cerrado temporalmente';
+            '✅ Negocio ABIERTO al público' : 
+            '🔒 Negocio CERRADO temporalmente';
         mostrarToast(mensaje, 'success');
         
-        console.log(`Estado cambiado: ${estadoAnterior} → ${configuracionHorarios.estadoActual} (${motivo})`);
+        console.log(`🔄 Estado cambiado: ${estadoAnterior} → ${configuracionHorarios.estadoActual} (${motivo})`);
     }
 
     function registrarEnHistorial(estado, tipo) {
@@ -110,7 +112,6 @@ document.addEventListener('DOMContentLoaded', function() {
             timestamp: Date.now()
         });
         
-        // Mantener solo los últimos 50 registros
         if (historial.length > 50) {
             historial.length = 50;
         }
@@ -121,13 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==================== HORA DE BOGOTÁ ====================
 
     function obtenerHoraBogota() {
-        const ahora = new Date();
-        const offsetBogota = -5 * 60;
-        const offsetLocal = ahora.getTimezoneOffset();
-        const diferencia = offsetBogota - offsetLocal;
-        
-        const horaBogota = new Date(ahora.getTime() + diferencia * 60000);
-        return horaBogota.toLocaleString('es-CO', {
+        return new Date().toLocaleString('es-CO', {
             timeZone: 'America/Bogota',
             year: 'numeric',
             month: '2-digit',
@@ -139,12 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function obtenerHoraActualBogota() {
-        const ahora = new Date();
-        const offsetBogota = -5 * 60;
-        const offsetLocal = ahora.getTimezoneOffset();
-        const diferencia = offsetBogota - offsetLocal;
-        
-        return new Date(ahora.getTime() + diferencia * 60000);
+        return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Bogota' }));
     }
 
     function obtenerHoraStringBogota() {
@@ -152,25 +142,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return horaBogota.toTimeString().slice(0, 5);
     }
 
+    function obtenerFechaHoraBogota() {
+        return obtenerHoraActualBogota();
+    }
+
     function convertirHoraAMinutos(horaString) {
         const [horas, minutos] = horaString.split(':').map(Number);
         return horas * 60 + minutos;
     }
 
-    // ==================== PROGRAMACIÓN AUTOMÁTICA CORREGIDA ====================
+    // ==================== SISTEMA DE VERIFICACIÓN AUTOMÁTICA ====================
 
     function verificarEstadoAutomatico() {
-        console.log('=== INICIANDO VERIFICACIÓN AUTOMÁTICA ===');
+        console.log('⏰ INICIANDO VERIFICACIÓN AUTOMÁTICA - Hora:', obtenerHoraStringBogota());
         
         // Primero verificar programaciones específicas
         const cambiosProgramaciones = verificarProgramacionesEspecificas();
         
-        // Si no hubo cambios por programaciones específicas, verificar horario automático
+        // Si no hubo cambios por programaciones, verificar horario automático
         if (!cambiosProgramaciones && configuracionHorarios.programacionAutomatica) {
             verificarHorarioAutomatico();
         }
         
-        console.log('=== VERIFICACIÓN AUTOMÁTICA COMPLETADA ===');
+        console.log('✅ VERIFICACIÓN COMPLETADA - Estado actual:', configuracionHorarios.estadoActual);
     }
 
     function verificarHorarioAutomatico() {
@@ -185,11 +179,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const deberiaEstarAbierto = minutosActual >= minutosApertura && minutosActual < minutosCierre;
         const estaAbierto = configuracionHorarios.estadoActual === 'abierto';
         
-        console.log(`Verificación horario automático - Hora: ${horaActual}, Apertura: ${horarioApertura}, Cierre: ${horarioCierre}`);
-        console.log(`Debería estar abierto: ${deberiaEstarAbierto}, Está abierto: ${estaAbierto}`);
+        console.log(`📊 Verificación horario automático:`);
+        console.log(`   - Hora actual: ${horaActual}`);
+        console.log(`   - Apertura: ${horarioApertura}`);
+        console.log(`   - Cierre: ${horarioCierre}`);
+        console.log(`   - Debería estar abierto: ${deberiaEstarAbierto}`);
+        console.log(`   - Está abierto: ${estaAbierto}`);
         
         if (deberiaEstarAbierto !== estaAbierto) {
-            console.log(`Cambio automático necesario: ${estaAbierto ? 'Cerrando' : 'Abriendo'}`);
+            console.log(`🔄 Cambio automático necesario: ${estaAbierto ? 'Cerrando' : 'Abriendo'}`);
             cambiarEstadoNegocio(deberiaEstarAbierto, 'automatico');
             return true;
         }
@@ -197,17 +195,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function verificarProgramacionesEspecificas() {
-        const ahora = obtenerHoraActualBogota();
+        const ahora = obtenerFechaHoraBogota();
         const timestampActual = ahora.getTime();
         
         let cambiosRealizados = false;
         const programacionesAEliminar = [];
         
-        console.log('Verificando programaciones específicas...');
+        console.log('🔍 Verificando programaciones específicas...');
+        console.log('   - Hora actual:', ahora.toLocaleString('es-CO'));
+        console.log('   - Programaciones pendientes:', configuracionHorarios.programaciones.filter(p => p.estado === 'pendiente').length);
         
-        configuracionHorarios.programaciones.forEach((programacion, index) => {
-            if (programacion.timestamp <= timestampActual && programacion.estado === 'pendiente') {
-                console.log(`⏰ Ejecutando programación: ${programacion.tipo} programado para ${new Date(programacion.timestamp).toLocaleString('es-CO')}`);
+        configuracionHorarios.programaciones.forEach((programacion) => {
+            if (programacion.estado === 'pendiente' && programacion.timestamp <= timestampActual) {
+                console.log(`⏰ EJECUTANDO PROGRAMACIÓN: ${programacion.tipo} programado para ${new Date(programacion.timestamp).toLocaleString('es-CO')}`);
                 
                 // Ejecutar la programación
                 cambiarEstadoNegocio(programacion.tipo === 'apertura', 'programado');
@@ -216,18 +216,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Marcar como completada
                 programacion.estado = 'completada';
                 
-                // Si es solo para hoy, programar eliminación
+                // Si es solo para hoy, marcar para eliminar
                 if (programacion.soloHoy) {
                     programacionesAEliminar.push(programacion.id);
                 }
             }
         });
         
-        // Eliminar programaciones de "solo hoy" que ya se ejecutaron
+        // Eliminar programaciones completadas de "solo hoy"
         if (programacionesAEliminar.length > 0) {
             configuracionHorarios.programaciones = configuracionHorarios.programaciones.filter(
                 p => !programacionesAEliminar.includes(p.id)
             );
+            console.log(`🗑️ Eliminadas ${programacionesAEliminar.length} programaciones completadas`);
         }
         
         if (cambiosRealizados) {
@@ -238,11 +239,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return cambiosRealizados;
     }
 
+    // ==================== SISTEMA DE PROGRAMACIÓN ====================
+
     function programarAperturaCierre(tipo, fechaHora, soloHoy = true) {
         const timestamp = fechaHora.getTime();
-        const ahora = Date.now();
+        const ahora = obtenerFechaHoraBogota().getTime();
         
-        // Validar que la programación sea en el futuro
+        console.log(`📅 Intentando programar ${tipo}:`);
+        console.log(`   - Fecha programada: ${fechaHora.toLocaleString('es-CO')}`);
+        console.log(`   - Timestamp programado: ${timestamp}`);
+        console.log(`   - Timestamp actual: ${ahora}`);
+        
         if (timestamp <= ahora) {
             mostrarToast('❌ La hora programada debe ser en el futuro', 'error');
             return null;
@@ -268,44 +275,44 @@ document.addEventListener('DOMContentLoaded', function() {
         guardarConfiguracion();
         
         const mensaje = tipo === 'apertura' ? 
-            `✅ Apertura programada para ${programacion.fechaHora}` :
-            `✅ Cierre programado para ${programacion.fechaHora}`;
+            `✅ APERTURA programada para ${programacion.fechaHora}` :
+            `✅ CIERRE programado para ${programacion.fechaHora}`;
             
         mostrarToast(mensaje, 'success');
         
-        console.log('Programación agregada:', programacion);
+        console.log('📅 Programación agregada:', programacion);
         actualizarListaProgramaciones();
         return programacion.id;
     }
 
-    function programarCierreEnMinutos(minutos) {
-        const fechaProgramada = new Date();
-        fechaProgramada.setMinutes(fechaProgramada.getMinutes() + minutos);
+    function programarCierreEnHoras(horas) {
+        const fechaProgramada = new Date(obtenerFechaHoraBogota());
+        fechaProgramada.setHours(fechaProgramada.getHours() + horas);
         
         const idProgramacion = programarAperturaCierre('cierre', fechaProgramada, true);
         
         if (idProgramacion) {
-            mostrarToast(`🔒 Cierre programado en ${minutos} minutos`, 'info');
+            mostrarToast(`🔒 Cierre programado en ${horas} hora(s)`, 'info');
         }
         
         return idProgramacion;
     }
 
-    function programarAperturaEnMinutos(minutos) {
-        const fechaProgramada = new Date();
-        fechaProgramada.setMinutes(fechaProgramada.getMinutes() + minutos);
+    function programarAperturaEnHoras(horas) {
+        const fechaProgramada = new Date(obtenerFechaHoraBogota());
+        fechaProgramada.setHours(fechaProgramada.getHours() + horas);
         
         const idProgramacion = programarAperturaCierre('apertura', fechaProgramada, true);
         
         if (idProgramacion) {
-            mostrarToast(`🟢 Apertura programada en ${minutos} minutos`, 'info');
+            mostrarToast(`🟢 Apertura programada en ${horas} hora(s)`, 'info');
         }
         
         return idProgramacion;
     }
 
     function obtenerProgramacionesPendientes() {
-        const ahora = Date.now();
+        const ahora = obtenerFechaHoraBogota().getTime();
         return configuracionHorarios.programaciones.filter(p => 
             p.estado === 'pendiente' && p.timestamp > ahora
         );
@@ -324,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
 
-    // ==================== MODAL DE PROGRAMACIÓN MEJORADO ====================
+    // ==================== MODAL DE PROGRAMACIÓN ====================
 
     function inicializarModalProgramacion() {
         if (elementos.botonProgramarHorario && elementos.modalProgramacion) {
@@ -336,21 +343,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Botones de programación rápida
-        const btnCierre5Min = document.getElementById('btnCierre5Min');
-        const btnCierre15Min = document.getElementById('btnCierre15Min');
-        const btnApertura5Min = document.getElementById('btnApertura5Min');
-        
-        if (btnCierre5Min) {
-            btnCierre5Min.addEventListener('click', () => programarCierreEnMinutos(5));
+        if (elementos.btnApertura1Hora) {
+            elementos.btnApertura1Hora.addEventListener('click', () => programarAperturaEnHoras(1));
         }
-        if (btnCierre15Min) {
-            btnCierre15Min.addEventListener('click', () => programarCierreEnMinutos(15));
+        if (elementos.btnApertura2Horas) {
+            elementos.btnApertura2Horas.addEventListener('click', () => programarAperturaEnHoras(2));
         }
-        if (btnApertura5Min) {
-            btnApertura5Min.addEventListener('click', () => programarAperturaEnMinutos(5));
+        if (elementos.btnCierre1Hora) {
+            elementos.btnCierre1Hora.addEventListener('click', () => programarCierreEnHoras(1));
         }
 
-        // Botones de programación desde modal
+        // Botones de programación específica
         if (elementos.btnProgramarCierre) {
             elementos.btnProgramarCierre.addEventListener('click', function() {
                 programarDesdeModal('cierre');
@@ -369,6 +372,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 guardarConfiguracionDesdeModal();
             });
         }
+
+        // Inicializar fecha actual en el modal
+        const fechaInput = document.getElementById('fechaProgramacion');
+        if (fechaInput) {
+            const hoy = new Date().toISOString().split('T')[0];
+            fechaInput.value = hoy;
+            fechaInput.min = hoy;
+        }
     }
 
     function cargarConfiguracionEnModal() {
@@ -386,25 +397,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function programarDesdeModal(tipo) {
-        const inputHora = document.getElementById('horaProgramacion');
-        if (!inputHora || !inputHora.value) {
-            mostrarToast('❌ Selecciona una hora para programar', 'error');
+        const fechaInput = document.getElementById('fechaProgramacion');
+        const horaInput = document.getElementById('horaProgramacion');
+        
+        if (!fechaInput || !fechaInput.value || !horaInput || !horaInput.value) {
+            mostrarToast('❌ Selecciona fecha y hora para programar', 'error');
             return;
         }
 
-        const ahora = obtenerHoraActualBogota();
-        const [horas, minutos] = inputHora.value.split(':');
-        const fechaProgramada = new Date(ahora);
-        fechaProgramada.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+        // Crear fecha en zona horaria de Bogotá
+        const [anio, mes, dia] = fechaInput.value.split('-');
+        const [horas, minutos] = horaInput.value.split(':');
+        
+        // Crear fecha en la zona horaria local pero con los valores de Bogotá
+        const fechaProgramada = new Date(anio, mes - 1, dia, horas, minutos, 0, 0);
+        
+        // Convertir a timestamp de Bogotá
+        const fechaBogota = new Date(fechaProgramada.toLocaleString('en-US', { timeZone: 'America/Bogota' }));
+        const ahoraBogota = obtenerFechaHoraBogota();
 
-        // Si la hora ya pasó hoy, programar para mañana
-        if (fechaProgramada <= ahora) {
-            fechaProgramada.setDate(fechaProgramada.getDate() + 1);
-            mostrarToast('⚠️ La hora ya pasó hoy, programando para mañana', 'info');
+        console.log('📅 Programación desde modal:');
+        console.log('   - Fecha programada (local):', fechaProgramada.toLocaleString('es-CO'));
+        console.log('   - Fecha programada (Bogotá):', fechaBogota.toLocaleString('es-CO'));
+        console.log('   - Ahora (Bogotá):', ahoraBogota.toLocaleString('es-CO'));
+
+        if (fechaBogota <= ahoraBogota) {
+            mostrarToast('❌ La fecha y hora deben ser en el futuro', 'error');
+            return;
         }
 
-        programarAperturaCierre(tipo, fechaProgramada, true);
-        inputHora.value = '';
+        programarAperturaCierre(tipo, fechaBogota, false);
+        
+        // Limpiar campos
+        horaInput.value = '';
     }
 
     function guardarConfiguracionDesdeModal() {
@@ -425,11 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (minutosApertura === minutosCierre) {
-            mostrarToast('❌ Los horarios de apertura y cierre no pueden ser iguales', 'error');
-            return;
-        }
-
         configuracionHorarios.horarioApertura = horarioApertura;
         configuracionHorarios.horarioCierre = horarioCierre;
         configuracionHorarios.programacionAutomatica = habilitarProgramacion;
@@ -443,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         mostrarToast('✅ Configuración de horarios guardada correctamente', 'success');
         
-        // Verificar inmediatamente si hay que cambiar el estado
+        // Verificar inmediatamente
         setTimeout(verificarEstadoAutomatico, 1000);
     }
 
@@ -460,18 +480,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         lista.innerHTML = programacionesPendientes.map(programacion => {
             const fechaProgramada = new Date(programacion.timestamp);
-            const ahora = new Date();
+            const ahora = obtenerFechaHoraBogota();
             const diferenciaMs = programacion.timestamp - ahora.getTime();
-            const diferenciaMin = Math.max(0, Math.floor(diferenciaMs / 60000));
+            const diferenciaHoras = Math.max(0, Math.floor(diferenciaMs / (1000 * 60 * 60)));
+            const diferenciaMin = Math.max(0, Math.floor((diferenciaMs % (1000 * 60 * 60)) / 60000));
+            
+            let tiempoRestante = '';
+            if (diferenciaHoras > 0) {
+                tiempoRestante = `en ${diferenciaHoras}h ${diferenciaMin}m`;
+            } else {
+                tiempoRestante = `en ${diferenciaMin} min`;
+            }
+            
+            const tipoTexto = programacion.tipo === 'apertura' ? 'Apertura' : 'Cierre';
+            const tipoClase = programacion.tipo === 'apertura' ? 'success' : 'warning';
+            const icono = programacion.tipo === 'apertura' ? '🟢' : '🔴';
             
             return `
-            <div class="programacion-item d-flex justify-content-between align-items-center p-3 border">
+            <div class="programacion-item d-flex justify-content-between align-items-center p-3 border mb-2 rounded">
                 <div class="flex-grow-1">
                     <div class="d-flex align-items-center mb-1">
-                        <strong class="${programacion.tipo === 'apertura' ? 'text-success' : 'text-warning'} me-2">
-                            ${programacion.tipo === 'apertura' ? '🟢 Apertura' : '🔴 Cierre'}
+                        <strong class="text-${tipoClase} me-2">
+                            ${icono} ${tipoTexto}
                         </strong>
-                        <small class="badge bg-secondary">en ${diferenciaMin} min</small>
+                        <small class="badge bg-secondary">${tiempoRestante}</small>
                     </div>
                     <small class="text-muted d-block">${programacion.fechaHora}</small>
                     ${programacion.soloHoy ? '<small class="text-info">⏰ Solo hoy</small>' : ''}
@@ -487,28 +519,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==================== FUNCIONES DE UTILIDAD ====================
 
     function mostrarToast(mensaje, tipo = 'info') {
+        // Crear contenedor de toasts si no existe
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 300px;
+            `;
+            document.body.appendChild(toastContainer);
+        }
+
         const toast = document.createElement('div');
-        toast.className = `toast-custom toast-${tipo}`;
-        toast.textContent = mensaje;
+        toast.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} alert-dismissible fade show`;
+        toast.style.cssText = 'margin-bottom: 10px; animation: slideInRight 0.3s ease;';
+        toast.innerHTML = `
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
         
-        document.body.appendChild(toast);
+        toastContainer.appendChild(toast);
         
+        // Auto-eliminar después de 5 segundos
         setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease-in';
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.parentNode.removeChild(toast);
-                }
-            }, 300);
-        }, 4000);
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 5000);
     }
 
     function iniciarVerificadorAutomatico() {
-        // Verificar cada 30 segundos
-        setInterval(verificarEstadoAutomatico, 30000);
+        // Verificar cada 10 segundos para mejor respuesta
+        setInterval(verificarEstadoAutomatico, 10000);
         
         // Verificar inmediatamente al cargar
-        setTimeout(verificarEstadoAutomatico, 2000);
+        setTimeout(verificarEstadoAutomatico, 1000);
         
         console.log('✅ Verificador automático iniciado - Hora Bogotá:', obtenerHoraStringBogota());
     }
@@ -523,7 +572,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 elementos.menuDesplegableUsuario.classList.toggle('mostrar');
             });
 
-            // Cerrar menú al hacer clic fuera
             document.addEventListener('click', function(e) {
                 if (!elementos.botonDesplegableUsuario.contains(e.target) && 
                     !elementos.menuDesplegableUsuario.contains(e.target)) {
@@ -531,7 +579,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Prevenir que el clic dentro del menú lo cierre
             elementos.menuDesplegableUsuario.addEventListener('click', function(e) {
                 e.stopPropagation();
             });
@@ -564,12 +611,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Simular envío de reporte
                 mostrarToast('✅ Reporte enviado correctamente. Te contactaremos pronto.', 'success');
                 const modal = bootstrap.Modal.getInstance(document.getElementById('modalReportarProblema'));
                 modal.hide();
                 
-                // Limpiar formulario
                 document.getElementById('categoriaProblema').value = '';
                 document.getElementById('descripcionProblema').value = '';
             });
@@ -590,20 +635,24 @@ document.addEventListener('DOMContentLoaded', function() {
     function inicializar() {
         console.log('🚀 Inicializando gestión de horarios...');
         console.log('🕐 Hora actual Bogotá:', obtenerHoraStringBogota());
+        console.log('📅 Fecha actual Bogotá:', obtenerFechaHoraBogota().toLocaleString('es-CO'));
         
         cargarConfiguracion();
         inicializarModalProgramacion();
-        inicializarHeader(); // <-- NUEVA FUNCIÓN AGREGADA
+        inicializarHeader();
         
         console.log('✅ Gestión de horarios inicializada correctamente');
         console.log('📊 Estado actual:', configuracionHorarios.estadoActual);
         console.log('📋 Programaciones pendientes:', obtenerProgramacionesPendientes().length);
+        
+        // Mostrar estado inicial
+        mostrarToast(`Negocio ${configuracionHorarios.estadoActual === 'abierto' ? 'ABIERTO' : 'CERRADO'}`, 'info');
     }
 
     // Hacer funciones globales para los event listeners
     window.cancelarProgramacion = cancelarProgramacion;
-    window.programarCierreEnMinutos = programarCierreEnMinutos;
-    window.programarAperturaEnMinutos = programarAperturaEnMinutos;
+    window.programarCierreEnHoras = programarCierreEnHoras;
+    window.programarAperturaEnHoras = programarAperturaEnHoras;
 
     // ==================== EJECUTAR INICIALIZACIÓN ====================
     inicializar();
