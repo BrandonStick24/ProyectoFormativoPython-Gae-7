@@ -1115,7 +1115,7 @@ def cliente_dashboard(request):
 
 @login_required(login_url='/auth/login/')
 def detalle_negocio_logeado(request, id):
-    """Vista detallada del negocio para el cliente logueado (con funcionalidades extra) - VERSIÓN CORREGIDA CON VARIANTES"""
+    """Vista detallada del negocio para el cliente logueado - VERSIÓN COMPLETAMENTE CORREGIDA CON PAGINACIÓN"""
     try:
         # Obtener negocio y relaciones
         negocio = get_object_or_404(
@@ -1127,13 +1127,13 @@ def detalle_negocio_logeado(request, id):
         # Obtener perfil del cliente logueado
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # PRODUCTOS DEL NEGOCIO - VERSIÓN MEJORADA CON VARIANTES
+        # PRODUCTOS DEL NEGOCIO - CON MANEJO COMPLETO DE VARIANTES Y OFERTAS
         productos = Productos.objects.filter(
             fknegocioasociado_prod=negocio,
             estado_prod='disponible'
         ).select_related('fkcategoria_prod')
         
-        # Preparar productos con manejo completo de variantes (igual que CLIENTE_DASH)
+        # Preparar productos con manejo completo de variantes y ofertas
         productos_list = []
         hoy = timezone.now().date()
         
@@ -1143,8 +1143,9 @@ def detalle_negocio_logeado(request, id):
             precio_final = precio_base
             descuento_porcentaje = 0
             ahorro = 0
+            tiene_descuento = False
             
-            # Verificar si tiene oferta activa usando SQL (igual que CLIENTE_DASH)
+            # Verificar si tiene oferta activa usando SQL
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT porcentaje_descuento 
@@ -1163,10 +1164,11 @@ def detalle_negocio_logeado(request, id):
                         if descuento_porcentaje > 0:
                             precio_final = precio_base * (1 - (descuento_porcentaje / 100))
                             ahorro = precio_base - precio_final
+                            tiene_descuento = True
                     except (ValueError, TypeError):
                         pass
             
-            # CORRECCIÓN COMPLETA: OBTENER VARIANTES CON STOCK REAL INDIVIDUAL (igual que CLIENTE_DASH)
+            # OBTENER VARIANTES CON STOCK INDIVIDUAL
             variantes_list = []
             tiene_variantes = VariantesProducto.objects.filter(
                 producto=producto, 
@@ -1181,78 +1183,96 @@ def detalle_negocio_logeado(request, id):
                 
                 for variante in variantes:
                     try:
-                        # USAR LOS CAMPOS CORRECTOS DEL MODELO VariantesProducto
                         variante_data = {
                             'id_variante': variante.id_variante,
                             'nombre_variante': variante.nombre_variante,
                             'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
-                            'stock_variante': variante.stock_variante or 0,  # ✅ STOCK REAL INDIVIDUAL DE LA VARIANTE
+                            'stock_variante': variante.stock_variante or 0,
                             'imagen_variante': variante.imagen_variante,
-                            'estado_variante': variante.estado_variante,
-                            'sku_variante': variante.sku_variante,
-                            
-                            # Precios calculados para la variante
-                            'precio_base_variante': precio_base + float(variante.precio_adicional) if variante.precio_adicional else precio_base,
-                            'precio_final_variante': (precio_base + float(variante.precio_adicional)) * (1 - (descuento_porcentaje / 100)) if variante.precio_adicional and descuento_porcentaje > 0 else (precio_base + float(variante.precio_adicional)) if variante.precio_adicional else precio_final,
-                            'tiene_descuento_variante': descuento_porcentaje > 0,
-                            'descuento_porcentaje_variante': descuento_porcentaje,
                         }
                         variantes_list.append(variante_data)
-                        
                     except Exception as e:
                         print(f"❌ Error procesando variante: {e}")
                         continue
             
-            # Datos completos del producto (igual que CLIENTE_DASH)
+            # Calcular stock total (producto base + variantes)
+            stock_total = producto.stock_prod or 0
+            if tiene_variantes:
+                stock_variantes = sum(variante['stock_variante'] for variante in variantes_list)
+                stock_total += stock_variantes
+            
+            # Datos completos del producto
             producto_data = {
                 'producto': producto,
                 'precio_base': precio_base,
                 'precio_final': round(precio_final, 2),
-                'tiene_descuento': descuento_porcentaje > 0,
+                'tiene_descuento': tiene_descuento,
                 'descuento_porcentaje': descuento_porcentaje,
                 'ahorro': round(ahorro, 2),
                 'tiene_variantes': tiene_variantes,
                 'variantes': variantes_list,
-                'stock': producto.stock_prod or 0,  # ✅ SOLO STOCK DEL PRODUCTO BASE
-                
-                # Campos adicionales para compatibilidad con template
-                'pkid_prod': producto.pkid_prod,
-                'nom_prod': producto.nom_prod,
-                'desc_prod': producto.desc_prod,
-                'img_prod': producto.img_prod,
-                'fkcategoria_prod': producto.fkcategoria_prod,
+                'stock': stock_total,  # Stock total considerando variantes
             }
             productos_list.append(producto_data)
         
-        # RESEÑAS DEL NEGOCIO (código existente)
+        # RESEÑAS DEL NEGOCIO - CON PAGINACIÓN (5 POR PÁGINA)
         resenas_list = ResenasNegocios.objects.filter(
             fknegocio_resena=negocio,
             estado_resena='activa'
         ).select_related('fkusuario_resena__fkuser').order_by('-fecha_resena')
         
-        # Estadísticas detalladas de reseñas
-        estadisticas_resenas = resenas_list.aggregate(
-            promedio=Avg('estrellas'),
-            total_resenas=Count('pkid_resena'),
-            cinco_estrellas=Count('pkid_resena', filter=Q(estrellas=5)),
-            cuatro_estrellas=Count('pkid_resena', filter=Q(estrellas=4)),
-            tres_estrellas=Count('pkid_resena', filter=Q(estrellas=3)),
-            dos_estrellas=Count('pkid_resena', filter=Q(estrellas=2)),
-            una_estrella=Count('pkid_resena', filter=Q(estrellas=1))
-        )
+        # ✅ PAGINACIÓN: Mostrar solo 5 reseñas inicialmente
+        paginator = Paginator(resenas_list, 5)  # 5 reseñas por página
+        page_number = request.GET.get('page', 1)  # Página actual, por defecto 1
+        resenas_paginadas = paginator.get_page(page_number)
         
-        # Calcular porcentajes para cada calificación
-        total = estadisticas_resenas['total_resenas'] or 1
-        estadisticas_resenas['porcentaje_5'] = (estadisticas_resenas['cinco_estrellas'] / total) * 100
-        estadisticas_resenas['porcentaje_4'] = (estadisticas_resenas['cuatro_estrellas'] / total) * 100
-        estadisticas_resenas['porcentaje_3'] = (estadisticas_resenas['tres_estrellas'] / total) * 100
-        estadisticas_resenas['porcentaje_2'] = (estadisticas_resenas['dos_estrellas'] / total) * 100
-        estadisticas_resenas['porcentaje_1'] = (estadisticas_resenas['una_estrella'] / total) * 100
+        # ✅ CÁLCULO CORRECTO DE ESTADÍSTICAS DE RESEÑAS
+        total_resenas = resenas_list.count()
         
-        # Paginación mejorada - mostrar 10 reseñas por página
-        paginator = Paginator(resenas_list, 10)
-        page_number = request.GET.get('page')
-        resenas = paginator.get_page(page_number)
+        # Calcular promedio de calificación
+        promedio_calificacion = resenas_list.aggregate(
+            promedio=Avg('estrellas')
+        )['promedio'] or 0
+        
+        # ✅ CÁLCULO CORRECTO DE DISTRIBUCIÓN POR ESTRELLAS
+        distribucion_estrellas = []
+        conteo_estrellas = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
+        
+        # Contar reseñas por cada cantidad de estrellas
+        for resena in resenas_list:
+            if resena.estrellas in conteo_estrellas:
+                conteo_estrellas[resena.estrellas] += 1
+        
+        # Crear distribución con porcentajes
+        for estrellas in [5, 4, 3, 2, 1]:
+            cantidad = conteo_estrellas[estrellas]
+            porcentaje = (cantidad / total_resenas * 100) if total_resenas > 0 else 0
+            
+            distribucion_estrellas.append({
+                'estrellas': estrellas,
+                'cantidad': cantidad,
+                'porcentaje': round(porcentaje, 1)
+            })
+        
+        # ✅ CREAR DICCIONARIO DE ESTADÍSTICAS COMPATIBLE CON EL TEMPLATE
+        estadisticas_resenas = {
+            'promedio': round(promedio_calificacion, 1),
+            'total_resenas': total_resenas,
+            'distribucion': distribucion_estrellas,
+        }
+        
+        # ✅ AGREGAR CAMPOS INDIVIDUALES PARA COMPATIBILIDAD CON EL TEMPLATE
+        for item in distribucion_estrellas:
+            estrellas = item['estrellas']
+            estadisticas_resenas[f'porcentaje_{estrellas}'] = item['porcentaje']
+            estadisticas_resenas[f'{estrellas}_estrellas'] = item['cantidad']
+        
+        # ✅ ASEGURAR QUE TODOS LOS CAMPOS EXISTAN (incluso si no hay reseñas)
+        for star in [5, 4, 3, 2, 1]:
+            if f'porcentaje_{star}' not in estadisticas_resenas:
+                estadisticas_resenas[f'porcentaje_{star}'] = 0
+            if f'{star}_estrellas' not in estadisticas_resenas:
+                estadisticas_resenas[f'{star}_estrellas'] = 0
         
         # Verificar si el usuario actual ya reseñó este negocio
         usuario_ya_reseno = ResenasNegocios.objects.filter(
@@ -1273,23 +1293,28 @@ def detalle_negocio_logeado(request, id):
         # Obtener carrito del usuario
         carrito_count = 0
         try:
-            carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+            carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=perfil_cliente)
             carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-        except Carrito.DoesNotExist:
-            pass
+        except Exception as e:
+            print(f"⚠️ Error obteniendo carrito: {e}")
         
-        # DEBUG: Verificar productos con variantes
-        productos_con_variantes = [p for p in productos_list if p['tiene_variantes']]
-        print(f"🔍 DETALLE_NEGOCIO_LOGEADO: {len(productos_list)} productos, {len(productos_con_variantes)} con variantes")
+        # DEBUG: Mostrar estadísticas en consola del servidor
+        print(f"📊 ESTADÍSTICAS DE RESEÑAS PARA {negocio.nom_neg}:")
+        print(f"   - Promedio: {estadisticas_resenas['promedio']}")
+        print(f"   - Total reseñas: {total_resenas}")
+        print(f"   - Distribución:")
+        for item in distribucion_estrellas:
+            print(f"     {item['estrellas']} estrellas: {item['cantidad']} ({item['porcentaje']}%)")
         
         contexto = {
             'negocio': negocio,
             'propietario': negocio.fkpropietario_neg,
             'tipo_negocio': negocio.fktiponeg_neg,
-            'productos': productos_list,  # ✅ LISTA COMPLETA CON MANEJO DE VARIANTES
+            'productos': productos_list,
             'perfil_cliente': perfil_cliente,
-            'resenas': resenas,
+            'resenas': resenas_paginadas,  # ✅ Ahora es objeto paginado
             'estadisticas_resenas': estadisticas_resenas,
+            'distribucion_estrellas': distribucion_estrellas,
             'usuario_ya_reseno': usuario_ya_reseno,
             'reseña_usuario_actual': reseña_usuario_actual,
             'carrito_count': carrito_count,
@@ -1298,12 +1323,16 @@ def detalle_negocio_logeado(request, id):
             
             # Flags para el template
             'hay_productos': len(productos_list) > 0,
-            'productos_con_variantes': productos_con_variantes,
+            'hay_resenas': total_resenas > 0,
+            'total_resenas': total_resenas,  # ✅ Total para mostrar
+            'hay_mas_resenas': resenas_paginadas.has_next(),  # ✅ Para botón "Ver más"
+            'pagina_actual': page_number,
+            'total_paginas': paginator.num_pages,
         }
         
         return render(request, 'cliente/detalle_neg_logeado.html', contexto)
         
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+    except UsuarioPerfil.DoesNotExist:
         messages.error(request, 'Complete su perfil para acceder a esta funcionalidad.')
         return redirect('completar_perfil')
     except Exception as e:
@@ -1311,8 +1340,8 @@ def detalle_negocio_logeado(request, id):
         import traceback
         traceback.print_exc()
         messages.error(request, f'Error al cargar el detalle del negocio: {str(e)}')
-        return redirect('cliente_dashboard')
-    
+        return redirect('cliente_dashboard')  
+
 @login_required
 def reportar_negocio(request):
     """Vista para reportar un negocio o reseña"""
@@ -1461,6 +1490,159 @@ def obtener_opciones_reporte(request):
     
     return JsonResponse({'opciones': opciones.get(tipo, [])})
 
+# ==================== FUNCIONES DE GESTIÓN DE STOCK ====================
+
+def descontar_stock_pedido(pedido):
+    """
+    Descontar stock cuando se procesa un pedido
+    """
+    try:
+        detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
+        
+        for detalle in detalles_pedido:
+            producto = detalle.fkproducto_detalle
+            cantidad = detalle.cantidad_detalle
+            
+            # Buscar el item del carrito original para obtener información de variantes
+            try:
+                # Intentar encontrar si era un producto con variante
+                carrito_item = CarritoItem.objects.filter(
+                    fkproducto=producto,
+                    variante_id__isnull=False
+                ).first()
+                
+                if carrito_item and carrito_item.variante_id:
+                    # Es una variante - descontar stock de la variante
+                    variante = VariantesProducto.objects.get(
+                        id_variante=carrito_item.variante_id,
+                        producto=producto
+                    )
+                    if variante.stock_variante >= cantidad:
+                        variante.stock_variante -= cantidad
+                        variante.save()
+                        print(f"✅ Stock descontado - Variante: {variante.nombre_variante}, Cantidad: {cantidad}, Stock restante: {variante.stock_variante}")
+                    else:
+                        print(f"⚠️ Stock insuficiente en variante: {variante.nombre_variante}")
+                
+                else:
+                    # Es producto base - descontar stock del producto
+                    if producto.stock_prod >= cantidad:
+                        producto.stock_prod -= cantidad
+                        producto.save()
+                        print(f"✅ Stock descontado - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock restante: {producto.stock_prod}")
+                    else:
+                        print(f"⚠️ Stock insuficiente en producto: {producto.nom_prod}")
+                        
+            except VariantesProducto.DoesNotExist:
+                # Si no existe la variante, descontar del producto base
+                if producto.stock_prod >= cantidad:
+                    producto.stock_prod -= cantidad
+                    producto.save()
+                    print(f"✅ Stock descontado (fallback) - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock restante: {producto.stock_prod}")
+                else:
+                    print(f"⚠️ Stock insuficiente en producto (fallback): {producto.nom_prod}")
+            
+            except Exception as e:
+                print(f"❌ Error al descontar stock para {producto.nom_prod}: {e}")
+                continue
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error general en descontar_stock_pedido: {e}")
+        return False
+
+def restaurar_stock_pedido(pedido):
+    """
+    Restaurar stock cuando se cancela un pedido
+    """
+    try:
+        detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
+        
+        for detalle in detalles_pedido:
+            producto = detalle.fkproducto_detalle
+            cantidad = detalle.cantidad_detalle
+            
+            # Buscar el item del carrito original para obtener información de variantes
+            try:
+                # Intentar encontrar si era un producto con variante
+                carrito_item = CarritoItem.objects.filter(
+                    fkproducto=producto,
+                    variante_id__isnull=False
+                ).first()
+                
+                if carrito_item and carrito_item.variante_id:
+                    # Es una variante - restaurar stock de la variante
+                    variante = VariantesProducto.objects.get(
+                        id_variante=carrito_item.variante_id,
+                        producto=producto
+                    )
+                    variante.stock_variante += cantidad
+                    variante.save()
+                    print(f"✅ Stock restaurado - Variante: {variante.nombre_variante}, Cantidad: {cantidad}, Stock actual: {variante.stock_variante}")
+                
+                else:
+                    # Es producto base - restaurar stock del producto
+                    producto.stock_prod += cantidad
+                    producto.save()
+                    print(f"✅ Stock restaurado - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock actual: {producto.stock_prod}")
+                        
+            except VariantesProducto.DoesNotExist:
+                # Si no existe la variante, restaurar al producto base
+                producto.stock_prod += cantidad
+                producto.save()
+                print(f"✅ Stock restaurado (fallback) - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock actual: {producto.stock_prod}")
+            
+            except Exception as e:
+                print(f"❌ Error al restaurar stock para {producto.nom_prod}: {e}")
+                continue
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error general en restaurar_stock_pedido: {e}")
+        return False
+
+def validar_stock_pedido(pedido):
+    """
+    Validar que hay suficiente stock para todos los items del pedido
+    """
+    try:
+        detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
+        
+        for detalle in detalles_pedido:
+            producto = detalle.fkproducto_detalle
+            cantidad = detalle.cantidad_detalle
+            
+            # Buscar información de variantes
+            carrito_item = CarritoItem.objects.filter(
+                fkproducto=producto,
+                variante_id__isnull=False
+            ).first()
+            
+            if carrito_item and carrito_item.variante_id:
+                # Validar stock de variante
+                try:
+                    variante = VariantesProducto.objects.get(
+                        id_variante=carrito_item.variante_id,
+                        producto=producto
+                    )
+                    if variante.stock_variante < cantidad:
+                        return False, f"Stock insuficiente para {producto.nom_prod} - {variante.nombre_variante}"
+                except VariantesProducto.DoesNotExist:
+                    # Si la variante no existe, validar producto base
+                    if producto.stock_prod < cantidad:
+                        return False, f"Stock insuficiente para {producto.nom_prod}"
+            else:
+                # Validar stock de producto base
+                if producto.stock_prod < cantidad:
+                    return False, f"Stock insuficiente para {producto.nom_prod}"
+        
+        return True, "Stock válido"
+        
+    except Exception as e:
+        return False, f"Error validando stock: {str(e)}"
+    
 @login_required(login_url='/auth/login/')
 @require_POST
 def agregar_al_carrito(request):
@@ -1664,7 +1846,97 @@ def agregar_al_carrito(request):
             'success': False, 
             'message': 'Error interno del servidor'
         }, status=500)
-         
+
+@login_required(login_url='/auth/login/')
+@require_POST
+def actualizar_cantidad_carrito(request):
+    """Actualizar cantidad de un item en el carrito - VERSIÓN CORREGIDA"""
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id')
+        cambio = data.get('cambio', 0)
+        
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+        item = CarritoItem.objects.get(pkid_item=item_id, fkcarrito=carrito)
+        
+        nueva_cantidad = item.cantidad + cambio
+        
+        if nueva_cantidad <= 0:
+            item.delete()
+        else:
+            # ✅ CORRECCIÓN: VERIFICAR STOCK SEGÚN SI ES VARIANTE O PRODUCTO BASE
+            stock_disponible = 0
+            
+            if item.variante_id:
+                # Es una variante - verificar stock de la variante específica
+                try:
+                    variante = VariantesProducto.objects.get(
+                        id_variante=item.variante_id,
+                        producto=item.fkproducto,
+                        estado_variante='activa'
+                    )
+                    stock_disponible = variante.stock_variante or 0
+                    print(f"🔍 DEBUG actualizar_cantidad: Variante {variante.nombre_variante} - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
+                except VariantesProducto.DoesNotExist:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'La variante seleccionada ya no está disponible'
+                    })
+            else:
+                # Es producto base - verificar stock del producto
+                stock_disponible = item.fkproducto.stock_prod or 0
+                print(f"🔍 DEBUG actualizar_cantidad: Producto base - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
+            
+            # Verificar stock disponible
+            if stock_disponible < nueva_cantidad:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Stock insuficiente. Solo quedan {stock_disponible} unidades'
+                })
+            
+            item.cantidad = nueva_cantidad
+            item.save()
+        
+        # Obtener nuevo conteo
+        carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
+        
+        return JsonResponse({
+            'success': True,
+            'carrito_count': carrito_count
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR actualizar_cantidad: {e}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+
+@login_required(login_url='/auth/login/')
+@require_POST
+def eliminar_item_carrito(request):
+    """Eliminar item del carrito - VERSIÓN CORREGIDA"""
+    try:
+        data = json.loads(request.body)
+        item_id = data.get('item_id')
+        
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+        item = CarritoItem.objects.get(pkid_item=item_id, fkcarrito=carrito)
+        item.delete()
+        
+        # Obtener nuevo conteo
+        carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
+        
+        return JsonResponse({
+            'success': True,
+            'carrito_count': carrito_count
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR eliminar_item: {e}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
+          
 @login_required(login_url='/auth/login/')
 def ver_carrito(request):
     """Vista para ver el carrito del usuario"""
@@ -1813,98 +2085,9 @@ def carrito_data(request):
 
 @login_required(login_url='/auth/login/')
 @require_POST
-def actualizar_cantidad_carrito(request):
-    """Actualizar cantidad de un item en el carrito - VERSIÓN CORREGIDA PARA VARIANTES"""
-    try:
-        data = json.loads(request.body)
-        item_id = data.get('item_id')
-        cambio = data.get('cambio', 0)
-        
-        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-        
-        carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
-        item = CarritoItem.objects.get(pkid_item=item_id, fkcarrito=carrito)
-        
-        nueva_cantidad = item.cantidad + cambio
-        
-        if nueva_cantidad <= 0:
-            item.delete()
-        else:
-            # ✅ CORRECCIÓN: VERIFICAR STOCK SEGÚN SI ES VARIANTE O PRODUCTO BASE
-            stock_disponible = 0
-            
-            if item.variante_id:
-                # Es una variante - verificar stock de la variante específica
-                try:
-                    variante = VariantesProducto.objects.get(
-                        id_variante=item.variante_id,
-                        producto=item.fkproducto,
-                        estado_variante='activa'
-                    )
-                    stock_disponible = variante.stock_variante or 0
-                    print(f"🔍 DEBUG actualizar_cantidad: Variante {variante.nombre_variante} - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
-                except VariantesProducto.DoesNotExist:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'La variante seleccionada ya no está disponible'
-                    })
-            else:
-                # Es producto base - verificar stock del producto
-                stock_disponible = item.fkproducto.stock_prod or 0
-                print(f"🔍 DEBUG actualizar_cantidad: Producto base - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
-            
-            # Verificar stock disponible
-            if stock_disponible < nueva_cantidad:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Stock insuficiente. Solo quedan {stock_disponible} unidades'
-                })
-            
-            item.cantidad = nueva_cantidad
-            item.save()
-        
-        # Obtener nuevo conteo
-        carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-        
-        return JsonResponse({
-            'success': True,
-            'carrito_count': carrito_count
-        })
-        
-    except Exception as e:
-        print(f"❌ ERROR actualizar_cantidad: {e}")
-        return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
-    
-@login_required(login_url='/auth/login/')
-@require_POST
-def eliminar_item_carrito(request):
-    """Eliminar item del carrito"""
-    try:
-        data = json.loads(request.body)
-        item_id = data.get('item_id')
-        
-        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-        
-        carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
-        item = CarritoItem.objects.get(pkid_item=item_id, fkcarrito=carrito)
-        item.delete()
-        
-        # Obtener nuevo conteo
-        carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-        
-        return JsonResponse({
-            'success': True,
-            'carrito_count': carrito_count
-        })
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'message': 'Error interno'})
-
-@login_required(login_url='/auth/login/')
-@require_POST
 @csrf_exempt
 def procesar_pedido(request):
-    """Procesar pedido del carrito - VALIDAR stock pero NO descontarlo"""
+    """Procesar pedido del carrito - CON descuento de stock"""
     try:
         data = json.loads(request.body)
         metodo_pago = data.get('metodo_pago')
@@ -1960,7 +2143,7 @@ def procesar_pedido(request):
                         'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
                     }, status=400)
 
-        # ✅ SI PASÓ LA VALIDACIÓN DE STOCK, PROCESAR EL PEDIDO
+        # ✅ SI PASÓ LA VALIDACIÓN DE STOCK, CREAR EL PEDIDO
         for item_carrito in items_carrito:
             monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
             total_pedido += monto_item
@@ -1997,6 +2180,7 @@ def procesar_pedido(request):
 
         print(f"🔍 DEBUG procesar_pedido: Total pedido: {total_pedido}, Negocio principal: {negocio_principal.nom_neg}")
 
+        # CREAR EL PEDIDO
         pedido = Pedidos.objects.create(
             fkusuario_pedido=perfil_cliente,
             fknegocio_pedido=negocio_principal,
@@ -2009,7 +2193,7 @@ def procesar_pedido(request):
             fecha_actualizacion=timezone.now()
         )
 
-        # ✅ CREAR DETALLES DEL PEDIDO PERO NO DESCONTAR STOCK
+        # ✅ CREAR DETALLES DEL PEDIDO
         for item_carrito in items_carrito:
             DetallesPedido.objects.create(
                 fkpedido_detalle=pedido,
@@ -2017,8 +2201,12 @@ def procesar_pedido(request):
                 cantidad_detalle=item_carrito.cantidad,
                 precio_unitario=item_carrito.precio_unitario
             )
-            
-            print(f"✅ DEBUG procesar_pedido: Detalle creado SIN modificar stock - {item_carrito.fkproducto.nom_prod}")
+
+        # ✅ DESCONTAR STOCK DEL PEDIDO
+        stock_descontado = descontar_stock_pedido(pedido)
+        
+        if not stock_descontado:
+            print("⚠️ ADVERTENCIA: No se pudo descontar el stock correctamente")
 
         # Crear pagos para cada negocio involucrado
         for negocio, monto in negocios_involucrados.items():
@@ -2062,7 +2250,7 @@ def procesar_pedido(request):
 
         response_data = {
             'success': True,
-            'message': 'Pedido procesado exitosamente. El vendedor gestionará el stock manualmente.',
+            'message': 'Pedido procesado exitosamente. Stock descontado correctamente.',
             'numero_pedido': pedido.pkid_pedido,
             'total': total_pedido,
             'metodo_pago': metodo_pago_texto,
@@ -2071,19 +2259,19 @@ def procesar_pedido(request):
             'pagos_creados': len(negocios_involucrados),
             'negocio_principal': negocio_principal.nom_neg,
             'correo_enviado': bool(email_cliente),
-            'stock_validado': True,  # ✅ INDICAR QUE SE VALIDÓ EL STOCK
-            'stock_no_modificado': True,  # ✅ INDICAR QUE NO SE MODIFICÓ EL STOCK
+            'stock_validado': True,
+            'stock_descontado': stock_descontado,  # ✅ INDICAR QUE SE DESCONTÓ EL STOCK
         }
 
-        print(f"🔍 DEBUG procesar_pedido: Pedido {pedido.pkid_pedido} procesado exitosamente - STOCK VALIDADO PERO NO MODIFICADO")
+        print(f"🔍 DEBUG procesar_pedido: Pedido {pedido.pkid_pedido} procesado exitosamente - STOCK DESCONTADO")
         return JsonResponse(response_data)
 
     except Exception as e:
         print(f"❌ ERROR procesar_pedido: {e}")
         import traceback
         traceback.print_exc()
-        return JsonResponse({'success': False, 'message': 'Error interno del servidor al procesar el pedido'}, status=500)
-    
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor al procesar el pedido'}, status=500)  
+
 def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados):
     """Enviar comprobante de pedido por correo electrónico"""
     try:
@@ -2511,7 +2699,7 @@ def mis_pedidos_data(request):
 
 @login_required(login_url='/auth/login/')
 def cancelar_pedido(request):
-    """Cancelar un pedido si no ha pasado 1 hora"""
+    """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -2540,14 +2728,88 @@ def cancelar_pedido(request):
                     'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
                 })
             
+            # ✅ RESTAURAR STOCK ANTES DE CANCELAR
+            stock_restaurado = restaurar_stock_pedido(pedido)
+            
             # Actualizar estado del pedido
             pedido.estado_pedido = 'cancelado'
             pedido.fecha_actualizacion = timezone.now()
             pedido.save()
             
+            mensaje = 'Pedido cancelado exitosamente'
+            if stock_restaurado:
+                mensaje += ' y stock restaurado'
+            else:
+                mensaje += ' (pero hubo un problema al restaurar el stock)'
+            
             return JsonResponse({
                 'success': True,
-                'message': 'Pedido cancelado exitosamente'
+                'message': mensaje,
+                'stock_restaurado': stock_restaurado
+            })
+            
+        except Pedidos.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Pedido no encontrado'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': 'Error al cancelar el pedido'
+            })
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    })
+    """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            pedido_id = data.get('pedido_id')
+            
+            perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+            
+            # Obtener el pedido
+            pedido = Pedidos.objects.get(
+                pkid_pedido=pedido_id,
+                fkusuario_pedido=perfil_cliente
+            )
+            
+            # Verificar que no haya pasado 1 hora
+            tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
+            if tiempo_transcurrido > timedelta(hours=1):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se puede cancelar el pedido. Ha pasado más de 1 hora desde que se realizó.'
+                })
+            
+            # Verificar que el pedido esté en estado cancelable
+            if pedido.estado_pedido not in ['pendiente', 'confirmado']:
+                return JsonResponse({
+                    'success': False, 
+                    'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
+                })
+            
+            # ✅ RESTAURAR STOCK ANTES DE CANCELAR
+            stock_restaurado = restaurar_stock_pedido(pedido)
+            
+            # Actualizar estado del pedido
+            pedido.estado_pedido = 'cancelado'
+            pedido.fecha_actualizacion = timezone.now()
+            pedido.save()
+            
+            mensaje = 'Pedido cancelado exitosamente'
+            if stock_restaurado:
+                mensaje += ' y stock restaurado'
+            else:
+                mensaje += ' (pero hubo un problema al restaurar el stock)'
+            
+            return JsonResponse({
+                'success': True,
+                'message': mensaje,
+                'stock_restaurado': stock_restaurado
             })
             
         except Pedidos.DoesNotExist:

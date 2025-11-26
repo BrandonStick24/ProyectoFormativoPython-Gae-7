@@ -1844,3 +1844,180 @@
     transform: none !important;
     box-shadow: none !important;
 }
+
+/* ===== ESTILOS CORREGIDOS PARA BARRAS DE RATING ===== */
+.rating-bars {
+    width: 100%;
+    padding: 1rem 0;
+}
+
+.rating-bar-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 10px;
+}
+
+.rating-label {
+    width: 70px;
+    font-size: 14px;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.rating-label i {
+    color: #ffc107;
+    font-size: 12px;
+}
+
+.rating-bar {
+    flex: 1;
+    height: 10px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin: 0 15px;
+}
+
+.rating-progress {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #ffc107, #fd7e14) !important;
+    width: 0%;
+    transition: width 1.5s ease-in-out !important;
+    position: relative;
+}
+
+/* Forzar la visualización de las barras */
+.rating-progress[style*="width"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.rating-count {
+    width: 40px;
+    font-size: 13px;
+    color: #6c757d;
+    text-align: right;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+/* Estados de las barras */
+.rating-progress.animated {
+    animation: barFill 1.5s ease-in-out forwards;
+}
+
+@keyframes barFill {
+    from { width: 0% !important; }
+    to { width: var(--target-width) !important; }
+}
+
+/* Asegurar que las barras sean visibles */
+.ratings-summary-card .rating-progress {
+    background: linear-gradient(90deg, #ffc107, #fd7e14) !important;
+    min-width: 3% !important; /* Mínimo para que sea visible */
+}
+
+/* Override cualquier estilo que pueda estar ocultando las barras */
+.card-body .rating-progress,
+.vecy-card .rating-progress,
+.ratings-summary-card .rating-bar .rating-progress {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: linear-gradient(90deg, #ffc107, #fd7e14) !important;
+}
+/* Agrega estos estilos al archivo CSS existente */
+
+/* ===== ESTILOS PARA EL MAPA ===== */
+.map-container-vecy {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+}
+
+#leaflet-map {
+    height: 250px;
+    width: 100%;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Estilos para el popup personalizado */
+.custom-popup .leaflet-popup-content-wrapper {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border: none;
+}
+
+.custom-popup .leaflet-popup-content {
+    margin: 0;
+    padding: 0;
+}
+
+.custom-popup .leaflet-popup-tip {
+    background: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Animación para el ícono del mapa */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.leaflet-custom-icon {
+    animation: pulse 2s infinite;
+}
+
+/* Estados de carga del mapa */
+.map-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.map-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: #dc3545;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 2rem;
+}
+
+/* Responsive para el mapa */
+@media (max-width: 768px) {
+    #leaflet-map {
+        height: 200px;
+    }
+    
+    .map-container-vecy {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Mejoras visuales para el contenedor del mapa en la sidebar */
+.sidebar-card .map-container-vecy {
+    margin-top: 0.5rem;
+}
+
+/* Efecto hover para el botón de abrir en Google Maps */
+.vecy-btn-outline:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(53, 152, 219, 0.2);
+}
