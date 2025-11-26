@@ -1464,7 +1464,7 @@ def obtener_opciones_reporte(request):
 @login_required(login_url='/auth/login/')
 @require_POST
 def agregar_al_carrito(request):
-    """Agregar producto al carrito - VERSIÓN CORREGIDA PARA VARIANTES SIN DESCUENTO"""
+    """Agregar producto al carrito - CON validación de stock pero SIN descontarlo"""
     
     try:
         data = json.loads(request.body)
@@ -1487,7 +1487,7 @@ def agregar_al_carrito(request):
         variante_nombre = None
         variante_id_int = None
         
-        # ✅ CORRECCIÓN: LAS VARIANTES NO TIENEN DESCUENTO
+        # ✅ VALIDAR STOCK AL AGREGAR AL CARRITO
         aplicar_descuento = True  # Por defecto SÍ aplica descuento al producto base
         
         if variante_id and variante_id != 'base':
@@ -1502,10 +1502,11 @@ def agregar_al_carrito(request):
                 print(f"🔍 DEBUG: Procesando variante ID {variante_id_int} - {variante.nombre_variante}")
                 print(f"🔍 DEBUG: Stock variante: {variante.stock_variante}, Cantidad solicitada: {cantidad}")
                 
+                # ✅ VALIDAR STOCK DE LA VARIANTE
                 if variante.stock_variante < cantidad:
                     return JsonResponse({
                         'success': False, 
-                        'message': f'Stock insuficiente. Solo quedan {variante.stock_variante} unidades'
+                        'message': f'Stock insuficiente. Solo quedan {variante.stock_variante} unidades de esta variante'
                     }, status=400)
                 
                 # Sumar precio adicional si existe
@@ -1515,7 +1516,7 @@ def agregar_al_carrito(request):
                     
                 variante_nombre = variante.nombre_variante
                 
-                # ✅ CORRECCIÓN IMPORTANTE: LAS VARIANTES NO TIENEN DESCUENTO
+                # ✅ LAS VARIANTES NO TIENEN DESCUENTO
                 aplicar_descuento = False
                 print(f"🔍 DEBUG: Variante detectada - NO se aplicarán descuentos")
                 
@@ -1524,7 +1525,7 @@ def agregar_al_carrito(request):
             except VariantesProducto.DoesNotExist:
                 return JsonResponse({'success': False, 'message': 'Variante no encontrada'}, status=404)
         else:
-            # Verificar stock del producto base
+            # ✅ VALIDAR STOCK DEL PRODUCTO BASE
             print(f"🔍 DEBUG: Producto base - Stock: {producto.stock_prod}, Cantidad solicitada: {cantidad}")
             if (producto.stock_prod or 0) < cantidad:
                 return JsonResponse({
@@ -1566,7 +1567,7 @@ def agregar_al_carrito(request):
         # Crear o actualizar carrito
         carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=perfil_cliente)
         
-        # ✅ CORRECCIÓN: VERIFICAR SI EL PRODUCTO YA EXISTE EN EL CARRITO
+        # ✅ VERIFICAR SI EL PRODUCTO YA EXISTE EN EL CARRITO
         item_existente = None
         
         if variante_id_int:
@@ -1590,7 +1591,7 @@ def agregar_al_carrito(request):
             # ✅ SI EXISTE, ACTUALIZAR CANTIDAD
             nueva_cantidad = item_existente.cantidad + cantidad
             
-            # Verificar stock nuevamente
+            # ✅ VALIDAR STOCK NUEVAMENTE PARA LA NUEVA CANTIDAD TOTAL
             stock_disponible = producto.stock_prod
             if variante_id_int:
                 stock_disponible = variante.stock_variante
@@ -1638,15 +1639,8 @@ def agregar_al_carrito(request):
             'cantidad': cantidad,
             'subtotal': precio_final * cantidad,
             'tiene_descuento': aplicar_descuento and precio_final < precio_original,
-            'item_actualizado': item_existente is not None,  # Indicar si se actualizó o creó nuevo
-            'es_variante': variante_id_int is not None,  # Indicar si es variante
-            'debug_info': {
-                'precio_original': precio_original,
-                'precio_final': precio_final,
-                'aplicar_descuento': aplicar_descuento,
-                'variante_id': variante_id_int,
-                'variante_nombre': variante_nombre
-            }
+            'item_actualizado': item_existente is not None,
+            'es_variante': variante_id_int is not None,
         }
         
         if variante_nombre:
@@ -1670,7 +1664,7 @@ def agregar_al_carrito(request):
             'success': False, 
             'message': 'Error interno del servidor'
         }, status=500)
-          
+         
 @login_required(login_url='/auth/login/')
 def ver_carrito(request):
     """Vista para ver el carrito del usuario"""
@@ -1910,7 +1904,7 @@ def eliminar_item_carrito(request):
 @require_POST
 @csrf_exempt
 def procesar_pedido(request):
-    """Procesar pedido del carrito - VERSIÓN CORREGIDA PARA VARIANTES"""
+    """Procesar pedido del carrito - VALIDAR stock pero NO descontarlo"""
     try:
         data = json.loads(request.body)
         metodo_pago = data.get('metodo_pago')
@@ -1937,12 +1931,41 @@ def procesar_pedido(request):
 
         print(f"🔍 DEBUG procesar_pedido: Procesando {items_carrito.count()} items del carrito")
 
+        # ✅ PRIMERO VALIDAR STOCK DE TODOS LOS ITEMS
+        for item_carrito in items_carrito:
+            # Validar stock antes de procesar el pedido
+            if item_carrito.variante_id:
+                # Validar stock de variante
+                try:
+                    variante = VariantesProducto.objects.get(
+                        id_variante=item_carrito.variante_id,
+                        producto=item_carrito.fkproducto,
+                        estado_variante='activa'
+                    )
+                    if (variante.stock_variante or 0) < item_carrito.cantidad:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod} - {variante.nombre_variante}. Solo quedan {variante.stock_variante} unidades'
+                        }, status=400)
+                except VariantesProducto.DoesNotExist:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': f'La variante de {item_carrito.fkproducto.nom_prod} ya no está disponible'
+                    }, status=400)
+            else:
+                # Validar stock de producto base
+                if (item_carrito.fkproducto.stock_prod or 0) < item_carrito.cantidad:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
+                    }, status=400)
+
+        # ✅ SI PASÓ LA VALIDACIÓN DE STOCK, PROCESAR EL PEDIDO
         for item_carrito in items_carrito:
             monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
             total_pedido += monto_item
             negocio = item_carrito.fknegocio
             
-            # Debug info
             print(f"🔍 DEBUG procesar_pedido: Item - {item_carrito.fkproducto.nom_prod}, "
                   f"Variante: {item_carrito.variante_seleccionada}, "
                   f"Precio: {item_carrito.precio_unitario}, "
@@ -1986,7 +2009,7 @@ def procesar_pedido(request):
             fecha_actualizacion=timezone.now()
         )
 
-        # Procesar detalles del pedido y actualizar stock
+        # ✅ CREAR DETALLES DEL PEDIDO PERO NO DESCONTAR STOCK
         for item_carrito in items_carrito:
             DetallesPedido.objects.create(
                 fkpedido_detalle=pedido,
@@ -1995,22 +2018,7 @@ def procesar_pedido(request):
                 precio_unitario=item_carrito.precio_unitario
             )
             
-            # Actualizar stock según si es variante o producto base
-            if item_carrito.variante_id:
-                # Es una variante - actualizar stock de la variante
-                try:
-                    variante = VariantesProducto.objects.get(id_variante=item_carrito.variante_id)
-                    variante.stock_variante = (variante.stock_variante or 0) - item_carrito.cantidad
-                    variante.save()
-                    print(f"🔍 DEBUG procesar_pedido: Stock variante actualizado - {variante.nombre_variante}, Nuevo stock: {variante.stock_variante}")
-                except VariantesProducto.DoesNotExist:
-                    print(f"⚠️ WARNING: Variante no encontrada al actualizar stock - ID: {item_carrito.variante_id}")
-            else:
-                # Es producto base - actualizar stock del producto
-                producto = item_carrito.fkproducto
-                producto.stock_prod = (producto.stock_prod or 0) - item_carrito.cantidad
-                producto.save()
-                print(f"🔍 DEBUG procesar_pedido: Stock producto actualizado - {producto.nom_prod}, Nuevo stock: {producto.stock_prod}")
+            print(f"✅ DEBUG procesar_pedido: Detalle creado SIN modificar stock - {item_carrito.fkproducto.nom_prod}")
 
         # Crear pagos para cada negocio involucrado
         for negocio, monto in negocios_involucrados.items():
@@ -2054,7 +2062,7 @@ def procesar_pedido(request):
 
         response_data = {
             'success': True,
-            'message': 'Pedido procesado exitosamente',
+            'message': 'Pedido procesado exitosamente. El vendedor gestionará el stock manualmente.',
             'numero_pedido': pedido.pkid_pedido,
             'total': total_pedido,
             'metodo_pago': metodo_pago_texto,
@@ -2063,13 +2071,11 @@ def procesar_pedido(request):
             'pagos_creados': len(negocios_involucrados),
             'negocio_principal': negocio_principal.nom_neg,
             'correo_enviado': bool(email_cliente),
-            'debug_info': {
-                'total_items': len(items_detallados),
-                'negocios_involucrados': len(negocios_involucrados)
-            }
+            'stock_validado': True,  # ✅ INDICAR QUE SE VALIDÓ EL STOCK
+            'stock_no_modificado': True,  # ✅ INDICAR QUE NO SE MODIFICÓ EL STOCK
         }
 
-        print(f"🔍 DEBUG procesar_pedido: Pedido {pedido.pkid_pedido} procesado exitosamente")
+        print(f"🔍 DEBUG procesar_pedido: Pedido {pedido.pkid_pedido} procesado exitosamente - STOCK VALIDADO PERO NO MODIFICADO")
         return JsonResponse(response_data)
 
     except Exception as e:
