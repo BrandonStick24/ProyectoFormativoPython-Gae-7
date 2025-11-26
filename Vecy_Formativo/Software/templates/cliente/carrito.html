@@ -1,0 +1,367 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Carrito de Compras - VECY{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'principal' %}">Inicio</a></li>
+                    <li class="breadcrumb-item active">Carrito de Compras</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Mi Carrito
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if carrito_vacio %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">Tu carrito está vacío</h5>
+                        <p class="text-muted">Agrega algunos productos para comenzar</p>
+                        <a href="{% url 'principal' %}" class="btn btn-primary-custom mt-3">
+                            <i class="fas fa-store me-2"></i>Seguir Comprando
+                        </a>
+                    </div>
+                    {% else %}
+                    <div id="carrito-completo">
+                        {% for item_data in items_carrito %}
+                        <div class="cart-item-completo border-bottom pb-3 mb-3">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    {% if item_data.item.fkproducto.img_prod %}
+                                        <img src="{{ item_data.item.fkproducto.img_prod.url }}" 
+                                             alt="{{ item_data.item.fkproducto.nom_prod }}" 
+                                             class="img-fluid rounded" style="max-height: 80px; object-fit: cover;">
+                                    {% else %}
+                                        <img src="{% static 'img/placeholder-product.jpg' %}" 
+                                             alt="{{ item_data.item.fkproducto.nom_prod }}" 
+                                             class="img-fluid rounded" style="max-height: 80px; object-fit: cover;">
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-1">{{ item_data.item.fkproducto.nom_prod }}</h6>
+                                    {% if item_data.item.variante_seleccionada %}
+                                    <p class="text-muted small mb-1">Variante: {{ item_data.item.variante_seleccionada }}</p>
+                                    {% endif %}
+                                    <p class="text-muted small mb-0">Vendido por: {{ item_data.item.fknegocio.nom_neg }}</p>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="quantity-controls">
+                                            <button class="btn btn-outline-secondary btn-sm" 
+                                                    onclick="updateCartQuantity({{ item_data.item.pkid_item }}, -1)">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <span class="mx-2">{{ item_data.item.cantidad }}</span>
+                                            <button class="btn btn-outline-secondary btn-sm" 
+                                                    onclick="updateCartQuantity({{ item_data.item.pkid_item }}, 1)">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        </div>
+                                        <div class="text-end">
+                                            {% if item_data.tiene_oferta %}
+                                            <div>
+                                                <small class="text-muted text-decoration-line-through">
+                                                    ${{ item_data.precio_original|floatformat:0 }}
+                                                </small>
+                                            </div>
+                                            {% endif %}
+                                            <strong class="text-primary">
+                                                ${{ item_data.item.precio_unitario|floatformat:0 }}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-success">
+                                            {% if item_data.tiene_oferta %}
+                                            Ahorras: ${{ item_data.ahorro|floatformat:0 }}
+                                            {% endif %}
+                                        </small>
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                onclick="removeCartItem({{ item_data.item.pkid_item }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Resumen del Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span id="resumen-subtotal">${{ total_carrito|floatformat:0 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Envío:</span>
+                        <span class="text-success">Gratis</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Descuentos:</span>
+                        <span class="text-success" id="resumen-descuentos">$0</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-3">
+                        <strong>Total:</strong>
+                        <strong class="text-primary" id="resumen-total">${{ total_carrito|floatformat:0 }}</strong>
+                    </div>
+
+                    {% if not carrito_vacio %}
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary-custom" data-bs-toggle="modal" data-bs-target="#checkoutModal">
+                            <i class="fas fa-credit-card me-2"></i>Proceder al Pago
+                        </button>
+                        <a href="{% url 'principal' %}" class="btn btn-outline-custom">
+                            <i class="fas fa-arrow-left me-2"></i>Seguir Comprando
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Checkout -->
+<div class="modal fade" id="checkoutModal" tabindex="-1" aria-labelledby="checkoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="checkoutModalLabel">Finalizar Compra</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="checkout-form">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Método de Pago</h6>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="contra_entrega" value="contra_entrega" checked>
+                                    <label class="form-check-label" for="contra_entrega">
+                                        <i class="fas fa-money-bill-wave me-2"></i>Contra Entrega
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="transferencia" value="transferencia">
+                                    <label class="form-check-label" for="transferencia">
+                                        <i class="fas fa-university me-2"></i>Transferencia Bancaria
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="nequi" value="nequi">
+                                    <label class="form-check-label" for="nequi">
+                                        <i class="fas fa-mobile-alt me-2"></i>Nequi
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="metodo_pago" id="daviplata" value="daviplata">
+                                    <label class="form-check-label" for="daviplata">
+                                        <i class="fas fa-wallet me-2"></i>DaviPlata
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Resumen</h6>
+                            <div class="bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between">
+                                    <span>Total a pagar:</span>
+                                    <strong class="text-primary">${{ total_carrito|floatformat:0 }}</strong>
+                                </div>
+                                <small class="text-muted">* El pago se confirma al validar la transacción</small>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary-custom" onclick="procesarPedido()">
+                    <i class="fas fa-check me-2"></i>Confirmar Pedido
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function procesarPedido() {
+        const metodoPago = document.querySelector('input[name="metodo_pago"]:checked').value;
+        const metodoPagoTextos = {
+            'contra_entrega': 'Contra Entrega',
+            'transferencia': 'Transferencia Bancaria', 
+            'nequi': 'Nequi',
+            'daviplata': 'DaviPlata'
+        };
+
+        // Mostrar loading
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+        btn.disabled = true;
+
+        fetch('{% url "procesar_pedido" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                metodo_pago: metodoPago,
+                metodo_pago_texto: metodoPagoTextos[metodoPago]
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('checkoutModal'));
+                modal.hide();
+                
+                // Mostrar mensaje de éxito
+                showAlert('success', `¡Pedido realizado con éxito!<br>Número de pedido: <strong>${data.numero_pedido}</strong><br>Total: <strong>$${data.total.toLocaleString('es-CO')}</strong>`);
+                
+                // Redirigir a la página principal después de 2 segundos
+                setTimeout(() => {
+                    window.location.href = "{% url 'principal' %}";
+                }, 2000);
+            } else {
+                showAlert('error', data.message || 'Error al procesar el pedido');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('error', 'Error de conexión al procesar el pedido');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    function showAlert(type, message) {
+        // Crear alerta
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+        alertDiv.style.position = 'fixed';
+        alertDiv.style.top = '20px';
+        alertDiv.style.right = '20px';
+        alertDiv.style.zIndex = '9999';
+        alertDiv.style.minWidth = '300px';
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(alertDiv);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Actualizar el carrito cuando se modifiquen las cantidades
+    function updateCartQuantity(itemId, cambio) {
+        fetch('{% url "actualizar_cantidad_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                item_id: itemId,
+                cambio: cambio
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recargar la página para actualizar los totales
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error al actualizar la cantidad');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating cart quantity:', error);
+            alert('Error al actualizar la cantidad');
+        });
+    }
+
+    // Eliminar item del carrito
+    function removeCartItem(itemId) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este producto del carrito?')) {
+            return;
+        }
+
+        fetch('{% url "eliminar_item_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                item_id: itemId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recargar la página
+                window.location.reload();
+            } else {
+                alert('Error al eliminar el producto');
+            }
+        })
+        .catch(error => {
+            console.error('Error removing cart item:', error);
+            alert('Error al eliminar el producto');
+        });
+    }
+</script>
+{% endblock %}

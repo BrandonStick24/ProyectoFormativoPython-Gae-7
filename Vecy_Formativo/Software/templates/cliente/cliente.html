@@ -9,6 +9,199 @@
 <!-- FONT AWESOME -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'cliente/css/cliente.css' %}">
+<style>
+    /* ESTILOS ESPECÍFICOS PARA VARIANTES EN CARRITO */
+    .variant-info-cart {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-top: 2px;
+    }
+    
+    .variant-badge {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-left: 5px;
+    }
+    
+    .cart-item-variant-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .variant-selection-indicator {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        background: #28a745;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        z-index: 2;
+    }
+    
+    .variant-thumb.selected {
+        border: 2px solid #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+    
+    .variant-thumb {
+        position: relative;
+        cursor: pointer;
+        border: 2px solid transparent;
+        border-radius: 8px;
+        padding: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .variant-thumb img {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+    
+    .variant-name {
+        font-size: 0.7rem;
+        margin-top: 3px;
+        text-align: center;
+    }
+    
+    .base-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ffc107;
+        color: #000;
+        padding: 1px 4px;
+        border-radius: 3px;
+        font-size: 0.6rem;
+        font-weight: bold;
+        z-index: 3;
+    }
+
+    /* NUEVOS ESTILOS PARA STOCK DE VARIANTES */
+    .variant-stock-info {
+        font-size: 0.7rem;
+        margin-top: 2px;
+    }
+    
+    .stock-available {
+        color: #28a745;
+    }
+    
+    .stock-low {
+        color: #ffc107;
+    }
+    
+    .stock-unavailable {
+        color: #dc3545;
+    }
+    
+    .variant-image-preview {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid #e9ecef;
+    }
+    
+    .variant-selected {
+        border-color: #007bff !important;
+        background-color: #f8f9fa;
+    }
+    
+    /* MEJORAS PARA EL CARRITO CON VARIANTES */
+    .cart-item-variant-details {
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 6px;
+        margin-top: 5px;
+        font-size: 0.8rem;
+    }
+    
+    .variant-image-in-cart {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+
+    /* ESTILOS PARA BOTONES DESHABILITADOS */
+    .variant-disabled {
+        opacity: 0.5;
+        cursor: not-allowed !important;
+    }
+    
+    .variant-disabled:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    .add-cart-btn:disabled {
+        background-color: #6c757d !important;
+        cursor: not-allowed !important;
+        opacity: 0.6;
+    }
+
+    /* ESTILOS PARA PEDIDOS CANCELADOS/ELIMINADOS */
+    .pedido-cancelado {
+        opacity: 0.7;
+        background-color: #f8f9fa;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .pedido-eliminado {
+        display: none !important;
+    }
+    
+    .btn-eliminar-pedido {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+    }
+    
+    .btn-eliminar-pedido:hover {
+        background-color: #c82333;
+    }
+    
+    .btn-mostrar-todos {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        margin: 10px 0;
+        cursor: pointer;
+    }
+    
+    .btn-mostrar-todos:hover {
+        background-color: #5a6268;
+    }
+
+    /* ESTILOS PARA ESTADOS DE PEDIDOS */
+    .estado-pendiente { color: #ffc107; font-weight: bold; }
+    .estado-confirmado { color: #17a2b8; font-weight: bold; }
+    .estado-preparando { color: #007bff; font-weight: bold; }
+    .estado-enviado { color: #6f42c1; font-weight: bold; }
+    .estado-entregado { color: #28a745; font-weight: bold; }
+    .estado-cancelado { color: #dc3545; font-weight: bold; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -166,7 +359,7 @@
             <div class="vecy-offers-grid">
                 {% for producto_data in productos_oferta|slice:":6" %}
                 {% with producto=producto_data.producto %}
-                {% if producto_data.stock > 0 %}
+                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
                 <div class="vecy-offer-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
                     <div class="vecy-offer-badge">
                         <i class="fas fa-fire"></i> Oferta
@@ -205,18 +398,33 @@
                             Ahorras ${{ producto_data.ahorro|floatformat:0 }}
                         </div>
 
+                        <!-- STOCK MEJORADO PARA VARIANTES -->
                         <div class="vecy-offer-stock">
+                            {% if producto_data.tiene_variantes %}
+                            <div class="variant-stock-info stock-available">
+                                <i class="fas fa-cubes me-1"></i>
+                                Múltiples variantes disponibles
+                            </div>
+                            {% else %}
                             <div class="vecy-stock-bar">
                                 <div class="vecy-stock-progress"
                                     style="width: {% widthratio producto_data.stock 50 100 %}%"></div>
                             </div>
                             <span>{{ producto_data.stock }} disponibles</span>
+                            {% endif %}
                         </div>
 
+                        {% if producto_data.tiene_variantes %}
+                        <button class="vecy-offer-btn" onclick="showVariantsModal('{{ producto.pkid_prod }}')">
+                            <i class="fas fa-list-alt me-2"></i>
+                            Ver Opciones
+                        </button>
+                        {% else %}
                         <button class="vecy-offer-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
                             <i class="fas fa-cart-plus me-2"></i>
                             Aprovechar Oferta
                         </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -235,94 +443,207 @@
         </div>
     </section>
 
-<!-- PRODUCTOS BARATOS CON VARIANTES REALES - VERSIÓN CORREGIDA -->
-<section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
-    <div class="container">
-        <div class="vecy-section-header">
-            <div class="vecy-header-content">
-                <div class="vecy-icon-header">
-                    <i class="fas fa-coins"></i>
-                </div>
-                <div>
-                    <h2 class="vecy-section-title">Productos Baratos</h2>
-                    <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
-                </div>
-            </div>
-            <a href="{% url 'productos_filtrados_logeado' %}?filtro=economicos" class="vecy-view-all">
-                Ver todos <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-
-        {% if productos_baratos %}
-        <div class="vecy-products-showcase">
-            {% for producto_data in productos_baratos|slice:":8" %}
-            {% with producto=producto_data.producto %}
-            {% if producto_data.stock > 0 %}
-
-            <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN MEJORADA -->
-            {% if producto_data.tiene_variantes and producto_data.variantes %}
-            <div class="product-card-with-variants" data-aos="fade-up" 
-                 data-aos-delay="{{ forloop.counter0|add:1 }}00"
-                 data-product-id="{{ producto.pkid_prod }}">
-                
-                <!-- Indicador de selección -->
-                <div class="selection-indicator">
-                    <i class="fas fa-check"></i>
-                </div>
-
-                <div class="product-image-container">
-                    <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
-                         alt="{{ producto.nom_prod }}" class="product-main-image" 
-                         id="mainProductImage-{{ producto.pkid_prod }}">
-                </div>
-
-                <div class="product-info-container">
+    <!-- PRODUCTOS BARATOS CON VARIANTES REALES - VERSIÓN CORREGIDA -->
+    <section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-coins"></i>
+                    </div>
                     <div>
-                        <!-- Título del producto -->
-                        <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
-                            {{ producto.nom_prod }}
-                        </h3>
+                        <h2 class="vecy-section-title">Productos Baratos</h2>
+                        <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
+                    </div>
+                </div>
+                <a href="{% url 'productos_filtrados_logeado' %}?filtro=economicos" class="vecy-view-all">
+                    Ver todos <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
 
-                        <!-- Información de la tienda -->
+            {% if productos_baratos %}
+            <div class="vecy-products-showcase">
+                {% for producto_data in productos_baratos|slice:":8" %}
+                {% with producto=producto_data.producto %}
+                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
+
+                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN MEJORADA -->
+                {% if producto_data.tiene_variantes and producto_data.variantes %}
+                <div class="product-card-with-variants" data-aos="fade-up" 
+                     data-aos-delay="{{ forloop.counter0|add:1 }}00"
+                     data-product-id="{{ producto.pkid_prod }}">
+                    
+                    <!-- Indicador de selección -->
+                    <div class="selection-indicator">
+                        <i class="fas fa-check"></i>
+                    </div>
+
+                    <div class="product-image-container">
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
+                             alt="{{ producto.nom_prod }}" class="product-main-image" 
+                             id="mainProductImage-{{ producto.pkid_prod }}">
+                    </div>
+
+                    <div class="product-info-container">
+                        <div>
+                            <!-- Título del producto -->
+                            <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
+                                {{ producto.nom_prod }}
+                            </h3>
+
+                            <!-- Información de la tienda -->
+                            <div class="vecy-store-info">
+                                <i class="fas fa-store"></i>
+                                <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                            </div>
+
+                            <!-- Información de stock MEJORADA -->
+                            <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                                <i class="fas fa-box"></i>
+                                <span id="stockInfo-{{ producto.pkid_prod }}">
+                                    {% if producto_data.tiene_variantes %}
+                                    Múltiples opciones disponibles
+                                    {% else %}
+                                    {{ producto_data.stock }} disponibles
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <!-- Descripción del producto -->
+                            <div class="product-description">
+                                <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
+                                    {{ producto.desc_prod|default:"Producto de alta calidad con múltiples opciones disponibles. Excelente relación calidad-precio." }}
+                                </p>
+                            </div>
+
+                            <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
+                            {% if producto_data.variantes %}
+                            <div class="variants-container">
+                                <div class="variants-label">
+                                    <i class="fas fa-list-alt me-2"></i>
+                                    Opciones disponibles:
+                                </div>
+                                <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
+                                    <!-- Las miniaturas se generarán con JavaScript -->
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sección de precio y botón -->
+                        <div class="product-price-section mt-3">
+                            <div class="vecy-price-section">
+                                <div class="vecy-price-main">
+                                    <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
+                                        ${{ producto_data.precio_final|floatformat:0 }}
+                                    </span>
+                                    {% if producto_data.tiene_descuento %}
+                                    <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if producto_data.tiene_descuento %}
+                                <div class="vecy-savings-badge">
+                                    Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <button class="vecy-add-cart-btn" 
+                                    onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
+                                    id="addToCartBtn-{{ producto.pkid_prod }}">
+                                <i class="fas fa-cart-plus me-2"></i>
+                                Agregar al Carrito
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
+                    <div class="variantes-reales-data" style="display: none;">
+                        <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+                        <div data-variant 
+                             data-variant-id="base"
+                             data-variant-name="{{ producto.nom_prod }} - Estándar"
+                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+                             data-variant-stock="{{ producto_data.stock }}"
+                             data-variant-precio-adicional="0"
+                             data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
+                             data-is-base="true">
+                        </div>
+                        
+                        <!-- VARIANTES ADICIONALES -->
+                        {% for variante in producto_data.variantes %}
+                        {% with precio_base_variante=producto_data.precio_base|add:variante.precio_adicional %}
+                        {% with precio_final_variante=producto_data.precio_final|add:variante.precio_adicional %}
+                        <div data-variant 
+                             data-variant-id="{{ variante.id_variante }}"
+                             data-variant-name="{{ variante.nombre_variante }}"
+                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
+                             data-variant-price="{{ precio_base_variante|floatformat:0 }}"
+                             data-variant-stock="{{ variante.stock_variante }}"
+                             data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
+                             data-variant-precio-final="{{ precio_final_variante|floatformat:0 }}"
+                             data-is-base="false">
+                        </div>
+                        {% endwith %}
+                        {% endwith %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL SIMPLIFICADA) -->
+                {% else %}
+                <div class="vecy-product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-product-media">
+                        <div class="vecy-image-container">
+                            {% if producto.img_prod %}
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
+                            {% else %}
+                            <div class="vecy-image-placeholder">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            {% endif %}
+
+                            <div class="vecy-product-overlay">
+                                <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="vecy-favorite-btn" onclick="addToFavorites('{{ producto.pkid_prod }}')">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                            </div>
+
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-discount-ribbon">
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="vecy-product-badges">
+                            <span class="vecy-badge vecy-budget-badge">
+                                <i class="fas fa-coins me-1"></i>Buen Precio
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="vecy-product-content">
+                        <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
+
                         <div class="vecy-store-info">
                             <i class="fas fa-store"></i>
                             <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
                         </div>
 
-                        <!-- Información de stock -->
+                        <!-- STOCK MEJORADO -->
                         <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
                             <i class="fas fa-box"></i>
-                            <span id="stockInfo-{{ producto.pkid_prod }}">{{ producto_data.stock }} disponibles</span>
+                            <span>{{ producto_data.stock }} disponibles</span>
                         </div>
 
-                        <!-- Descripción del producto -->
-                        <div class="product-description">
-                            <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
-                                {{ producto.desc_prod|default:"Producto de alta calidad con múltiples opciones disponibles. Excelente relación calidad-precio." }}
-                            </p>
-                        </div>
-
-                        <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
-                        {% if producto_data.variantes %}
-                        <div class="variants-container">
-                            <div class="variants-label">
-                                <i class="fas fa-list-alt me-2"></i>
-                                Opciones disponibles:
-                            </div>
-                            <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
-                                <!-- Las miniaturas se generarán con JavaScript -->
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Sección de precio y botón -->
-                    <div class="product-price-section mt-3">
                         <div class="vecy-price-section">
                             <div class="vecy-price-main">
-                                <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
-                                    ${{ producto_data.precio_final|floatformat:0 }}
-                                </span>
+                                <span class="vecy-current-price">${{ producto_data.precio_final|floatformat:0 }}</span>
                                 {% if producto_data.tiene_descuento %}
                                 <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
                                 {% endif %}
@@ -334,127 +655,20 @@
                             {% endif %}
                         </div>
 
-                        <button class="vecy-add-cart-btn" 
-                                onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
-                                id="addToCartBtn-{{ producto.pkid_prod }}">
+                        <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
                             <i class="fas fa-cart-plus me-2"></i>
                             Agregar al Carrito
                         </button>
                     </div>
                 </div>
-
-                <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
-<div class="variantes-reales-data" style="display: none;">
-    <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
-    <div data-variant 
-         data-variant-id="base"
-         data-variant-name="{{ producto.nom_prod }} - Estándar"
-         data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}"
-         data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
-         data-variant-stock="{{ producto_data.stock }}"
-         data-variant-precio-adicional="0"
-         data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
-         data-is-base="true">
-    </div>
-    
-    <!-- VARIANTES ADICIONALES -->
-    {% for variante in producto_data.variantes %}
-    {% with precio_base_variante=producto_data.precio_base|add:variante.precio_adicional %}
-    {% with precio_final_variante=producto_data.precio_final|add:variante.precio_adicional %}
-    <div data-variant 
-         data-variant-id="{{ variante.id_variante }}"
-         data-variant-name="{{ variante.nombre_variante }}"
-         data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}/static/img/placeholder-producto.jpg{% endif %}{% endif %}"
-         data-variant-price="{{ precio_base_variante|floatformat:0 }}"
-         data-variant-stock="{{ variante.stock_variante }}"
-         data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
-         data-variant-precio-final="{{ precio_final_variante|floatformat:0 }}"
-         data-is-base="false">
-    </div>
-    {% endwith %}
-    {% endwith %}
-    {% endfor %}
-</div>
-                </div>
-            </div>
-
-            <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL SIMPLIFICADA) -->
-            {% else %}
-            <div class="vecy-product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                <div class="vecy-product-media">
-                    <div class="vecy-image-container">
-                        {% if producto.img_prod %}
-                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
-                        {% else %}
-                        <div class="vecy-image-placeholder">
-                            <i class="fas fa-coins"></i>
-                        </div>
-                        {% endif %}
-
-                        <div class="vecy-product-overlay">
-                            <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="vecy-favorite-btn" onclick="addToFavorites('{{ producto.pkid_prod }}')">
-                                <i class="fas fa-heart"></i>
-                            </button>
-                        </div>
-
-                        {% if producto_data.tiene_descuento %}
-                        <div class="vecy-discount-ribbon">
-                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="vecy-product-badges">
-                        <span class="vecy-badge vecy-budget-badge">
-                            <i class="fas fa-coins me-1"></i>Buen Precio
-                        </span>
-                    </div>
-                </div>
-
-                <div class="vecy-product-content">
-                    <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
-
-                    <div class="vecy-store-info">
-                        <i class="fas fa-store"></i>
-                        <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
-                    </div>
-
-                    <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
-                        <i class="fas fa-box"></i>
-                        <span>{{ producto_data.stock }} disponibles</span>
-                    </div>
-
-                    <div class="vecy-price-section">
-                        <div class="vecy-price-main">
-                            <span class="vecy-current-price">${{ producto_data.precio_final|floatformat:0 }}</span>
-                            {% if producto_data.tiene_descuento %}
-                            <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
-                            {% endif %}
-                        </div>
-                        {% if producto_data.tiene_descuento %}
-                        <div class="vecy-savings-badge">
-                            Ahorras ${{ producto_data.ahorro|floatformat:0 }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
-                        <i class="fas fa-cart-plus me-2"></i>
-                        Agregar al Carrito
-                    </button>
-                </div>
+                {% endif %}
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
             </div>
             {% endif %}
-            {% endif %}
-            {% endwith %}
-            {% endfor %}
         </div>
-        {% endif %}
-    </div>
-</section>
+    </section>
 
     <!-- PRODUCTOS DESTACADOS -->
     <section id="vecy-featured" class="vecy-section vecy-gradient-bg-2">
@@ -478,7 +692,7 @@
             <div class="vecy-products-showcase">
                 {% for producto_data in productos_destacados|slice:":8" %}
                 {% with producto=producto_data.producto %}
-                {% if producto_data.stock > 0 %}
+                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
                 <div class="vecy-product-card vecy-featured-card" data-aos="fade-up"
                     data-aos-delay="{{ forloop.counter0|add:1 }}00">
                     <div class="vecy-product-media">
@@ -532,9 +746,16 @@
                             <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
                         </div>
 
+                        <!-- STOCK MEJORADO PARA VARIANTES -->
                         <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
                             <i class="fas fa-box"></i>
-                            <span>{{ producto_data.stock }} disponibles</span>
+                            <span>
+                                {% if producto_data.tiene_variantes %}
+                                Múltiples opciones disponibles
+                                {% else %}
+                                {{ producto_data.stock }} disponibles
+                                {% endif %}
+                            </span>
                         </div>
 
                         <div class="vecy-price-section">
@@ -551,10 +772,17 @@
                             {% endif %}
                         </div>
 
+                        {% if producto_data.tiene_variantes %}
+                        <button class="vecy-add-cart-btn" onclick="showVariantsModal('{{ producto.pkid_prod }}')">
+                            <i class="fas fa-list-alt me-2"></i>
+                            Ver Opciones
+                        </button>
+                        {% else %}
                         <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
                             <i class="fas fa-cart-plus me-2"></i>
                             Agregar al Carrito
                         </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -672,89 +900,90 @@
             {% endif %}
         </div>
     </section>
+
     <!-- OTROS NEGOCIOS ACTIVOS -->
-{% if otros_negocios %}
-<section id="vecy-other-businesses" class="vecy-section vecy-gradient-bg-5">
-    <div class="container">
-        <div class="vecy-section-header">
-            <div class="vecy-header-content">
-                <div class="vecy-icon-header">
-                    <i class="fas fa-store-alt"></i>
+    {% if otros_negocios %}
+    <section id="vecy-other-businesses" class="vecy-section vecy-gradient-bg-5">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-store-alt"></i>
+                    </div>
+                    <div>
+                        <h2 class="vecy-section-title">Más Negocios</h2>
+                        <p class="vecy-section-subtitle">Descubre otros negocios activos en tu zona</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 class="vecy-section-title">Más Negocios</h2>
-                    <p class="vecy-section-subtitle">Descubre otros negocios activos en tu zona</p>
-                </div>
+                <a href="#" class="vecy-view-all">
+                    Ver todos <i class="fas fa-arrow-right"></i>
+                </a>
             </div>
-            <a href="#" class="vecy-view-all">
-                Ver todos <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
 
-        <div class="vecy-businesses-grid">
-            {% for negocio_data in otros_negocios %}
-            {% with negocio=negocio_data.negocio %}
-            <div class="vecy-business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                <div class="vecy-business-header">
-                    <div class="vecy-business-image">
-                        {% if negocio.img_neg %}
-                        <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="vecy-business-img">
-                        {% else %}
-                        <div class="vecy-business-placeholder">
-                            <i class="fas fa-store"></i>
-                        </div>
-                        {% endif %}
+            <div class="vecy-businesses-grid">
+                {% for negocio_data in otros_negocios %}
+                {% with negocio=negocio_data.negocio %}
+                <div class="vecy-business-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-business-header">
+                        <div class="vecy-business-image">
+                            {% if negocio.img_neg %}
+                            <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="vecy-business-img">
+                            {% else %}
+                            <div class="vecy-business-placeholder">
+                                <i class="fas fa-store"></i>
+                            </div>
+                            {% endif %}
 
-                        <div class="vecy-rating-badge">
-                            <i class="fas fa-star"></i>
-                            {{ negocio_data.promedio_calificacion|floatformat:1 }}
-                            <small>({{ negocio_data.total_resenas }})</small>
+                            <div class="vecy-rating-badge">
+                                <i class="fas fa-star"></i>
+                                {{ negocio_data.promedio_calificacion|floatformat:1 }}
+                                <small>({{ negocio_data.total_resenas }})</small>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="vecy-business-content">
+                        <h3 class="vecy-business-name">{{ negocio.nom_neg }}</h3>
+                        <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con la calidad y el servicio"|truncatewords:15 }}</p>
+
+                        <div class="vecy-business-info">
+                            <div class="vecy-info-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ negocio.direcc_neg|truncatewords:3 }}</span>
+                            </div>
+                            <div class="vecy-info-item">
+                                <i class="fas fa-tag"></i>
+                                <span>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
+                            </div>
+                        </div>
+
+                        <div class="vecy-business-stats">
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.total_productos }}</strong>
+                                <span>Productos</span>
+                            </div>
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.productos_en_oferta }}</strong>
+                                <span>Ofertas</span>
+                            </div>
+                            <div class="vecy-stat">
+                                <strong>{{ negocio_data.total_resenas }}</strong>
+                                <span>Reseñas</span>
+                            </div>
+                        </div>
+
+                        <a href="{% url 'detalle_negocio_logeado' id=negocio.pkid_neg %}" class="vecy-visit-btn">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            Visitar Tienda
+                        </a>
                     </div>
                 </div>
-
-                <div class="vecy-business-content">
-                    <h3 class="vecy-business-name">{{ negocio.nom_neg }}</h3>
-                    <p class="vecy-business-description">{{ negocio.desc_neg|default:"Negocio local comprometido con la calidad y el servicio"|truncatewords:15 }}</p>
-
-                    <div class="vecy-business-info">
-                        <div class="vecy-info-item">
-                            <i class="fas fa-map-marker-alt"></i>
-                            <span>{{ negocio.direcc_neg|truncatewords:3 }}</span>
-                        </div>
-                        <div class="vecy-info-item">
-                            <i class="fas fa-tag"></i>
-                            <span>{{ negocio.fktiponeg_neg.desc_tiponeg }}</span>
-                        </div>
-                    </div>
-
-                    <div class="vecy-business-stats">
-                        <div class="vecy-stat">
-                            <strong>{{ negocio_data.total_productos }}</strong>
-                            <span>Productos</span>
-                        </div>
-                        <div class="vecy-stat">
-                            <strong>{{ negocio_data.productos_en_oferta }}</strong>
-                            <span>Ofertas</span>
-                        </div>
-                        <div class="vecy-stat">
-                            <strong>{{ negocio_data.total_resenas }}</strong>
-                            <span>Reseñas</span>
-                        </div>
-                    </div>
-
-                    <a href="{% url 'detalle_negocio_logeado' id=negocio.pkid_neg %}" class="vecy-visit-btn">
-                        <i class="fas fa-external-link-alt me-2"></i>
-                        Visitar Tienda
-                    </a>
-                </div>
+                {% endwith %}
+                {% endfor %}
             </div>
-            {% endwith %}
-            {% endfor %}
         </div>
-    </div>
-</section>
-{% endif %}
+    </section>
+    {% endif %}
 </div>
 
 <!-- FLOATING ACTION BUTTONS -->
@@ -875,6 +1104,36 @@
                 <div class="spinner-border text-primary" role="status" id="pedidosLoading">
                     <span class="visually-hidden">Cargando...</span>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PARA SELECCIÓN DE VARIANTES -->
+<div class="modal fade" id="variantsModal" tabindex="-1" aria-labelledby="variantsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="variantsModalLabel">
+                    <i class="fas fa-list-alt me-2"></i>
+                    Seleccionar Variante
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="variantsModalContent">
+                    <!-- Contenido dinámico de variantes -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmVariantSelection">
+                    <i class="fas fa-check me-2"></i>
+                    Seleccionar Variante
+                </button>
             </div>
         </div>
     </div>
@@ -1212,6 +1471,8 @@
     let datosPago = {};
     let productVariantsData = {};
     let selectedVariants = {};
+    let currentProductForModal = null;
+    let mostrarTodosPedidos = false; // Control para mostrar/ocultar pedidos antiguos
 
     // URLs absolutas usando Django template tags
     const URLS = {
@@ -1276,7 +1537,7 @@
                     const variant = {
                         id: variantId,
                         name: variantName,
-                        image: variantImage || '/static/img/placeholder-producto.jpg',
+                        image: variantImage || '{% static "img/placeholder-producto.jpg" %}',
                         selected: isBase,
                         price: variantPrice || '0',
                         stock: variantStock,
@@ -1323,24 +1584,34 @@
             }
 
             const thumbElement = document.createElement('div');
-            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
+            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''} ${variant.stock === 0 ? 'variant-disabled' : ''}`;
             thumbElement.setAttribute('data-variant-id', variant.id);
             thumbElement.setAttribute('title', variant.name);
+
+            // Determinar clase de stock
+            let stockClass = 'stock-available';
+            let stockText = `(${variant.stock} disp)`;
+            
+            if (variant.stock === 0) {
+                stockClass = 'stock-unavailable';
+                stockText = '(Sin stock)';
+            } else if (variant.stock < 5) {
+                stockClass = 'stock-low';
+                stockText = `(${variant.stock} disp)`;
+            }
 
             // Mostrar badge especial para producto base
             const baseBadge = variant.isBase ? 
                 '<div class="base-badge">Base</div>' : '';
 
-            // Mostrar información de stock
-            const stockInfo = variant.stock > 0 ? 
-                `<span style="color: #28a745;">(${variant.stock} disp)</span>` : 
-                `<span style="color: #dc3545;">(Sin stock)</span>`;
-
             thumbElement.innerHTML = `
                 ${baseBadge}
                 <img src="${variant.image}" alt="${variant.name}" loading="lazy"
-                     onerror="this.src='/static/img/placeholder-producto.jpg'">
-                <div class="variant-name">${variant.name} - $${variant.price} ${stockInfo}</div>
+                     onerror="this.src='{% static "img/placeholder-producto.jpg" %}'">
+                <div class="variant-name">${variant.name}</div>
+                <div class="variant-stock-info ${stockClass}">
+                    $${variant.price} ${stockText}
+                </div>
             `;
 
             thumbElement.addEventListener('click', () => {
@@ -1392,6 +1663,30 @@
                 priceElement.textContent = `$${selectedVariant.price}`;
             }
 
+            // Actualizar stock info
+            const stockElement = document.getElementById(`stockInfo-${productId}`);
+            if (stockElement) {
+                if (selectedVariant.isBase) {
+                    stockElement.textContent = `${selectedVariant.stock} disponibles`;
+                } else {
+                    stockElement.textContent = `Variante seleccionada: ${selectedVariant.stock} disponibles`;
+                }
+            }
+
+            // Actualizar estado del botón de agregar al carrito
+            const addToCartBtn = document.getElementById(`addToCartBtn-${productId}`);
+            if (addToCartBtn) {
+                if (selectedVariant.stock === 0) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.innerHTML = '<i class="fas fa-times me-2"></i>Sin Stock';
+                    addToCartBtn.classList.add('add-cart-btn', 'disabled');
+                } else {
+                    addToCartBtn.disabled = false;
+                    addToCartBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>Agregar al Carrito';
+                    addToCartBtn.classList.remove('disabled');
+                }
+            }
+
             // Actualizar estado de selección en todas las variantes
             variants.forEach(v => {
                 v.selected = v.id === variantId;
@@ -1406,6 +1701,79 @@
 
             console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
         }
+    }
+
+    // Función para mostrar modal de variantes
+    function showVariantsModal(productId) {
+        console.log(`📱 Mostrando modal de variantes para producto: ${productId}`);
+        
+        currentProductForModal = productId;
+        const variants = productVariantsData[productId];
+        
+        if (!variants || variants.length === 0) {
+            showVariantNotification('No hay variantes disponibles para este producto', 'error');
+            return;
+        }
+
+        const modalContent = document.getElementById('variantsModalContent');
+        let html = `
+            <div class="variants-modal-content">
+                <h6 class="fw-bold mb-3">Selecciona una opción:</h6>
+                <div class="variants-grid-modal">
+        `;
+
+        variants.forEach(variant => {
+            const stockClass = variant.stock > 0 ? 
+                (variant.stock < 5 ? 'stock-low' : 'stock-available') : 
+                'stock-unavailable';
+            
+            const stockText = variant.stock > 0 ? 
+                `${variant.stock} disponibles` : 
+                'Sin stock';
+
+            html += `
+                <div class="variant-option ${variant.selected ? 'variant-selected' : ''} ${variant.stock === 0 ? 'variant-disabled' : ''}" 
+                     data-variant-id="${variant.id}"
+                     onclick="${variant.stock > 0 ? `selectVariantInModal('${productId}', '${variant.id}')` : ''}">
+                    <div class="variant-option-image">
+                        <img src="${variant.image}" alt="${variant.name}" 
+                             onerror="this.src='{% static "img/placeholder-producto.jpg" %}'">
+                    </div>
+                    <div class="variant-option-info">
+                        <div class="variant-option-name">${variant.name}</div>
+                        <div class="variant-option-price">$${variant.price}</div>
+                        <div class="variant-option-stock ${stockClass}">
+                            <i class="fas fa-box me-1"></i>${stockText}
+                        </div>
+                    </div>
+                    ${variant.selected ? '<div class="variant-selected-indicator"><i class="fas fa-check"></i></div>' : ''}
+                </div>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+
+        modalContent.innerHTML = html;
+
+        // Mostrar modal
+        const variantsModal = new bootstrap.Modal(document.getElementById('variantsModal'));
+        variantsModal.show();
+    }
+
+    // Función para seleccionar variante en el modal
+    function selectVariantInModal(productId, variantId) {
+        const variants = productVariantsData[productId];
+        selectVariant(productId, variantId, variants);
+        
+        // Cerrar modal después de seleccionar
+        const variantsModal = bootstrap.Modal.getInstance(document.getElementById('variantsModal'));
+        variantsModal.hide();
+        
+        // Agregar al carrito automáticamente
+        addToCartWithVariant(productId);
     }
 
     // Función para notificaciones de variantes
@@ -1435,7 +1803,7 @@
             for (const [productId, variants] of Object.entries(productVariantsData)) {
                 createVariantThumbnails(productId, variants);
                 
-                // Aplicar selección inicial (base)
+                // Aplicar selección inicial (base) y verificar stock
                 const baseVariant = variants.find(v => v.isBase);
                 if (baseVariant) {
                     selectVariant(productId, baseVariant.id, variants);
@@ -1448,7 +1816,9 @@
         }
     }
 
-    // Función para agregar al carrito considerando variantes
+    // ==================== FUNCIÓN CORREGIDA PARA AGREGAR AL CARRITO CON VARIANTES ====================
+
+    // Función MEJORADA para agregar al carrito considerando variantes
     function addToCartWithVariant(productId) {
         console.log(`🛒 Agregando producto con variante: ${productId}`);
         
@@ -1462,6 +1832,23 @@
         }
         
         console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
+        
+        // ✅ CORRECCIÓN: VERIFICAR STOCK DE LA VARIANTE ESPECÍFICA
+        const variants = productVariantsData[productId];
+        const selectedVariant = variants.find(v => v.id === selectedVariantId);
+        
+        if (!selectedVariant) {
+            vecyShowNotification('Error al encontrar la variante seleccionada', 'error');
+            return;
+        }
+        
+        // ✅ CORRECCIÓN: VERIFICAR STOCK INDIVIDUAL DE LA VARIANTE
+        if (selectedVariant.stock < 1) {
+            vecyShowNotification('Esta variante no tiene stock disponible', 'error');
+            return;
+        }
+        
+        console.log(`✅ Stock disponible: ${selectedVariant.stock} unidades`);
         
         // Si es la variante base, usar addToCart normal
         if (selectedVariantId === 'base') {
@@ -1521,7 +1908,7 @@
             });
     }
 
-    // Función para renderizar los items del carrito
+    // Función MEJORADA para renderizar los items del carrito con manejo de variantes
     function renderCartItems(items, totales) {
         const container = document.getElementById('cartItemsContainer');
         const cartSubtotal = document.getElementById('cartSubtotal');
@@ -1542,17 +1929,52 @@
             const precioOriginal = item.precio_original;
             const precioActual = item.precio_unitario;
             const ahorroItem = (precioOriginal - precioActual) * item.cantidad;
+            const stockDisponible = item.stock_disponible || 0; // ✅ OBTENER STOCK DISPONIBLE
+            
+            // ✅ VERIFICAR SI LA CANTIDAD ACTUAL EXCEDE EL STOCK
+            const cantidadExcedeStock = item.cantidad > stockDisponible;
+            const puedeAumentar = item.cantidad < stockDisponible;
+
+            // ✅ CORRECCIÓN: Obtener imagen de la variante si existe
+            let imagenProducto = item.imagen || 'https://via.placeholder.com/80x80/f1f5f9/64748b?text=VECY';
+            
+            // Si es una variante y tiene imagen específica, usar esa
+            if (item.es_variante && item.debug_info && item.debug_info.variante_id) {
+                // Buscar la imagen de la variante en los datos del producto
+                const productId = item.id;
+                const variantId = item.debug_info.variante_id;
+                
+                // Buscar en los datos de variantes cargados
+                for (const [pid, variants] of Object.entries(productVariantsData)) {
+                    const variant = variants.find(v => v.id == variantId);
+                    if (variant && variant.image) {
+                        imagenProducto = variant.image;
+                        break;
+                    }
+                }
+            }
 
             html += `
-            <div class="cart-item" data-item-id="${item.id}">
-                <img src="${item.imagen || 'https://via.placeholder.com/80x80/f1f5f9/64748b?text=VECY'}" 
-                     alt="${item.nombre}" class="cart-item-image">
+            <div class="cart-item ${cantidadExcedeStock ? 'cart-item-stock-exceeded' : ''}" data-item-id="${item.id}">
+                <div class="cart-item-image-container">
+                    <img src="${imagenProducto}" 
+                         alt="${item.nombre}" class="cart-item-image">
+                    ${item.es_variante ? '<div class="variant-selection-indicator" title="Variante seleccionada"><i class="fas fa-star"></i></div>' : ''}
+                </div>
                 
                 <div class="cart-item-info">
                     <div class="cart-item-name">${item.nombre}</div>
+                    ${item.variante ? `<div class="variant-info-cart">Variante: <span class="variant-badge">${item.variante}</span></div>` : ''}
                     <div class="cart-item-store">
                         <i class="fas fa-store"></i> ${item.negocio}
                     </div>
+                    
+                    ${cantidadExcedeStock ? `
+                        <div class="stock-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Stock insuficiente. Solo ${stockDisponible} disponibles
+                        </div>
+                    ` : ''}
                     
                     <div class="cart-item-price">
                         <span class="cart-item-current-price">$${precioActual.toFixed(0)}</span>
@@ -1565,11 +1987,11 @@
                 
                 <div class="cart-item-actions">
                     <div class="cart-quantity-control">
-                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, -1)">
+                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, -1)" ${item.cantidad <= 1 ? 'disabled' : ''}>
                             <i class="fas fa-minus"></i>
                         </button>
-                        <span class="quantity-display">${item.cantidad}</span>
-                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, 1)">
+                        <span class="quantity-display ${cantidadExcedeStock ? 'quantity-exceeded' : ''}">${item.cantidad}</span>
+                        <button class="quantity-btn" onclick="updateCartItemQuantity(${item.id}, 1)" ${!puedeAumentar ? 'disabled' : ''}>
                             <i class="fas fa-plus"></i>
                         </button>
                     </div>
@@ -1674,12 +2096,314 @@
                     vecyShowNotification('Producto eliminado del carrito', 'success');
                 } else {
                     vecyShowNotification(data.message, 'error');
-                }
+                    }
             })
             .catch(error => {
                 console.error('Error eliminando item:', error);
                 vecyShowNotification('Error eliminando producto', 'error');
             });
+    }
+
+    // ==================== SISTEMA DE PEDIDOS MEJORADO ====================
+
+    // Función para cargar los pedidos del usuario
+    function loadPedidosContent() {
+        const pedidosContent = document.getElementById('pedidosContent');
+        const pedidosLoading = document.getElementById('pedidosLoading');
+
+        if (!pedidosContent) return;
+
+        console.log("📦 Cargando pedidos del usuario...");
+
+        // Mostrar loading
+        pedidosContent.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando pedidos...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando tus pedidos...</p>
+            </div>
+        `;
+
+        // URL ABSOLUTA usando Django template
+        fetch(URLS.MIS_PEDIDOS_DATA, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderPedidos(data.pedidos);
+            } else {
+                showPedidosEmptyState();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando pedidos:', error);
+            showPedidosEmptyState('Error al cargar los pedidos');
+        });
+    }
+
+    // Función MEJORADA para renderizar los pedidos con filtro por fecha
+    function renderPedidos(pedidos) {
+        const pedidosContent = document.getElementById('pedidosContent');
+        
+        if (!pedidos || pedidos.length === 0) {
+            showPedidosEmptyState();
+            return;
+        }
+
+        let html = '';
+        let pedidosRecientes = 0;
+        let pedidosAntiguos = 0;
+        const ahora = new Date();
+        const dosDiasAtras = new Date(ahora.getTime() - (2 * 24 * 60 * 60 * 1000)); // Hace 2 días
+
+        // Botón para mostrar/ocultar pedidos antiguos
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Tus Pedidos</h6>
+                <button class="btn-mostrar-todos" onclick="toggleMostrarTodosPedidos()" id="btnMostrarTodos">
+                    ${mostrarTodosPedidos ? 'Ocultar Antiguos' : 'Mostrar Todos'}
+                </button>
+            </div>
+        `;
+
+        pedidos.forEach(pedido => {
+            const fechaPedido = new Date(pedido.fecha_pedido);
+            const esReciente = fechaPedido >= dosDiasAtras;
+            const esCancelado = pedido.estado_pedido === 'cancelado';
+            const puedeCancelar = pedido.puede_cancelar;
+            const tiempoRestante = pedido.tiempo_restante;
+
+            // Contar pedidos
+            if (esReciente) {
+                pedidosRecientes++;
+            } else {
+                pedidosAntiguos++;
+            }
+
+            // Si no estamos mostrando todos y el pedido es antiguo, saltar
+            if (!mostrarTodosPedidos && !esReciente) {
+                return;
+            }
+
+            const clasePedido = esCancelado ? 'pedido-cancelado' : '';
+            const claseOculto = !esReciente && !mostrarTodosPedidos ? 'pedido-eliminado' : '';
+
+            html += `
+            <div class="pedido-card ${clasePedido} ${claseOculto}" data-pedido-id="${pedido.pkid_pedido}" data-fecha="${pedido.fecha_pedido}">
+                <div class="pedido-header">
+                    <div class="pedido-info">
+                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
+                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
+                    </div>
+                    <span class="pedido-estado estado-${pedido.estado_pedido}">
+                        ${pedido.estado_display}
+                    </span>
+                </div>
+
+                <div class="pedido-negocio">
+                    <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
+                </div>
+
+                <div class="pedido-productos">
+                    ${pedido.productos.map(producto => `
+                        <div class="producto-pedido">
+                            <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
+                                 alt="${producto.nombre}" class="producto-pedido-img">
+                            <div class="producto-pedido-info">
+                                <div class="producto-pedido-nombre">${producto.nombre}</div>
+                                <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
+                            </div>
+                            <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="pedido-total">
+                    <span>Total:</span>
+                    <span>$${pedido.total_pedido}</span>
+                </div>
+
+                ${!esCancelado ? `
+                    <div class="pedido-acciones">
+                        <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
+                            <i class="fas fa-eye me-1"></i>Ver Detalle
+                        </button>
+                        ${puedeCancelar ? `
+                            <button class="btn-cancelar-pedido" 
+                                    onclick="cancelarPedido(${pedido.pkid_pedido})"
+                                    data-pedido-id="${pedido.pkid_pedido}">
+                                <i class="fas fa-times me-1"></i>Cancelar Pedido
+                            </button>
+                        ` : `
+                            <button class="btn-cancelar-pedido" disabled>
+                                <i class="fas fa-clock me-1"></i>No Cancelable
+                            </button>
+                        `}
+                    </div>
+                    ${puedeCancelar && tiempoRestante ? `
+                        <div class="tiempo-restante">
+                            <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
+                        </div>
+                    ` : ''}
+                ` : `
+                    <div class="pedido-acciones">
+                        <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
+                            <i class="fas fa-eye me-1"></i>Ver Detalle
+                        </button>
+                        <button class="btn-eliminar-pedido" onclick="eliminarPedido(${pedido.pkid_pedido})">
+                            <i class="fas fa-trash me-1"></i>Eliminar
+                        </button>
+                    </div>
+                `}
+            </div>
+            `;
+        });
+
+        // Mostrar contador de pedidos
+        html += `
+            <div class="pedidos-counter mt-3 p-2 bg-light rounded text-center">
+                <small class="text-muted">
+                    Mostrando ${mostrarTodosPedidos ? pedidosRecientes + pedidosAntiguos : pedidosRecientes} de ${pedidos.length} pedidos
+                    ${pedidosAntiguos > 0 ? `(${pedidosAntiguos} antiguos)` : ''}
+                </small>
+            </div>
+        `;
+
+        pedidosContent.innerHTML = html;
+    }
+
+    // Función para mostrar/ocultar todos los pedidos
+    function toggleMostrarTodosPedidos() {
+        mostrarTodosPedidos = !mostrarTodosPedidos;
+        loadPedidosContent(); // Recargar con el nuevo filtro
+    }
+
+    // Función para eliminar un pedido cancelado
+    function eliminarPedido(pedidoId) {
+        console.log(`🗑️ Eliminando pedido: ${pedidoId}`);
+        
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Esta acción eliminará permanentemente este pedido de tu historial.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Ocultar el pedido inmediatamente
+                const pedidoCard = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+                if (pedidoCard) {
+                    pedidoCard.classList.add('pedido-eliminado');
+                    pedidoCard.style.display = 'none';
+                }
+
+                // Aquí podrías hacer una llamada AJAX para eliminar el pedido de la base de datos
+                // Por ahora solo lo ocultamos del frontend
+                
+                vecyShowNotification('Pedido eliminado de tu historial', 'success');
+                
+                // Actualizar contador
+                setTimeout(() => {
+                    loadPedidosContent();
+                }, 1000);
+            }
+        });
+    }
+
+    // Función para cancelar un pedido
+    function cancelarPedido(pedidoId) {
+        console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
+        
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: "Esta acción cancelará tu pedido. ¿Deseas continuar?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, cancelar pedido',
+            cancelButtonText: 'No, mantener pedido'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Mostrar loading en el botón
+                const btn = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
+                btn.disabled = true;
+
+                // URL ABSOLUTA usando Django template
+                fetch(URLS.CANCELAR_PEDIDO, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        pedido_id: pedidoId
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        vecyShowNotification('Pedido cancelado exitosamente', 'success');
+                        // Recargar la lista de pedidos
+                        loadPedidosContent();
+                    } else {
+                        vecyShowNotification(data.message || 'Error al cancelar el pedido', 'error');
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cancelando pedido:', error);
+                    vecyShowNotification('Error de conexión al cancelar el pedido', 'error');
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+            }
+        });
+    }
+
+    // Función para mostrar estado vacío de pedidos
+    function showPedidosEmptyState(mensaje = null) {
+        const pedidosContent = document.getElementById('pedidosContent');
+        
+        const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
+        
+        pedidosContent.innerHTML = `
+            <div class="empty-pedidos">
+                <i class="fas fa-clipboard-list"></i>
+                <h5>No hay pedidos</h5>
+                <p>${mensajeFinal}</p>
+                <button class="btn btn-primary mt-3" onclick="toggleCart()">
+                    <i class="fas fa-shopping-bag me-2"></i>
+                    Realizar mi primer pedido
+                </button>
+            </div>
+        `;
+    }
+
+    // Función para ver detalle del pedido
+    function verDetallePedido(pedidoId) {
+        console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
+        // Aquí puedes implementar la lógica para mostrar un modal con los detalles completos
+        vecyShowNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
+        
+        // Ejemplo básico - puedes expandir esto
+        Swal.fire({
+            title: `Detalles del Pedido #${pedidoId}`,
+            text: 'Aquí irían los detalles completos del pedido...',
+            icon: 'info',
+            confirmButtonText: 'Cerrar'
+        });
     }
 
     // ==================== FUNCIONES DE PAGO (URLS ABSOLUTAS) ====================
@@ -1737,6 +2461,7 @@
                 <div class="resumen-producto">
                     <span class="fw-medium">${item.nombre}</span>
                     <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
+                    ${item.variante ? `<small class="text-muted">Variante: ${item.variante}</small>` : ''}
                 </div>
                 <div class="resumen-precio">
                     $${(item.precio_unitario * item.cantidad).toFixed(0)}
@@ -1954,6 +2679,7 @@
                 <div class="resumen-producto">
                     <span class="fw-medium">${item.nombre}</span>
                     <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
+                    ${item.variante ? `<small class="text-muted">Variante: ${item.variante}</small>` : ''}
                 </div>
                 <div class="resumen-precio">
                     $${(item.precio_unitario * item.cantidad).toFixed(0)}
@@ -2348,214 +3074,6 @@
         const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
         pedidosOffcanvas.show();
         loadPedidosContent();
-    }
-
-    // Función para cargar los pedidos del usuario
-    function loadPedidosContent() {
-        const pedidosContent = document.getElementById('pedidosContent');
-        const pedidosLoading = document.getElementById('pedidosLoading');
-
-        if (!pedidosContent) return;
-
-        console.log("📦 Cargando pedidos del usuario...");
-
-        // Mostrar loading
-        pedidosContent.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando pedidos...</span>
-                </div>
-                <p class="mt-2 text-muted">Cargando tus pedidos...</p>
-            </div>
-        `;
-
-        // URL ABSOLUTA usando Django template
-        fetch(URLS.MIS_PEDIDOS_DATA, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                renderPedidos(data.pedidos);
-            } else {
-                showPedidosEmptyState();
-            }
-        })
-        .catch(error => {
-            console.error('❌ Error cargando pedidos:', error);
-            showPedidosEmptyState('Error al cargar los pedidos');
-        });
-    }
-
-    // Función para renderizar los pedidos
-    function renderPedidos(pedidos) {
-        const pedidosContent = document.getElementById('pedidosContent');
-        
-        if (!pedidos || pedidos.length === 0) {
-            showPedidosEmptyState();
-            return;
-        }
-
-        let html = '';
-
-        pedidos.forEach(pedido => {
-            const puedeCancelar = pedido.puede_cancelar;
-            const tiempoRestante = pedido.tiempo_restante;
-            const esCancelado = pedido.estado_pedido === 'cancelado';
-
-            html += `
-            <div class="pedido-card ${esCancelado ? 'pedido-cancelado' : ''}">
-                <div class="pedido-header">
-                    <div class="pedido-info">
-                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
-                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
-                    </div>
-                    <span class="pedido-estado estado-${pedido.estado_pedido}">
-                        ${pedido.estado_display}
-                    </span>
-                </div>
-
-                <div class="pedido-negocio">
-                    <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
-                </div>
-
-                <div class="pedido-productos">
-                    ${pedido.productos.map(producto => `
-                        <div class="producto-pedido">
-                            <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
-                                 alt="${producto.nombre}" class="producto-pedido-img">
-                            <div class="producto-pedido-info">
-                                <div class="producto-pedido-nombre">${producto.nombre}</div>
-                                <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
-                            </div>
-                            <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
-                        </div>
-                    `).join('')}
-                </div>
-
-                <div class="pedido-total">
-                    <span>Total:</span>
-                    <span>$${pedido.total_pedido}</span>
-                </div>
-
-                ${!esCancelado ? `
-                    <div class="pedido-acciones">
-                        <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-eye me-1"></i>Ver Detalle
-                        </button>
-                        ${puedeCancelar ? `
-                            <button class="btn-cancelar-pedido" 
-                                    onclick="cancelarPedido(${pedido.pkid_pedido})"
-                                    data-pedido-id="${pedido.pkid_pedido}">
-                                <i class="fas fa-times me-1"></i>Cancelar Pedido
-                            </button>
-                        ` : `
-                            <button class="btn-cancelar-pedido" disabled>
-                                <i class="fas fa-clock me-1"></i>No Cancelable
-                            </button>
-                        `}
-                    </div>
-                    ${puedeCancelar && tiempoRestante ? `
-                        <div class="tiempo-restante">
-                            <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
-                        </div>
-                    ` : ''}
-                ` : ''}
-            </div>
-            `;
-        });
-
-        pedidosContent.innerHTML = html;
-    }
-
-    // Función para mostrar estado vacío de pedidos
-    function showPedidosEmptyState(mensaje = null) {
-        const pedidosContent = document.getElementById('pedidosContent');
-        
-        const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
-        
-        pedidosContent.innerHTML = `
-            <div class="empty-pedidos">
-                <i class="fas fa-clipboard-list"></i>
-                <h5>No hay pedidos</h5>
-                <p>${mensajeFinal}</p>
-                <button class="btn btn-primary mt-3" onclick="toggleCart()">
-                    <i class="fas fa-shopping-bag me-2"></i>
-                    Realizar mi primer pedido
-                </button>
-            </div>
-        `;
-    }
-
-    // Función para cancelar un pedido
-    function cancelarPedido(pedidoId) {
-        console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
-        
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: "Esta acción cancelará tu pedido. ¿Deseas continuar?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, cancelar pedido',
-            cancelButtonText: 'No, mantener pedido'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Mostrar loading en el botón
-                const btn = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
-                btn.disabled = true;
-
-                // URL ABSOLUTA usando Django template
-                fetch(URLS.CANCELAR_PEDIDO, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        pedido_id: pedidoId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        vecyShowNotification('Pedido cancelado exitosamente', 'success');
-                        loadPedidosContent(); // Recargar la lista
-                    } else {
-                        vecyShowNotification(data.message || 'Error al cancelar el pedido', 'error');
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error cancelando pedido:', error);
-                    vecyShowNotification('Error de conexión al cancelar el pedido', 'error');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
-            }
-        });
-    }
-
-    // Función para ver detalle del pedido
-    function verDetallePedido(pedidoId) {
-        console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
-        // Aquí puedes implementar la lógica para mostrar un modal con los detalles completos
-        vecyShowNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
-        
-        // Ejemplo básico - puedes expandir esto
-        Swal.fire({
-            title: `Detalles del Pedido #${pedidoId}`,
-            text: 'Aquí irían los detalles completos del pedido...',
-            icon: 'info',
-            confirmButtonText: 'Cerrar'
-        });
     }
 
     // ==================== INICIALIZACIÓN COMPLETA ====================

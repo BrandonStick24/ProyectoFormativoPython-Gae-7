@@ -42,7 +42,7 @@
 .vecy-premium-homepage {
     background: var(--vecy-lighter);
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow: visible;
 }
 
 .vecy-section {
@@ -2474,4 +2474,31 @@
     .pedido-acciones {
         flex-direction: column;
     }
+}
+/* ESTILOS PARA ADVERTENCIAS DE STOCK EN CARRITO */
+.cart-item-stock-exceeded {
+    border-left: 4px solid #dc3545;
+    background-color: #fff5f5;
+}
+
+.stock-warning {
+    color: #dc3545;
+    font-size: 0.8rem;
+    margin: 5px 0;
+    padding: 5px;
+    background: #ffe6e6;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.quantity-exceeded {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.quantity-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

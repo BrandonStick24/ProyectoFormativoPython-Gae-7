@@ -149,3 +149,11 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'soportevecy@gmail.com'
 EMAIL_HOST_PASSWORD = 'ylmu ujso qlri akjy'
 DEFAULT_FROM_EMAIL = 'soportevecy@gmail.com'
+
+# settings.py
+SESSION_COOKIE_AGE = 3600  # 1 hora en segundos (en lugar de 2 semanas)
+SESSION_SAVE_EVERY_REQUEST = True  # Renovar la sesión en cada request
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Expirar al cerrar el navegador
+
+if DEBUG:
+    SESSION_COOKIE_AGE = 1800  
