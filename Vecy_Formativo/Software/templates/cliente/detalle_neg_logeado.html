@@ -2,45 +2,1480 @@
 {% load static %}
 
 {% block title %}VECY - {{ negocio.nom_neg }}{% endblock %}
+
 {% block extra_css %}
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'cliente/css/detalle_neg_logeado.css' %}">
-{% endblock %}
-{% block content %}
+<style>
+    :root {
+        --primary: #3598db;
+        --primary-dark: #2980b9;
+        --secondary: #34495e;
+        --dark: #2d3e50;
+        --light: #ecf0f1;
+        --success: #2ecc71;
+        --warning: #f39c12;
+        --danger: #e74c3c;
+        --gray: #95a5a6;
+        --light-gray: #f8f9fa;
+        --border-radius: 20px;
+        --box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        --box-shadow-hover: 0 12px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s ease;
+    }
 
+    /* Reset y utilidades */
+    .vecy-gradient-primary { background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%); }
+    .vecy-gradient-warning { background: linear-gradient(135deg, var(--warning) 0%, #e67e22 100%); }
+    .vecy-gradient-success { background: linear-gradient(135deg, var(--success) 0%, #27ae60 100%); }
+    
+    .vecy-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(0,0,0,0.05);
+        transition: var(--transition);
+        overflow: hidden;
+    }
+    
+    .vecy-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--box-shadow-hover);
+    }
+    
+    .vecy-btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .vecy-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(53, 152, 219, 0.3);
+        color: white;
+    }
+    
+    .vecy-btn-outline {
+        border: 2px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: var(--transition);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .vecy-btn-outline:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Hero Section Mejorada */
+    .business-hero {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        color: white;
+        padding: 4rem 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .business-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" opacity="0.05"><polygon fill="white" points="0,1000 1000,0 1000,1000"/></svg>');
+        background-size: cover;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-logo {
+        width: 120px;
+        height: 120px;
+        border-radius: 20px;
+        object-fit: cover;
+        border: 4px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    .hero-logo-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 20px;
+        background: rgba(255,255,255,0.1);
+        border: 4px solid rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2.5rem;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .hero-category {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        background: rgba(255,255,255,0.1);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        display: inline-block;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+
+    .hero-stats {
+        font-size: 1.1rem;
+        margin: 1.5rem 0;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .hero-stats .stars {
+        color: #ffd700;
+        margin-right: 0.5rem;
+    }
+
+    .hero-description {
+        font-size: 1.1rem;
+        line-height: 1.6;
+        opacity: 0.9;
+        max-width: 600px;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-actions {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .hero-badge {
+        background: rgba(255,255,255,0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        height: fit-content;
+    }
+
+    .badge-content {
+        text-align: center;
+        color: white;
+    }
+
+    .badge-rating {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+
+    .badge-text {
+        opacity: 0.9;
+        font-size: 0.9rem;
+    }
+
+    /* Sección de Productos Mejorada */
+    .products-section {
+        background: var(--light-gray);
+        padding: 4rem 0;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.1rem;
+        color: var(--gray);
+        max-width: 600px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    .product-card {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: var(--box-shadow);
+        transition: var(--transition);
+        border: 1px solid rgba(0,0,0,0.05);
+        height: 100%;
+        position: relative;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--box-shadow-hover);
+    }
+
+    .product-image {
+        position: relative;
+        height: 250px;
+        overflow: hidden;
+        background: var(--light-gray);
+    }
+
+    .product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .product-image img {
+        transform: scale(1.05);
+    }
+
+    .product-image-placeholder {
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, var(--light) 0%, #dfe6e9 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray);
+        font-size: 3rem;
+    }
+
+    .product-badge {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        z-index: 2;
+    }
+
+    .discount-badge {
+        background: var(--vecy-gradient-warning);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+    }
+
+    .product-actions {
+        position: absolute;
+        bottom: 15px;
+        right: 15px;
+        display: flex;
+        gap: 8px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: var(--transition);
+    }
+
+    .product-card:hover .product-actions {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .btn-action {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: none;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: var(--transition);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        cursor: pointer;
+    }
+
+    .btn-action:hover {
+        background: var(--primary);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .product-info {
+        padding: 1.5rem;
+    }
+
+    .product-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .product-category {
+        color: var(--gray);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .product-category::before {
+        content: '📁';
+        font-size: 0.8rem;
+    }
+
+    .product-price {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .current-price {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .original-price {
+        font-size: 1rem;
+        color: var(--gray);
+        text-decoration: line-through;
+    }
+
+    .product-stock {
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .stock-available {
+        color: var(--success);
+    }
+
+    .stock-low {
+        color: var(--warning);
+    }
+
+    .stock-out {
+        color: var(--danger);
+    }
+
+    /* Business Card Mejorada */
+    .business-card-logged {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: var(--box-shadow);
+        border: 1px solid rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+    }
+
+    .business-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+    }
+
+    .business-logo {
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+    }
+
+    .business-logo img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .logo-placeholder {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, var(--light) 0%, #dfe6e9 100%);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray);
+        font-size: 2rem;
+    }
+
+    .business-info {
+        flex: 1;
+    }
+
+    .business-info h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .business-category {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+        background: rgba(53, 152, 219, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+    }
+
+    .business-rating {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .business-rating .stars {
+        color: #ffd700;
+        margin-right: 0.5rem;
+    }
+
+    .exclusive-features {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .btn-follow, .btn-share, .btn-report {
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--primary);
+        background: transparent;
+        color: var(--primary);
+        border-radius: 50px;
+        font-weight: 600;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .btn-follow:hover, .btn-share:hover, .btn-report:hover {
+        background: var(--primary);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(53, 152, 219, 0.3);
+    }
+
+    .btn-following {
+        background: var(--primary);
+        color: white;
+    }
+
+    /* Cards Mejoradas */
+    .ratings-summary-card, .reviews-section, .sidebar-card {
+        border-radius: 20px;
+        border: 1px solid rgba(0,0,0,0.05);
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+
+    .ratings-summary-card .card-body, .reviews-section .card-body, .sidebar-card .card-body {
+        padding: 2rem;
+    }
+
+    .card-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-title i {
+        color: var(--primary);
+    }
+
+    .average-rating {
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .rating-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1;
+        margin-bottom: 1rem;
+    }
+
+    .rating-bars {
+        padding: 1rem 0;
+    }
+
+    .rating-bar-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .rating-label {
+        width: 80px;
+        font-size: 0.9rem;
+        color: var(--gray);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .rating-bar {
+        flex: 1;
+        height: 8px;
+        background: var(--light);
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 0 1rem;
+    }
+
+    .rating-progress {
+        height: 100%;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        border-radius: 10px;
+        transition: width 1s ease;
+    }
+
+    .rating-count {
+        width: 30px;
+        text-align: right;
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
+
+    /* Reviews Mejoradas */
+    .review-item {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+    }
+
+    .review-item:last-child {
+        border-bottom: none;
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .review-user {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex: 1;
+    }
+
+    .review-user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+
+    .review-user-info {
+        flex: 1;
+    }
+
+    .review-user-name {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .review-date {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    .review-actions {
+        position: relative;
+    }
+
+    .review-actions .btn-review-actions {
+        background: transparent;
+        border: none;
+        color: var(--gray);
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition);
+        cursor: pointer;
+    }
+
+    .review-actions .btn-review-actions:hover {
+        background: var(--light);
+        color: var(--dark);
+    }
+
+    .review-stars {
+        color: #ffd700;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+    }
+
+    .review-text {
+        line-height: 1.6;
+        color: var(--dark);
+        margin-bottom: 1rem;
+    }
+
+    .review-response {
+        background: var(--light-gray);
+        padding: 1.5rem;
+        border-radius: 15px;
+        border-left: 4px solid var(--primary);
+        margin-top: 1rem;
+    }
+
+    .response-header {
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .response-text {
+        margin: 0;
+        line-height: 1.6;
+        color: var(--dark);
+    }
+
+    .review-divider {
+        margin: 0;
+        opacity: 0.1;
+    }
+
+    /* Sidebar Mejorada */
+    .business-details .detail-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: var(--light-gray);
+        border-radius: 12px;
+        transition: var(--transition);
+    }
+
+    .business-details .detail-item:hover {
+        background: var(--light);
+        transform: translateX(5px);
+    }
+
+    .business-details .detail-item i {
+        color: var(--primary);
+        font-size: 1.2rem;
+        margin-top: 2px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .detail-content {
+        flex: 1;
+    }
+
+    .detail-content strong {
+        color: var(--dark);
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-content span {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    /* Star Rating Mejorado */
+    .star-rating {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin: 1.5rem 0;
+    }
+
+    .star-label {
+        color: #ddd;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 2rem;
+        position: relative;
+    }
+
+    .star-label:hover,
+    .star-label.active {
+        color: #ffd700;
+        transform: scale(1.1);
+    }
+
+    .star-label.hover {
+        color: #ffd700;
+        transform: scale(1.2);
+    }
+
+    .btn-submit-review {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: var(--transition);
+        width: 100%;
+        font-size: 1.1rem;
+        cursor: pointer;
+    }
+
+    .btn-submit-review:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(53, 152, 219, 0.3);
+    }
+
+    /* Modal de Reporte Mejorado */
+    .modal-reporte .modal-content {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        overflow: hidden;
+    }
+
+    .modal-reporte .modal-header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        border-bottom: none;
+        padding: 2rem;
+        color: white;
+    }
+
+    .modal-reporte .modal-body {
+        padding: 2rem;
+    }
+
+    .reporte-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .reporte-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--warning) 0%, #e67e22 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        color: white;
+        font-size: 2rem;
+    }
+
+    .reporte-title {
+        color: var(--dark);
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+    }
+
+    .reporte-subtitle {
+        color: var(--gray);
+        font-size: 1.1rem;
+        line-height: 1.5;
+    }
+
+    .form-control, .form-select {
+        border-radius: 12px;
+        border: 2px solid var(--light);
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+        font-size: 1rem;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 0.2rem rgba(53, 152, 219, 0.1);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-text {
+        color: var(--gray);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Floating Actions Mejorados */
+    .vecy-floating-actions {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 1000;
+    }
+
+    .vecy-fab-main {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: 0 8px 25px rgba(53, 152, 219, 0.4);
+        transition: var(--transition);
+        position: relative;
+        border: none;
+    }
+
+    .vecy-fab-main:hover {
+        transform: scale(1.1);
+        box-shadow: 0 12px 35px rgba(53, 152, 219, 0.5);
+    }
+
+    .vecy-fab-menu {
+        position: absolute;
+        bottom: 70px;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: var(--transition);
+    }
+
+    .vecy-floating-actions.active .vecy-fab-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .vecy-fab-item {
+        width: 50px;
+        height: 50px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--dark);
+        font-size: 1.2rem;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: var(--transition);
+        border: none;
+        position: relative;
+    }
+
+    .vecy-fab-item:hover {
+        background: var(--primary);
+        color: white;
+        transform: scale(1.1);
+    }
+
+    .vecy-fab-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: var(--danger);
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        border: 2px solid white;
+    }
+
+    /* Offcanvas Styles */
+    .vecy-cart-offcanvas, .vecy-pedidos-offcanvas {
+        border-radius: 20px 0 0 20px;
+    }
+
+    .offcanvas-header {
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        padding: 1.5rem;
+    }
+
+    .offcanvas-title {
+        font-weight: 700;
+        color: var(--dark);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .offcanvas-body {
+        padding: 1.5rem;
+    }
+
+    /* Cart Items Styles */
+    .cart-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid rgba(0,0,0,0.1);
+        gap: 1rem;
+    }
+
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }
+
+    .cart-item-info {
+        flex: 1;
+    }
+
+    .cart-item-name {
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .cart-item-store {
+        color: var(--gray);
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .cart-item-price {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .cart-item-current-price {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .cart-item-original-price {
+        color: var(--gray);
+        text-decoration: line-through;
+        font-size: 0.9rem;
+    }
+
+    .cart-item-discount {
+        color: var(--success);
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .cart-item-actions {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .cart-quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--light-gray);
+        border-radius: 25px;
+        padding: 0.25rem;
+    }
+
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: none;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .quantity-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .quantity-display {
+        font-weight: 600;
+        min-width: 30px;
+        text-align: center;
+    }
+
+    .cart-remove-btn {
+        background: transparent;
+        border: none;
+        color: var(--danger);
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: var(--transition);
+    }
+
+    .cart-remove-btn:hover {
+        background: var(--danger);
+        color: white;
+    }
+
+    .cart-summary {
+        background: var(--light-gray);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-top: 1.5rem;
+    }
+
+    /* Payment Methods Styles */
+    .metodo-pago-card {
+        border: 2px solid var(--light);
+        border-radius: 15px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        height: 100%;
+    }
+
+    .metodo-pago-card:hover {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+    }
+
+    .metodo-pago-card.selected {
+        border-color: var(--primary);
+        background: rgba(53, 152, 219, 0.05);
+    }
+
+    .metodo-pago-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .metodo-pago-body {
+        color: var(--gray);
+        font-size: 0.9rem;
+    }
+
+    .logo-billetera {
+        width: 40px;
+        height: 40px;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+
+    /* Empty States */
+    .empty-state {
+        padding: 4rem 2rem;
+        text-align: center;
+        color: var(--gray);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.5;
+    }
+
+    .empty-state h4 {
+        color: var(--gray);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: var(--gray);
+        margin-bottom: 2rem;
+    }
+
+    /* Loading States */
+    .vecy-loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255,255,255,.3);
+        border-radius: 50%;
+        border-top-color: #fff;
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    /* Alert Styles */
+    .alert {
+        border-radius: 12px;
+        border: none;
+        padding: 1rem 1.5rem;
+    }
+
+    .alert-info {
+        background: rgba(52, 152, 219, 0.1);
+        color: var(--primary);
+        border-left: 4px solid var(--primary);
+    }
+
+    /* Pagination */
+    .pagination {
+        margin: 2rem 0 0 0;
+    }
+
+    .page-link {
+        border: none;
+        color: var(--primary);
+        padding: 0.75rem 1rem;
+        margin: 0 0.25rem;
+        border-radius: 10px;
+        transition: var(--transition);
+    }
+
+    .page-link:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+        }
+        
+        .exclusive-features {
+            justify-content: center;
+        }
+        
+        .vecy-floating-actions {
+            bottom: 1rem;
+            right: 1rem;
+        }
+        
+        .hero-actions {
+            justify-content: center;
+        }
+        
+        .business-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .business-logo {
+            margin: 0 auto 1rem;
+        }
+        
+        .rating-bar-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .rating-bar {
+            margin: 0.5rem 0;
+            width: 100%;
+        }
+    }
+
+    /* Animaciones */
+    [data-aos] {
+        transition: all 0.6s ease;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--light-gray);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-dark);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section del Negocio -->
+<section class="business-hero py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="hero-content text-white">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if negocio.img_neg %}
+                            <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="hero-logo me-4">
+                        {% else %}
+                            <div class="hero-logo-placeholder me-4">
+                                <i class="fas fa-store"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h1 class="hero-title mb-1">{{ negocio.nom_neg }}</h1>
+                            <div class="hero-category">{{ negocio.fktiponeg_neg.desc_tiponeg }}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-stats">
+                        <div class="d-flex align-items-center">
+                            <div class="stars me-3">
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= estadisticas_resenas.promedio|default:0 %}
+                                        <i class="fas fa-star"></i>
+                                    {% elif forloop.counter <= estadisticas_resenas.promedio|default:0|add:0.5 %}
+                                        <i class="fas fa-star-half-alt"></i>
+                                    {% else %}
+                                        <i class="far fa-star"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            <span class="me-4">{{ estadisticas_resenas.promedio|default:0|floatformat:1 }} ({{ estadisticas_resenas.total_resenas|default:0 }} reseñas)</span>
+                        </div>
+                        <span><i class="fas fa-map-marker-alt me-1"></i> {{ negocio.direcc_neg }}</span>
+                    </div>
+                    
+                    {% if negocio.desc_neg %}
+                    <p class="hero-description">{{ negocio.desc_neg }}</p>
+                    {% endif %}
+                    
+                    <div class="hero-actions">
+                        <button class="vecy-btn-primary" onclick="seguirNegocio({{ negocio.pkid_neg }})">
+                            <i class="far fa-heart me-1"></i> Seguir Negocio
+                        </button>
+                        <button class="vecy-btn-outline">
+                            <i class="fas fa-share-alt me-1"></i> Compartir
+                        </button>
+                        <button class="vecy-btn-outline" onclick="abrirModalReporte('negocio', {{ negocio.pkid_neg }})">
+                            <i class="fas fa-flag me-1"></i> Reportar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <div class="hero-badge">
+                    <div class="badge-content">
+                        <div class="badge-rating">{{ estadisticas_resenas.promedio|default:0|floatformat:1 }}</div>
+                        <div class="stars mb-2">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= estadisticas_resenas.promedio|default:0 %}
+                                    <i class="fas fa-star"></i>
+                                {% elif forloop.counter <= estadisticas_resenas.promedio|default:0|add:0.5 %}
+                                    <i class="fas fa-star-half-alt"></i>
+                                {% else %}
+                                    <i class="far fa-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="badge-text">{{ estadisticas_resenas.total_resenas|default:0 }} reseñas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Sección de Productos -->
+<section class="products-section">
+    <div class="container">
+        <div class="section-header mb-5">
+            <h2 class="section-title">Productos Destacados</h2>
+            <p class="section-subtitle">Descubre lo que este negocio tiene para ofrecerte</p>
+        </div>
+        
+        {% if productos %}
+        <div class="row g-4">
+            {% for producto in productos %}
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:50 }}">
+                    <div class="product-image">
+                        {% if producto.img_prod %}
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                        {% else %}
+                            <div class="product-image-placeholder">
+                                <i class="fas fa-box-open"></i>
+                            </div>
+                        {% endif %}
+                        
+                        {% if producto.tiene_oferta %}
+                        <div class="product-badge">
+                            <span class="discount-badge">Oferta</span>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="product-actions">
+                            <button class="btn-action" onclick="agregarAlCarrito({{ producto.pkid_prod }})" title="Agregar al carrito">
+                                <i class="fas fa-shopping-cart"></i>
+                            </button>
+                            <button class="btn-action" onclick="addToFavorites({{ producto.pkid_prod }})" title="Agregar a favoritos">
+                                <i class="far fa-heart"></i>
+                            </button>
+                            <button class="btn-action" onclick="quickView({{ producto.pkid_prod }})" title="Vista rápida">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="product-info">
+                        <h3 class="product-title">{{ producto.nom_prod }}</h3>
+                        <p class="product-category">{{ producto.fkcategoria_prod.nom_cat }}</p>
+                        
+                        <div class="product-price">
+                            {% if producto.tiene_oferta %}
+                            <span class="current-price">${{ producto.precio_prod|floatformat:0 }}</span>
+                            <span class="original-price">${{ producto.precio_original|floatformat:0 }}</span>
+                            {% else %}
+                            <span class="current-price">${{ producto.precio_prod|floatformat:0 }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="product-stock">
+                            {% if producto.stock_prod > 10 %}
+                            <span class="stock-available"><i class="fas fa-check-circle"></i> En stock</span>
+                            {% elif producto.stock_prod > 0 %}
+                            <span class="stock-low"><i class="fas fa-exclamation-triangle"></i> Últimas unidades</span>
+                            {% else %}
+                            <span class="stock-out"><i class="fas fa-times-circle"></i> Agotado</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if productos|length > 8 %}
+        <div class="text-center mt-5">
+            <button class="vecy-btn-primary btn-lg">
+                <i class="fas fa-store me-2"></i> Ver todos los productos
+            </button>
+        </div>
+        {% endif %}
+        
+        {% else %}
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <h4>No hay productos disponibles</h4>
+            <p>Este negocio aún no ha agregado productos a su catálogo.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Sección de Información y Reseñas -->
 <section class="business-detail-section py-5">
     <div class="container">
         <div class="row">
             <div class="col-lg-8">
                 <!-- Información del negocio -->
-                <div class="business-card-logged mb-4">
-                    <div class="business-header d-flex align-items-start">
-                        <div class="business-logo me-4">
+                <div class="business-card-logged" data-aos="fade-up">
+                    <div class="business-header">
+                        <div class="business-logo">
                             {% if negocio.img_neg %}
-                                <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}" class="rounded">
+                                <img src="{{ negocio.img_neg.url }}" alt="{{ negocio.nom_neg }}">
                             {% else %}
-                                <div class="logo-placeholder rounded d-flex align-items-center justify-content-center">
-                                    <i class="fas fa-store fa-2x"></i>
+                                <div class="logo-placeholder">
+                                    <i class="fas fa-store"></i>
                                 </div>
                             {% endif %}
                         </div>
-                        <div class="business-info flex-grow-1">
-                            <h1 class="h3 mb-2">{{ negocio.nom_neg }}</h1>
-                            <p class="business-category mb-2">{{ negocio.fktiponeg_neg.desc_tiponeg }}</p>
-                            <div class="business-rating d-flex align-items-center">
+                        <div class="business-info">
+                            <h1>{{ negocio.nom_neg }}</h1>
+                            <p class="business-category">{{ negocio.fktiponeg_neg.desc_tiponeg }}</p>
+                            <div class="business-rating">
                                 <div class="stars me-2">
                                     {% for i in "12345" %}
-                                        {% if forloop.counter <= promedio_calificacion|default:0 %}
+                                        {% if forloop.counter <= estadisticas_resenas.promedio|default:0 %}
                                             <i class="fas fa-star"></i>
-                                        {% elif forloop.counter <= promedio_calificacion|default:0|add:0.5 %}
+                                        {% elif forloop.counter <= estadisticas_resenas.promedio|default:0|add:0.5 %}
                                             <i class="fas fa-star-half-alt"></i>
                                         {% else %}
                                             <i class="far fa-star"></i>
                                         {% endif %}
                                     {% endfor %}
                                 </div>
-                                <span>({{ total_resenas|default:0 }} reseñas)</span>
+                                <span>({{ estadisticas_resenas.total_resenas|default:0 }} reseñas)</span>
                             </div>
                             {% if negocio.desc_neg %}
                             <p class="mt-3">{{ negocio.desc_neg }}</p>
@@ -49,110 +1484,252 @@
                     </div>
                     
                     <!-- Funcionalidades exclusivas para logueados -->
-                    <div class="exclusive-features mt-4 pt-3 border-top">
-                        <button class="btn-follow me-2" onclick="seguirNegocio({{ negocio.pkid_neg }})">
+                    <div class="exclusive-features">
+                        <button class="btn-follow" onclick="seguirNegocio({{ negocio.pkid_neg }})">
                             <i class="far fa-heart me-1"></i> Seguir Negocio
                         </button>
                         <button class="btn-share">
                             <i class="fas fa-share-alt me-1"></i> Compartir
                         </button>
+                        <button class="btn-report" onclick="abrirModalReporte('negocio', {{ negocio.pkid_neg }})">
+                            <i class="fas fa-flag me-1"></i> Reportar
+                        </button>
                     </div>
                 </div>
 
-                <!-- Productos con funcionalidades de carrito -->
-                <div class="products-section">
-                    <h3 class="mb-4">Productos Disponibles</h3>
-                    <div class="row">
-                        {% for producto in productos %}
-                        <div class="col-md-6 col-lg-4 mb-4">
-                            <div class="product-card-logged card h-100">
-                                <div class="product-image">
-                                    {% if producto.img_prod %}
-                                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="card-img-top">
-                                    {% else %}
-                                        <div class="image-placeholder d-flex align-items-center justify-content-center">
-                                            <i class="fas fa-box fa-2x"></i>
-                                        </div>
-                                    {% endif %}
-                                </div>
-                                <div class="card-body d-flex flex-column">
-                                    <h5 class="card-title">{{ producto.nom_prod }}</h5>
-                                    <p class="card-text small flex-grow-1">
-                                        {{ producto.desc_prod|truncatewords:15|default:"Sin descripción" }}
-                                    </p>
-                                    <div class="mt-auto">
-                                        <p class="product-price h5 mb-1">${{ producto.precio_prod }}</p>
-                                        <p class="product-stock small mb-3">
-                                            {% if producto.stock_prod > 0 %}
-                                                <span class="text-success">En stock ({{ producto.stock_prod }})</span>
+                <!-- Estadísticas de reseñas -->
+                <div class="ratings-summary-card vecy-card" data-aos="fade-up" data-aos-delay="100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Reseñas del Negocio
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="average-rating">
+                                    <div class="rating-number">{{ estadisticas_resenas.promedio|default:0|floatformat:1 }}</div>
+                                    <div class="stars mb-2">
+                                        {% for i in "12345" %}
+                                            {% if forloop.counter <= estadisticas_resenas.promedio|default:0 %}
+                                                <i class="fas fa-star"></i>
+                                            {% elif forloop.counter <= estadisticas_resenas.promedio|default:0|add:0.5 %}
+                                                <i class="fas fa-star-half-alt"></i>
                                             {% else %}
-                                                <span class="text-danger">Agotado</span>
+                                                <i class="far fa-star"></i>
                                             {% endif %}
-                                        </p>
-                                        <button class="btn-add-cart w-100 {% if producto.stock_prod <= 0 %}disabled{% endif %}" 
-                                                onclick="agregarAlCarrito({{ producto.pkid_prod }})"
-                                                {% if producto.stock_prod <= 0 %}disabled{% endif %}>
-                                            <i class="fas fa-cart-plus me-1"></i> 
-                                            {% if producto.stock_prod > 0 %}Agregar{% else %}Agotado{% endif %}
-                                        </button>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="total-reviews">{{ estadisticas_resenas.total_resenas|default:0 }} reseñas</div>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="rating-bars">
+                                    {% for i in "54321" %}
+                                    <div class="rating-bar-item">
+                                        <span class="rating-label">
+                                            <i class="fas fa-star"></i> {{ i }}
+                                        </span>
+                                        <div class="rating-bar">
+                                            <div class="rating-progress" 
+                                                 style="width: {{ estadisticas_resenas.porcentaje|default:0 }}%">
+                                            </div>
+                                        </div>
+                                        <span class="rating-count">
+                                            {{ estadisticas_resenas.cinco_estrellas|default:0 }}
+                                        </span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de reseñas -->
+                <div class="reviews-section vecy-card" data-aos="fade-up" data-aos-delay="200">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-comments me-2"></i>
+                                Reseñas de Clientes
+                            </h5>
+                            <span class="badge bg-primary">{{ estadisticas_resenas.total_resenas|default:0 }} reseñas</span>
+                        </div>
+
+                        {% if resenas %}
+                            <div class="reviews-list">
+                                {% for resena in resenas %}
+                                <div class="review-item" data-resena-id="{{ resena.pkid_resena }}">
+                                    <div class="review-header">
+                                        <div class="review-user">
+                                            <div class="review-user-avatar">
+                                                <i class="fas fa-user-circle"></i>
+                                            </div>
+                                            <div class="review-user-info">
+                                                <div class="review-user-name">
+                                                    {{ resena.fkusuario_resena.fkuser.first_name }} {{ resena.fkusuario_resena.fkuser.last_name }}
+                                                </div>
+                                                <div class="review-date">
+                                                    {{ resena.fecha_resena|date:"d M Y" }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Menú de 3 puntos para reportar -->
+                                        <div class="review-actions dropdown">
+                                            <button class="btn-review-actions" type="button" data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                {% if resena.fkusuario_resena != perfil_cliente %}
+                                                <li>
+                                                    <a class="dropdown-item text-danger" href="#" 
+                                                       onclick="abrirModalReporte('resena', {{ negocio.pkid_neg }}, {{ resena.pkid_resena }})">
+                                                        <i class="fas fa-flag me-2"></i>Reportar Reseña
+                                                    </a>
+                                                </li>
+                                                {% else %}
+                                                <li>
+                                                    <span class="dropdown-item text-muted">
+                                                        <i class="fas fa-user me-2"></i>Tu reseña
+                                                    </span>
+                                                </li>
+                                                {% endif %}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="review-content">
+                                        <div class="review-stars">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= resena.estrellas %}
+                                                    <i class="fas fa-star text-warning"></i>
+                                                {% else %}
+                                                    <i class="far fa-star text-warning"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        <p class="review-text">{{ resena.comentario|default:"Sin comentario" }}</p>
+                                        
+                                        {% if resena.respuesta_vendedor %}
+                                        <div class="review-response">
+                                            <div class="response-header">
+                                                <i class="fas fa-reply me-2"></i>
+                                                <strong>Respuesta del vendedor</strong>
+                                                <span class="response-date ms-2 text-muted">
+                                                    {{ resena.fecha_respuesta|date:"d M Y" }}
+                                                </span>
+                                            </div>
+                                            <p class="response-text">{{ resena.respuesta_vendedor }}</p>
+                                        </div>
+                                        {% endif %}
                                     </div>
                                 </div>
+                                {% endfor %}
                             </div>
-                        </div>
-                        {% empty %}
-                        <div class="col-12">
-                            <div class="text-center py-5">
-                                <i class="fas fa-box-open fa-3x mb-3"></i>
-                                <h4>No hay productos disponibles</h4>
-                                <p>Este negocio no tiene productos en este momento.</p>
+
+                            <!-- Paginación -->
+                            {% if resenas.has_other_pages %}
+                            <nav aria-label="Paginación de reseñas" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if resenas.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ resenas.previous_page_number }}">Anterior</a>
+                                    </li>
+                                    {% endif %}
+                                    
+                                    {% for num in resenas.paginator.page_range %}
+                                        {% if resenas.number == num %}
+                                        <li class="page-item active">
+                                            <span class="page-link">{{ num }}</span>
+                                        </li>
+                                        {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                        </li>
+                                        {% endif %}
+                                    {% endfor %}
+                                    
+                                    {% if resenas.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ resenas.next_page_number }}">Siguiente</a>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                            {% endif %}
+                        {% else %}
+                            <div class="empty-state">
+                                <i class="fas fa-comments"></i>
+                                <h5>Aún no hay reseñas</h5>
+                                <p>Sé el primero en dejar una reseña para este negocio</p>
                             </div>
-                        </div>
-                        {% endfor %}
+                        {% endif %}
                     </div>
                 </div>
             </div>
             
             <div class="col-lg-4">
                 <!-- Sidebar con información extra para logueados -->
-                <div class="sidebar-logged">                    
+                <div class="sidebar-logged">
                     <!-- Información del negocio -->
-                    <div class="sidebar-card card mb-4">
+                    <div class="sidebar-card vecy-card mb-4" data-aos="fade-left" data-aos-delay="100">
                         <div class="card-body">
-                            <h5 class="card-title mb-3">
+                            <h5 class="card-title">
                                 <i class="fas fa-info-circle me-2"></i>
                                 Información del Negocio
                             </h5>
                             <div class="business-details">
-                                <p class="mb-2">
-                                    <i class="fas fa-map-marker-alt me-2"></i>
-                                    <strong>Dirección:</strong> {{ negocio.direcc_neg }}
-                                </p>
-                                <p class="mb-2">
-                                    <i class="fas fa-id-card me-2"></i>
-                                    <strong>NIT:</strong> {{ negocio.nit_neg }}
-                                </p>
-                                <p class="mb-0">
-                                    <i class="fas fa-calendar me-2"></i>
-                                    <strong>Miembro desde:</strong> {{ negocio.fechacreacion_neg|date:"M Y" }}
-                                </p>
+                                <div class="detail-item">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <div class="detail-content">
+                                        <strong>Dirección:</strong>
+                                        <span>{{ negocio.direcc_neg }}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-id-card"></i>
+                                    <div class="detail-content">
+                                        <strong>NIT:</strong>
+                                        <span>{{ negocio.nit_neg }}</span>
+                                    </div>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar"></i>
+                                    <div class="detail-content">
+                                        <strong>Miembro desde:</strong>
+                                        <span>{{ negocio.fechacreacion_neg|date:"M Y" }}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Formulario de reseña (solo si no ha reseñado) -->
-                    <div class="sidebar-card card">
+                    <!-- Formulario de reseña -->
+                    <div class="sidebar-card vecy-card" data-aos="fade-left" data-aos-delay="200">
                         <div class="card-body">
-                            <h5 class="card-title mb-3">
+                            <h5 class="card-title">
                                 <i class="fas fa-star me-2"></i>
-                                Deja tu Reseña
+                                {% if usuario_ya_reseno %}
+                                    Actualizar tu Reseña
+                                {% else %}
+                                    Deja tu Reseña
+                                {% endif %}
                             </h5>
+                            
+                            {% if usuario_ya_reseno %}
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Ya tienes una reseña publicada. Puedes actualizarla si lo deseas.
+                            </div>
+                            {% endif %}
+                            
                             <form method="post" action="{% url 'guardar_resena' %}">
                                 {% csrf_token %}
                                 <input type="hidden" name="fknegocio_resena" value="{{ negocio.pkid_neg }}">
                                 <input type="hidden" name="es_vista_logeada" value="true">
                                 
                                 <div class="star-rating mb-3 text-center">
-                                    <!-- Orden corregido: 1, 2, 3, 4, 5 para mostrar correctamente -->
                                     <input type="radio" id="star1" name="estrellas" value="1" class="d-none">
                                     <label for="star1" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
@@ -173,17 +1750,24 @@
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                     
-                                    <input type="radio" id="star5" name="estrellas" value="5" class="d-none" checked>
+                                    <input type="radio" id="star5" name="estrellas" value="5" class="d-none" 
+                                           {% if not usuario_ya_reseno or reseña_usuario_actual.estrellas == 5 %}checked{% endif %}>
                                     <label for="star5" class="star-label active">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <textarea name="comentario" class="form-control" placeholder="Tu comentario..." rows="3"></textarea>
+                                    <textarea name="comentario" class="form-control" placeholder="Tu experiencia con este negocio..." rows="3">{% if usuario_ya_reseno %}{{ reseña_usuario_actual.comentario }}{% endif %}</textarea>
                                 </div>
-                                <button type="submit" class="btn-submit-review w-100">
-                                    <i class="fas fa-paper-plane me-1"></i> Enviar Reseña
+                                
+                                <button type="submit" class="btn-submit-review">
+                                    <i class="fas fa-paper-plane me-1"></i>
+                                    {% if usuario_ya_reseno %}
+                                        Actualizar Reseña
+                                    {% else %}
+                                        Enviar Reseña
+                                    {% endif %}
                                 </button>
                             </form>
                         </div>
@@ -193,7 +1777,74 @@
         </div>
     </div>
 </section>
-<!-- FLOATING ACTION BUTTONS -->
+
+<!-- Modal para Reportar -->
+<div class="modal fade modal-reporte" id="modalReporte" tabindex="-1" aria-labelledby="modalReporteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-white" id="modalReporteTitulo">
+                    <i class="fas fa-flag me-2"></i>
+                    Reportar Contenido
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="reporte-header mb-4">
+                    <div class="reporte-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h4 class="reporte-title">Ayúdanos a mantener la comunidad segura</h4>
+                    <p class="reporte-subtitle">Tu reporte es anónimo y nos ayuda a mejorar la experiencia de todos</p>
+                </div>
+                
+                <form id="formReporte">
+                    <input type="hidden" id="negocioId" name="negocio_id">
+                    <input type="hidden" id="reseñaId" name="reseña_id">
+                    <input type="hidden" id="tipoReporte" name="tipo_reporte">
+                    
+                    <div class="mb-4">
+                        <label for="asuntoReporte" class="form-label">Asunto del Reporte</label>
+                        <input type="text" class="form-control" id="asuntoReporte" name="asunto" 
+                               placeholder="Describe brevemente el motivo del reporte" required>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="motivoReporte" class="form-label">Motivo Principal</label>
+                        <select class="form-select" id="motivoReporte" name="motivo" required>
+                            <option value="">Selecciona un motivo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="descripcionReporte" class="form-label">Descripción Detallada</label>
+                        <textarea class="form-control" id="descripcionReporte" name="descripcion" 
+                                  rows="4" placeholder="Proporciona todos los detalles relevantes sobre el reporte..."></textarea>
+                        <div class="form-text">Mientras más detalles proporciones, más fácil será revisar tu reporte.</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Importante:</strong> Tus reportes nos ayudan a mantener la comunidad segura y confiable. 
+                        Revisaremos tu reporte en un plazo máximo de 48 horas.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="vecy-btn-outline" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="vecy-btn-primary" id="btnEnviarReporte" onclick="enviarReporte()">
+                    <i class="fas fa-paper-plane me-2"></i>
+                    Enviar Reporte
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Buttons -->
 <div class="vecy-floating-actions">
     <div class="vecy-fab-main" onclick="toggleCart()">
         <i class="fas fa-shopping-cart"></i>
@@ -223,7 +1874,7 @@
     </div>
 </div>
 
-<!-- OFFCANVAS CARRITO -->
+<!-- Offcanvas Carrito -->
 <div class="offcanvas offcanvas-end vecy-cart-offcanvas" tabindex="-1" id="vecyCartOffcanvas"
     aria-labelledby="vecyCartOffcanvasLabel">
     <div class="offcanvas-header">
@@ -241,7 +1892,7 @@
                 <!-- Contenido cargado dinámicamente -->
             </div>
 
-            <div class="cart-summary mt-4 p-3 bg-light rounded">
+            <div class="cart-summary">
                 <div class="d-flex justify-content-between mb-2">
                     <span>Subtotal:</span>
                     <span id="cartSubtotal">$0</span>
@@ -257,24 +1908,22 @@
                 </div>
 
                 <div class="d-grid gap-2">
-                    <button class="btn btn-primary btn-lg" onclick="procederPago()">
+                    <button class="vecy-btn-primary btn-lg" onclick="procederPago()">
                         <i class="fas fa-credit-card me-2"></i>
                         Proceder al Pago
                     </button>
-                    <button class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">
+                    <button class="vecy-btn-outline" data-bs-dismiss="offcanvas">
                         <i class="fas fa-arrow-left me-2"></i>
                         Seguir Comprando
                     </button>
                 </div>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <div class="empty-cart-icon mb-3">
-                    <i class="fas fa-shopping-cart fa-4x text-muted"></i>
-                </div>
-                <h5 class="text-muted">Tu carrito está vacío</h5>
-                <p class="text-muted">Agrega algunos productos increíbles</p>
-                <button class="btn btn-primary mt-3" data-bs-dismiss="offcanvas">
+            <div class="empty-state">
+                <i class="fas fa-shopping-cart"></i>
+                <h5>Tu carrito está vacío</h5>
+                <p>Agrega algunos productos increíbles</p>
+                <button class="vecy-btn-primary mt-3" data-bs-dismiss="offcanvas">
                     <i class="fas fa-shopping-bag me-2"></i>
                     Explorar Productos
                 </button>
@@ -291,7 +1940,7 @@
     </div>
 </div>
 
-<!-- OFFCANVAS PEDIDOS -->
+<!-- Offcanvas Pedidos -->
 <div class="offcanvas offcanvas-end vecy-pedidos-offcanvas" tabindex="-1" id="vecyPedidosOffcanvas"
     aria-labelledby="vecyPedidosOffcanvasLabel">
     <div class="offcanvas-header">
@@ -315,11 +1964,11 @@
     </div>
 </div>
 
-<!-- MODAL MÉTODOS DE PAGO PRINCIPAL -->
+<!-- Modal Métodos de Pago -->
 <div class="modal fade" id="metodosPagoModal" tabindex="-1" aria-labelledby="metodosPagoModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header vecy-gradient-primary text-white">
                 <h5 class="modal-title" id="metodosPagoModalLabel">
                     <i class="fas fa-credit-card me-2"></i>
                     Seleccionar Método de Pago
@@ -416,7 +2065,9 @@
                             <div class="metodo-pago-card nequi-card" data-metodo="nequi">
                                 <div class="metodo-pago-header">
                                     <div class="d-flex align-items-center">
-                                        <img src="{% static 'img/nequi.jpg' %}" alt="Nequi" class="logo-billetera">
+                                        <div class="logo-billetera bg-primary text-white rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-mobile-alt"></i>
+                                        </div>
                                         <div class="form-check">
                                             <input class="form-check-input" type="radio" name="metodoPago" id="nequi"
                                                 value="nequi">
@@ -429,7 +2080,7 @@
                                 <div class="metodo-pago-body">
                                     <p class="small text-muted mb-2">Paga rápido y seguro con tu billetera Nequi</p>
                                     <div class="nequi-info">
-                                        <span class="badge nequi-bg text-white">Pago Rápido</span>
+                                        <span class="badge bg-primary text-white">Pago Rápido</span>
                                     </div>
                                 </div>
                             </div>
@@ -440,8 +2091,9 @@
                             <div class="metodo-pago-card daviplata-card" data-metodo="daviplata">
                                 <div class="metodo-pago-header">
                                     <div class="d-flex align-items-center">
-                                        <img src="{% static 'img/daviplata.jpeg' %}" alt="DaviPlata"
-                                            class="logo-billetera">
+                                        <div class="logo-billetera bg-success text-white rounded d-flex align-items-center justify-content-center me-2" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-wallet"></i>
+                                        </div>
                                         <div class="form-check">
                                             <input class="form-check-input" type="radio" name="metodoPago"
                                                 id="daviplata" value="daviplata">
@@ -454,7 +2106,7 @@
                                 <div class="metodo-pago-body">
                                     <p class="small text-muted mb-2">Paga con tu billetera DaviPlata de forma segura</p>
                                     <div class="daviplata-info">
-                                        <span class="badge daviplata-bg text-white">Pago Seguro</span>
+                                        <span class="badge bg-success text-white">Pago Seguro</span>
                                     </div>
                                 </div>
                             </div>
@@ -465,22 +2117,22 @@
                 <!-- Formularios específicos para cada método -->
                 <div class="formularios-pago mt-4">
                     <!-- Formulario Nequi -->
-                    <div class="formulario-pago" id="formularioNequi">
-                        <h6 class="fw-bold mb-3 nequi-color">
+                    <div class="formulario-pago" id="formularioNequi" style="display: none;">
+                        <h6 class="fw-bold mb-3 text-primary">
                             <i class="fas fa-mobile-alt me-2"></i>Información para pago con Nequi
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="campo-formulario">
-                                    <label for="nequiTelefono">Número de Teléfono</label>
-                                    <input type="tel" id="nequiTelefono"
+                                <div class="mb-3">
+                                    <label for="nequiTelefono" class="form-label">Número de Teléfono</label>
+                                    <input type="tel" class="form-control" id="nequiTelefono"
                                         placeholder="Ingresa tu número de teléfono Nequi" maxlength="10">
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="campo-formulario">
-                                    <label for="nequiClave">Clave Dinámica</label>
-                                    <input type="text" id="nequiClave" placeholder="Ingresa la clave dinámica"
+                                <div class="mb-3">
+                                    <label for="nequiClave" class="form-label">Clave Dinámica</label>
+                                    <input type="text" class="form-control" id="nequiClave" placeholder="Ingresa la clave dinámica"
                                         maxlength="6">
                                 </div>
                             </div>
@@ -493,22 +2145,22 @@
                     </div>
 
                     <!-- Formulario DaviPlata -->
-                    <div class="formulario-pago" id="formularioDaviplata">
-                        <h6 class="fw-bold mb-3 daviplata-color">
+                    <div class="formulario-pago" id="formularioDaviplata" style="display: none;">
+                        <h6 class="fw-bold mb-3 text-success">
                             <i class="fas fa-wallet me-2"></i>Información para pago con DaviPlata
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <div class="campo-formulario">
-                                    <label for="daviplataTelefono">Número de Teléfono</label>
-                                    <input type="tel" id="daviplataTelefono"
+                                <div class="mb-3">
+                                    <label for="daviplataTelefono" class="form-label">Número de Teléfono</label>
+                                    <input type="tel" class="form-control" id="daviplataTelefono"
                                         placeholder="Ingresa tu número de teléfono DaviPlata" maxlength="10">
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="campo-formulario">
-                                    <label for="daviplataClave">Clave de 4 Dígitos</label>
-                                    <input type="password" id="daviplataClave"
+                                <div class="mb-3">
+                                    <label for="daviplataClave" class="form-label">Clave de 4 Dígitos</label>
+                                    <input type="password" class="form-control" id="daviplataClave"
                                         placeholder="Ingresa tu clave de 4 dígitos" maxlength="4">
                                 </div>
                             </div>
@@ -530,11 +2182,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="vecy-btn-outline" data-bs-dismiss="modal">
                     <i class="fas fa-arrow-left me-2"></i>
                     Volver al Carrito
                 </button>
-                <button type="button" class="btn btn-primary" id="confirmarPagoBtn" onclick="confirmarPago()" disabled>
+                <button type="button" class="vecy-btn-primary" id="confirmarPagoBtn" onclick="confirmarPago()" disabled>
                     <i class="fas fa-lock me-2"></i>
                     Confirmar y Pagar
                 </button>
@@ -543,7 +2195,7 @@
     </div>
 </div>
 
-<!-- MODAL TRANSFERENCIA BANCARIA -->
+<!-- Modal Transferencia Bancaria -->
 <div class="modal fade" id="transferenciaModal" tabindex="-1" aria-labelledby="transferenciaModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -568,38 +2220,38 @@
                     <h6 class="fw-bold mb-3">Información para transferencia</h6>
 
                     <div class="datos-banco">
-                        <div class="dato-banco">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
                             <span class="fw-medium">Titular:</span>
                             <span>VECY MARKETPLACE S.A.S.</span>
-                            <button class="btn-copiar" onclick="copiarAlPortapapeles('VECY MARKETPLACE S.A.S.')">
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copiarAlPortapapeles('VECY MARKETPLACE S.A.S.')">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        <div class="dato-banco">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
                             <span class="fw-medium">NIT:</span>
                             <span>901.234.567-8</span>
-                            <button class="btn-copiar" onclick="copiarAlPortapapeles('901.234.567-8')">
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copiarAlPortapapeles('901.234.567-8')">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
-                        <div class="dato-banco">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
                             <span class="fw-medium">Banco:</span>
                             <span>Bancolombia</span>
                         </div>
-                        <div class="dato-banco">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
                             <span class="fw-medium">Tipo de Cuenta:</span>
                             <span>Cuenta de Ahorros</span>
                         </div>
-                        <div class="dato-banco">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 border-bottom">
                             <span class="fw-medium">Número de Cuenta:</span>
                             <span>345-789456-12</span>
-                            <button class="btn-copiar" onclick="copiarAlPortapapeles('345-789456-12')">
+                            <button class="btn btn-sm btn-outline-primary ms-2" onclick="copiarAlPortapapeles('345-789456-12')">
                                 <i class="fas fa-copy"></i>
                             </button>
                         </div>
                     </div>
 
-                    <div class="mt-3">
+                    <div class="mt-4">
                         <h6 class="fw-bold">Instrucciones:</h6>
                         <ol class="small">
                             <li>Realiza la transferencia por el monto exacto de tu pedido</li>
@@ -616,11 +2268,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="volverAMetodosPago()">
+                <button type="button" class="vecy-btn-outline" onclick="volverAMetodosPago()">
                     <i class="fas fa-arrow-left me-2"></i>
                     Volver a Métodos
                 </button>
-                <button type="button" class="btn btn-primary" id="confirmarTransferenciaBtn"
+                <button type="button" class="vecy-btn-primary" id="confirmarTransferenciaBtn"
                     onclick="confirmarTransferencia()">
                     <i class="fas fa-check me-2"></i>
                     Confirmar Transferencia
@@ -634,8 +2286,22 @@
 {% block scripts %}
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+<!-- AOS Animation -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
+    // Inicializar AOS
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 100
+    });
+
+    // URLs para el sistema de reportes
+    const REPORTE_URLS = {
+        REPORTAR: "{% url 'reportar_negocio' %}",
+        OBTENER_OPCIONES: "{% url 'obtener_opciones_reporte' %}"
+    };
+
     // ==================== SISTEMA DE CARRITO Y PAGOS UNIFICADO ====================
 
     console.log("🎯 VECY SCRIPT INICIADO - Página Detalle Negocio");
@@ -903,7 +2569,7 @@
         const cartSavings = document.getElementById('cartSavings');
         const cartSavingsContainer = document.getElementById('cartSavingsContainer');
         const cartSummary = document.querySelector('.cart-summary');
-        const emptyCartSection = document.querySelector('.empty-cart-icon');
+        const emptyCartSection = document.querySelector('.empty-state');
 
         console.log("🎨 Renderizando items del carrito:", items);
 
@@ -963,7 +2629,7 @@
 
         // Ocultar sección de carrito vacío si existe
         if (emptyCartSection) {
-            emptyCartSection.closest('.text-center').style.display = 'none';
+            emptyCartSection.style.display = 'none';
         }
 
         // Mostrar resumen
@@ -993,7 +2659,7 @@
     function showCartEmptyState() {
         const container = document.getElementById('cartItemsContainer');
         const cartSummary = document.querySelector('.cart-summary');
-        const emptyCartSection = document.querySelector('.empty-cart-icon');
+        const emptyCartSection = document.querySelector('.empty-state');
 
         console.log("🔄 Mostrando estado vacío del carrito");
 
@@ -1003,7 +2669,7 @@
 
         // Mostrar sección de carrito vacío si existe
         if (emptyCartSection) {
-            emptyCartSection.closest('.text-center').style.display = 'block';
+            emptyCartSection.style.display = 'block';
         }
 
         if (cartSummary) {
@@ -1077,7 +2743,7 @@
     // Función para proceder al pago
     function procederPago() {
         const cartItemsContainer = document.getElementById('cartItemsContainer');
-        if (!cartItemsContainer || cartItemsContainer.innerHTML.includes('empty-cart-icon')) {
+        if (!cartItemsContainer || cartItemsContainer.innerHTML.includes('empty-state')) {
             vecyShowNotification('Tu carrito está vacío', 'error');
             return;
         }
@@ -1122,12 +2788,12 @@
 
         items.forEach(item => {
             html += `
-            <div class="resumen-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="resumen-producto">
                     <span class="fw-medium">${item.nombre}</span>
                     <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
                 </div>
-                <div class="resumen-precio">
+                <div class="resumen-precio fw-medium">
                     $${(item.precio_unitario * item.cantidad).toFixed(0)}
                 </div>
             </div>
@@ -1135,25 +2801,25 @@
         });
 
         html += `
-        <div class="resumen-item pt-2 mt-2 border-top">
+        <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
             <div class="fw-bold">Subtotal</div>
-            <div>$${totales.subtotal.toFixed(0)}</div>
+            <div class="fw-bold">$${totales.subtotal.toFixed(0)}</div>
         </div>
     `;
 
         if (totales.ahorro_total > 0) {
             html += `
-            <div class="resumen-item text-success">
+            <div class="d-flex justify-content-between align-items-center text-success">
                 <div>Ahorro</div>
                 <div>-$${totales.ahorro_total.toFixed(0)}</div>
-        </div>
+            </div>
         `;
         }
 
         html += `
-        <div class="resumen-item resumen-total">
-            <div>Total a Pagar</div>
-            <div>$${totales.total.toFixed(0)}</div>
+        <div class="d-flex justify-content-between align-items-center resumen-total pt-2 mt-2 border-top">
+            <div class="fw-bold fs-5">Total a Pagar</div>
+            <div class="fw-bold fs-5 text-primary">$${totales.total.toFixed(0)}</div>
         </div>
     `;
 
@@ -1168,7 +2834,7 @@
 
         // Resetear selección
         metodoPagoCards.forEach(card => card.classList.remove('selected'));
-        formularios.forEach(form => form.classList.remove('active'));
+        formularios.forEach(form => form.style.display = 'none');
         confirmarBtn.disabled = true;
         metodoPagoSeleccionado = null;
         datosPago = {};
@@ -1183,12 +2849,12 @@
                 radio.checked = true;
                 metodoPagoSeleccionado = radio.value;
 
-                formularios.forEach(form => form.classList.remove('active'));
+                formularios.forEach(form => form.style.display = 'none');
 
                 if (metodoPagoSeleccionado === 'nequi') {
-                    document.getElementById('formularioNequi').classList.add('active');
+                    document.getElementById('formularioNequi').style.display = 'block';
                 } else if (metodoPagoSeleccionado === 'daviplata') {
-                    document.getElementById('formularioDaviplata').classList.add('active');
+                    document.getElementById('formularioDaviplata').style.display = 'block';
                 }
                 
                 confirmarBtn.disabled = false;
@@ -1204,12 +2870,12 @@
                     card.classList.add('selected');
                     metodoPagoSeleccionado = this.value;
 
-                    formularios.forEach(form => form.classList.remove('active'));
+                    formularios.forEach(form => form.style.display = 'none');
 
                     if (metodoPagoSeleccionado === 'nequi') {
-                        document.getElementById('formularioNequi').classList.add('active');
+                        document.getElementById('formularioNequi').style.display = 'block';
                     } else if (metodoPagoSeleccionado === 'daviplata') {
-                        document.getElementById('formularioDaviplata').classList.add('active');
+                        document.getElementById('formularioDaviplata').style.display = 'block';
                     }
                     
                     confirmarBtn.disabled = false;
@@ -1338,12 +3004,12 @@
 
         items.forEach(item => {
             html += `
-            <div class="resumen-item">
+            <div class="d-flex justify-content-between align-items-center mb-2">
                 <div class="resumen-producto">
                     <span class="fw-medium">${item.nombre}</span>
                     <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
                 </div>
-                <div class="resumen-precio">
+                <div class="resumen-precio fw-medium">
                     $${(item.precio_unitario * item.cantidad).toFixed(0)}
                 </div>
             </div>
@@ -1351,15 +3017,15 @@
         });
 
         html += `
-        <div class="resumen-item pt-2 mt-2 border-top">
+        <div class="d-flex justify-content-between align-items-center pt-2 mt-2 border-top">
             <div class="fw-bold">Subtotal</div>
-            <div>$${totales.subtotal.toFixed(0)}</div>
+            <div class="fw-bold">$${totales.subtotal.toFixed(0)}</div>
         </div>
     `;
 
         if (totales.ahorro_total > 0) {
             html += `
-            <div class="resumen-item text-success">
+            <div class="d-flex justify-content-between align-items-center text-success">
                 <div>Ahorro</div>
                 <div>-$${totales.ahorro_total.toFixed(0)}</div>
             </div>
@@ -1367,9 +3033,9 @@
         }
 
         html += `
-        <div class="resumen-item resumen-total">
-            <div>Total a Transferir</div>
-            <div>$${totales.total.toFixed(0)}</div>
+        <div class="d-flex justify-content-between align-items-center resumen-total pt-2 mt-2 border-top">
+            <div class="fw-bold fs-5">Total a Transferir</div>
+            <div class="fw-bold fs-5 text-primary">$${totales.total.toFixed(0)}</div>
         </div>
     `;
 
@@ -1629,63 +3295,57 @@
             const esCancelado = pedido.estado_pedido === 'cancelado';
 
             html += `
-            <div class="pedido-card ${esCancelado ? 'pedido-cancelado' : ''}">
-                <div class="pedido-header">
-                    <div class="pedido-info">
-                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
-                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
-                    </div>
-                    <span class="pedido-estado estado-${pedido.estado_pedido}">
-                        ${pedido.estado_display}
-                    </span>
-                </div>
-
-                <div class="pedido-negocio">
-                    <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
-                </div>
-
-                <div class="pedido-productos">
-                    ${pedido.productos.map(producto => `
-                        <div class="producto-pedido">
-                            <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
-                                 alt="${producto.nombre}" class="producto-pedido-img">
-                            <div class="producto-pedido-info">
-                                <div class="producto-pedido-nombre">${producto.nombre}</div>
-                                <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
-                            </div>
-                            <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
+            <div class="vecy-card mb-3 ${esCancelado ? 'border-danger' : ''}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">Pedido #${pedido.numero_pedido}</h6>
+                            <small class="text-muted">${pedido.fecha_pedido}</small>
                         </div>
-                    `).join('')}
-                </div>
+                        <span class="badge ${esCancelado ? 'bg-danger' : 'bg-primary'}">
+                            ${pedido.estado_display}
+                        </span>
+                    </div>
 
-                <div class="pedido-total">
-                    <span>Total:</span>
-                    <span>$${pedido.total_pedido}</span>
-                </div>
+                    <div class="mb-3">
+                        <i class="fas fa-store me-2 text-muted"></i>
+                        <span class="text-muted">${pedido.negocio_nombre}</span>
+                    </div>
 
-                ${!esCancelado ? `
-                    <div class="pedido-acciones">
-                        <button class="btn-ver-detalle" onclick="verDetallePedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-eye me-1"></i>Ver Detalle
-                        </button>
-                        ${puedeCancelar ? `
-                            <button class="btn-cancelar-pedido" 
-                                    onclick="cancelarPedido(${pedido.pkid_pedido})"
-                                    data-pedido-id="${pedido.pkid_pedido}">
-                                <i class="fas fa-times me-1"></i>Cancelar Pedido
+                    <div class="mb-3">
+                        ${pedido.productos.map(producto => `
+                            <div class="d-flex align-items-center mb-2">
+                                <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
+                                     alt="${producto.nombre}" class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium">${producto.nombre}</div>
+                                    <div class="text-muted small">$${producto.precio_unitario} x ${producto.cantidad}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                        <span class="fw-bold">Total: $${pedido.total_pedido}</span>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-primary" onclick="verDetallePedido(${pedido.pkid_pedido})">
+                                <i class="fas fa-eye me-1"></i>Detalle
                             </button>
-                        ` : `
-                            <button class="btn-cancelar-pedido" disabled>
-                                <i class="fas fa-clock me-1"></i>No Cancelable
-                            </button>
-                        `}
+                            ${!esCancelado && puedeCancelar ? `
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="cancelarPedido(${pedido.pkid_pedido})"
+                                        data-pedido-id="${pedido.pkid_pedido}">
+                                    <i class="fas fa-times me-1"></i>Cancelar
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                     ${puedeCancelar && tiempoRestante ? `
-                        <div class="tiempo-restante">
+                        <div class="text-center text-warning small mt-2">
                             <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
                         </div>
                     ` : ''}
-                ` : ''}
+                </div>
             </div>
             `;
         });
@@ -1700,11 +3360,11 @@
         const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
         
         pedidosContent.innerHTML = `
-            <div class="empty-pedidos">
+            <div class="empty-state">
                 <i class="fas fa-clipboard-list"></i>
                 <h5>No hay pedidos</h5>
                 <p>${mensajeFinal}</p>
-                <button class="btn btn-primary mt-3" onclick="toggleCart()">
+                <button class="vecy-btn-primary mt-3" onclick="toggleCart()">
                     <i class="fas fa-shopping-bag me-2"></i>
                     Realizar mi primer pedido
                 </button>
@@ -1979,5 +3639,113 @@
     setTimeout(debugCart, 3000);
 
     console.log("✅ VECY SISTEMA DE CARRITO INICIALIZADO - SOLUCIÓN DEFINITIVA");
+
+    // Función para abrir modal de reporte
+    function abrirModalReporte(tipo, negocioId, reseñaId = null) {
+        console.log(`📝 Abriendo modal de reporte - Tipo: ${tipo}, Negocio: ${negocioId}, Reseña: ${reseñaId}`);
+        
+        // Configurar el modal según el tipo
+        const titulo = tipo === 'resena' ? 'Reportar Reseña' : 'Reportar Negocio';
+        document.getElementById('modalReporteTitulo').textContent = titulo;
+        
+        // Limpiar y configurar el formulario
+        document.getElementById('formReporte').reset();
+        document.getElementById('negocioId').value = negocioId;
+        document.getElementById('reseñaId').value = reseñaId || '';
+        document.getElementById('tipoReporte').value = tipo;
+        
+        // Cargar opciones de motivo
+        cargarOpcionesReporte(tipo);
+        
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('modalReporte'));
+        modal.show();
+    }
+
+    // Función para cargar opciones de reporte
+    function cargarOpcionesReporte(tipo) {
+        const selectMotivo = document.getElementById('motivoReporte');
+        
+        // Mostrar loading
+        selectMotivo.innerHTML = '<option value="">Cargando opciones...</option>';
+        
+        fetch(`${REPORTE_URLS.OBTENER_OPCIONES}?tipo=${tipo}`)
+            .then(response => response.json())
+            .then(data => {
+                selectMotivo.innerHTML = '<option value="">Selecciona un motivo</option>';
+                
+                data.opciones.forEach(opcion => {
+                    const option = document.createElement('option');
+                    option.value = opcion.value;
+                    option.textContent = opcion.text;
+                    selectMotivo.appendChild(option);
+                });
+            })
+            .catch(error => {
+                console.error('Error cargando opciones:', error);
+                selectMotivo.innerHTML = '<option value="">Error cargando opciones</option>';
+            });
+    }
+
+    // Función para enviar reporte
+    function enviarReporte() {
+        const form = document.getElementById('formReporte');
+        const btnEnviar = document.getElementById('btnEnviarReporte');
+        
+        // Validar formulario
+        const asunto = document.getElementById('asuntoReporte').value.trim();
+        const motivo = document.getElementById('motivoReporte').value;
+        
+        if (!asunto || !motivo) {
+            vecyShowNotification('Por favor completa todos los campos obligatorios', 'error');
+            return;
+        }
+        
+        // Preparar datos
+        const formData = new FormData(form);
+        const datos = {
+            negocio_id: formData.get('negocio_id'),
+            reseña_id: formData.get('reseña_id'),
+            asunto: asunto,
+            motivo: motivo,
+            descripcion: document.getElementById('descripcionReporte').value.trim()
+        };
+        
+        // Mostrar loading
+        const originalText = btnEnviar.innerHTML;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+        btnEnviar.disabled = true;
+        
+        // Enviar reporte
+        fetch(REPORTE_URLS.REPORTAR, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
+                modal.hide();
+                
+                // Mostrar confirmación
+                vecyShowNotification(data.message, 'success');
+            } else {
+                vecyShowNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error enviando reporte:', error);
+            vecyShowNotification('Error de conexión al enviar el reporte', 'error');
+        })
+        .finally(() => {
+            btnEnviar.innerHTML = originalText;
+            btnEnviar.disabled = false;
+        });
+    }
 </script>
 {% endblock %}

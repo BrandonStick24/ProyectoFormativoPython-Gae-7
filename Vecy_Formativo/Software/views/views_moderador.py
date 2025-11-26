@@ -9,10 +9,8 @@ from django.utils import timezone
 from django.db.models import Count, Avg
 from django.contrib import messages
 from django.db.models import Q
-from django.utils import timezone
 from datetime import timedelta
 from collections import Counter
-from django.contrib.auth.models import User
 from django.db.models.functions import ExtractMonth, ExtractYear
 from Software.email_utils import enviar_notificacion_simple
 
@@ -24,14 +22,13 @@ from django.conf import settings
 def obtener_datos_moderador(request):
     """Función auxiliar para obtener datos del moderador"""
     try:
-        # CORREGIDO: Convertir request.user (User) a AuthUser
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        # CORREGIDO: Usar UsuarioPerfil directamente del request.user
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         
         return {
-            'nombre_usuario': auth_user.first_name,
+            'nombre_usuario': request.user.first_name,
             'perfil': perfil,
-            'auth_user': auth_user,
+            'auth_user': request.user,
         }
     except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
         return None
@@ -42,9 +39,8 @@ def is_moderator(user):
         return False
         
     try:
-        # CORREGIDO: Convertir user (User) a AuthUser
-        auth_user = AuthUser.objects.get(username=user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        # CORREGIDO: Usar UsuarioPerfil directamente
+        perfil = UsuarioPerfil.objects.get(fkuser=user)
         
         # Verificar si tiene rol de moderador
         return UsuariosRoles.objects.filter(
@@ -55,7 +51,7 @@ def is_moderator(user):
         return False
 
 # VISTA PRINCIPAL DEL MODERADOR - CORREGIDA
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def moderador_dash(request):
     """Vista principal del dashboard del moderador con verificación corregida"""
     try:
@@ -66,10 +62,9 @@ def moderador_dash(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Convertir request.user (User) a AuthUser
-            auth_user = AuthUser.objects.get(username=request.user.username)
-            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            # CORREGIDO: Usar UsuarioPerfil directamente
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('iniciar_sesion')
         
@@ -87,7 +82,7 @@ def moderador_dash(request):
         # Obtener el rango de tiempo (último año)
         fecha_limite = timezone.now() - timedelta(days=365)
         
-        # 1. REGISTRO DE USUARIOS POR MES - CORREGIDO: Usar AuthUser en lugar de User
+        # 1. REGISTRO DE USUARIOS POR MES - CORREGIDO: Usar AuthUser
         usuarios_por_mes = AuthUser.objects.filter(
             date_joined__gte=fecha_limite
         ).annotate(
@@ -139,7 +134,7 @@ def moderador_dash(request):
         acciones_tipos = [item['tipo_accion'] for item in acciones_moderacion]
         acciones_totales = [item['total'] for item in acciones_moderacion]
         
-        # MÉTRICAS PRINCIPALES - CORREGIDO: Usar AuthUser en lugar de User
+        # MÉTRICAS PRINCIPALES - CORREGIDO: Usar AuthUser
         total_usuarios = AuthUser.objects.count()
         usuarios_activos = AuthUser.objects.filter(is_active=1).count()
         total_negocios = Negocios.objects.count()
@@ -156,7 +151,7 @@ def moderador_dash(request):
         )['avg_rating'] or 0
         
         contexto = {
-            'nombre': auth_user.first_name or auth_user.username,
+            'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             
             # Métricas principales para las tarjetas
@@ -189,7 +184,7 @@ def moderador_dash(request):
         return redirect('principal')
 
 # GESTIÓN DE USUARIOS - CORREGIDA
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def gestion_usuarios(request):
     """Vista para gestión de usuarios por parte del moderador - CORREGIDA"""
     try:
@@ -200,10 +195,9 @@ def gestion_usuarios(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Convertir request.user (User) a AuthUser
-            auth_user = AuthUser.objects.get(username=request.user.username)
-            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            # CORREGIDO: Usar UsuarioPerfil directamente
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('iniciar_sesion')
         
@@ -246,10 +240,7 @@ def gestion_usuarios(request):
                     user.is_active = 1 if nuevo_estado == 'activo' else 0
                     user.save()
                     
-                    # ENVIAR CORREO DE NOTIFICACIÓN - VERSIÓN SIMPLE
-                    from Software.email_utils import enviar_notificacion_simple
-                    
-                    # Notificar al usuario
+                    # ENVIAR CORREO DE NOTIFICACIÓN
                     accion_correo = 'bloquear' if nuevo_estado == 'inactivo' else 'desbloquear'
                     resultado = enviar_notificacion_simple(user, accion_correo)
                     
@@ -267,10 +258,7 @@ def gestion_usuarios(request):
                 elif accion == 'eliminar':
                     username = user.username
                     
-                    # Enviar notificación antes de eliminar usando la versión simple
-                    from Software.email_utils import enviar_notificacion_simple
-                    
-                    # Notificar eliminación
+                    # Enviar notificación antes de eliminar
                     resultado = enviar_notificacion_simple(user, 'eliminar')
                     
                     # Eliminar el perfil y el usuario
@@ -387,7 +375,7 @@ def gestion_usuarios(request):
         total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
         
         context = {
-            'nombre': auth_user.first_name or auth_user.username,
+            'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             'usuarios': usuarios_data,
             'total_usuarios': total_usuarios,
@@ -407,7 +395,7 @@ def gestion_usuarios(request):
         return redirect('principal')
 
 # GESTIÓN DE NEGOCIOS - CORREGIDA
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def gestion_negocios(request):
     """Vista principal de gestión de negocios para moderadores - CORREGIDA"""    
     try:
@@ -418,10 +406,9 @@ def gestion_negocios(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Convertir request.user (User) a AuthUser
-            auth_user = AuthUser.objects.get(username=request.user.username)
-            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            # CORREGIDO: Usar UsuarioPerfil directamente
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('iniciar_sesion')
         
@@ -574,7 +561,7 @@ def gestion_negocios(request):
             })
         
         context = {
-            'nombre': auth_user.first_name or auth_user.username,
+            'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             'negocios': negocios_data,
             'titulo_pagina': 'Gestión de Negocios',
@@ -590,13 +577,12 @@ def gestion_negocios(request):
 
 # ==================== APIs para Gestión de Negocios ====================
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def detalle_negocio_json(request, negocio_id):
     """API para obtener detalles completos de un negocio (para modal)"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -655,13 +641,12 @@ def detalle_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def resenas_negocio_json(request, negocio_id):
     """API para obtener reseñas de un negocio"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -693,13 +678,12 @@ def resenas_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def productos_negocio_json(request, negocio_id):
     """API para obtener productos de un negocio"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -739,15 +723,14 @@ def productos_negocio_json(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_negocio(request, negocio_id):
     """API para cambiar el estado de un negocio"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -785,15 +768,14 @@ def cambiar_estado_negocio(request, negocio_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def eliminar_negocio(request, negocio_id):
     """API para eliminar un negocio"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -818,13 +800,12 @@ def eliminar_negocio(request, negocio_id):
 
 # ==================== APIs para Gestión de Usuarios ====================
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def detalle_usuario_json(request, usuario_id):
     """API para obtener detalles completos de un usuario (para modal)"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -833,12 +814,12 @@ def detalle_usuario_json(request, usuario_id):
         if not es_moderador:
             return JsonResponse({'error': 'No tienes permisos de moderador'}, status=403)
         
-        perfil = UsuarioPerfil.objects.select_related(
+        perfil_usuario = UsuarioPerfil.objects.select_related(
             'fkuser', 'fktipodoc_user'
         ).prefetch_related('usuariosroles_set__fkrol').get(id=usuario_id)
         
-        user = perfil.fkuser
-        roles = perfil.usuariosroles_set.all()
+        user = perfil_usuario.fkuser
+        roles = perfil_usuario.usuariosroles_set.all()
         rol_principal = 'CLIENTE'
         if roles.exists():
             rol_principal = roles.first().fkrol.desc_rol
@@ -846,7 +827,7 @@ def detalle_usuario_json(request, usuario_id):
         # Obtener negocios si es vendedor
         negocios_data = []
         if rol_principal == 'VENDEDOR':
-            negocios = Negocios.objects.filter(fkpropietario_neg=perfil.id)
+            negocios = Negocios.objects.filter(fkpropietario_neg=perfil_usuario.id)
             for negocio in negocios:
                 negocios_data.append({
                     'id': negocio.pkid_neg,
@@ -857,16 +838,16 @@ def detalle_usuario_json(request, usuario_id):
                 })
         
         datos_usuario = {
-            'id': perfil.id,
+            'id': perfil_usuario.id,
             'user_id': user.id,
             'nombre': f"{user.first_name} {user.last_name}".strip() or user.username,
             'email': user.email,
-            'documento': perfil.doc_user,
-            'tipo_documento': perfil.fktipodoc_user.desc_doc,
-            'fecha_nacimiento': perfil.fechanac_user.strftime("%d/%m/%Y") if perfil.fechanac_user else 'No especificada',
-            'estado': perfil.estado_user,
+            'documento': perfil_usuario.doc_user,
+            'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+            'fecha_nacimiento': perfil_usuario.fechanac_user.strftime("%d/%m/%Y") if perfil_usuario.fechanac_user else 'No especificada',
+            'estado': perfil_usuario.estado_user,
             'rol': rol_principal,
-            'img_user': request.build_absolute_uri(perfil.img_user.url) if perfil.img_user else '',
+            'img_user': request.build_absolute_uri(perfil_usuario.img_user.url) if perfil_usuario.img_user else '',
             'fecha_registro': user.date_joined.strftime("%d/%m/%Y %H:%M"),
             'ultimo_login': user.last_login.strftime("%d/%m/%Y %H:%M") if user.last_login else 'Nunca',
             'negocios': negocios_data
@@ -878,15 +859,14 @@ def detalle_usuario_json(request, usuario_id):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def cambiar_estado_usuario(request, usuario_id):
     """API para cambiar el estado de un usuario"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -902,12 +882,12 @@ def cambiar_estado_usuario(request, usuario_id):
         if nuevo_estado not in ['activo', 'inactivo', 'bloqueado']:
             return JsonResponse({'error': 'Estado inválido'}, status=400)
         
-        perfil = UsuarioPerfil.objects.get(id=usuario_id)
-        perfil.estado_user = nuevo_estado
-        perfil.save()
+        perfil_usuario = UsuarioPerfil.objects.get(id=usuario_id)
+        perfil_usuario.estado_user = nuevo_estado
+        perfil_usuario.save()
         
         # También actualizar el estado en auth_user si es necesario
-        user = perfil.fkuser
+        user = perfil_usuario.fkuser
         user.is_active = 1 if nuevo_estado == 'activo' else 0
         user.save()
         
@@ -923,13 +903,12 @@ def cambiar_estado_usuario(request, usuario_id):
         return JsonResponse({'error': str(e)}, status=500)
 
 # VISTA DE VERIFICACIÓN DE LOGIN (opcional)
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def verificar_moderador_login(request):
     """Vista para verificar el login del moderador - CORREGIDA"""
     try:
         # Verificar si es moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
@@ -943,7 +922,7 @@ def verificar_moderador_login(request):
         # Si es moderador, redirigir al dashboard
         return redirect('moderador_dash')
         
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+    except UsuarioPerfil.DoesNotExist:
         messages.error(request, "Perfil de usuario no encontrado.")
         return redirect('principal')
 
@@ -1174,7 +1153,7 @@ def enviar_notificacion_simple(usuario, accion):
 
 # ==================== VISTAS PARA CORREOS ====================
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def enviar_correos(request):
     """Vista para la página de envío de correos - CORREGIDA"""
     try:
@@ -1185,10 +1164,9 @@ def enviar_correos(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Convertir request.user (User) a AuthUser
-            auth_user = AuthUser.objects.get(username=request.user.username)
-            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            # CORREGIDO: Usar UsuarioPerfil directamente
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('iniciar_sesion')
         
@@ -1248,7 +1226,7 @@ def enviar_correos(request):
         total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
         
         context = {
-            'nombre': auth_user.first_name or auth_user.username,
+            'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             'titulo_pagina': 'Enviar Correos',
             'total_usuarios': total_usuarios,
@@ -1263,15 +1241,14 @@ def enviar_correos(request):
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 @csrf_exempt
 @require_http_methods(["POST"])
 def enviar_correo_masivo(request):
     """API para enviar correos masivos SOLO a usuarios seleccionados - CORREGIDA"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -1482,13 +1459,12 @@ def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_ad
         }
 
 # API para obtener usuarios para correos
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def api_usuarios_correos(request):
     """API para obtener usuarios para el sistema de correos"""
     try:
         # Verificar permisos de moderador - CORREGIDO
-        auth_user = AuthUser.objects.get(username=request.user.username)
-        perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
+        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         es_moderador = UsuariosRoles.objects.filter(
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
@@ -1548,7 +1524,7 @@ def api_usuarios_correos(request):
         return JsonResponse({'error': str(e)}, status=500)
  
 # VISTA PARA RESEÑAS REPORTADAS - CORREGIDA (ERROR DE ESTADO)
-@login_required(login_url='/auth/iniciar_sesion/')
+@login_required(login_url='/auth/login/')
 def gestion_resenas_reportadas(request):
     """Vista para gestión de reseñas reportadas por parte del moderador - CORREGIDA"""
     try:
@@ -1559,10 +1535,9 @@ def gestion_resenas_reportadas(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Convertir request.user (User) a AuthUser
-            auth_user = AuthUser.objects.get(username=request.user.username)
-            perfil = UsuarioPerfil.objects.get(fkuser=auth_user)
-        except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+            # CORREGIDO: Usar UsuarioPerfil directamente
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('iniciar_sesion')
         
@@ -1756,7 +1731,7 @@ def gestion_resenas_reportadas(request):
         total_reportes = sum([r['total_reportes'] for r in reseñas_data])
         
         context = {
-            'nombre': auth_user.first_name or auth_user.username,
+            'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             'reseñas': reseñas_data,
             'titulo_pagina': 'Reseñas Reportadas',

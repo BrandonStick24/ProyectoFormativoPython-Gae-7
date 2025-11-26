@@ -1136,26 +1136,75 @@ def detalle_negocio_logeado(request, id):
         # Obtener perfil del cliente logueado
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # Productos del negocio
+        # Productos del negocio - MEJORADO
         productos = Productos.objects.filter(
             fknegocioasociado_prod=negocio,
             estado_prod='disponible',
             stock_prod__gt=0
         ).select_related('fkcategoria_prod')
         
-        # Reseñas del negocio con información del usuario
-        resenas = ResenasNegocios.objects.filter(
+        # Preparar productos con campos adicionales para el template
+        productos_list = []
+        for producto in productos:
+            producto_data = {
+                'pkid_prod': producto.pkid_prod,
+                'nom_prod': producto.nom_prod,
+                'desc_prod': producto.desc_prod,
+                'precio_prod': producto.precio_prod,
+                'stock_prod': producto.stock_prod,
+                'img_prod': producto.img_prod,
+                'fkcategoria_prod': producto.fkcategoria_prod,
+                # Campos adicionales para el template
+                'tiene_oferta': hasattr(producto, 'precio_original') and producto.precio_original and producto.precio_original > producto.precio_prod,
+                'precio_original': getattr(producto, 'precio_original', producto.precio_prod),
+            }
+            productos_list.append(producto_data)
+        
+        # Resto del código igual...
+        resenas_list = ResenasNegocios.objects.filter(
             fknegocio_resena=negocio,
             estado_resena='activa'
         ).select_related('fkusuario_resena__fkuser').order_by('-fecha_resena')
         
-        # Promedio de calificaciones
-        promedio_calificacion = resenas.aggregate(
+        # Estadísticas detalladas de reseñas
+        estadisticas_resenas = resenas_list.aggregate(
             promedio=Avg('estrellas'),
-            total_resenas=Count('pkid_resena')
+            total_resenas=Count('pkid_resena'),
+            cinco_estrellas=Count('pkid_resena', filter=Q(estrellas=5)),
+            cuatro_estrellas=Count('pkid_resena', filter=Q(estrellas=4)),
+            tres_estrellas=Count('pkid_resena', filter=Q(estrellas=3)),
+            dos_estrellas=Count('pkid_resena', filter=Q(estrellas=2)),
+            una_estrella=Count('pkid_resena', filter=Q(estrellas=1))
         )
         
-        usuario_ya_reseno = False
+        # Calcular porcentajes para cada calificación
+        total = estadisticas_resenas['total_resenas'] or 1
+        estadisticas_resenas['porcentaje_5'] = (estadisticas_resenas['cinco_estrellas'] / total) * 100
+        estadisticas_resenas['porcentaje_4'] = (estadisticas_resenas['cuatro_estrellas'] / total) * 100
+        estadisticas_resenas['porcentaje_3'] = (estadisticas_resenas['tres_estrellas'] / total) * 100
+        estadisticas_resenas['porcentaje_2'] = (estadisticas_resenas['dos_estrellas'] / total) * 100
+        estadisticas_resenas['porcentaje_1'] = (estadisticas_resenas['una_estrella'] / total) * 100
+        
+        # Paginación mejorada - mostrar 10 reseñas por página
+        paginator = Paginator(resenas_list, 10)
+        page_number = request.GET.get('page')
+        resenas = paginator.get_page(page_number)
+        
+        # Verificar si el usuario actual ya reseñó este negocio
+        usuario_ya_reseno = ResenasNegocios.objects.filter(
+            fknegocio_resena=negocio,
+            fkusuario_resena=perfil_cliente,
+            estado_resena='activa'
+        ).exists()
+        
+        # Obtener la reseña del usuario actual si existe
+        reseña_usuario_actual = None
+        if usuario_ya_reseno:
+            reseña_usuario_actual = ResenasNegocios.objects.filter(
+                fknegocio_resena=negocio,
+                fkusuario_resena=perfil_cliente,
+                estado_resena='activa'
+            ).first()
         
         # Obtener carrito del usuario
         carrito_count = 0
@@ -1169,12 +1218,12 @@ def detalle_negocio_logeado(request, id):
             'negocio': negocio,
             'propietario': negocio.fkpropietario_neg,
             'tipo_negocio': negocio.fktiponeg_neg,
-            'productos': productos,
+            'productos': productos_list,  # Usar la lista preparada
             'perfil_cliente': perfil_cliente,
             'resenas': resenas,
-            'promedio_calificacion': promedio_calificacion['promedio'] or 0,
-            'total_resenas': promedio_calificacion['total_resenas'] or 0,
+            'estadisticas_resenas': estadisticas_resenas,
             'usuario_ya_reseno': usuario_ya_reseno,
+            'reseña_usuario_actual': reseña_usuario_actual,
             'carrito_count': carrito_count,
             'es_vista_logeada': True,
             'nombre': f"{request.user.first_name} {request.user.last_name}",
@@ -1188,6 +1237,154 @@ def detalle_negocio_logeado(request, id):
     except Exception as e:
         messages.error(request, f'Error al cargar el detalle del negocio: {str(e)}')
         return redirect('cliente_dashboard')
+    
+@login_required
+def reportar_negocio(request):
+    """Vista para reportar un negocio o reseña"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            negocio_id = data.get('negocio_id')
+            reseña_id = data.get('reseña_id')
+            asunto = data.get('asunto')
+            motivo = data.get('motivo')
+            descripcion = data.get('descripcion', '')
+            
+            # Validaciones
+            if not negocio_id or not asunto or not motivo:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'Faltan campos obligatorios'
+                })
+            
+            # Obtener perfil del usuario
+            perfil_usuario = UsuarioPerfil.objects.get(fkuser=request.user)
+            
+            # Obtener negocio
+            negocio = Negocios.objects.get(pkid_neg=negocio_id)
+            
+            # Determinar tipo de reporte
+            tipo_reporte = 'resena' if reseña_id else 'negocio'
+            reseña_obj = None
+            
+            if tipo_reporte == 'resena':
+                # Verificar que la reseña existe y pertenece al negocio
+                reseña_obj = ResenasNegocios.objects.get(
+                    pkid_resena=reseña_id,
+                    fknegocio_resena=negocio,
+                    estado_resena='activa'
+                )
+                
+                # Verificar que el usuario no reporte su propia reseña
+                if reseña_obj.fkusuario_resena == perfil_usuario:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'No puedes reportar tu propia reseña'
+                    })
+                
+                # Verificar que el usuario no haya reportado esta reseña antes
+                reporte_existente = Reportes.objects.filter(
+                    fknegocio_reportado=negocio,
+                    fkresena_reporte=reseña_obj,
+                    fkusuario_reporta=perfil_usuario,
+                    tipo_reporte='resena'
+                ).exists()
+                
+                if reporte_existente:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'Ya has reportado esta reseña anteriormente'
+                    })
+            
+            else:
+                # Verificar que el usuario no reporte su propio negocio
+                if negocio.fkpropietario_neg == perfil_usuario:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'No puedes reportar tu propio negocio'
+                    })
+                
+                # Verificar que el usuario no haya reportado este negocio antes
+                reporte_existente = Reportes.objects.filter(
+                    fknegocio_reportado=negocio,
+                    fkusuario_reporta=perfil_usuario,
+                    tipo_reporte='negocio'
+                ).exists()
+                
+                if reporte_existente:
+                    return JsonResponse({
+                        'success': False, 
+                        'message': 'Ya has reportado este negocio anteriormente'
+                    })
+            
+            # Crear el reporte
+            reporte = Reportes(
+                fknegocio_reportado=negocio,
+                fkresena_reporte=reseña_obj,
+                fkusuario_reporta=perfil_usuario,
+                tipo_reporte=tipo_reporte,
+                asunto=asunto,
+                motivo=motivo,
+                descripcion=descripcion,
+                estado_reporte='pendiente',
+                leido=False
+            )
+            reporte.save()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Reporte enviado correctamente. Lo revisaremos pronto.'
+            })
+            
+        except Negocios.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'El negocio no existe'
+            })
+        except ResenasNegocios.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'La reseña no existe'
+            })
+        except UsuarioPerfil.DoesNotExist:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Complete su perfil para realizar esta acción'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al procesar el reporte: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'})
+
+@login_required
+def obtener_opciones_reporte(request):
+    """Obtener opciones de reporte para el modal"""
+    tipo = request.GET.get('tipo')
+    
+    opciones = {
+        'negocio': [
+            {'value': 'informacion_falsa', 'text': 'Información falsa o engañosa'},
+            {'value': 'contenido_inapropiado', 'text': 'Contenido inapropiado'},
+            {'value': 'actividades_sospechosas', 'text': 'Actividades sospechosas'},
+            {'value': 'violacion_derechos', 'text': 'Violación de derechos de autor'},
+            {'value': 'mal_servicio', 'text': 'Mal servicio al cliente'},
+            {'value': 'otro', 'text': 'Otro motivo'}
+        ],
+        'resena': [
+            {'value': 'contenido_inapropiado', 'text': 'Contenido inapropiado u ofensivo'},
+            {'value': 'lenguaje_ofensivo', 'text': 'Lenguaje ofensivo o discriminatorio'},
+            {'value': 'informacion_falsa', 'text': 'Información falsa o engañosa'},
+            {'value': 'spam', 'text': 'Spam o publicidad no deseada'},
+            {'value': 'acoso', 'text': 'Acoso o bullying'},
+            {'value': 'conflicto_interes', 'text': 'Conflicto de interés (empleado/familiar)'},
+            {'value': 'otro', 'text': 'Otro motivo'}
+        ]
+    }
+    
+    return JsonResponse({'opciones': opciones.get(tipo, [])})
 
 @login_required(login_url='/auth/login/')
 @require_POST

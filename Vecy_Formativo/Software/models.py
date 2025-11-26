@@ -337,17 +337,23 @@ class Promociones(models.Model):
 
 class Reportes(models.Model):
     pkid_reporte = models.AutoField(primary_key=True)
-    fknegocio_reportado = models.ForeignKey(Negocios, models.DO_NOTHING, db_column='fknegocio_reportado')
+    fknegocio_reportado = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio_reportado')
+    fkresena_reporte = models.ForeignKey('ResenasNegocios', models.DO_NOTHING, db_column='fkresena_reporte', blank=True, null=True)
     fkusuario_reporta = models.ForeignKey('UsuarioPerfil', models.DO_NOTHING, db_column='fkusuario_reporta')
+    tipo_reporte = models.CharField(max_length=10, choices=[('negocio', 'Negocio'), ('resena', 'Reseña')], default='negocio')
+    asunto = models.CharField(max_length=200)
     motivo = models.CharField(max_length=255)
     descripcion = models.TextField(blank=True, null=True)
     fecha_reporte = models.DateTimeField(auto_now_add=True)
-    estado_reporte = models.CharField(max_length=9, blank=True, null=True)
+    estado_reporte = models.CharField(max_length=9, blank=True, null=True, default='pendiente')
+    leido = models.BooleanField(default=False)
 
     class Meta:
         managed = False
         db_table = 'reportes'
-
+    
+    def __str__(self):
+        return f"Reporte #{self.pkid_reporte} - {self.asunto}"
 
 class ResenasNegocios(models.Model):
     pkid_resena = models.AutoField(primary_key=True)
@@ -356,13 +362,21 @@ class ResenasNegocios(models.Model):
     estrellas = models.IntegerField()
     comentario = models.TextField(blank=True, null=True)
     fecha_resena = models.DateTimeField(auto_now_add=True)
-    estado_resena = models.CharField(max_length=9, blank=True, null=True)
+    estado_resena = models.CharField(max_length=9, blank=True, null=True, default='activa')
     respuesta_vendedor = models.TextField(blank=True, null=True)
     fecha_respuesta = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         managed = False
         db_table = 'resenas_negocios'
+    
+    @property
+    def puede_ser_reportada(self):
+        return self.estado_resena == 'activa'
+    
+    @property
+    def tiene_respuesta(self):
+        return bool(self.respuesta_vendedor)
 
 
 class ResenasServicios(models.Model):

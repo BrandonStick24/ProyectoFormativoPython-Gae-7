@@ -24,6 +24,8 @@ urlpatterns = [
     # Dashboard y negocio logueado
     path('dashboard/', views_cliente.cliente_dashboard, name='cliente_dashboard'),
     path('negocio-logeado/<int:id>/', views_cliente.detalle_negocio_logeado, name='detalle_negocio_logeado'),
+    path('reportar/', views_cliente.reportar_negocio, name='reportar_negocio'),
+    path('obtener-opciones-reporte/', views_cliente.obtener_opciones_reporte, name='obtener_opciones_reporte'),
     
     # Carrito y compras
     path('agregar-carrito/', views_cliente.agregar_al_carrito, name='agregar_carrito'),
