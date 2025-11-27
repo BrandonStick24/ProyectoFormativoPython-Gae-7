@@ -516,6 +516,37 @@
         color: #007bff;
         cursor: pointer;
     }
+
+    /* NUEVOS ESTILOS PARA CONTRAENTREGA CON ANTICIPO */
+    .info-anticipo {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.85rem;
+    }
+    
+    .resumen-pago-anticipo {
+        background: #e7f3ff;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 10px;
+    }
+    
+    .linea-pago {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+    }
+    
+    .linea-pago.total {
+        font-weight: bold;
+        border-top: 1px solid #dee2e6;
+        padding-top: 8px;
+        margin-top: 8px;
+    }
 </style>
 
 <!-- ==================== HTML COMPONENTS ==================== -->
@@ -721,22 +752,48 @@
                             </div>
                         </div>
 
-                        <!-- Pago Contra Entrega -->
+                        <!-- Pago Contra Entrega CON ANTICIPO -->
                         <div class="col-md-6">
-                            <div class="metodo-pago-card" data-metodo="contra_entrega">
+                            <div class="metodo-pago-card" data-metodo="contra_entrega_anticipo">
                                 <div class="metodo-pago-header">
                                     <i class="fas fa-money-bill-wave fa-2x text-success"></i>
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="metodoPago"
-                                            id="contraEntrega" value="contra_entrega">
-                                        <label class="form-check-label fw-bold" for="contraEntrega">
-                                            Pago Contra Entrega
+                                            id="contraEntregaAnticipo" value="contra_entrega_anticipo">
+                                        <label class="form-check-label fw-bold" for="contraEntregaAnticipo">
+                                            Contra Entrega con Anticipo
                                         </label>
                                     </div>
                                 </div>
                                 <div class="metodo-pago-body">
-                                    <p class="small text-muted mb-2">Paga cuando recibas tu pedido en efectivo o con
-                                        datáfono</p>
+                                    <p class="small text-muted mb-2">Paga el 20% ahora y el resto al recibir tu pedido</p>
+                                    <div class="info-anticipo">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Ventajas:</strong> Tu pedido se confirma inmediatamente y pagas el 80% restante al recibirlo.
+                                    </div>
+                                    <div class="opciones-pago mt-2">
+                                        <span class="badge bg-success me-1">20% Online</span>
+                                        <span class="badge bg-primary">80% Efectivo/Datáfono</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Pago Contra Entrega TRADICIONAL -->
+                        <div class="col-md-6">
+                            <div class="metodo-pago-card" data-metodo="contra_entrega">
+                                <div class="metodo-pago-header">
+                                    <i class="fas fa-truck fa-2x text-warning"></i>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="metodoPago"
+                                            id="contraEntrega" value="contra_entrega">
+                                        <label class="form-check-label fw-bold" for="contraEntrega">
+                                            Contra Entrega Tradicional
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="metodo-pago-body">
+                                    <p class="small text-muted mb-2">Paga el 100% cuando recibas tu pedido</p>
                                     <div class="opciones-pago">
                                         <span class="badge bg-success me-1">Efectivo</span>
                                         <span class="badge bg-primary">Datáfono</span>
@@ -819,6 +876,20 @@
                     </div>
                 </div>
 
+                <!-- RESUMEN DE PAGO PARA CONTRAENTREGA CON ANTICIPO -->
+                <div class="resumen-pago-anticipo mt-4" id="resumenAnticipoContainer" style="display: none;">
+                    <h6 class="fw-bold mb-3 text-primary">
+                        <i class="fas fa-calculator me-2"></i>Resumen de Pago - Contra Entrega con Anticipo
+                    </h6>
+                    <div id="resumenAnticipoContent">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Pagas el <strong>20% ahora</strong> para confirmar tu pedido y el <strong>80% restante</strong> al momento de la entrega.
+                    </div>
+                </div>
+
                 <!-- Formularios específicos para cada método -->
                 <div class="formularios-pago mt-4">
                     <!-- Formulario Nequi -->
@@ -883,6 +954,7 @@
                         <li>Tu información de pago está protegida con encriptación SSL</li>
                         <li>Puedes cancelar tu pedido hasta 1 hora después de realizado</li>
                         <li>Recibirás confirmación de tu pedido por correo electrónico</li>
+                        <li>Para <strong>Contra Entrega con Anticipo</strong>: El 20% se paga online y el 80% al recibir</li>
                     </ul>
                 </div>
             </div>
@@ -893,7 +965,7 @@
                 </button>
                 <button type="button" class="btn btn-primary" id="confirmarPagoBtn" onclick="vecyCarritoSystem.confirmarPago()" disabled>
                     <i class="fas fa-lock me-2"></i>
-                    Confirmar y Pagar
+                    <span id="textoBotonPago">Confirmar y Pagar</span>
                 </button>
             </div>
         </div>
@@ -987,7 +1059,7 @@
     </div>
 </div>
 
-<!-- ==================== JAVASCRIPT COMPLETO ==================== -->
+// ==================== JAVASCRIPT COMPLETO CORREGIDO ====================
 <script>
 // URLs ABSOLUTAS DE DJANGO - CORREGIDAS
 const VECY_URLS = {
@@ -1011,6 +1083,8 @@ class VecyCarritoSystem {
         this.metodoPagoSeleccionado = null;
         this.datosPago = {};
         this.currentProductForModal = null;
+        this.totalPedido = 0;
+        this.porcentajeAnticipo = 20; // 20% de anticipo
         
         this.init();
     }
@@ -1019,6 +1093,7 @@ class VecyCarritoSystem {
         console.log("🚀 Iniciando VecyCarritoSystem...");
         this.initializeVariantsSystem();
         this.setupEventListeners();
+        this.updateCartCountFromServer();
         console.log("✅ Sistema de carrito inicializado");
     }
 
@@ -1182,7 +1257,6 @@ class VecyCarritoSystem {
             this.updateVariantSelectionState(variants, variantId);
             this.createVariantThumbnails(productId, variants);
             
-            // ✅ ELIMINADA LA NOTIFICACIÓN AUTOMÁTICA MOLESTA
             console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
         }
     }
@@ -1241,6 +1315,63 @@ class VecyCarritoSystem {
         variants.forEach(v => {
             v.selected = v.id === selectedVariantId;
         });
+    }
+
+    // ==================== AGREGAR AL CARRITO ====================
+    async addToCartWithVariant(productId) {
+        console.log(`🛒 Agregando producto ${productId} al carrito con variante...`);
+        
+        const selectedVariantId = this.selectedVariants[productId];
+        if (!selectedVariantId) {
+            this.showNotification('Por favor selecciona una variante', 'error');
+            return;
+        }
+
+        const variants = this.productVariantsData[productId];
+        const selectedVariant = variants.find(v => v.id === selectedVariantId);
+        
+        if (!selectedVariant) {
+            this.showNotification('Variante no encontrada', 'error');
+            return;
+        }
+
+        if (selectedVariant.stock === 0) {
+            this.showNotification('Esta variante no tiene stock disponible', 'error');
+            return;
+        }
+
+        await this.addToCart(productId, selectedVariantId);
+    }
+
+    async addToCart(productId, varianteId = null) {
+        console.log(`🛒 Agregando al carrito: Producto ${productId}, Variante ${varianteId}`);
+
+        try {
+            const response = await fetch(this.URLS.AGREGAR_CARRITO, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    producto_id: productId,
+                    variante_id: varianteId,
+                    cantidad: 1
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification('Producto agregado al carrito', 'success');
+                this.updateCartCount(data.carrito_count);
+                this.toggleCart(); // Abrir carrito después de agregar
+            } else {
+                this.showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error agregando al carrito:', error);
+            this.showNotification('Error al agregar producto al carrito', 'error');
+        }
     }
 
     // ==================== CARRITO ====================
@@ -1451,6 +1582,400 @@ class VecyCarritoSystem {
         }
     }
 
+    // ==================== SISTEMA DE PAGO MEJORADO ====================
+    procederPago() {
+        console.log("💳 Procediendo al pago...");
+        this.mostrarModalMetodosPago();
+    }
+
+    mostrarModalMetodosPago() {
+        this.cargarResumenPedido();
+        const modal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
+        modal.show();
+        this.configurarEventosMetodosPago();
+    }
+
+    async cargarResumenPedido() {
+        try {
+            const response = await fetch(this.URLS.CARRITO_DATA, {
+                method: 'GET',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.totalPedido = data.totales.total;
+                this.mostrarResumenPedido(data.items, data.totales);
+            }
+        } catch (error) {
+            console.error('Error cargando resumen:', error);
+        }
+    }
+
+    mostrarResumenPedido(items, totales) {
+        const resumenContainer = document.getElementById('resumenPedidoContent');
+        let html = '';
+
+        items.forEach(item => {
+            html += `
+            <div class="resumen-item">
+                <div class="resumen-producto">
+                    <span class="fw-medium">${item.nombre}</span>
+                    <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
+                    ${item.variante ? `<small class="text-muted">Variante: ${item.variante}</small>` : ''}
+                </div>
+                <div class="resumen-precio">
+                    $${(item.precio_unitario * item.cantidad).toFixed(0)}
+                </div>
+            </div>
+            `;
+        });
+
+        html += `
+        <div class="resumen-item pt-2 mt-2 border-top">
+            <div class="fw-bold">Subtotal</div>
+            <div>$${totales.subtotal.toFixed(0)}</div>
+        </div>
+        `;
+
+        if (totales.ahorro_total > 0) {
+            html += `
+            <div class="resumen-item text-success">
+                <div>Ahorro</div>
+                <div>-$${totales.ahorro_total.toFixed(0)}</div>
+            </div>
+            `;
+        }
+
+        html += `
+        <div class="resumen-item resumen-total">
+            <div>Total a Pagar</div>
+            <div>$${totales.total.toFixed(0)}</div>
+        </div>
+        `;
+
+        resumenContainer.innerHTML = html;
+    }
+
+    configurarEventosMetodosPago() {
+        const metodoPagoCards = document.querySelectorAll('.metodo-pago-card');
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const formularios = document.querySelectorAll('.formulario-pago');
+        const resumenAnticipoContainer = document.getElementById('resumenAnticipoContainer');
+
+        // Resetear estado
+        metodoPagoCards.forEach(card => card.classList.remove('selected'));
+        formularios.forEach(form => form.classList.remove('active'));
+        if (resumenAnticipoContainer) resumenAnticipoContainer.style.display = 'none';
+        confirmarBtn.disabled = true;
+        this.metodoPagoSeleccionado = null;
+        this.datosPago = {};
+
+        // Habilitar todas las tarjetas primero
+        metodoPagoCards.forEach(card => {
+            card.classList.remove('disabled');
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) radio.disabled = false;
+        });
+
+        metodoPagoCards.forEach(card => {
+            card.addEventListener('click', () => {
+                if (card.classList.contains('disabled')) return;
+
+                metodoPagoCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+
+                const radio = card.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    this.metodoPagoSeleccionado = radio.value;
+
+                    // Manejar lógica específica para cada método
+                    this.manejarSeleccionMetodoPago();
+
+                    confirmarBtn.disabled = false;
+                }
+            });
+        });
+    }
+
+    manejarSeleccionMetodoPago() {
+        const metodoPagoCards = document.querySelectorAll('.metodo-pago-card');
+        const formularios = document.querySelectorAll('.formulario-pago');
+        const resumenAnticipoContainer = document.getElementById('resumenAnticipoContainer');
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const textoBotonPago = document.getElementById('textoBotonPago');
+
+        // Ocultar todos los formularios primero
+        formularios.forEach(form => form.classList.remove('active'));
+
+        // Resetear estado de todas las tarjetas
+        metodoPagoCards.forEach(card => {
+            card.classList.remove('disabled');
+            const radio = card.querySelector('input[type="radio"]');
+            if (radio) radio.disabled = false;
+        });
+
+        if (this.metodoPagoSeleccionado === 'contra_entrega_anticipo') {
+            // Mostrar resumen de anticipo
+            if (resumenAnticipoContainer) {
+                resumenAnticipoContainer.style.display = 'block';
+                this.mostrarResumenAnticipo();
+            }
+            
+            // Cambiar texto del botón
+            textoBotonPago.textContent = 'Pagar 20% Ahora';
+            
+            // Deshabilitar otros métodos excepto Nequi y DaviPlata
+            metodoPagoCards.forEach(card => {
+                const metodo = card.getAttribute('data-metodo');
+                if (metodo !== 'contra_entrega_anticipo' && metodo !== 'nequi' && metodo !== 'daviplata') {
+                    card.classList.add('disabled');
+                    const radio = card.querySelector('input[type="radio"]');
+                    if (radio) radio.disabled = true;
+                }
+            });
+
+        } else if (this.metodoPagoSeleccionado === 'contra_entrega') {
+            // Contra entrega tradicional - no necesita formularios
+            if (resumenAnticipoContainer) {
+                resumenAnticipoContainer.style.display = 'none';
+            }
+            textoBotonPago.textContent = 'Confirmar Pedido';
+            
+        } else {
+            // Otros métodos de pago (tarjeta, transferencia, nequi, daviplata)
+            if (resumenAnticipoContainer) {
+                resumenAnticipoContainer.style.display = 'none';
+            }
+            textoBotonPago.textContent = 'Confirmar y Pagar';
+
+            // Mostrar formularios específicos
+            if (this.metodoPagoSeleccionado === 'nequi') {
+                const formularioNequi = document.getElementById('formularioNequi');
+                if (formularioNequi) formularioNequi.classList.add('active');
+            } else if (this.metodoPagoSeleccionado === 'daviplata') {
+                const formularioDaviplata = document.getElementById('formularioDaviplata');
+                if (formularioDaviplata) formularioDaviplata.classList.add('active');
+            }
+        }
+    }
+
+    mostrarResumenAnticipo() {
+        const montoAnticipo = this.totalPedido * (this.porcentajeAnticipo / 100);
+        const montoRestante = this.totalPedido - montoAnticipo;
+
+        const resumenAnticipoContent = document.getElementById('resumenAnticipoContent');
+        if (resumenAnticipoContent) {
+            resumenAnticipoContent.innerHTML = `
+                <div class="linea-pago">
+                    <span>Total del pedido:</span>
+                    <span>$${this.totalPedido.toFixed(0)}</span>
+                </div>
+                <div class="linea-pago text-success">
+                    <span>Anticipo (${this.porcentajeAnticipo}%):</span>
+                    <span>-$${montoAnticipo.toFixed(0)}</span>
+                </div>
+                <div class="linea-pago text-primary">
+                    <span>Pago online ahora:</span>
+                    <span><strong>$${montoAnticipo.toFixed(0)}</strong></span>
+                </div>
+                <div class="linea-pago text-muted">
+                    <span>Restante al recibir:</span>
+                    <span>$${montoRestante.toFixed(0)}</span>
+                </div>
+                <div class="linea-pago total">
+                    <span>Total a pagar ahora:</span>
+                    <span class="text-primary fw-bold">$${montoAnticipo.toFixed(0)}</span>
+                </div>
+            `;
+        }
+    }
+
+    validarFormularioBilletera() {
+        if (this.metodoPagoSeleccionado === 'nequi') {
+            const telefonoInput = document.getElementById('nequiTelefono');
+            const claveInput = document.getElementById('nequiClave');
+            
+            if (!telefonoInput || !claveInput) return true;
+
+            const telefono = telefonoInput.value.trim();
+            const clave = claveInput.value.trim();
+
+            if (!telefono) {
+                this.showNotification('Por favor ingresa tu número de teléfono Nequi', 'error');
+                return false;
+            }
+
+            if (!/^\d{10}$/.test(telefono)) {
+                this.showNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                return false;
+            }
+
+            if (!clave) {
+                this.showNotification('Por favor ingresa la clave dinámica', 'error');
+                return false;
+            }
+
+            if (!/^\d{6}$/.test(clave)) {
+                this.showNotification('La clave dinámica debe tener 6 dígitos', 'error');
+                return false;
+            }
+
+            this.datosPago = { telefono: telefono, clave: clave };
+
+        } else if (this.metodoPagoSeleccionado === 'daviplata') {
+            const telefonoInput = document.getElementById('daviplataTelefono');
+            const claveInput = document.getElementById('daviplataClave');
+            
+            if (!telefonoInput || !claveInput) return true;
+
+            const telefono = telefonoInput.value.trim();
+            const clave = claveInput.value.trim();
+
+            if (!telefono) {
+                this.showNotification('Por favor ingresa tu número de teléfono DaviPlata', 'error');
+                return false;
+            }
+
+            if (!/^\d{10}$/.test(telefono)) {
+                this.showNotification('El número de teléfono debe tener 10 dígitos', 'error');
+                return false;
+            }
+
+            if (!clave) {
+                this.showNotification('Por favor ingresa tu clave de 4 dígitos', 'error');
+                return false;
+            }
+
+            if (!/^\d{4}$/.test(clave)) {
+                this.showNotification('La clave debe tener 4 dígitos', 'error');
+                return false;
+            }
+
+            this.datosPago = { telefono: telefono, clave: clave };
+        }
+
+        return true;
+    }
+
+    confirmarPago() {
+        if (!this.metodoPagoSeleccionado) {
+            this.showNotification('Por favor selecciona un método de pago', 'error');
+            return;
+        }
+
+        // Validar formularios de billeteras si es necesario
+        if ((this.metodoPagoSeleccionado === 'nequi' || this.metodoPagoSeleccionado === 'daviplata') && !this.validarFormularioBilletera()) {
+            return;
+        }
+
+        const metodoLabel = document.querySelector(`label[for="${this.metodoPagoSeleccionado}"]`);
+        const metodoTexto = metodoLabel ? metodoLabel.textContent : this.metodoPagoSeleccionado;
+        
+        console.log(`💳 Método seleccionado: ${this.metodoPagoSeleccionado} - ${metodoTexto}`);
+
+        if (this.metodoPagoSeleccionado === 'contra_entrega_anticipo') {
+            this.procesarPagoContraEntregaConAnticipo(metodoTexto);
+        } else {
+            this.procesarPagoDirecto(this.metodoPagoSeleccionado, metodoTexto);
+        }
+    }
+
+    procesarPagoContraEntregaConAnticipo(metodoTexto) {
+        const montoAnticipo = this.totalPedido * (this.porcentajeAnticipo / 100);
+        const montoRestante = this.totalPedido - montoAnticipo;
+
+        console.log(`💰 Procesando contraentrega con anticipo: ${montoAnticipo.toFixed(0)} (${this.porcentajeAnticipo}%)`);
+
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const originalText = confirmarBtn.innerHTML;
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+        confirmarBtn.disabled = true;
+
+        const datosEnvio = {
+            metodo_pago: 'contra_entrega_anticipo',
+            metodo_pago_texto: `${metodoTexto} - ${this.porcentajeAnticipo}% anticipado`,
+            monto_anticipo: montoAnticipo,
+            monto_restante: montoRestante,
+            porcentaje_anticipo: this.porcentajeAnticipo
+        };
+
+        // Si se seleccionó Nequi o DaviPlata para el anticipo, agregar datos
+        if (this.metodoPagoSeleccionado === 'nequi' || this.metodoPagoSeleccionado === 'daviplata') {
+            datosEnvio.metodo_pago_anticipo = this.metodoPagoSeleccionado;
+            datosEnvio.datos_billetera = this.datosPago;
+        }
+
+        this.procesarPagoConDatos(datosEnvio, metodoTexto, confirmarBtn, originalText);
+    }
+
+    procesarPagoDirecto(metodoPago, metodoTexto) {
+        console.log(`💳 Procesando pago directo: ${metodoPago}`);
+
+        const confirmarBtn = document.getElementById('confirmarPagoBtn');
+        const originalText = confirmarBtn.innerHTML;
+        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
+        confirmarBtn.disabled = true;
+
+        const datosEnvio = {
+            metodo_pago: metodoPago,
+            metodo_pago_texto: metodoTexto
+        };
+
+        // Agregar datos de billetera si es necesario
+        if (metodoPago === 'nequi' || metodoPago === 'daviplata') {
+            datosEnvio.datos_billetera = this.datosPago;
+        }
+
+        this.procesarPagoConDatos(datosEnvio, metodoTexto, confirmarBtn, originalText);
+    }
+
+    async procesarPagoConDatos(datosEnvio, metodoTexto, confirmarBtn, originalText) {
+        try {
+            const response = await fetch(this.URLS.PROCESAR_PEDIDO, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify(datosEnvio)
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.mostrarConfirmacionPago(data, metodoTexto);
+            } else {
+                this.showNotification(data.message || 'Error al procesar el pago', 'error');
+            }
+        } catch (error) {
+            console.error('Error procesando pago:', error);
+            this.showNotification('Error de conexión al procesar el pago', 'error');
+        } finally {
+            confirmarBtn.innerHTML = originalText;
+            confirmarBtn.disabled = false;
+        }
+    }
+
+    mostrarConfirmacionPago(data, metodoTexto) {
+        this.showNotification('¡Pedido realizado con éxito!', 'success');
+        
+        // Cerrar modales
+        const metodosPagoModal = bootstrap.Modal.getInstance(document.getElementById('metodosPagoModal'));
+        if (metodosPagoModal) metodosPagoModal.hide();
+        
+        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
+        if (cartOffcanvas) cartOffcanvas.hide();
+
+        // Resetear carrito
+        this.updateCartCount(0);
+        
+        // Redirigir o mostrar mensaje de éxito
+        setTimeout(() => {
+            this.showNotification(`Pedido #${data.numero_pedido} confirmado. Método: ${metodoTexto}`, 'success');
+        }, 1000);
+    }
+
     // ==================== PEDIDOS ====================
     togglePedidos() {
         console.log("📋 Abriendo panel de pedidos...");
@@ -1548,74 +2073,51 @@ class VecyCarritoSystem {
                 </div>
 
                 <div class="pedido-negocio">
-                    <i class="fas fa-store me-2"></i>${pedido.negocio_nombre}
+                    <i class="fas fa-store"></i> ${pedido.negocio}
                 </div>
 
                 <div class="pedido-productos">
                     ${pedido.productos.map(producto => `
-                        <div class="producto-pedido">
-                            <img src="${producto.imagen || 'https://via.placeholder.com/40x40/f1f5f9/64748b?text=PD'}" 
-                                 alt="${producto.nombre}" class="producto-pedido-img">
-                            <div class="producto-pedido-info">
-                                <div class="producto-pedido-nombre">${producto.nombre}</div>
-                                <div class="producto-pedido-precio">$${producto.precio_unitario}</div>
-                            </div>
-                            <div class="producto-pedido-cantidad">x${producto.cantidad}</div>
+                        <div class="pedido-producto">
+                            <span class="producto-nombre">${producto.nombre}</span>
+                            <span class="producto-cantidad">${producto.cantidad}x</span>
+                            <span class="producto-precio">$${producto.precio_unitario}</span>
                         </div>
                     `).join('')}
                 </div>
 
                 <div class="pedido-total">
-                    <span>Total:</span>
-                    <span>$${pedido.total_pedido}</span>
+                    Total: $${pedido.total_pedido}
                 </div>
 
-                ${!esCancelado ? `
+                ${puedeCancelar ? `
                     <div class="pedido-acciones">
-                        <button class="btn-ver-detalle" onclick="vecyCarritoSystem.verDetallePedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-eye me-1"></i>Ver Detalle
-                        </button>
-                        ${puedeCancelar ? `
-                            <button class="btn-cancelar-pedido" 
-                                    onclick="vecyCarritoSystem.cancelarPedido(${pedido.pkid_pedido})"
-                                    data-pedido-id="${pedido.pkid_pedido}">
-                                <i class="fas fa-times me-1"></i>Cancelar Pedido
-                            </button>
-                        ` : `
-                            <button class="btn-cancelar-pedido" disabled>
-                                <i class="fas fa-clock me-1"></i>No Cancelable
-                            </button>
-                        `}
-                    </div>
-                    ${puedeCancelar && tiempoRestante ? `
-                        <div class="tiempo-restante">
-                            <i class="fas fa-clock me-1"></i>Tiempo para cancelar: ${tiempoRestante}
-                        </div>
-                    ` : ''}
-                ` : `
-                    <div class="pedido-acciones">
-                        <button class="btn-ver-detalle" onclick="vecyCarritoSystem.verDetallePedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-eye me-1"></i>Ver Detalle
-                        </button>
-                        <button class="btn-eliminar-pedido" onclick="vecyCarritoSystem.eliminarPedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-trash me-1"></i>Eliminar
+                        <button class="btn-cancelar-pedido" onclick="vecyCarritoSystem.cancelarPedido(${pedido.pkid_pedido})">
+                            <i class="fas fa-times me-2"></i>
+                            Cancelar Pedido ${tiempoRestante ? `(${tiempoRestante})` : ''}
                         </button>
                     </div>
-                `}
+                ` : ''}
             </div>
             `;
         });
 
-        html += `
-            <div class="pedidos-counter mt-3 p-2 bg-light rounded text-center">
-                <small class="text-muted">
-                    Mostrando ${this.mostrarTodosPedidos ? pedidosRecientes + pedidosAntiguos : pedidosRecientes} de ${pedidos.length} pedidos
-                    ${pedidosAntiguos > 0 ? `(${pedidosAntiguos} antiguos)` : ''}
-                </small>
-            </div>
-        `;
-
         pedidosContent.innerHTML = html;
+    }
+
+    showPedidosEmptyState(mensaje = 'Aún no tienes pedidos') {
+        const pedidosContent = document.getElementById('pedidosContent');
+        if (pedidosContent) {
+            pedidosContent.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="empty-pedidos-icon mb-3">
+                        <i class="fas fa-clipboard-list fa-4x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">${mensaje}</h5>
+                    <p class="text-muted">Realiza tu primer pedido y aparecerá aquí</p>
+                </div>
+            `;
+        }
     }
 
     toggleMostrarTodosPedidos() {
@@ -1623,725 +2125,33 @@ class VecyCarritoSystem {
         this.loadPedidosContent();
     }
 
-    eliminarPedido(pedidoId) {
-        console.log(`🗑️ Eliminando pedido: ${pedidoId}`);
-        
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: "Esta acción eliminará permanentemente este pedido de tu historial.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const pedidoCard = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-                if (pedidoCard) {
-                    pedidoCard.classList.add('pedido-eliminado');
-                    pedidoCard.style.display = 'none';
-                }
-                
-                this.showNotification('Pedido eliminado de tu historial', 'success');
-                
-                setTimeout(() => {
-                    this.loadPedidosContent();
-                }, 1000);
-            }
-        });
-    }
-
     async cancelarPedido(pedidoId) {
-        console.log(`🗑️ Intentando cancelar pedido: ${pedidoId}`);
-        
-        Swal.fire({
-            title: '¿Estás seguro?',
-            text: "Esta acción cancelará tu pedido y restaurará el stock. ¿Deseas continuar?",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, cancelar pedido',
-            cancelButtonText: 'No, mantener pedido'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const btn = document.querySelector(`[data-pedido-id="${pedidoId}"] .btn-cancelar-pedido`);
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Cancelando...';
-                btn.disabled = true;
-
-                fetch(this.URLS.CANCELAR_PEDIDO, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': this.getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({
-                        pedido_id: pedidoId
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        this.showNotification('Pedido cancelado exitosamente. Stock restaurado.', 'success');
-                        
-                        // ✅ ACTUALIZAR INMEDIATAMENTE LA INTERFAZ
-                        const pedidoCard = document.querySelector(`[data-pedido-id="${pedidoId}"]`);
-                        if (pedidoCard) {
-                            // Actualizar estado visualmente
-                            const estadoElement = pedidoCard.querySelector('.pedido-estado');
-                            if (estadoElement) {
-                                estadoElement.textContent = 'Cancelado';
-                                estadoElement.className = 'pedido-estado estado-cancelado';
-                            }
-                            
-                            // Deshabilitar botones
-                            const btnCancelar = pedidoCard.querySelector('.btn-cancelar-pedido');
-                            if (btnCancelar) {
-                                btnCancelar.disabled = true;
-                                btnCancelar.innerHTML = '<i class="fas fa-times me-1"></i>Cancelado';
-                                btnCancelar.classList.add('btn-cancelado');
-                            }
-                            
-                            // Ocultar tiempo restante
-                            const tiempoRestante = pedidoCard.querySelector('.tiempo-restante');
-                            if (tiempoRestante) {
-                                tiempoRestante.style.display = 'none';
-                            }
-                            
-                            // Agregar clase de cancelado
-                            pedidoCard.classList.add('pedido-cancelado');
-                            
-                            // Mostrar mensaje de stock restaurado
-                            const accionesDiv = pedidoCard.querySelector('.pedido-acciones');
-                            if (accionesDiv) {
-                                const stockMsg = document.createElement('div');
-                                stockMsg.className = 'stock-restaurado';
-                                stockMsg.innerHTML = '<i class="fas fa-check-circle me-1"></i>Stock restaurado';
-                                accionesDiv.appendChild(stockMsg);
-                            }
-                        }
-                        
-                    } else {
-                        this.showNotification(data.message || 'Error al cancelar el pedido', 'error');
-                        btn.innerHTML = originalText;
-                        btn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    console.error('Error cancelando pedido:', error);
-                    this.showNotification('Error de conexión al cancelar el pedido', 'error');
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                });
-            }
-        });
-    }
-
-    showPedidosEmptyState(mensaje = null) {
-        const pedidosContent = document.getElementById('pedidosContent');
-        const mensajeFinal = mensaje || 'Aún no tienes pedidos realizados';
-        
-        pedidosContent.innerHTML = `
-            <div class="empty-pedidos">
-                <i class="fas fa-clipboard-list"></i>
-                <h5>No hay pedidos</h5>
-                <p>${mensajeFinal}</p>
-                <button class="btn btn-primary mt-3" onclick="vecyCarritoSystem.toggleCart()">
-                    <i class="fas fa-shopping-bag me-2"></i>
-                    Realizar mi primer pedido
-                </button>
-            </div>
-        `;
-    }
-
-    verDetallePedido(pedidoId) {
-        console.log(`🔍 Viendo detalle del pedido: ${pedidoId}`);
-        this.showNotification(`Mostrando detalles del pedido #${pedidoId}`, 'info');
-        
-        Swal.fire({
-            title: `Detalles del Pedido #${pedidoId}`,
-            text: 'Aquí irían los detalles completos del pedido...',
-            icon: 'info',
-            confirmButtonText: 'Cerrar'
-        });
-    }
-
-    // ==================== SISTEMA DE PAGO ====================
-    procederPago() {
-        const cartItemsContainer = document.getElementById('cartItemsContainer');
-        if (!cartItemsContainer || cartItemsContainer.innerHTML.includes('empty-cart-icon')) {
-            this.showNotification('Tu carrito está vacío', 'error');
+        if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
             return;
         }
 
-        this.mostrarModalMetodosPago();
-    }
-
-    mostrarModalMetodosPago() {
-        this.cargarResumenPedido();
-        const modal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
-        modal.show();
-        this.configurarEventosMetodosPago();
-    }
-
-    async cargarResumenPedido() {
         try {
-            const response = await fetch(this.URLS.CARRITO_DATA, {
-                method: 'GET',
-                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.mostrarResumenPedido(data.items, data.totales);
-            }
-        } catch (error) {
-            console.error('Error cargando resumen:', error);
-        }
-    }
-
-    mostrarResumenPedido(items, totales) {
-        const resumenContainer = document.getElementById('resumenPedidoContent');
-        let html = '';
-
-        items.forEach(item => {
-            html += `
-            <div class="resumen-item">
-                <div class="resumen-producto">
-                    <span class="fw-medium">${item.nombre}</span>
-                    <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
-                    ${item.variante ? `<small class="text-muted">Variante: ${item.variante}</small>` : ''}
-                </div>
-                <div class="resumen-precio">
-                    $${(item.precio_unitario * item.cantidad).toFixed(0)}
-                </div>
-            </div>
-            `;
-        });
-
-        html += `
-        <div class="resumen-item pt-2 mt-2 border-top">
-            <div class="fw-bold">Subtotal</div>
-            <div>$${totales.subtotal.toFixed(0)}</div>
-        </div>
-        `;
-
-        if (totales.ahorro_total > 0) {
-            html += `
-            <div class="resumen-item text-success">
-                <div>Ahorro</div>
-                <div>-$${totales.ahorro_total.toFixed(0)}</div>
-            </div>
-            `;
-        }
-
-        html += `
-        <div class="resumen-item resumen-total">
-            <div>Total a Pagar</div>
-            <div>$${totales.total.toFixed(0)}</div>
-        </div>
-        `;
-
-        resumenContainer.innerHTML = html;
-    }
-
-    configurarEventosMetodosPago() {
-        const metodoPagoCards = document.querySelectorAll('.metodo-pago-card');
-        const confirmarBtn = document.getElementById('confirmarPagoBtn');
-        const formularios = document.querySelectorAll('.formulario-pago');
-
-        metodoPagoCards.forEach(card => card.classList.remove('selected'));
-        formularios.forEach(form => form.classList.remove('active'));
-        confirmarBtn.disabled = true;
-        this.metodoPagoSeleccionado = null;
-        this.datosPago = {};
-
-        metodoPagoCards.forEach(card => {
-            card.addEventListener('click', () => {
-                metodoPagoCards.forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-
-                const radio = card.querySelector('input[type="radio"]');
-                radio.checked = true;
-                this.metodoPagoSeleccionado = radio.value;
-
-                formularios.forEach(form => form.classList.remove('active'));
-
-                if (this.metodoPagoSeleccionado === 'nequi') {
-                    document.getElementById('formularioNequi').classList.add('active');
-                } else if (this.metodoPagoSeleccionado === 'daviplata') {
-                    document.getElementById('formularioDaviplata').classList.add('active');
-                }
-                
-                confirmarBtn.disabled = false;
-            });
-        });
-
-        const radioButtons = document.querySelectorAll('input[name="metodoPago"]');
-        radioButtons.forEach(radio => {
-            radio.addEventListener('change', () => {
-                if (radio.checked) {
-                    metodoPagoCards.forEach(card => card.classList.remove('selected'));
-                    const card = radio.closest('.metodo-pago-card');
-                    card.classList.add('selected');
-                    this.metodoPagoSeleccionado = radio.value;
-
-                    formularios.forEach(form => form.classList.remove('active'));
-
-                    if (this.metodoPagoSeleccionado === 'nequi') {
-                        document.getElementById('formularioNequi').classList.add('active');
-                    } else if (this.metodoPagoSeleccionado === 'daviplata') {
-                        document.getElementById('formularioDaviplata').classList.add('active');
-                    }
-                    
-                    confirmarBtn.disabled = false;
-                }
-            });
-        });
-    }
-
-    validarFormularioBilletera() {
-        if (this.metodoPagoSeleccionado === 'nequi') {
-            const telefono = document.getElementById('nequiTelefono').value.trim();
-            const clave = document.getElementById('nequiClave').value.trim();
-
-            if (!telefono) {
-                this.showNotification('Por favor ingresa tu número de teléfono Nequi', 'error');
-                return false;
-            }
-
-            if (!/^\d{10}$/.test(telefono)) {
-                this.showNotification('El número de teléfono debe tener 10 dígitos', 'error');
-                return false;
-            }
-
-            if (!clave) {
-                this.showNotification('Por favor ingresa la clave dinámica', 'error');
-                return false;
-            }
-
-            if (!/^\d{6}$/.test(clave)) {
-                this.showNotification('La clave dinámica debe tener 6 dígitos', 'error');
-                return false;
-            }
-
-            this.datosPago = { telefono: telefono, clave: clave };
-
-        } else if (this.metodoPagoSeleccionado === 'daviplata') {
-            const telefono = document.getElementById('daviplataTelefono').value.trim();
-            const clave = document.getElementById('daviplataClave').value.trim();
-
-            if (!telefono) {
-                this.showNotification('Por favor ingresa tu número de teléfono DaviPlata', 'error');
-                return false;
-            }
-
-            if (!/^\d{10}$/.test(telefono)) {
-                this.showNotification('El número de teléfono debe tener 10 dígitos', 'error');
-                return false;
-            }
-
-            if (!clave) {
-                this.showNotification('Por favor ingresa tu clave de 4 dígitos', 'error');
-                return false;
-            }
-
-            if (!/^\d{4}$/.test(clave)) {
-                this.showNotification('La clave debe tener 4 dígitos', 'error');
-                return false;
-            }
-
-            this.datosPago = { telefono: telefono, clave: clave };
-        }
-
-        return true;
-    }
-
-    confirmarPago() {
-        if (!this.metodoPagoSeleccionado) {
-            this.showNotification('Por favor selecciona un método de pago', 'error');
-            return;
-        }
-
-        if ((this.metodoPagoSeleccionado === 'nequi' || this.metodoPagoSeleccionado === 'daviplata') && !this.validarFormularioBilletera()) {
-            return;
-        }
-
-        const metodoTexto = document.querySelector(`label[for="${this.metodoPagoSeleccionado}"]`).textContent;
-        console.log(`💳 Método seleccionado: ${this.metodoPagoSeleccionado} - ${metodoTexto}`);
-
-        if (this.metodoPagoSeleccionado === 'transferencia') {
-            this.mostrarModalTransferencia();
-        } else {
-            this.procesarPagoDirecto(this.metodoPagoSeleccionado, metodoTexto);
-        }
-    }
-
-    mostrarModalTransferencia() {
-        const modalPrincipal = bootstrap.Modal.getInstance(document.getElementById('metodosPagoModal'));
-        modalPrincipal.hide();
-
-        this.cargarResumenTransferencia();
-
-        setTimeout(() => {
-            const modalTransferencia = new bootstrap.Modal(document.getElementById('transferenciaModal'));
-            modalTransferencia.show();
-        }, 300);
-    }
-
-    async cargarResumenTransferencia() {
-        try {
-            const response = await fetch(this.URLS.CARRITO_DATA, {
-                method: 'GET',
-                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.mostrarResumenTransferencia(data.items, data.totales);
-            }
-        } catch (error) {
-            console.error('Error cargando resumen transferencia:', error);
-        }
-    }
-
-    mostrarResumenTransferencia(items, totales) {
-        const resumenContainer = document.getElementById('resumenTransferenciaContent');
-        let html = '';
-
-        items.forEach(item => {
-            html += `
-            <div class="resumen-item">
-                <div class="resumen-producto">
-                    <span class="fw-medium">${item.nombre}</span>
-                    <small class="text-muted d-block">Cantidad: ${item.cantidad}</small>
-                    ${item.variante ? `<small class="text-muted">Variante: ${item.variante}</small>` : ''}
-                </div>
-                <div class="resumen-precio">
-                    $${(item.precio_unitario * item.cantidad).toFixed(0)}
-                </div>
-            </div>
-            `;
-        });
-
-        html += `
-        <div class="resumen-item pt-2 mt-2 border-top">
-            <div class="fw-bold">Subtotal</div>
-            <div>$${totales.subtotal.toFixed(0)}</div>
-        </div>
-        `;
-
-        if (totales.ahorro_total > 0) {
-            html += `
-            <div class="resumen-item text-success">
-                <div>Ahorro</div>
-                <div>-$${totales.ahorro_total.toFixed(0)}</div>
-            </div>
-            `;
-        }
-
-        html += `
-        <div class="resumen-item resumen-total">
-            <div>Total a Transferir</div>
-            <div>$${totales.total.toFixed(0)}</div>
-        </div>
-        `;
-
-        resumenContainer.innerHTML = html;
-    }
-
-    volverAMetodosPago() {
-        const modalTransferencia = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
-        modalTransferencia.hide();
-
-        setTimeout(() => {
-            const modalPrincipal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
-            modalPrincipal.show();
-        }, 300);
-    }
-
-    copiarAlPortapapeles(texto) {
-        navigator.clipboard.writeText(texto).then(() => {
-            this.showNotification('Copiado al portapapeles', 'success');
-        }).catch(err => {
-            console.error('Error al copiar: ', err);
-        });
-    }
-
-    confirmarTransferencia() {
-        const metodoCompleto = 'Transferencia Bancaria - Bancolombia';
-        console.log(`🏦 Confirmando transferencia: ${metodoCompleto}`);
-
-        const confirmarBtn = document.getElementById('confirmarTransferenciaBtn');
-        const originalText = confirmarBtn.innerHTML;
-        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
-        confirmarBtn.disabled = true;
-
-        this.procesarPagoTransferencia(metodoCompleto);
-
-        setTimeout(() => {
-            confirmarBtn.innerHTML = originalText;
-            confirmarBtn.disabled = false;
-        }, 5000);
-    }
-
-    async procesarPagoTransferencia(metodoCompleto) {
-        console.log(`🔄 Procesando transferencia: ${metodoCompleto}`);
-
-        try {
-            const response = await fetch(this.URLS.PROCESAR_PEDIDO, {
+            const response = await fetch(this.URLS.CANCELAR_PEDIDO, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': this.getCookie('csrftoken')
                 },
                 body: JSON.stringify({
-                    metodo_pago: 'transferencia',
-                    metodo_pago_texto: metodoCompleto
+                    pedido_id: pedidoId
                 })
             });
             const data = await response.json();
             
             if (data.success) {
-                this.mostrarConfirmacionTransferencia(data, metodoCompleto);
+                this.showNotification('Pedido cancelado exitosamente', 'success');
+                this.loadPedidosContent();
             } else {
-                this.showNotification(data.message || 'Error al procesar la transferencia', 'error');
+                this.showNotification(data.message, 'error');
             }
         } catch (error) {
-            console.error('Error procesando transferencia:', error);
-            this.showNotification('Error de conexión al procesar la transferencia', 'error');
-        }
-    }
-
-    mostrarConfirmacionTransferencia(data, metodoCompleto) {
-        const modalTransferencia = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
-        modalTransferencia.hide();
-
-        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
-        if (cartOffcanvas) cartOffcanvas.hide();
-
-        Swal.fire({
-            icon: 'success',
-            title: '¡Transferencia Confirmada!',
-            html: `
-            <div class="text-center">
-                <i class="fas fa-university fa-4x text-info mb-3"></i>
-                <h4>¡Tu pedido ha sido confirmado!</h4>
-                <p class="mb-2"><strong>Número de pedido:</strong> #${data.numero_pedido || '0001'}</p>
-                <p class="mb-2"><strong>Total a transferir:</strong> $${data.total || '0'}</p>
-                <p class="mb-3"><strong>Método:</strong> ${metodoCompleto}</p>
-                
-                <div class="alert alert-info mt-3 text-start">
-                    <h6><i class="fas fa-info-circle me-2"></i>Instrucciones importantes:</h6>
-                    <ul class="small mb-0">
-                        <li>Realiza la transferencia por el monto exacto</li>
-                        <li>Usa el número de pedido como referencia</li>
-                        <li>Guarda el comprobante de transferencia</li>
-                        <li>Tu pedido se activará en 15-30 minutos</li>
-                    </ul>
-                </div>
-            </div>
-            `,
-            confirmButtonText: 'Entendido',
-            confirmButtonColor: '#007bff'
-        }).then(() => {
-            location.reload();
-        });
-
-        this.updateCartCount(0);
-    }
-
-    async procesarPagoDirecto(metodo, metodoTexto) {
-        console.log(`🔄 Procesando pago directo con: ${metodoTexto}`);
-
-        const confirmarBtn = document.getElementById('confirmarPagoBtn');
-        const originalText = confirmarBtn.innerHTML;
-        confirmarBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Procesando...';
-        confirmarBtn.disabled = true;
-
-        const datosEnvio = {
-            metodo_pago: metodo,
-            metodo_pago_texto: metodoTexto
-        };
-
-        if (metodo === 'nequi' || metodo === 'daviplata') {
-            datosEnvio.datos_billetera = this.datosPago;
-        }
-
-        try {
-            const response = await fetch(this.URLS.PROCESAR_PEDIDO, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken')
-                },
-                body: JSON.stringify(datosEnvio)
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.mostrarConfirmacionPago(data, metodoTexto);
-            } else {
-                this.showNotification(data.message || 'Error al procesar el pago', 'error');
-            }
-        } catch (error) {
-            console.error('Error procesando pago:', error);
-            this.showNotification('Error de conexión al procesar el pago', 'error');
-        } finally {
-            confirmarBtn.innerHTML = originalText;
-            confirmarBtn.disabled = false;
-        }
-    }
-
-    mostrarConfirmacionPago(data, metodoTexto) {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('metodosPagoModal'));
-        modal.hide();
-
-        const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
-        if (cartOffcanvas) cartOffcanvas.hide();
-
-        Swal.fire({
-            icon: 'success',
-            title: '¡Pago Exitoso!',
-            html: `
-            <div class="text-center">
-                <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
-                <h4>¡Tu pedido ha sido confirmado!</h4>
-                <p class="mb-2"><strong>Número de pedido:</strong> #${data.numero_pedido || '0001'}</p>
-                <p class="mb-2"><strong>Total pagado:</strong> $${data.total || '0'}</p>
-                <p class="mb-3"><strong>Método:</strong> ${metodoTexto}</p>
-                <p class="text-muted small">Recibirás un correo de confirmación shortly</p>
-            </div>
-            `,
-            confirmButtonText: 'Ver Mis Pedidos',
-            confirmButtonColor: '#007bff',
-            showCancelButton: true,
-            cancelButtonText: 'Seguir Comprando'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = '/cliente/mis-pedidos/';
-            } else {
-                location.reload();
-            }
-        });
-
-        this.updateCartCount(0);
-    }
-
-    // ==================== FUNCIONES DE PRODUCTOS ====================
-    async addToCart(productId, varianteId = null) {
-        const numericProductId = productId.split('-').pop();
-        const varianteSeleccionada = varianteId || this.selectedVariants[numericProductId];
-
-        console.log(`🛒 Intentando agregar producto ${numericProductId} al carrito con variante: ${varianteSeleccionada}`);
-
-        // ✅ ELIMINADA LA NOTIFICACIÓN MOLESTA "AGREGANDO..."
-        // this.showNotification('Agregando al carrito...', 'info');
-
-        const datosEnvio = {
-            producto_id: numericProductId,
-            cantidad: 1
-        };
-
-        if (varianteSeleccionada && varianteSeleccionada !== 'base') {
-            datosEnvio.variante_id = varianteSeleccionada;
-            console.log(`📦 Enviando variante_id: ${varianteSeleccionada}`);
-        } else {
-            console.log(`📦 Producto base, sin variante_id`);
-        }
-
-        try {
-            const response = await fetch(this.URLS.AGREGAR_CARRITO, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken')
-                },
-                body: JSON.stringify(datosEnvio)
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.updateCartCount(data.carrito_count);
-
-                const cartOffcanvas = document.getElementById('vecyCartOffcanvas');
-                if (cartOffcanvas && cartOffcanvas.classList.contains('show')) {
-                    this.loadCartContent();
-                }
-
-                // ✅ SOLO MOSTRAR NOTIFICACIÓN CUANDO REALMENTE SE AGREGA
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Producto agregado!',
-                    text: `${data.producto_nombre} se agregó al carrito`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-
-                console.log(`✅ Producto agregado al carrito: ${data.producto_nombre}`);
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.message || 'No se pudo agregar el producto al carrito',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 4000
-                });
-
-                console.log(`❌ Error: ${data.message}`);
-            }
-        } catch (error) {
-            console.error('❌ Error en fetch:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de conexión',
-                text: 'No se pudo conectar con el servidor',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 4000
-            });
-        }
-    }
-
-    addToCartWithVariant(productId) {
-        console.log(`🛒 Agregando producto con variante: ${productId}`);
-        
-        const selectedVariantId = this.selectedVariants[productId];
-        
-        if (!selectedVariantId) {
-            console.log(`❌ No hay variante seleccionada para producto ${productId}`);
-            this.showNotification('Por favor selecciona una opción', 'error');
-            return;
-        }
-        
-        console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
-        
-        const variants = this.productVariantsData[productId];
-        const selectedVariant = variants.find(v => v.id === selectedVariantId);
-        
-        if (!selectedVariant) {
-            this.showNotification('Error al encontrar la variante seleccionada', 'error');
-            return;
-        }
-        
-        if (selectedVariant.stock < 1) {
-            this.showNotification('Esta variante no tiene stock disponible', 'error');
-            return;
-        }
-        
-        console.log(`✅ Stock disponible: ${selectedVariant.stock} unidades`);
-        
-        if (selectedVariantId === 'base') {
-            this.addToCart(productId);
-        } else {
-            this.addToCart(productId, selectedVariantId);
+            console.error('Error cancelando pedido:', error);
+            this.showNotification('Error al cancelar el pedido', 'error');
         }
     }
 
@@ -2362,22 +2172,43 @@ class VecyCarritoSystem {
     }
 
     showNotification(message, type = 'info') {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer)
-                toast.addEventListener('mouseleave', Swal.resumeTimer)
-            }
-        });
+        // Usar SweetAlert2 si está disponible, sino console.log
+        if (typeof Swal !== 'undefined') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
 
-        Toast.fire({
-            icon: type,
-            title: message
-        });
+            Toast.fire({
+                icon: type,
+                title: message
+            });
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    async updateCartCountFromServer() {
+        try {
+            const response = await fetch(this.URLS.CARRITO_DATA, {
+                method: 'GET',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.updateCartCount(data.carrito_count);
+            }
+        } catch (error) {
+            console.error('Error obteniendo count del carrito:', error);
+        }
     }
 
     updateCartCount(count) {
@@ -2407,30 +2238,6 @@ class VecyCarritoSystem {
             });
         }
     }
-
-    // ==================== FUNCIONES DE COMPATIBILIDAD ====================
-    addToFavorites(productId) {
-        this.showNotification('Producto agregado a favoritos', 'success');
-    }
-
-    quickView(productId) {
-        this.showNotification('Función de vista rápida', 'info');
-    }
-
-    showSupport() {
-        this.showNotification('Redirigiendo a soporte...', 'info');
-    }
-
-    toggleFavorites() {
-        this.showNotification('Abriendo favoritos...', 'info');
-    }
-
-    confirmarSeleccionVariante() {
-        // Función para el modal de variantes
-        this.showNotification('Variante seleccionada', 'success');
-        const variantsModal = bootstrap.Modal.getInstance(document.getElementById('variantsModal'));
-        variantsModal.hide();
-    }
 }
 
 // ==================== INICIALIZACIÓN ====================
@@ -2440,7 +2247,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("✅ VecyCarritoSystem inicializado globalmente");
 });
 
-// Función global para compatibilidad con código existente
+// Funciones globales para compatibilidad con código existente
 function addToCart(productId, varianteId = null) {
     if (window.vecyCarritoSystem) {
         window.vecyCarritoSystem.addToCart(productId, varianteId);
@@ -2471,3 +2278,47 @@ function procederPago() {
     }
 }
 </script>
+
+<style>
+/* Estilos para elementos deshabilitados */
+.metodo-pago-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+    background-color: #f8f9fa;
+}
+
+.metodo-pago-card.disabled:hover {
+    border-color: #e9ecef !important;
+    background-color: #f8f9fa !important;
+    transform: none !important;
+}
+
+.metodo-pago-card.disabled .metodo-pago-header,
+.metodo-pago-card.disabled .metodo-pago-body {
+    pointer-events: none;
+}
+
+/* Estilos para formularios activos */
+.formulario-pago {
+    display: none;
+}
+
+.formulario-pago.active {
+    display: block;
+}
+
+/* Estilos para el resumen de anticipo */
+.linea-pago {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.linea-pago.total {
+    border-top: 1px solid #dee2e6;
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+    font-weight: bold;
+}
+</style>
