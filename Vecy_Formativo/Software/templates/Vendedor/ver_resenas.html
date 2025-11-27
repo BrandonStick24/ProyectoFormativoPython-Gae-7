@@ -42,37 +42,6 @@
         </div>
     </div>
 
-    <!-- Barra de Herramientas Mejorada -->
-    <div class="barra-herramientas">
-        <div class="grupo-botones-accion">
-            <button class="boton-accion boton-secundario" onclick="exportarResenas()">
-                <i class="fas fa-download"></i> Exportar Reseñas
-            </button>
-        </div>
-
-        <div class="grupo-busqueda-filtros">
-            <div class="contenedor-busqueda">
-                <i class="fas fa-search icono-busqueda"></i>
-                <input type="text" class="input-busqueda" id="filtro-busqueda" placeholder="Buscar por cliente o comentario...">
-            </div>
-            
-            <div class="contenedor-filtros">
-                <select class="select-filtro" id="filtro-estado">
-                    <option value="todas">Todas las reseñas</option>
-                    <option value="respondidas">Respondidas</option>
-                    <option value="sin-respuesta">Sin respuesta</option>
-                </select>
-                
-                <select class="select-filtro" id="filtro-orden">
-                    <option value="recientes">Más recientes</option>
-                    <option value="antiguas">Más antiguas</option>
-                    <option value="mejores">Mejor calificación</option>
-                    <option value="peores">Peor calificación</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
     <!-- Layout Dividido Mejorado -->
     <div class="row g-4">
         <!-- Columna Izquierda: Lista de Reseñas -->
@@ -87,12 +56,9 @@
                     {% if resenas %}
                         <div class="lista-resenas" id="lista-resenas">
                             {% for resena in resenas %}
-                            <div class="resena-item {% if resena.tiene_respuesta %}resena-respondida{% endif %}" 
+                            <div class="resena-item {% if resena.tiene_respuesta %}resena-respondida{% endif %} {% if resena.reportada %}resena-reportada{% endif %}" 
                                  data-index="{{ forloop.counter0 }}"
-                                 data-estado="{% if resena.tiene_respuesta %}respondida{% else %}sin-respuesta{% endif %}"
-                                 data-calificacion="{{ resena.calificacion }}"
-                                 data-cliente="{{ resena.cliente|lower }}"
-                                 data-fecha="{{ resena.fecha }}"
+                                 data-id="{{ resena.id }}"
                                  onclick="mostrarResena({{ forloop.counter0 }})">
                                 <div class="resena-header">
                                     <div class="resena-avatar">
@@ -104,12 +70,17 @@
                                             <span class="resena-fecha">
                                                 <i class="far fa-clock me-1"></i>{{ resena.fecha }}
                                             </span>
-                                            <span class="resena-estado {% if resena.tiene_respuesta %}estado-respondida{% else %}estado-pendiente{% endif %}">
-                                                {% if resena.tiene_respuesta %}
-                                                    <i class="fas fa-check-circle me-1"></i>Respondida
-                                                {% else %}
-                                                    <i class="fas fa-clock me-1"></i>Sin respuesta
-                                                {% endif %}
+                                            {% if resena.reportada %}
+                                            <span class="resena-estado estado-reportada">
+                                                <i class="fas fa-flag me-1"></i>Reportada
+                                            </span>
+                                            {% elif resena.tiene_respuesta %}
+                                            <span class="resena-estado estado-respondida">
+                                                <i class="fas fa-check-circle me-1"></i>Respondida
+                                            {% else %}
+                                            <span class="resena-estado estado-pendiente">
+                                                <i class="fas fa-clock me-1"></i>Sin respuesta
+                                            {% endif %}
                                             </span>
                                         </div>
                                     </div>
@@ -131,21 +102,6 @@
                                 </div>
                             </div>
                             {% endfor %}
-                        </div>
-
-                        <!-- Paginación Mejorada -->
-                        <div class="paginacion-resenas">
-                            <div class="info-paginacion">
-                                <span id="info-paginacion">Página 1 de {{ total_paginas }}</span>
-                            </div>
-                            <div class="controles-paginacion">
-                                <button class="btn-paginacion" id="btn-prev" disabled>
-                                    <i class="fas fa-chevron-left"></i>
-                                </button>
-                                <button class="btn-paginacion" id="btn-next">
-                                    <i class="fas fa-chevron-right"></i>
-                                </button>
-                            </div>
                         </div>
                     {% else %}
                         <div class="estado-vacio">
@@ -179,6 +135,48 @@
     </div>
 </div>
 
+<!-- Modal para Reportar Reseña -->
+<div class="modal fade" id="modalReportar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reportar Reseña</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-reportar">
+                    {% csrf_token %}
+                    <input type="hidden" id="resena_id_reportar" name="resena_id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Motivo del Reporte</label>
+                        <select class="form-select" id="motivo_reporte" name="motivo" required>
+                            <option value="">Selecciona un motivo</option>
+                            <option value="contenido_inapropiado">Contenido inapropiado</option>
+                            <option value="lenguaje_ofensivo">Lenguaje ofensivo</option>
+                            <option value="spam">Spam o publicidad</option>
+                            <option value="informacion_falsa">Información falsa</option>
+                            <option value="acoso">Acoso o bullying</option>
+                            <option value="otro">Otro motivo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Descripción (opcional)</label>
+                        <textarea class="form-control" id="descripcion_reporte" name="descripcion" rows="3" placeholder="Proporciona más detalles sobre el reporte..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secundario" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="enviarReporte()">
+                    <i class="fas fa-flag me-1"></i> Reportar Reseña
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Template para el detalle de reseña (oculto) -->
 <div id="template-resena" style="display: none;">
     <div class="resena-detalle-completa">
@@ -196,6 +194,9 @@
                             <span id="detalle-fecha"></span>
                         </span>
                         <span class="estado-detalle" id="estado-detalle"></span>
+                        <span class="estado-detalle estado-reportada-detalle" id="estado-reportada-detalle" style="display: none;">
+                            <i class="fas fa-flag me-1"></i>Reportada
+                        </span>
                     </div>
                 </div>
             </div>
@@ -228,58 +229,27 @@
             </div>
         </div>
 
-        <!-- Formulario de Respuesta -->
-        <div class="seccion-formulario-respuesta">
-            <form method="post" action="" id="form-respuesta" class="formulario-respuesta">
-                {% csrf_token %}
-                <h5 class="titulo-seccion">
-                    <i class="fas fa-edit me-2"></i>
-                    <span id="label-respuesta">Responder a esta reseña</span>
-                </h5>
-                
-                <div class="campo-respuesta">
-                    <textarea name="respuesta" class="input-respuesta" 
-                              placeholder="Escribe tu respuesta profesional aquí..." 
-                              rows="5" id="textarea-respuesta" required></textarea>
-                    <div class="contador-caracteres">
-                        <span id="contador-caracteres">0</span> caracteres
+        <!-- Botones de Acción -->
+        <div class="seccion-acciones-resena">
+            <div class="d-flex gap-2 flex-wrap">
+                <!-- Formulario de Respuesta -->
+                <form method="post" action="" id="form-respuesta" class="flex-grow-1">
+                    {% csrf_token %}
+                    <div class="campo-respuesta mb-2">
+                        <textarea name="respuesta" class="input-respuesta" 
+                                  placeholder="Escribe tu respuesta profesional aquí..." 
+                                  rows="3" id="textarea-respuesta" required></textarea>
                     </div>
-                </div>
-                
-                <div class="acciones-respuesta">
-                    <button type="button" class="btn btn-secundario" onclick="limpiarRespuesta()">
-                        <i class="fas fa-times me-1"></i> Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primario">
-                        <i class="fas fa-paper-plane me-1"></i> 
-                        <span id="texto-boton">Publicar Respuesta</span>
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal de Exportación -->
-<div class="modal fade" id="modalExportar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Exportar Reseñas</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Selecciona el formato de exportación:</p>
-                <div class="formatos-exportacion">
-                    <button class="btn-formato" onclick="exportarPDF()">
-                        <i class="fas fa-file-pdf"></i>
-                        <span>PDF</span>
-                    </button>
-                    <button class="btn-formato" onclick="exportarExcel()">
-                        <i class="fas fa-file-excel"></i>
-                        <span>Excel</span>
-                    </button>
-                </div>
+                    <div class="acciones-respuesta">
+                        <button type="button" class="btn btn-outline-danger" onclick="mostrarModalReportar()">
+                            <i class="fas fa-flag me-1"></i> Reportar
+                        </button>
+                        <button type="submit" class="btn btn-primario">
+                            <i class="fas fa-paper-plane me-1"></i> 
+                            <span id="texto-boton">Publicar Respuesta</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -300,22 +270,20 @@ const resenasData = [
         respuesta: `{{ resena.respuesta|escapejs }}`,
         tiene_respuesta: {{ resena.tiene_respuesta|yesno:"true,false" }},
         fecha_respuesta: "{{ resena.fecha_respuesta }}",
-        url_responder: "{% url 'responder_resena' resena.id %}"
+        reportada: {{ resena.reportada|yesno:"true,false" }},
+        url_responder: "{% url 'responder_resena' resena.id %}",
+        url_reportar: "{% url 'reportar_resena' resena.id %}"
     },
     {% endfor %}
 ];
 
-// Variables para paginación y filtros
-let resenasFiltradas = [...resenasData];
-let paginaActual = 1;
-const reseñasPorPagina = 5;
 let resenaSeleccionada = null;
 
 // Función para mostrar reseña en el detalle
 function mostrarResena(index) {
-    if (index < 0 || index >= resenasFiltradas.length) return;
+    if (index < 0 || index >= resenasData.length) return;
     
-    resenaSeleccionada = resenasFiltradas[index];
+    resenaSeleccionada = resenasData[index];
     const template = document.getElementById('template-resena').innerHTML;
     const detalleDiv = document.getElementById('detalle-resena');
     
@@ -338,21 +306,30 @@ function mostrarResena(index) {
     document.getElementById('detalle-estrellas').innerHTML = estrellasHtml;
     document.getElementById('detalle-calificacion').textContent = `${resenaSeleccionada.calificacion}/5`;
     
-    // Estado
+    // Estado - Manejar estado reportada
     const estadoDetalle = document.getElementById('estado-detalle');
-    if (resenaSeleccionada.tiene_respuesta) {
-        estadoDetalle.innerHTML = '<i class="fas fa-check-circle me-1"></i>Respondida';
-        estadoDetalle.className = 'estado-detalle estado-respondida';
+    const estadoReportada = document.getElementById('estado-reportada-detalle');
+    
+    if (resenaSeleccionada.reportada) {
+        estadoDetalle.style.display = 'none';
+        estadoReportada.style.display = 'inline-block';
     } else {
-        estadoDetalle.innerHTML = '<i class="fas fa-clock me-1"></i>Sin respuesta';
-        estadoDetalle.className = 'estado-detalle estado-pendiente';
+        estadoReportada.style.display = 'none';
+        if (resenaSeleccionada.tiene_respuesta) {
+            estadoDetalle.innerHTML = '<i class="fas fa-check-circle me-1"></i>Respondida';
+            estadoDetalle.className = 'estado-detalle estado-respondida';
+            estadoDetalle.style.display = 'inline-block';
+        } else {
+            estadoDetalle.innerHTML = '<i class="fas fa-clock me-1"></i>Sin respuesta';
+            estadoDetalle.className = 'estado-detalle estado-pendiente';
+            estadoDetalle.style.display = 'inline-block';
+        }
     }
     
     // Configurar respuesta existente
     const respuestaDiv = document.getElementById('respuesta-existente');
     const form = document.getElementById('form-respuesta');
     const textarea = document.getElementById('textarea-respuesta');
-    const contadorCaracteres = document.getElementById('contador-caracteres');
     
     if (resenaSeleccionada.tiene_respuesta) {
         respuestaDiv.style.display = 'block';
@@ -361,12 +338,10 @@ function mostrarResena(index) {
             ` - ${resenaSeleccionada.fecha_respuesta}` : '';
         
         // Cambiar texto del formulario para edición
-        document.getElementById('label-respuesta').textContent = 'Editar tu respuesta';
         document.getElementById('texto-boton').textContent = 'Actualizar Respuesta';
         textarea.value = resenaSeleccionada.respuesta;
     } else {
         respuestaDiv.style.display = 'none';
-        document.getElementById('label-respuesta').textContent = 'Responder a esta reseña';
         document.getElementById('texto-boton').textContent = 'Publicar Respuesta';
         textarea.value = '';
     }
@@ -374,195 +349,64 @@ function mostrarResena(index) {
     // Actualizar action del formulario
     form.action = resenaSeleccionada.url_responder;
     
-    // Actualizar contador de caracteres
-    contadorCaracteres.textContent = textarea.value.length;
-    
-    // Configurar evento para contador de caracteres
-    textarea.addEventListener('input', function() {
-        contadorCaracteres.textContent = this.value.length;
-    });
-    
     // Resaltar item seleccionado
     document.querySelectorAll('.resena-item').forEach(item => {
         item.classList.remove('activa');
     });
     
-    // Encontrar y resaltar el item correcto en la lista filtrada
+    // Encontrar y resaltar el item correcto
     const items = document.querySelectorAll('.resena-item');
-    for (let i = 0; i < items.length; i++) {
-        if (parseInt(items[i].dataset.index) === index) {
-            items[i].classList.add('activa');
-            break;
-        }
-    }
-    
-    // Scroll suave al detalle en móvil
-    if (window.innerWidth < 992) {
-        document.querySelector('.seccion-detalle-resena').scrollIntoView({ 
-            behavior: 'smooth' 
-        });
+    if (items[index]) {
+        items[index].classList.add('activa');
     }
 }
 
-// Función para aplicar filtros
-function aplicarFiltros() {
-    const filtroEstado = document.getElementById('filtro-estado').value;
-    const filtroOrden = document.getElementById('filtro-orden').value;
-    const filtroBusqueda = document.getElementById('filtro-busqueda').value.toLowerCase();
-    
-    // Filtrar por estado
-    resenasFiltradas = resenasData.filter(resena => {
-        let cumpleEstado = true;
-        let cumpleBusqueda = true;
-        
-        // Filtro por estado (respondida/sin respuesta)
-        if (filtroEstado === 'respondidas') {
-            cumpleEstado = resena.tiene_respuesta;
-        } else if (filtroEstado === 'sin-respuesta') {
-            cumpleEstado = !resena.tiene_respuesta;
-        }
-        
-        // Filtro por búsqueda
-        if (filtroBusqueda) {
-            cumpleBusqueda = resena.cliente.toLowerCase().includes(filtroBusqueda) || 
-                            resena.comentario.toLowerCase().includes(filtroBusqueda);
-        }
-        
-        return cumpleEstado && cumpleBusqueda;
-    });
-    
-    // Ordenar
-    switch (filtroOrden) {
-        case 'antiguas':
-            resenasFiltradas.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-            break;
-        case 'mejores':
-            resenasFiltradas.sort((a, b) => b.calificacion - a.calificacion);
-            break;
-        case 'peores':
-            resenasFiltradas.sort((a, b) => a.calificacion - b.calificacion);
-            break;
-        default: // recientes
-            resenasFiltradas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+// Función para mostrar modal de reporte
+function mostrarModalReportar() {
+    if (!resenaSeleccionada) {
+        alert('Por favor selecciona una reseña primero');
+        return;
     }
     
-    // Resetear a página 1
-    paginaActual = 1;
-    actualizarListaResenas();
-}
-
-// Función para actualizar la lista visual
-function actualizarListaResenas() {
-    const lista = document.getElementById('lista-resenas');
-    const contador = document.getElementById('contador-resenas');
-    const infoPaginacion = document.getElementById('info-paginacion');
+    document.getElementById('resena_id_reportar').value = resenaSeleccionada.id;
+    document.getElementById('motivo_reporte').value = '';
+    document.getElementById('descripcion_reporte').value = '';
     
-    if (!lista) return;
-    
-    // Calcular índices para paginación
-    const inicio = (paginaActual - 1) * reseñasPorPagina;
-    const fin = inicio + reseñasPorPagina;
-    const resenasPagina = resenasFiltradas.slice(inicio, fin);
-    
-    // Actualizar lista
-    lista.innerHTML = '';
-    resenasPagina.forEach((resena, index) => {
-        const indexGlobal = resenasFiltradas.indexOf(resena);
-        const item = document.createElement('div');
-        item.className = `resena-item ${resena.tiene_respuesta ? 'resena-respondida' : ''}`;
-        item.setAttribute('data-index', indexGlobal);
-        item.setAttribute('data-estado', resena.tiene_respuesta ? 'respondida' : 'sin-respuesta');
-        item.setAttribute('data-calificacion', resena.calificacion);
-        item.setAttribute('data-cliente', resena.cliente.toLowerCase());
-        item.setAttribute('data-fecha', resena.fecha);
-        item.onclick = () => mostrarResena(indexGlobal);
-        
-        let estrellasHtml = '';
-        for (let i = 1; i <= 5; i++) {
-            estrellasHtml += i <= resena.calificacion ? 
-                '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
-        }
-        
-        item.innerHTML = `
-            <div class="resena-header">
-                <div class="resena-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="resena-info">
-                    <h5 class="resena-cliente">${resena.cliente}</h5>
-                    <div class="resena-meta">
-                        <span class="resena-fecha">
-                            <i class="far fa-clock me-1"></i>${resena.fecha}
-                        </span>
-                        <span class="resena-estado ${resena.tiene_respuesta ? 'estado-respondida' : 'estado-pendiente'}">
-                            ${resena.tiene_respuesta ? 
-                                '<i class="fas fa-check-circle me-1"></i>Respondida' : 
-                                '<i class="fas fa-clock me-1"></i>Sin respuesta'}
-                        </span>
-                    </div>
-                </div>
-                <div class="resena-calificacion">
-                    <div class="estrellas-resena">${estrellasHtml}</div>
-                    <span class="puntuacion">${resena.calificacion}/5</span>
-                </div>
-            </div>
-            <div class="resena-comentario">
-                <p>${resena.comentario.substring(0, 100)}${resena.comentario.length > 100 ? '...' : ''}</p>
-            </div>
-        `;
-        
-        lista.appendChild(item);
-    });
-    
-    // Actualizar contadores
-    contador.textContent = resenasFiltradas.length;
-    
-    const totalPaginas = Math.ceil(resenasFiltradas.length / reseñasPorPagina);
-    infoPaginacion.textContent = `Página ${paginaActual} de ${totalPaginas}`;
-    
-    // Actualizar botones de paginación
-    document.getElementById('btn-prev').disabled = paginaActual === 1;
-    document.getElementById('btn-next').disabled = paginaActual === totalPaginas || totalPaginas === 0;
-    
-    // Mostrar primera reseña si existe
-    if (resenasPagina.length > 0) {
-        mostrarResena(resenasFiltradas.indexOf(resenasPagina[0]));
-    } else {
-        document.getElementById('detalle-resena').innerHTML = `
-            <div class="estado-vacio">
-                <i class="fas fa-search fa-2x"></i>
-                <h4>No hay reseñas que coincidan</h4>
-                <p>No se encontraron reseñas con los filtros aplicados</p>
-            </div>
-        `;
-    }
-}
-
-// Función para limpiar respuesta
-function limpiarRespuesta() {
-    const textarea = document.getElementById('textarea-respuesta');
-    const contador = document.getElementById('contador-caracteres');
-    
-    if (textarea) {
-        textarea.value = '';
-        contador.textContent = '0';
-    }
-}
-
-// Funciones de exportación
-function exportarResenas() {
-    const modal = new bootstrap.Modal(document.getElementById('modalExportar'));
+    const modal = new bootstrap.Modal(document.getElementById('modalReportar'));
     modal.show();
 }
 
-function exportarPDF() {
-    mostrarNotificacion('Preparando exportación en PDF...', 'info');
-    // Aquí iría la lógica real de exportación PDF
-}
-
-function exportarExcel() {
-    mostrarNotificacion('Preparando exportación en Excel...', 'info');
-    // Aquí iría la lógica real de exportación Excel
+// Función para enviar reporte
+function enviarReporte() {
+    const form = document.getElementById('form-reportar');
+    const formData = new FormData(form);
+    
+    fetch(resenaSeleccionada.url_reportar, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar modal y mostrar mensaje de éxito
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalReportar'));
+            modal.hide();
+            
+            // Recargar la página para mostrar los cambios
+            location.reload();
+            
+            mostrarNotificacion('✅ Reporte enviado correctamente', 'success');
+        } else {
+            mostrarNotificacion('❌ Error al enviar el reporte: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        mostrarNotificacion('❌ Error al enviar el reporte', 'error');
+    });
 }
 
 // Función para mostrar notificaciones
@@ -574,17 +418,10 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
         'info': 'alert-info'
     }[tipo] || 'alert-info';
 
-    const iconClass = {
-        'success': 'fa-check-circle',
-        'error': 'fa-exclamation-circle',
-        'warning': 'fa-exclamation-triangle',
-        'info': 'fa-info-circle'
-    }[tipo] || 'fa-info-circle';
-
     const notificacionHTML = `
         <div class="alert ${alertClass} alert-dismissible fade show notificacion-temporal" role="alert" 
              style="position: fixed; top: 100px; right: 20px; z-index: 1060; min-width: 300px;">
-            <i class="fas ${iconClass} me-2"></i>
+            <i class="fas fa-info-circle me-2"></i>
             ${mensaje}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
@@ -601,36 +438,18 @@ function mostrarNotificacion(mensaje, tipo = 'info') {
     }, 4000);
 }
 
-// Event Listeners para filtros
+// Inicializar
 document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar
     if (resenasData.length > 0) {
-        aplicarFiltros();
+        mostrarResena(0);
     }
     
-    // Configurar event listeners para filtros
-    document.getElementById('filtro-estado').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtro-orden').addEventListener('change', aplicarFiltros);
-    document.getElementById('filtro-busqueda').addEventListener('input', aplicarFiltros);
-    
-    // Configurar paginación
-    document.getElementById('btn-prev').addEventListener('click', function() {
-        if (paginaActual > 1) {
-            paginaActual--;
-            actualizarListaResenas();
-        }
-    });
-    
-    document.getElementById('btn-next').addEventListener('click', function() {
-        const totalPaginas = Math.ceil(resenasFiltradas.length / reseñasPorPagina);
-        if (paginaActual < totalPaginas) {
-            paginaActual++;
-            actualizarListaResenas();
-        }
-    });
-    
-    // Auto-focus en búsqueda
-    document.getElementById('filtro-busqueda').focus();
+    // Configurar scroll personalizado para la lista de reseñas
+    const contenedorLista = document.querySelector('.contenedor-lista-resenas');
+    if (contenedorLista) {
+        contenedorLista.style.overflowY = 'auto';
+        contenedorLista.style.maxHeight = '60vh';
+    }
 });
 </script>
 
@@ -726,125 +545,6 @@ document.addEventListener('DOMContentLoaded', function() {
     letter-spacing: 0.5px;
 }
 
-/* Barra de Herramientas */
-.barra-herramientas {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-}
-
-.grupo-botones-accion {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.boton-accion {
-    padding: 0.8rem 1.5rem;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    font-weight: 600;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    text-decoration: none;
-}
-
-.boton-primario {
-    background: var(--secondary-gradient);
-    color: white;
-}
-
-.boton-primario:hover {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
-    color: white;
-}
-
-.boton-secundario {
-    background: white;
-    color: #4F46E5;
-    border: 2px solid #4F46E5;
-}
-
-.boton-secundario:hover {
-    background: #4F46E5;
-    color: white;
-    transform: translateY(-2px);
-}
-
-/* Filtros y Búsqueda */
-.grupo-busqueda-filtros {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.contenedor-busqueda {
-    position: relative;
-    min-width: 300px;
-}
-
-.icono-busqueda {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6B7280;
-    z-index: 2;
-}
-
-.input-busqueda {
-    width: 100%;
-    padding: 0.8rem 1rem 0.8rem 2.5rem;
-    border: 2px solid #E5E7EB;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    transition: all 0.3s;
-    background: white;
-}
-
-.input-busqueda:focus {
-    outline: none;
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.contenedor-filtros {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.select-filtro {
-    padding: 0.8rem 1rem;
-    border: 2px solid #E5E7EB;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    cursor: pointer;
-    background: white;
-    transition: all 0.3s;
-    min-width: 150px;
-}
-
-.select-filtro:focus {
-    outline: none;
-    border-color: #4F46E5;
-}
-
 /* Secciones */
 .seccion-lista-resenas,
 .seccion-detalle-resena {
@@ -929,6 +629,10 @@ document.addEventListener('DOMContentLoaded', function() {
     border-left-color: #10B981;
 }
 
+.resena-reportada {
+    border-left-color: #EF4444;
+}
+
 .resena-header {
     display: flex;
     align-items: flex-start;
@@ -993,6 +697,11 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #92400E;
 }
 
+.estado-reportada {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
 .resena-calificacion {
     text-align: right;
     flex-shrink: 0;
@@ -1018,51 +727,6 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.9rem;
     line-height: 1.4;
     margin: 0;
-}
-
-/* Paginación */
-.paginacion-resenas {
-    padding: 1rem 1.5rem;
-    background: #F8FAFC;
-    border-top: 1px solid #E5E7EB;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.info-paginacion {
-    font-size: 0.9rem;
-    color: #6B7280;
-}
-
-.controles-paginacion {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.btn-paginacion {
-    width: 40px;
-    height: 40px;
-    border: 1px solid #E5E7EB;
-    background: white;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    color: #6B7280;
-}
-
-.btn-paginacion:hover:not(:disabled) {
-    background: #4F46E5;
-    color: white;
-    border-color: #4F46E5;
-}
-
-.btn-paginacion:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 /* Detalle de Reseña */
@@ -1148,6 +812,11 @@ document.addEventListener('DOMContentLoaded', function() {
 .estado-pendiente {
     background: #FEF3C7;
     color: #92400E;
+}
+
+.estado-reportada-detalle {
+    background: #FEE2E2;
+    color: #DC2626;
 }
 
 .resena-calificacion-detalle {
@@ -1294,6 +963,16 @@ document.addEventListener('DOMContentLoaded', function() {
     border-color: #D1D5DB;
 }
 
+.btn-outline-danger {
+    border-color: #EF4444;
+    color: #EF4444;
+}
+
+.btn-outline-danger:hover {
+    background-color: #EF4444;
+    color: white;
+}
+
 /* Estados Vacío */
 .estado-vacio {
     display: flex;
@@ -1319,41 +998,17 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-bottom: 0;
 }
 
-/* Modal de Exportación */
-.formatos-exportacion {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 1rem;
+.seccion-acciones-resena {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #E5E7EB;
 }
 
-.btn-formato {
-    padding: 1.5rem;
-    border: 2px solid #E5E7EB;
-    border-radius: 12px;
-    background: white;
-    cursor: pointer;
-    transition: all 0.3s;
+.acciones-respuesta {
     display: flex;
-    flex-direction: column;
+    gap: 1rem;
+    justify-content: space-between;
     align-items: center;
-    gap: 0.5rem;
-}
-
-.btn-formato:hover {
-    border-color: #4F46E5;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.btn-formato i {
-    font-size: 2rem;
-    color: #4F46E5;
-}
-
-.btn-formato span {
-    font-weight: 600;
-    color: #374151;
 }
 
 /* Responsive */
@@ -1385,37 +1040,13 @@ document.addEventListener('DOMContentLoaded', function() {
         grid-template-columns: 1fr;
     }
     
-    .barra-herramientas {
+    .acciones-respuesta {
         flex-direction: column;
-        align-items: stretch;
+        gap: 0.5rem;
     }
     
-    .grupo-botones-accion {
-        flex-direction: column;
-    }
-    
-    .boton-accion {
+    .acciones-respuesta .btn {
         width: 100%;
-        justify-content: center;
-    }
-    
-    .contenedor-busqueda {
-        min-width: 100%;
-    }
-    
-    .contenedor-filtros {
-        width: 100%;
-        justify-content: space-between;
-    }
-    
-    .resena-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.75rem;
-    }
-    
-    .resena-calificacion {
-        text-align: left;
     }
     
     .resena-detalle-header {
@@ -1426,14 +1057,6 @@ document.addEventListener('DOMContentLoaded', function() {
     .resena-info-completa {
         flex-direction: column;
         text-align: center;
-    }
-    
-    .acciones-respuesta {
-        flex-direction: column;
-    }
-    
-    .formatos-exportacion {
-        grid-template-columns: 1fr;
     }
 }
 

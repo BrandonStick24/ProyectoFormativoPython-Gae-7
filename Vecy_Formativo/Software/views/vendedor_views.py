@@ -1163,7 +1163,7 @@ def configurar_negocio(request, negocio_id):
 # ==================== RESEÑAS DEL VENDEDOR ====================
 @login_required(login_url='login')
 def ver_resenas_vendedor(request):
-    """Vista para reseñas usando SQL directo - CON NUEVAS COLUMNAS"""
+    """Vista para reseñas usando SQL directo - CON INFORMACIÓN DE REPORTES"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -1172,7 +1172,7 @@ def ver_resenas_vendedor(request):
         
         negocio = datos['negocio_activo']
         
-        # CONSULTA ACTUALIZADA CON LAS NUEVAS COLUMNAS
+        # CONSULTA ACTUALIZADA CON INFORMACIÓN DE REPORTES
         with connection.cursor() as cursor:
             sql = """
             SELECT 
@@ -1183,21 +1183,36 @@ def ver_resenas_vendedor(request):
                 u.first_name,
                 u.username,
                 r.respuesta_vendedor,
-                r.fecha_respuesta
+                r.fecha_respuesta,
+                CASE WHEN rep.pkid_reporte IS NOT NULL THEN 1 ELSE 0 END as reportada
             FROM resenas_negocios r
             JOIN usuario_perfil up ON r.fkusuario_resena = up.id
             JOIN auth_user u ON up.fkuser_id = u.id
+            LEFT JOIN reportes rep ON r.pkid_resena = rep.fkresena_reporte 
+                AND rep.fknegocio_reportado = %s 
+                AND rep.estado_reporte = 'pendiente'
             WHERE r.fknegocio_resena = %s 
             AND r.estado_resena = 'activa'
             ORDER BY r.fecha_resena DESC
             """
-            cursor.execute(sql, [negocio.pkid_neg])
+            cursor.execute(sql, [negocio.pkid_neg, negocio.pkid_neg])
             resultados = cursor.fetchall()
         
-        # Procesar resultados CON RESPUESTAS
+        # Procesar resultados CON RESPUESTAS Y REPORTES
         resenas_completas = []
+        resenas_respondidas = 0
+        resenas_reportadas = 0
+        
         for row in resultados:
             tiene_respuesta = row[6] is not None and row[6].strip() != ''
+            reportada = bool(row[8])  # Convertir a booleano
+            
+            if tiene_respuesta:
+                resenas_respondidas += 1
+            
+            if reportada:
+                resenas_reportadas += 1
+            
             fecha_respuesta = row[7].strftime('%d %b %Y') if row[7] else ''
             
             resenas_completas.append({
@@ -1208,7 +1223,8 @@ def ver_resenas_vendedor(request):
                 'cliente': row[4] or row[5] or f"Usuario {row[0]}",
                 'respuesta': row[6] or '',
                 'tiene_respuesta': tiene_respuesta,
-                'fecha_respuesta': fecha_respuesta
+                'fecha_respuesta': fecha_respuesta,
+                'reportada': reportada  # Añadido campo reportada
             })
         
         # Calcular estadísticas
@@ -1226,6 +1242,8 @@ def ver_resenas_vendedor(request):
             'resenas': resenas_completas,
             'total_resenas': total_resenas,
             'promedio_estrellas': promedio_estrellas,
+            'resenas_respondidas': resenas_respondidas,
+            'resenas_reportadas': resenas_reportadas,  # Nueva estadística
         }
         
         return render(request, 'Vendedor/ver_resenas.html', contexto)
@@ -2549,3 +2567,68 @@ def reabastecer_stock_por_cancelacion(pedido_id):
     except Exception as e:
         print(f"❌ ERROR en reabastecer_stock: {str(e)}")
         return False
+    
+# ==================== REPORTAR RESEÑAS ====================
+@login_required(login_url='login')
+def reportar_resena(request, resena_id):
+    """Vista para reportar una reseña - CORREGIDA"""
+    if request.method == 'POST':
+        try:
+            # Obtener datos del vendedor
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+            
+            negocio = datos['negocio_activo']
+            perfil = datos['perfil']
+            
+            # Verificar que la reseña pertenece al negocio del vendedor
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT pkid_resena FROM resenas_negocios WHERE pkid_resena = %s AND fknegocio_resena = %s",
+                    [resena_id, negocio.pkid_neg]
+                )
+                if not cursor.fetchone():
+                    return JsonResponse({'success': False, 'error': 'No puedes reportar esta reseña'})
+            
+            # Verificar si ya existe un reporte pendiente para esta reseña
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pkid_reporte FROM reportes 
+                    WHERE fkresena_reporte = %s AND fknegocio_reportado = %s AND estado_reporte = 'pendiente'
+                """, [resena_id, negocio.pkid_neg])
+                
+                if cursor.fetchone():
+                    return JsonResponse({'success': False, 'error': 'Ya existe un reporte pendiente para esta reseña'})
+            
+            # Obtener datos del formulario
+            motivo = request.POST.get('motivo', 'otro')
+            descripcion = request.POST.get('descripcion', '')
+            
+            # Validar motivo
+            if not motivo:
+                return JsonResponse({'success': False, 'error': 'Debes seleccionar un motivo'})
+            
+            # Insertar el reporte en la base de datos
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO reportes 
+                    (fknegocio_reportado, fkresena_reporte, fkusuario_reporta, motivo, descripcion, estado_reporte, fecha_reporte)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    negocio.pkid_neg,
+                    resena_id,
+                    perfil.id,
+                    motivo,
+                    descripcion,
+                    'pendiente',
+                    datetime.now()
+                ])
+            
+            return JsonResponse({'success': True, 'message': 'Reporte enviado correctamente'})
+            
+        except Exception as e:
+            print(f"ERROR al reportar reseña: {str(e)}")
+            return JsonResponse({'success': False, 'error': 'Error interno del servidor'})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})

@@ -14,6 +14,7 @@ urlpatterns = [
     path('vendedor/stock/', vendedor_views.Stock_V, name='Stock_V'),
     path('vendedor/resenas/', vendedor_views.ver_resenas_vendedor, name='ver_resenas_vendedor'),
     path('vendedor/resenas/responder/<int:resena_id>/', vendedor_views.responder_resena, name='responder_resena'),
+    path('vendedor/resenas/reportar/<int:resena_id>/', vendedor_views.reportar_resena, name='reportar_resena'),
 
     # ==================== URLs PARA GESTIÓN DE NEGOCIOS VENDEDOR ====================
     path('vendedor/negocios/seleccionar/<int:negocio_id>/', vendedor_views.seleccionar_negocio, name='seleccionar_negocio'),
