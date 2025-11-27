@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 import json
 from Software.models import Negocios, UsuarioPerfil, Pedidos, DetallesPedido, ResenasNegocios, AuthUser, Roles, TipoDocumento, UsuariosRoles, TipoNegocio, Productos, CategoriaProductos, Reportes
 from django.utils import timezone
+from django.db import connection
 from django.db.models import Count, Avg
 from django.contrib import messages
 from django.db.models import Q
@@ -183,7 +184,6 @@ def moderador_dash(request):
         messages.error(request, f"Error al cargar el dashboard: {str(e)}")
         return redirect('principal')
 
-# GESTIÓN DE USUARIOS - CORREGIDA
 @login_required(login_url='/auth/login/')
 def gestion_usuarios(request):
     """Vista para gestión de usuarios por parte del moderador - CORREGIDA"""
@@ -195,7 +195,6 @@ def gestion_usuarios(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Usar UsuarioPerfil directamente
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
@@ -305,7 +304,8 @@ def gestion_usuarios(request):
                 Q(fkuser__first_name__icontains=search_query) |
                 Q(fkuser__last_name__icontains=search_query) |
                 Q(fkuser__username__icontains=search_query) |
-                Q(fkuser__email__icontains=search_query)
+                Q(fkuser__email__icontains=search_query) |
+                Q(doc_user__icontains=search_query)
             )
         
         if rol_filter:
@@ -316,45 +316,60 @@ def gestion_usuarios(request):
         if estado_filter:
             usuarios_perfiles = usuarios_perfiles.filter(estado_user=estado_filter)
         
+        # Preparar datos para el template
         usuarios_data = []
         for perfil_usuario in usuarios_perfiles:
             user = perfil_usuario.fkuser
-            roles = perfil_usuario.usuariosroles_set.all()
             
-            # Determinar el rol principal
-            rol_principal = 'CLIENTE'  # Por defecto
-            if roles.exists():
-                # Buscar el primer rol que no sea MODERADOR
-                for rol in roles:
-                    if rol.fkrol.desc_rol.lower() != 'moderador':
-                        rol_principal = rol.fkrol.desc_rol
-                        break
+            # Obtener roles del usuario
+            roles_usuario = UsuariosRoles.objects.filter(fkperfil=perfil_usuario)
+            roles_nombres = [rol.fkrol.desc_rol for rol in roles_usuario]
             
-            # Obtener negocios si es vendedor
-            negocios = []
-            if rol_principal == 'VENDEDOR':
-                negocios_vendedor = Negocios.objects.filter(
-                    fkpropietario_neg=perfil_usuario.id
-                ).values('pkid_neg', 'nom_neg')
-                negocios = list(negocios_vendedor)
+            # Determinar rol principal (excluyendo moderador)
+            rol_principal = 'CLIENTE'
+            for rol_nombre in roles_nombres:
+                if rol_nombre.lower() != 'moderador':
+                    rol_principal = rol_nombre
+                    break
             
             # Construir nombre completo
             nombre_completo = f"{user.first_name} {user.last_name}".strip()
             if not nombre_completo:
                 nombre_completo = user.username
             
+            # Obtener negocios si es vendedor
+            negocios = []
+            if rol_principal == 'VENDEDOR':
+                negocios_vendedor = Negocios.objects.filter(
+                    fkpropietario_neg=perfil_usuario.id
+                ).values('pkid_neg', 'nom_neg', 'estado_neg')
+                negocios = list(negocios_vendedor)
+            
+            # Manejar imagen del usuario
+            imagen_url = ''
+            if perfil_usuario.img_user:
+                try:
+                    imagen_url = perfil_usuario.img_user.url
+                except:
+                    imagen_url = '/static/images/default-user.png'
+            else:
+                imagen_url = '/static/images/default-user.png'
+            
             usuarios_data.append({
                 'id': perfil_usuario.id,
                 'user_id': user.id,
                 'nombre': nombre_completo,
                 'email': user.email,
+                'username': user.username,
                 'documento': perfil_usuario.doc_user,
-                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc if perfil_usuario.fktipodoc_user else 'No especificado',
                 'fecha_nacimiento': perfil_usuario.fechanac_user,
                 'estado': perfil_usuario.estado_user,
                 'rol': rol_principal,
-                'img_user': perfil_usuario.img_user,
+                'roles': roles_nombres,
+                'img_user': imagen_url,
                 'fecha_registro': user.date_joined,
+                'ultimo_login': user.last_login,
                 'negocios': negocios
             })
         
@@ -365,14 +380,35 @@ def gestion_usuarios(request):
                 u for u in usuarios_data 
                 if (search_lower in u['nombre'].lower() or 
                     search_lower in u['email'].lower() or
+                    search_lower in u['username'].lower() or
                     search_lower in u['documento'].lower())
             ]
         
-        # Estadísticas para los gráficos (basadas en los datos filtrados)
-        total_usuarios = len(usuarios_data)
-        usuarios_activos = len([u for u in usuarios_data if u['estado'] == 'activo'])
-        total_clientes = len([u for u in usuarios_data if u['rol'] == 'CLIENTE'])
-        total_vendedores = len([u for u in usuarios_data if u['rol'] == 'VENDEDOR'])
+        # Aplicar filtros de rol y estado en memoria (para mayor precisión)
+        if rol_filter:
+            usuarios_data = [u for u in usuarios_data if u['rol'] == rol_filter]
+        
+        if estado_filter:
+            usuarios_data = [u for u in usuarios_data if u['estado'] == estado_filter]
+        
+        # **CORRECCIÓN: CALCULAR ESTADÍSTICAS DIRECTAMENTE DE LA BASE DE DATOS**
+        # Obtener todos los perfiles excluyendo moderadores para estadísticas
+        perfiles_totales = UsuarioPerfil.objects.exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        # Calcular estadísticas desde la base de datos (más preciso)
+        total_usuarios = perfiles_totales.count()
+        usuarios_activos = perfiles_totales.filter(estado_user='activo').count()
+        
+        # Contar clientes y vendedores por roles
+        perfiles_clientes = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='CLIENTE'
+        ).exclude(fkperfil__id__in=perfiles_moderadores).values('fkperfil').distinct().count()
+        
+        perfiles_vendedores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='VENDEDOR'
+        ).exclude(fkperfil__id__in=perfiles_moderadores).values('fkperfil').distinct().count()
         
         context = {
             'nombre': request.user.first_name or request.user.username,
@@ -380,8 +416,8 @@ def gestion_usuarios(request):
             'usuarios': usuarios_data,
             'total_usuarios': total_usuarios,
             'usuarios_activos': usuarios_activos,
-            'total_clientes': total_clientes,
-            'total_vendedores': total_vendedores,
+            'total_clientes': perfiles_clientes,
+            'total_vendedores': perfiles_vendedores,
             'titulo_pagina': 'Gestión de Usuarios',
             'search_query': search_query,
             'rol_filter': rol_filter,
@@ -391,6 +427,7 @@ def gestion_usuarios(request):
         return render(request, 'Moderador/gestion_usuarios.html', context)
     
     except Exception as e:
+        print(f"ERROR en gestión de usuarios: {str(e)}")
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
@@ -1523,19 +1560,19 @@ def api_usuarios_correos(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
  
-# VISTA PARA RESEÑAS REPORTADAS - CORREGIDA (ERROR DE ESTADO)
+# VISTA PARA RESEÑAS REPORTADAS - COMPLETAMENTE CORREGIDA
+# VISTA PARA RESEÑAS REPORTADAS - CON SQL PURO
 @login_required(login_url='/auth/login/')
 def gestion_resenas_reportadas(request):
-    """Vista para gestión de reseñas reportadas por parte del moderador - CORREGIDA"""
+    """Vista para gestión de reseñas reportadas usando SQL puro"""
     try:
         # Verificar si el usuario está autenticado
         if not request.user.is_authenticated:
             messages.error(request, "Debes iniciar sesión.")
             return redirect('iniciar_sesion')
         
-        # Obtener perfil del usuario - CORREGIDO
+        # Obtener perfil del usuario
         try:
-            # CORREGIDO: Usar UsuarioPerfil directamente
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
@@ -1557,195 +1594,247 @@ def gestion_resenas_reportadas(request):
             accion = request.POST.get('accion')
             
             try:
-                resena = ResenasNegocios.objects.get(pkid_resena=resena_id)
-                
-                if accion == 'aprobar':
-                    # Aprobar la reseña (mantenerla activa)
-                    resena.estado_resena = 'activa'
-                    resena.save()
+                with connection.cursor() as cursor:
+                    if accion == 'aprobar':
+                        # Aprobar la reseña (mantenerla activa)
+                        cursor.execute(
+                            "UPDATE resenas_negocios SET estado_resena = 'activa' WHERE pkid_resena = %s",
+                            [resena_id]
+                        )
+                        
+                        # Actualizar reportes relacionados
+                        cursor.execute(
+                            "UPDATE reportes SET estado_reporte = 'revisado' WHERE fkresena_reporte = %s AND estado_reporte = 'pendiente'",
+                            [resena_id]
+                        )
+                        
+                        messages.success(request, 'Reseña aprobada correctamente')
                     
-                    # CORRECCIÓN: Usar 'revisado' en lugar de 'atendido'
-                    Reportes.objects.filter(
-                        fknegocio_reportado=resena.fknegocio_resena_id,
-                        estado_reporte='pendiente'
-                    ).update(estado_reporte='revisado')
+                    elif accion == 'eliminar':
+                        # Eliminar la reseña (cambiar estado a eliminada)
+                        cursor.execute(
+                            "UPDATE resenas_negocios SET estado_resena = 'eliminada' WHERE pkid_resena = %s",
+                            [resena_id]
+                        )
+                        
+                        # Actualizar reportes relacionados
+                        cursor.execute(
+                            "UPDATE reportes SET estado_reporte = 'resuelto' WHERE fkresena_reporte = %s AND estado_reporte = 'pendiente'",
+                            [resena_id]
+                        )
+                        
+                        messages.success(request, 'Reseña eliminada correctamente')
                     
-                    messages.success(request, 'Reseña aprobada correctamente')
-                
-                elif accion == 'eliminar':
-                    # Eliminar la reseña (cambiar estado a eliminada)
-                    resena.estado_resena = 'eliminada'
-                    resena.save()
-                    
-                    # CORRECCIÓN: Usar 'revisado' en lugar de 'atendido'
-                    Reportes.objects.filter(
-                        fknegocio_reportado=resena.fknegocio_resena_id,
-                        estado_reporte='pendiente'
-                    ).update(estado_reporte='revisado')
-                    
-                    messages.success(request, 'Reseña eliminada correctamente')
-                
-                else:
-                    messages.error(request, 'Acción no válida')
-                    
-            except ResenasNegocios.DoesNotExist:
-                messages.error(request, 'Reseña no encontrada')
+                    else:
+                        messages.error(request, 'Acción no válida')
+                        
             except Exception as e:
                 messages.error(request, f'Error al procesar la solicitud: {str(e)}')
             
             return redirect('gestion_resenas_reportadas')
         
         # Obtener parámetros de filtrado
-        search_query = request.GET.get('search', '')
         estado_filter = request.GET.get('estado', '')
+        gravedad_filter = request.GET.get('gravedad', '')
+        fecha_filter = request.GET.get('fecha', '')
         
-        # Obtener IDs de negocios que tienen reportes pendientes
-        negocios_con_reportes = Reportes.objects.filter(
-            estado_reporte='pendiente'
-        ).values_list('fknegocio_reportado', flat=True).distinct()
+        # CONSULTA SQL PRINCIPAL: Obtener reseñas que tienen reportes pendientes
+        sql = """
+        SELECT 
+            rn.pkid_resena as id,
+            rn.comentario,
+            rn.estrellas,
+            rn.fecha_resena,
+            rn.estado_resena as estado_db,
+            n.pkid_neg as negocio_id,
+            n.nom_neg as negocio_nombre,
+            tn.desc_tiponeg as negocio_categoria,
+            n.direcc_neg as negocio_direccion,
+            up.id as usuario_id,
+            CONCAT(au.first_name, ' ', au.last_name) as usuario_nombre,
+            au.email as usuario_email,
+            au.username as usuario_username,
+            up.img_user as usuario_imagen,
+            COUNT(rep.pkid_reporte) as total_reportes,
+            MAX(rep.fecha_reporte) as ultimo_reporte
+        FROM reportes rep
+        INNER JOIN resenas_negocios rn ON rep.fkresena_reporte = rn.pkid_resena
+        INNER JOIN negocios n ON rn.fknegocio_resena = n.pkid_neg
+        INNER JOIN tipo_negocio tn ON n.fktiponeg_neg = tn.pkid_tiponeg
+        INNER JOIN usuario_perfil up ON rn.fkusuario_resena = up.id
+        INNER JOIN auth_user au ON up.fkuser_id = au.id
+        WHERE rep.estado_reporte = 'pendiente'
+        AND rep.fkresena_reporte IS NOT NULL
+        """
         
-        # Obtener todas las reseñas de esos negocios
-        reseñas_query = ResenasNegocios.objects.filter(
-            fknegocio_resena__in=negocios_con_reportes
-        )
+        params = []
         
         # Aplicar filtros
-        if search_query:
-            reseñas_query = reseñas_query.filter(
-                Q(comentario__icontains=search_query) |
-                Q(fknegocio_resena__nom_neg__icontains=search_query) |
-                Q(fkusuario_resena__fkuser__first_name__icontains=search_query) |
-                Q(fkusuario_resena__fkuser__last_name__icontains=search_query) |
-                Q(fkusuario_resena__fkuser__username__icontains=search_query) |
-                Q(fkusuario_resena__fkuser__email__icontains=search_query)
-            )
-        
         if estado_filter:
-            reseñas_query = reseñas_query.filter(estado_resena=estado_filter)
+            sql += " AND rep.estado_reporte = %s"
+            params.append(estado_filter)
         
-        # Seleccionar datos relacionados para optimizar
-        reseñas_reportadas = reseñas_query.select_related(
-            'fknegocio_resena',
-            'fknegocio_resena__fktiponeg_neg',
-            'fkusuario_resena__fkuser'
-        ).order_by('-fecha_resena')
+        if fecha_filter:
+            sql += " AND DATE(rep.fecha_reporte) = %s"
+            params.append(fecha_filter)
         
-        # Preparar datos para el template
+        sql += " GROUP BY rn.pkid_resena, n.pkid_neg, up.id, au.id ORDER BY ultimo_reporte DESC"
+        
+        # Ejecutar consulta principal
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            columns = [col[0] for col in cursor.description]
+            reseñas_base = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        # Para cada reseña, obtener los detalles de los reportes
         reseñas_data = []
-        for resena in reseñas_reportadas:
-            # Obtener información del negocio
-            negocio = resena.fknegocio_resena
+        for reseña in reseñas_base:
+            # Obtener motivos y usuarios que reportaron para esta reseña
+            sql_reportes = """
+            SELECT 
+                rep.motivo,
+                rep.descripcion,
+                rep.fecha_reporte,
+                CONCAT(au2.first_name, ' ', au2.last_name) as reportero_nombre,
+                au2.email as reportero_email
+            FROM reportes rep
+            INNER JOIN usuario_perfil up2 ON rep.fkusuario_reporta = up2.id
+            INNER JOIN auth_user au2 ON up2.fkuser_id = au2.id
+            WHERE rep.fkresena_reporte = %s 
+            AND rep.estado_reporte = 'pendiente'
+            ORDER BY rep.fecha_reporte DESC
+            """
             
-            # Obtener información del usuario
-            usuario = resena.fkusuario_resena.fkuser
-            nombre_usuario = f"{usuario.first_name} {usuario.last_name}".strip()
-            if not nombre_usuario:
-                nombre_usuario = usuario.username
+            with connection.cursor() as cursor:
+                cursor.execute(sql_reportes, [reseña['id']])
+                columns_reportes = [col[0] for col in cursor.description]
+                reportes_detalle = [dict(zip(columns_reportes, row)) for row in cursor.fetchall()]
             
-            # Obtener reportes pendientes para este negocio
-            reportes_pendientes_negocio = Reportes.objects.filter(
-                fknegocio_reportado=negocio.pkid_neg,
-                estado_reporte='pendiente'
-            )
+            # Obtener motivos únicos
+            motivos_reportes = list(set([reporte['motivo'] for reporte in reportes_detalle]))
             
-            # Contar reportes y obtener motivos
-            total_reportes = reportes_pendientes_negocio.count()
-            motivos_reportes = list(reportes_pendientes_negocio.values_list('motivo', flat=True).distinct())
-            
-            # Obtener usuarios que reportaron
-            usuarios_reportan_ids = reportes_pendientes_negocio.values_list('fkusuario_reporta', flat=True).distinct()
-            usuarios_reportan = UsuarioPerfil.objects.filter(
-                id__in=usuarios_reportan_ids
-            ).select_related('fkuser')
-            
+            # Preparar información de usuarios que reportaron
             usuarios_reportan_info = []
-            for usuario_reporter in usuarios_reportan:
-                user_reporter = usuario_reporter.fkuser
-                nombre_reporter = f"{user_reporter.first_name} {user_reporter.last_name}".strip()
-                if not nombre_reporter:
-                    nombre_reporter = user_reporter.username
+            for reporte in reportes_detalle:
                 usuarios_reportan_info.append({
-                    'nombre': nombre_reporter,
-                    'email': user_reporter.email
+                    'nombre': reporte['reportero_nombre'] or reporte['reportero_email'],
+                    'email': reporte['reportero_email'],
+                    'motivo': reporte['motivo'],
+                    'descripcion': reporte['descripcion'] or 'Sin descripción adicional',
+                    'fecha': reporte['fecha_reporte']
                 })
+            
+            # Determinar gravedad basada en número de reportes
+            total_reportes = reseña['total_reportes']
+            if total_reportes >= 3:
+                gravedad = 'alta'
+            elif total_reportes == 2:
+                gravedad = 'media'
+            else:
+                gravedad = 'baja'
+            
+            # Aplicar filtro de gravedad
+            if gravedad_filter and gravedad != gravedad_filter:
+                continue
             
             # Manejar imagen del usuario
             imagen_usuario = ''
-            try:
-                perfil_usuario = UsuarioPerfil.objects.get(fkuser=usuario)
-                if perfil_usuario.img_user:
-                    imagen_usuario = perfil_usuario.img_user.url
-            except UsuarioPerfil.DoesNotExist:
-                pass
-            
-            # Mapear estados de reseña
-            estado_map = {
-                'activa': 'Activa',
-                'inactiva': 'Inactiva',
-                'eliminada': 'Eliminada',
-                'pendiente': 'Pendiente'
-            }
-            
-            estado_display = estado_map.get(resena.estado_resena, resena.estado_resena)
-            
-            # Obtener el último reporte
-            ultimo_reporte_obj = reportes_pendientes_negocio.order_by('-fecha_reporte').first()
-            ultimo_reporte = ultimo_reporte_obj.fecha_reporte if ultimo_reporte_obj else None
-            
-            # Obtener detalles de reportes para el modal
-            reportes_detalles = list(reportes_pendientes_negocio.values('motivo', 'descripcion', 'fecha_reporte'))
+            if reseña['usuario_imagen']:
+                try:
+                    imagen_usuario = reseña['usuario_imagen']
+                except:
+                    imagen_usuario = '/static/img/default-avatar.png'
+            else:
+                imagen_usuario = '/static/img/default-avatar.png'
             
             reseñas_data.append({
-                'id': resena.pkid_resena,
-                'comentario': resena.comentario or 'Sin comentario',
-                'estrellas': resena.estrellas,
-                'fecha_resena': resena.fecha_resena,
-                'estado': estado_display,
-                'estado_db': resena.estado_resena,
+                'id': reseña['id'],
+                'comentario': reseña['comentario'] or 'Sin comentario',
+                'estrellas': reseña['estrellas'],
+                'fecha_resena': reseña['fecha_resena'],
+                'estado': 'Activa' if reseña['estado_db'] == 'activa' else 'Eliminada',
+                'estado_db': reseña['estado_db'],
+                'gravedad': gravedad,
                 
                 # Información del negocio
-                'negocio_id': negocio.pkid_neg,
-                'negocio_nombre': negocio.nom_neg,
-                'negocio_categoria': negocio.fktiponeg_neg.desc_tiponeg,
-                'negocio_direccion': negocio.direcc_neg,
+                'negocio_id': reseña['negocio_id'],
+                'negocio_nombre': reseña['negocio_nombre'],
+                'negocio_categoria': reseña['negocio_categoria'],
+                'negocio_direccion': reseña['negocio_direccion'],
                 
-                # Información del usuario
-                'usuario_id': usuario.id,
-                'usuario_nombre': nombre_usuario,
-                'usuario_email': usuario.email,
+                # Información del usuario que hizo la reseña
+                'usuario_id': reseña['usuario_id'],
+                'usuario_nombre': reseña['usuario_nombre'] or reseña['usuario_username'],
+                'usuario_email': reseña['usuario_email'],
                 'usuario_imagen': imagen_usuario,
-                'usuario_username': usuario.username,
+                'usuario_username': reseña['usuario_username'],
                 
                 # Información de reportes
                 'total_reportes': total_reportes,
                 'motivos_reportes': motivos_reportes,
                 'usuarios_reportan': usuarios_reportan_info,
-                'ultimo_reporte': ultimo_reporte,
-                'reportes_detalles': reportes_detalles
+                'ultimo_reporte': reseña['ultimo_reporte'],
             })
         
-        # Estadísticas para las tarjetas
-        total_resenas_reportadas = len(reseñas_data)
-        resenas_pendientes = len([r for r in reseñas_data if r['estado_db'] == 'activa'])
-        resenas_eliminadas = len([r for r in reseñas_data if r['estado_db'] == 'eliminada'])
-        total_reportes = sum([r['total_reportes'] for r in reseñas_data])
+        # Calcular estadísticas para las tarjetas
+        with connection.cursor() as cursor:
+            # Total de reportes pendientes de reseñas
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'pendiente' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            total_reportes_count = cursor.fetchone()[0]
+            
+            # Reportes pendientes
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'pendiente' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            pendientes_count = cursor.fetchone()[0]
+            
+            # Reportes resueltos de reseñas
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'resuelto' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            resueltos_count = cursor.fetchone()[0]
+        
+        # Para alta prioridad, contamos reseñas con múltiples reportes
+        alta_prioridad_count = 0
+        for resena_data in reseñas_data:
+            if resena_data['total_reportes'] >= 3:
+                alta_prioridad_count += 1
+        
+        # Paginación
+        from django.core.paginator import Paginator
+        paginator = Paginator(reseñas_data, 10)  # 10 items por página
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
         
         context = {
             'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
-            'reseñas': reseñas_data,
+            'reseñas_reportadas': page_obj,
             'titulo_pagina': 'Reseñas Reportadas',
-            'search_query': search_query,
+            
+            # Filtros actuales para mantener en la interfaz
             'estado_filter': estado_filter,
-            'total_resenas_reportadas': total_resenas_reportadas,
-            'resenas_pendientes': resenas_pendientes,
-            'resenas_eliminadas': resenas_eliminadas,
-            'total_reportes': total_reportes
+            'gravedad_filter': gravedad_filter,
+            'fecha_filter': fecha_filter,
+            
+            # Estadísticas para las tarjetas
+            'total_reportes': total_reportes_count,
+            'pendientes': pendientes_count,
+            'resueltos': resueltos_count,
+            'alta_prioridad': alta_prioridad_count
         }
         
         return render(request, 'Moderador/reporte_resenas.html', context)
     
     except Exception as e:
-        print(f"ERROR en vista: {str(e)}")
-        messages.error(request, f"Error: {str(e)}")
+        print(f"ERROR en vista reseñas reportadas: {str(e)}")
+        messages.error(request, f"Error al cargar las reseñas reportadas: {str(e)}")
         return redirect('principal')

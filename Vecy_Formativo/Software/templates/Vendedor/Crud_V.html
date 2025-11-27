@@ -6,6 +6,94 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'vendedor/css/crud_V.css' %}">
+<style>
+/* Estilos para el modal de importación */
+.importacion-guia {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 2px solid #bae6fd;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.pasos-importacion {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.paso-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.paso-numero {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-weight: bold;
+}
+
+.plantilla-preview {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.columnas-tabla {
+    font-size: 0.9rem;
+    color: #475569;
+}
+
+.badge-columna {
+    background: #4F46E5;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-right: 0.5rem;
+}
+
+.archivo-cargado {
+    background: #f0fdf4;
+    border: 2px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1rem 0;
+}
+
+.btn-descargar {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-descargar:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    color: white;
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -60,6 +148,9 @@
     <div class="grupo-botones-accion">
         <button class="boton-accion boton-primario" data-bs-toggle="modal" data-bs-target="#modalAgregarProducto">
             <i class="fas fa-plus"></i> Agregar Producto
+        </button>
+        <button class="boton-accion boton-masivo" data-bs-toggle="modal" data-bs-target="#modalImportarProductos">
+            <i class="fas fa-file-import"></i> Carga Masiva
         </button>
     </div>
 
@@ -450,24 +541,233 @@
 <div class="modal fade" id="modalEliminarProducto" tabindex="-1" aria-labelledby="modalEliminarProductoLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEliminarProductoLabel">Eliminar Producto</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalEliminarProductoLabel">
+                    <i class="fas fa-trash-alt me-2"></i>Eliminar Producto
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEliminarProducto" method="post" action="">
                 {% csrf_token %}
                 <input type="hidden" id="producto_id_eliminar" name="producto_id">
+                
                 <div class="modal-body">
-                    <p>¿Estás seguro de que deseas eliminar el producto?</p>
-                    <p><strong id="nombre_producto_eliminar"></strong></p>
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Esta acción no se puede deshacer.
+                    <!-- Información del producto -->
+                    <div class="alert alert-info">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle fa-lg me-3"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Producto a eliminar:</h6>
+                                <span class="fw-bold text-danger fs-5" id="nombre_producto_eliminar"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campo de motivo de eliminación -->
+                    <div class="mb-4">
+                        <label for="motivo_eliminacion" class="form-label fw-bold">
+                            <i class="fas fa-clipboard-list me-2"></i>Motivo de eliminación:
+                        </label>
+                        <select class="form-select form-select-lg" id="motivo_eliminacion" name="motivo_eliminacion" required>
+                            <option value="" disabled selected>Selecciona un motivo...</option>
+                            <option value="Producto descontinuado">📦 Producto descontinuado</option>
+                            <option value="Baja demanda">📉 Baja demanda</option>
+                            <option value="Problemas con proveedor">🚚 Problemas con proveedor</option>
+                            <option value="Cambio de temporada">🍂 Cambio de temporada</option>
+                            <option value="Reestructuración de inventario">📊 Reestructuración de inventario</option>
+                            <option value="Error en registro">❌ Error en registro</option>
+                            <option value="Calidad insuficiente">⭐ Calidad insuficiente</option>
+                            <option value="Precio no competitivo">💰 Precio no competitivo</option>
+                            <option value="Falta de materias primas">⚙️ Falta de materias primas</option>
+                            <option value="Otro motivo">🔍 Otro motivo</option>
+                        </select>
+                        <div class="form-text text-muted">
+                            <i class="fas fa-history me-1"></i>
+                            Este motivo se registrará permanentemente en el historial de movimientos de stock.
+                        </div>
+                    </div>
+
+                    <!-- Campo para motivo personalizado -->
+                    <div class="mb-3" id="campo_motivo_personalizado" style="display: none;">
+                        <label for="motivo_personalizado" class="form-label fw-bold">
+                            <i class="fas fa-edit me-2"></i>Especificar motivo:
+                        </label>
+                        <textarea class="form-control" id="motivo_personalizado" name="motivo_personalizado" 
+                                  rows="2" placeholder="Describe el motivo específico de la eliminación..."></textarea>
+                    </div>
+
+                    <!-- Advertencias importantes -->
+                    <div class="alert alert-warning border-warning">
+                        <div class="d-flex">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3 text-warning"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">⚠️ Acción irreversible</h6>
+                                <ul class="mb-0 ps-3">
+                                    <li>El producto será <strong>eliminado permanentemente</strong> del sistema</li>
+                                    <li>Todas las <strong>variantes asociadas</strong> serán eliminadas</li>
+                                    <li>Las <strong>promociones relacionadas</strong> serán removidas</li>
+                                    <li>Se registrará un <strong>movimiento de stock</strong> con el motivo seleccionado</li>
+                                    <li class="text-danger"><strong>Esta acción no se puede deshacer</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Confirmación final -->
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmar_eliminacion" required>
+                        <label class="form-check-label fw-bold text-danger" for="confirmar_eliminacion">
+                            <i class="fas fa-check-circle me-1"></i>
+                            Confirmo que entiendo las consecuencias y deseo proceder con la eliminación
+                        </label>
                     </div>
                 </div>
+                
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar Producto</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="btn_confirmar_eliminacion" disabled>
+                        <i class="fas fa-trash-alt me-1"></i> Confirmar Eliminación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modal Importar Productos - AGREGAR DESPUÉS DEL MODAL ELIMINAR -->
+<div class="modal fade" id="modalImportarProductos" tabindex="-1" aria-labelledby="modalImportarProductosLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalImportarProductosLabel">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Importar Productos desde Excel
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'importar_productos_excel' %}" enctype="multipart/form-data" id="formImportarExcel">
+                {% csrf_token %}
+                <div class="modal-body">
+                    
+                    <!-- Guía Rápida -->
+                    <div class="importacion-guia">
+                        <h6 class="mb-3">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            ¿Cómo importar tus productos?
+                        </h6>
+                        
+                        <div class="pasos-importacion">
+                            <div class="paso-card">
+                                <div class="paso-numero">1</div>
+                                <h6>Descarga Plantilla</h6>
+                                <p class="text-muted small">Obtén el formato correcto</p>
+                            </div>
+                            <div class="paso-card">
+                                <div class="paso-numero">2</div>
+                                <h6>Llena los Datos</h6>
+                                <p class="text-muted small">Productos y variantes</p>
+                            </div>
+                            <div class="paso-card">
+                                <div class="paso-numero">3</div>
+                                <h6>Sube el Archivo</h6>
+                                <p class="text-muted small">Procesamiento automático</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descargar Plantilla -->
+                    <div class="text-center mb-4">
+                        <a href="{% url 'descargar_plantilla_productos' %}" class="btn btn-descargar">
+                            <i class="fas fa-download me-1"></i>
+                            Descargar Plantilla Excel
+                        </a>
+                    </div>
+
+                    <!-- Vista Previa de Columnas -->
+                    <div class="plantilla-preview">
+                        <h6 class="mb-3">
+                            <i class="fas fa-table me-2"></i>
+                            Estructura de la Plantilla
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary">📋 PRODUCTOS BASE</h6>
+                                <div class="columnas-tabla">
+                                    <div><span class="badge-columna">A</span> nombre*</div>
+                                    <div><span class="badge-columna">B</span> precio*</div>
+                                    <div><span class="badge-columna">C</span> descripcion</div>
+                                    <div><span class="badge-columna">D</span> stock_inicial</div>
+                                    <div><span class="badge-columna">E</span> categoria*</div>
+                                    <div><span class="badge-columna">F</span> estado</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-success">🎨 VARIANTES (Opcional)</h6>
+                                <div class="columnas-tabla">
+                                    <div><span class="badge-columna">A</span> producto_base*</div>
+                                    <div><span class="badge-columna">B</span> nombre_variante*</div>
+                                    <div><span class="badge-columna">C</span> precio_adicional</div>
+                                    <div><span class="badge-columna">D</span> stock</div>
+                                    <div><span class="badge-columna">E</span> estado</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3 mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Tip:</strong> Las variantes se vinculan automáticamente al producto base por nombre
+                        </div>
+                    </div>
+
+                    <!-- Subir Archivo -->
+                    <div class="mb-3">
+                        <label for="archivo_excel" class="form-label">
+                            <i class="fas fa-upload me-2"></i>
+                            Selecciona tu archivo Excel
+                        </label>
+                        <input type="file" class="form-control" id="archivo_excel" name="archivo_excel" accept=".xlsx, .xls" required>
+                        <div class="form-text">
+                            Formatos aceptados: .xlsx, .xls (Máx: 10MB)
+                        </div>
+                    </div>
+
+                    <!-- Opciones de Importación -->
+                    <div class="mb-3">
+                        <label class="form-label">Opciones de importación:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="sobrescribir_existentes" id="sobrescribir_existentes">
+                            <label class="form-check-label" for="sobrescribir_existentes">
+                                Sobrescribir productos existentes (mismo nombre)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="crear_categorias" id="crear_categorias" checked>
+                            <label class="form-check-label" for="crear_categorias">
+                                Crear categorías automáticamente si no existen
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Preview del archivo seleccionado -->
+                    <div id="preview-archivo" class="archivo-cargado" style="display: none;">
+                        <h6 class="mb-2">
+                            <i class="fas fa-file-excel text-success me-2"></i>
+                            Archivo listo para importar
+                        </h6>
+                        <p class="mb-1" id="nombre-archivo"></p>
+                        <p class="mb-0 text-muted small" id="tamaño-archivo"></p>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btnImportar">
+                        <i class="fas fa-upload me-1"></i> Importar Productos
+                    </button>
                 </div>
             </form>
         </div>
@@ -477,4 +777,73 @@
 
 {% block extra_js %}
 <script src="{% static 'vendedor/js/Crud_V.js' %}"></script>
+<script>
+// Script para el modal de importación
+document.addEventListener('DOMContentLoaded', function() {
+    const archivoInput = document.getElementById('archivo_excel');
+    const previewArchivo = document.getElementById('preview-archivo');
+    const nombreArchivo = document.getElementById('nombre-archivo');
+    const tamañoArchivo = document.getElementById('tamaño-archivo');
+    const btnImportar = document.getElementById('btnImportar');
+    const formImportar = document.getElementById('formImportarExcel');
+
+    // Mostrar preview del archivo
+    if (archivoInput) {
+        archivoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const fileName = file.name;
+                const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+                
+                nombreArchivo.textContent = `Archivo: ${fileName}`;
+                tamañoArchivo.textContent = `Tamaño: ${fileSize} MB`;
+                previewArchivo.style.display = 'block';
+                
+                // Validar tamaño máximo (10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('❌ El archivo es demasiado grande. Máximo 10MB permitido.');
+                    archivoInput.value = '';
+                    previewArchivo.style.display = 'none';
+                }
+            } else {
+                previewArchivo.style.display = 'none';
+            }
+        });
+    }
+
+    // Validación antes de enviar
+    if (formImportar) {
+        formImportar.addEventListener('submit', function(e) {
+            const archivo = archivoInput.files[0];
+            if (!archivo) {
+                e.preventDefault();
+                alert('❌ Por favor selecciona un archivo Excel.');
+                return false;
+            }
+            
+            // Mostrar loading
+            btnImportar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Importando...';
+            btnImportar.disabled = true;
+            
+            return true;
+        });
+    }
+
+    // Resetear botón cuando se cierre el modal
+    const modalImportar = document.getElementById('modalImportarProductos');
+    if (modalImportar) {
+        modalImportar.addEventListener('hidden.bs.modal', function() {
+            if (btnImportar) {
+                btnImportar.innerHTML = '<i class="fas fa-upload me-1"></i> Importar Productos';
+                btnImportar.disabled = false;
+            }
+            if (previewArchivo) {
+                previewArchivo.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
+
+

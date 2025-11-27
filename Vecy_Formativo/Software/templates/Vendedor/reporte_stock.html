@@ -1,4 +1,4 @@
-<!-- Templates/Vendedor/reporte_stock.html -->
+<!-- templates/Vendedor/reporte_stock.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
@@ -76,6 +76,7 @@
                         <button onclick="window.print()" class="btn btn-light me-2">
                             <i class="fas fa-print me-1"></i>Imprimir
                         </button>
+                        <!-- ✅ CORREGIDO: Botón que regresa al dashboard de stock -->
                         <a href="{% url 'Stock_V' %}" class="btn btn-outline-light">
                             <i class="fas fa-arrow-left me-1"></i>Volver al Stock
                         </a>
@@ -87,6 +88,7 @@
 
     <!-- Estadísticas Resumen -->
     <div class="row mb-4">
+        <!-- En reporte_stock.html - Sección de estadísticas -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stats-card border-start border-primary border-4">
                 <div class="card-body">
@@ -108,7 +110,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="fw-bold text-success mb-0">{{ estadisticas.total_entradas }}</h3>
+                            <h3 class="fw-bold text-success mb-0">{{ estadisticas.total_entradas|floatformat:0 }}</h3>
                             <p class="text-muted mb-0">Total Entradas</p>
                         </div>
                         <div class="align-self-center">
@@ -124,7 +126,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="fw-bold text-danger mb-0">{{ estadisticas.total_salidas }}</h3>
+                            <h3 class="fw-bold text-danger mb-0">{{ estadisticas.total_salidas|floatformat:0 }}</h3>
                             <p class="text-muted mb-0">Total Salidas</p>
                         </div>
                         <div class="align-self-center">
@@ -140,7 +142,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="fw-bold text-warning mb-0">{{ estadisticas.total_ajustes }}</h3>
+                            <h3 class="fw-bold text-warning mb-0">{{ estadisticas.total_ajustes|floatformat:0 }}</h3>
                             <p class="text-muted mb-0">Total Ajustes</p>
                         </div>
                         <div class="align-self-center">

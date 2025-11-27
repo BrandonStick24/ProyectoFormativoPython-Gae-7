@@ -1,4 +1,4 @@
-// static/vendedor/js/Crud_V.js - VERSIÓN MEJORADA SIN AJAX - CORREGIDA
+// static/vendedor/js/Crud_V.js - VERSIÓN MEJORADA SIN AJAX - COMPLETAMENTE CORREGIDA
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log("=== DEBUG: Crud_V.js cargado correctamente ===");
@@ -208,12 +208,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Inicializar funcionalidad del modal de eliminación
+    inicializarModalEliminacion();
+
     // Debug: Verificar que los modales se cargan correctamente
     console.log("=== DEBUG: Modales disponibles ===");
     console.log("Modal Editar:", document.getElementById('modalEditarProducto'));
     console.log("Modal Stock:", document.getElementById('modalAjustarStock'));
     console.log("Modal Eliminar:", document.getElementById('modalEliminarProducto'));
 });
+
+// ==================== FUNCIONES GLOBALES ====================
 
 // Funciones globales para cargar datos en los modales
 function cargarDatosProducto(id, nombre, precio, stock, estado, categoria, descripcion) {
@@ -266,10 +271,194 @@ function cargarDatosEliminar(id, nombre) {
     document.getElementById('producto_id_eliminar').value = id;
     document.getElementById('nombre_producto_eliminar').textContent = nombre;
     
-    // Configurar la acción del formulario - CORREGIDO
+    // Configurar la acción del formulario
     document.getElementById('formEliminarProducto').action = `/auth/vendedor/productos/eliminar/${id}/`;
     console.log(`Form action delete: ${document.getElementById('formEliminarProducto').action}`);
+    
+    // Resetear campos del modal de eliminación
+    resetearModalEliminacion();
+    
+    // ✅ ACTUALIZAR MENSAJE PARA REFLEJAR LA NUEVA FUNCIONALIDAD
+    const mensajeEliminar = document.querySelector('#modalEliminarProducto .modal-body p');
+    const alertaEliminar = document.querySelector('#modalEliminarProducto .alert-warning');
+    
+    if (mensajeEliminar) {
+        mensajeEliminar.innerHTML = `¿Estás seguro de que deseas <strong>eliminar permanentemente</strong> el producto?`;
+    }
+    
+    if (alertaEliminar) {
+        alertaEliminar.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Advertencia:</strong> Esta acción no se puede deshacer. 
+            Se eliminarán también todas las variantes del producto y se registrará 
+            el movimiento en el historial de stock.
+        `;
+    }
 }
+
+// ==================== FUNCIONALIDAD DEL MODAL DE ELIMINACIÓN ====================
+
+function inicializarModalEliminacion() {
+    const motivoSelect = document.getElementById('motivo_eliminacion');
+    const motivoPersonalizadoDiv = document.getElementById('campo_motivo_personalizado');
+    const motivoPersonalizadoInput = document.getElementById('motivo_personalizado');
+    const confirmCheckbox = document.getElementById('confirmar_eliminacion');
+    const submitBtn = document.getElementById('btn_confirmar_eliminacion');
+
+    // Mostrar/ocultar campo de motivo personalizado
+    if (motivoSelect && motivoPersonalizadoDiv) {
+        motivoSelect.addEventListener('change', function() {
+            if (this.value === 'Otro motivo') {
+                motivoPersonalizadoDiv.style.display = 'block';
+                if (motivoPersonalizadoInput) {
+                    motivoPersonalizadoInput.required = true;
+                }
+            } else {
+                motivoPersonalizadoDiv.style.display = 'none';
+                if (motivoPersonalizadoInput) {
+                    motivoPersonalizadoInput.required = false;
+                    motivoPersonalizadoInput.value = '';
+                }
+            }
+            actualizarBotonEliminacion();
+        });
+    }
+
+    // Habilitar/deshabilitar botón de confirmación
+    if (confirmCheckbox && submitBtn) {
+        confirmCheckbox.addEventListener('change', function() {
+            actualizarBotonEliminacion();
+        });
+    }
+
+    // Validar campo de motivo personalizado
+    if (motivoPersonalizadoInput) {
+        motivoPersonalizadoInput.addEventListener('input', function() {
+            actualizarBotonEliminacion();
+        });
+    }
+
+    // Validación antes de enviar el formulario
+    const formEliminar = document.getElementById('formEliminarProducto');
+    if (formEliminar) {
+        formEliminar.addEventListener('submit', function(e) {
+            if (!validarFormularioEliminacion()) {
+                e.preventDefault();
+                return;
+            }
+
+            // Mostrar loading en el botón
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+                submitBtn.disabled = true;
+            }
+        });
+    }
+
+    // Resetear formulario cuando se cierre el modal
+    const modalEliminar = document.getElementById('modalEliminarProducto');
+    if (modalEliminar) {
+        modalEliminar.addEventListener('hidden.bs.modal', function() {
+            resetearModalEliminacion();
+        });
+    }
+}
+
+function validarFormularioEliminacion() {
+    const motivoSelect = document.getElementById('motivo_eliminacion');
+    const motivoPersonalizadoInput = document.getElementById('motivo_personalizado');
+    const confirmCheckbox = document.getElementById('confirmar_eliminacion');
+
+    if (!motivoSelect || !motivoSelect.value) {
+        showAlert('Por favor selecciona un motivo de eliminación.', 'warning');
+        motivoSelect.focus();
+        return false;
+    }
+
+    if (!confirmCheckbox || !confirmCheckbox.checked) {
+        showAlert('Debes confirmar que entiendes las consecuencias de esta acción.', 'warning');
+        return false;
+    }
+
+    // Si es "Otro motivo", validar que se especifique
+    if (motivoSelect.value === 'Otro motivo') {
+        if (!motivoPersonalizadoInput || !motivoPersonalizadoInput.value.trim()) {
+            showAlert('Por favor especifica el motivo de eliminación.', 'warning');
+            motivoPersonalizadoInput.focus();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function actualizarBotonEliminacion() {
+    const motivoSelect = document.getElementById('motivo_eliminacion');
+    const motivoPersonalizadoInput = document.getElementById('motivo_personalizado');
+    const confirmCheckbox = document.getElementById('confirmar_eliminacion');
+    const submitBtn = document.getElementById('btn_confirmar_eliminacion');
+
+    if (!submitBtn) return;
+
+    const motivoValido = motivoSelect && motivoSelect.value;
+    const motivoPersonalizadoValido = motivoSelect.value !== 'Otro motivo' || 
+                                    (motivoPersonalizadoInput && motivoPersonalizadoInput.value.trim());
+    const confirmado = confirmCheckbox && confirmCheckbox.checked;
+
+    submitBtn.disabled = !(motivoValido && motivoPersonalizadoValido && confirmado);
+}
+
+function resetearModalEliminacion() {
+    const motivoSelect = document.getElementById('motivo_eliminacion');
+    const motivoPersonalizadoDiv = document.getElementById('campo_motivo_personalizado');
+    const motivoPersonalizadoInput = document.getElementById('motivo_personalizado');
+    const confirmCheckbox = document.getElementById('confirmar_eliminacion');
+    const submitBtn = document.getElementById('btn_confirmar_eliminacion');
+
+    if (motivoSelect) motivoSelect.value = '';
+    if (motivoPersonalizadoDiv) motivoPersonalizadoDiv.style.display = 'none';
+    if (motivoPersonalizadoInput) {
+        motivoPersonalizadoInput.value = '';
+        motivoPersonalizadoInput.required = false;
+    }
+    if (confirmCheckbox) confirmCheckbox.checked = false;
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-trash-alt me-1"></i> Confirmar Eliminación';
+    }
+    
+    // Remover alertas temporales
+    const modalEliminar = document.getElementById('modalEliminarProducto');
+    if (modalEliminar) {
+        const alerts = modalEliminar.querySelectorAll('.alert:not(.alert-warning):not(.alert-info)');
+        alerts.forEach(alert => alert.remove());
+    }
+}
+
+function showAlert(message, type) {
+    // Crear alerta temporal
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Insertar al inicio del modal body
+    const modalBody = document.querySelector('#modalEliminarProducto .modal-body');
+    if (modalBody) {
+        modalBody.insertBefore(alertDiv, modalBody.firstChild);
+        
+        // Auto-remover después de 5 segundos
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    }
+}
+
+// ==================== FUNCIONES UTILITARIAS ====================
 
 // Función para debug adicional
 function debugForms() {
@@ -277,6 +466,38 @@ function debugForms() {
     const forms = document.querySelectorAll('form');
     forms.forEach((form, index) => {
         console.log(`Form ${index}:`, form.action, form.method);
+    });
+}
+
+// Función para mostrar notificaciones toast
+function mostrarToast(mensaje, tipo = 'info') {
+    const toastContainer = document.getElementById('toastContainer');
+    if (!toastContainer) return;
+
+    const toastId = 'toast-' + Date.now();
+    const bgColor = tipo === 'success' ? 'bg-success' : 
+                   tipo === 'error' ? 'bg-danger' : 
+                   tipo === 'warning' ? 'bg-warning' : 'bg-info';
+
+    const toastHTML = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgColor} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${mensaje}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+
+    // Remover del DOM después de que se oculte
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
     });
 }
 

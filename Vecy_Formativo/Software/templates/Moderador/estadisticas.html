@@ -1,7 +1,7 @@
 {% extends 'Layout_M.html' %}
 {% load static %}
 
-{% block title %}Estadísticas - Dashboard Moderador{% endblock %}
+{% block title %} Dashboard Moderador{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -190,7 +190,7 @@
         </div>
     </div>
 
-    <!-- Tabla de Categorías Detallada -->
+    <!-- Tabla de Categorías Detallada - CORREGIDA -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow">
@@ -210,15 +210,20 @@
                             <tbody>
                                 {% for categoria in negocios_por_categoria %}
                                 <tr>
-                                    <td>{{ categoria.fktiponeg_neg__desc_tiponeg }}</td>
+                                    <td>{{ categoria.fktiponeg_neg__desc_tiponeg|default:"Sin categoría" }}</td>
                                     <td>{{ categoria.total }}</td>
                                     <td>
+                                        {% with porcentaje=categoria.total|floatformat:0 %}
                                         <div class="progress">
-                                            <div class="progress-bar" role="progressbar"
-                                                style="width: {{ categoria.total|divisibleby:total_negocios|floatformat:2 }}%">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {{ porcentaje }}%"
+                                                 aria-valuenow="{{ porcentaje }}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
                                             </div>
                                         </div>
-                                        {{ categoria.total|divisibleby:total_negocios|floatformat:1 }}%
+                                        {{ porcentaje }}%
+                                        {% endwith %}
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -275,20 +280,20 @@
             labels: ['Activos', 'Rechazados', 'Suspendidos'],
             datasets: [{
                 data: [{{ negocios_activos }}, {{ negocios_inactivos }}, {{ negocios_suspendidos }}],
-    backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e'],
-        hoverBackgroundColor: ['#17a673', '#d52a1e', '#dda20a'],
-            borderWidth: 2
+                backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e'],
+                hoverBackgroundColor: ['#17a673', '#d52a1e', '#dda20a'],
+                borderWidth: 2
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
-                plugins: {
-            legend: {
-                position: 'bottom'
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
-    }
     });
 
     // Gráfico de categorías
@@ -296,27 +301,27 @@
     const catChart = new Chart(catCtx, {
         type: 'bar',
         data: {
-            labels: {{ categorias_nombres| safe }},
-    datasets: [{
-        label: 'Negocios',
-        data: {{ categorias_totales| safe }},
-        backgroundColor: '#4e73df',
-        borderColor: '#2e59d9',
-        borderWidth: 1
+            labels: {{ categorias_nombres|safe }},
+            datasets: [{
+                label: 'Negocios',
+                data: {{ categorias_totales|safe }},
+                backgroundColor: '#4e73df',
+                borderColor: '#2e59d9',
+                borderWidth: 1
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
-                scales: {
-            y: {
-                beginAtZero: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
                     ticks: {
-                    stepSize: 1
+                        stepSize: 1
+                    }
                 }
             }
         }
-    }
     });
 
     // Gráfico de distribución
@@ -327,19 +332,19 @@
             labels: ['Usuarios', 'Negocios', 'Reseñas'],
             datasets: [{
                 data: [{{ total_usuarios }}, {{ total_negocios }}, {{ total_resenas }}],
-    backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
-        hoverBackgroundColor: ['#2e59d9', '#17a673', '#dda20a']
+                backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
+                hoverBackgroundColor: ['#2e59d9', '#17a673', '#dda20a']
             }]
         },
-    options: {
-        responsive: true,
+        options: {
+            responsive: true,
             maintainAspectRatio: false,
-                plugins: {
-            legend: {
-                position: 'bottom'
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
             }
         }
-    }
     });
 </script>
 {% endblock %}

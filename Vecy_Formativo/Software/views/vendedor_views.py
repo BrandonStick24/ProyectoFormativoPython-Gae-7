@@ -12,6 +12,10 @@ from datetime import datetime
 import json
 import os
 from django.conf import settings
+import pandas as pd
+from django.http import HttpResponse
+from django.core.files.storage import FileSystemStorage
+from django.utils.text import slugify
 
 # Importar modelos
 from Software.models import (
@@ -170,6 +174,8 @@ def registrar_negocio_vendedor(request):
     return redirect('Negocios_V')
 
 # ==================== VISTAS VENDEDOR - DASHBOARD ====================
+# En Software/views/vendedor_views.py - actualizar la vista vendedor_dash
+
 @login_required(login_url='login')
 def vendedor_dash(request):
     try:
@@ -178,15 +184,299 @@ def vendedor_dash(request):
             messages.error(request, "Perfil de usuario no encontrado.")
             return redirect('principal')
         
+        negocio = datos['negocio_activo']
+        if not negocio:
+            messages.error(request, "No tienes un negocio activo registrado.")
+            return redirect('registro_negocios')
+        
+        # ==================== DATOS REALES PARA EL DASHBOARD ====================
+        
+        # 1. VENTAS HOY
+        with connection.cursor() as cursor:
+            # Ventas de hoy
+            cursor.execute("""
+                SELECT COUNT(*), COALESCE(SUM(total_pedido), 0) 
+                FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND DATE(fecha_pedido) = CURDATE()
+                AND estado_pedido = 'entregado'
+            """, [negocio.pkid_neg])
+            resultado = cursor.fetchone()
+            ventas_hoy = resultado[0] if resultado else 0
+            total_ventas_hoy = float(resultado[1]) if resultado and resultado[1] else 0.0
+            
+            # Ingresos mensuales
+            cursor.execute("""
+                SELECT COALESCE(SUM(total_pedido), 0) 
+                FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND MONTH(fecha_pedido) = MONTH(CURDATE())
+                AND YEAR(fecha_pedido) = YEAR(CURDATE())
+                AND estado_pedido = 'entregado'
+            """, [negocio.pkid_neg])
+            ingresos_mensuales = float(cursor.fetchone()[0] or 0)
+            
+            # Crecimiento de ingresos (vs mes anterior)
+            cursor.execute("""
+                SELECT COALESCE(SUM(total_pedido), 0) 
+                FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND MONTH(fecha_pedido) = MONTH(CURDATE() - INTERVAL 1 MONTH)
+                AND YEAR(fecha_pedido) = YEAR(CURDATE() - INTERVAL 1 MONTH)
+                AND estado_pedido = 'entregado'
+            """, [negocio.pkid_neg])
+            ingresos_mes_anterior = float(cursor.fetchone()[0] or 0)
+            
+            if ingresos_mes_anterior > 0:
+                crecimiento_ingresos = round(((ingresos_mensuales - ingresos_mes_anterior) / ingresos_mes_anterior) * 100, 1)
+            else:
+                crecimiento_ingresos = 100.0 if ingresos_mensuales > 0 else 0.0
+        
+        # 2. CLIENTES ACTIVOS
+        with connection.cursor() as cursor:
+            # Clientes únicos en los últimos 30 días
+            cursor.execute("""
+                SELECT COUNT(DISTINCT fkusuario_pedido) 
+                FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND fecha_pedido >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            """, [negocio.pkid_neg])
+            clientes_activos = cursor.fetchone()[0] or 0
+            
+            # Crecimiento de clientes (vs semana anterior)
+            cursor.execute("""
+                SELECT COUNT(DISTINCT fkusuario_pedido) 
+                FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND fecha_pedido BETWEEN DATE_SUB(CURDATE(), INTERVAL 14 DAY) AND DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            """, [negocio.pkid_neg])
+            clientes_semana_anterior = cursor.fetchone()[0] or 0
+            
+            if clientes_semana_anterior > 0:
+                crecimiento_clientes = round(((clientes_activos - clientes_semana_anterior) / clientes_semana_anterior) * 100, 1)
+            else:
+                crecimiento_clientes = 100.0 if clientes_activos > 0 else 0.0
+        
+        # 3. PRODUCTOS
+        with connection.cursor() as cursor:
+            # Total de productos
+            cursor.execute("""
+                SELECT COUNT(*) FROM productos 
+                WHERE fknegocioasociado_prod = %s
+            """, [negocio.pkid_neg])
+            total_productos = cursor.fetchone()[0] or 0
+            
+            # Productos con stock bajo (<= 5)
+            cursor.execute("""
+                SELECT COUNT(*) FROM productos 
+                WHERE fknegocioasociado_prod = %s 
+                AND stock_prod <= 5 AND stock_prod > 0
+            """, [negocio.pkid_neg])
+            productos_stock_bajo = cursor.fetchone()[0] or 0
+            
+            # Productos sin stock
+            cursor.execute("""
+                SELECT COUNT(*) FROM productos 
+                WHERE fknegocioasociado_prod = %s 
+                AND stock_prod = 0
+            """, [negocio.pkid_neg])
+            productos_sin_stock = cursor.fetchone()[0] or 0
+            
+            # Productos disponibles
+            productos_disponibles = total_productos - productos_stock_bajo - productos_sin_stock
+        
+        # 4. GRÁFICO DE VENTAS ÚLTIMOS 7 DÍAS
+        ventas_labels = []
+        ventas_data = []
+        
+        with connection.cursor() as cursor:
+            for i in range(6, -1, -1):
+                cursor.execute("""
+                    SELECT COALESCE(SUM(total_pedido), 0) 
+                    FROM pedidos 
+                    WHERE fknegocio_pedido = %s 
+                    AND DATE(fecha_pedido) = DATE_SUB(CURDATE(), INTERVAL %s DAY)
+                    AND estado_pedido = 'entregado'
+                """, [negocio.pkid_neg, i])
+                total_dia = float(cursor.fetchone()[0] or 0)
+                
+                # Formatear fecha
+                cursor.execute("SELECT DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL %s DAY), '%%d/%%m')", [i])
+                fecha_label = cursor.fetchone()[0]
+                
+                ventas_labels.append(f'"{fecha_label}"')
+                ventas_data.append(total_dia)
+        
+        # 5. GRÁFICO DE VENTAS POR CATEGORÍA
+        categorias_labels = []
+        categorias_data = []
+        
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT c.desc_cp, COALESCE(SUM(pd.precio_unitario * pd.cantidad_detalle), 0) as total
+                FROM categoria_productos c
+                LEFT JOIN productos pr ON c.pkid_cp = pr.fkcategoria_prod
+                LEFT JOIN detalles_pedido pd ON pr.pkid_prod = pd.fkproducto_detalle
+                LEFT JOIN pedidos p ON pd.fkpedido_detalle = p.pkid_pedido
+                WHERE pr.fknegocioasociado_prod = %s 
+                AND p.estado_pedido = 'entregado'
+                AND p.fecha_pedido >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY c.pkid_cp, c.desc_cp
+                ORDER BY total DESC
+                LIMIT 8
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                categorias_labels.append(f'"{row[0]}"')
+                categorias_data.append(float(row[1] or 0))
+        
+        # 6. ESTADO DE PEDIDOS
+        with connection.cursor() as cursor:
+            # Pedidos pendientes
+            cursor.execute("""
+                SELECT COUNT(*) FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND estado_pedido IN ('pendiente', 'confirmado')
+            """, [negocio.pkid_neg])
+            pedidos_pendientes = cursor.fetchone()[0] or 0
+            
+            # Pedidos en proceso
+            cursor.execute("""
+                SELECT COUNT(*) FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND estado_pedido IN ('preparando', 'enviado')
+            """, [negocio.pkid_neg])
+            pedidos_proceso = cursor.fetchone()[0] or 0
+            
+            # Pedidos completados
+            cursor.execute("""
+                SELECT COUNT(*) FROM pedidos 
+                WHERE fknegocio_pedido = %s 
+                AND estado_pedido = 'entregado'
+                AND fecha_pedido >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            """, [negocio.pkid_neg])
+            pedidos_completados = cursor.fetchone()[0] or 0
+        
+        # 7. PRODUCTOS DESTACADOS (más vendidos)
+        productos_destacados = []
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT p.pkid_prod, p.nom_prod, p.precio_prod, p.stock_prod, p.img_prod
+                FROM productos p
+                LEFT JOIN detalles_pedido dp ON p.pkid_prod = dp.fkproducto_detalle
+                LEFT JOIN pedidos ped ON dp.fkpedido_detalle = ped.pkid_pedido
+                WHERE p.fknegocioasociado_prod = %s
+                AND ped.estado_pedido = 'entregado'
+                AND ped.fecha_pedido >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                GROUP BY p.pkid_prod, p.nom_prod, p.precio_prod, p.stock_prod, p.img_prod
+                ORDER BY SUM(dp.cantidad_detalle) DESC
+                LIMIT 5
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                productos_destacados.append({
+                    'pkid_prod': row[0],
+                    'nom_prod': row[1],
+                    'precio_prod': float(row[2]),
+                    'stock_prod': row[3],
+                    'img_prod': row[4]
+                })
+        
+        # 8. PEDIDOS RECIENTES
+        pedidos_recientes = []
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    p.pkid_pedido,
+                    p.estado_pedido,
+                    p.total_pedido,
+                    p.fecha_pedido,
+                    u.first_name,
+                    u.username
+                FROM pedidos p
+                JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
+                JOIN auth_user u ON up.fkuser_id = u.id
+                WHERE p.fknegocio_pedido = %s
+                ORDER BY p.fecha_pedido DESC
+                LIMIT 5
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                pedidos_recientes.append({
+                    'id': row[0],
+                    'estado': row[1],
+                    'total': float(row[2]),
+                    'fecha_creacion': row[3],
+                    'cliente_nombre': row[4] or row[5] or f"Usuario {row[0]}"
+                })
+        
+        # 9. MOVIMIENTOS RECIENTES
+        movimientos_recientes = []
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    ms.fecha_movimiento,
+                    COALESCE(p.nom_prod, 'PRODUCTO ELIMINADO') as producto,
+                    ms.tipo_movimiento,
+                    ms.motivo,
+                    ms.cantidad,
+                    COALESCE(u.first_name, 'Sistema') as usuario_nombre
+                FROM movimientos_stock ms
+                LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
+                LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
+                LEFT JOIN auth_user u ON up.fkuser_id = u.id
+                WHERE ms.negocio_id = %s
+                ORDER BY ms.fecha_movimiento DESC
+                LIMIT 8
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                movimientos_recientes.append({
+                    'fecha': row[0],
+                    'producto': row[1],
+                    'tipo': row[2],
+                    'motivo': row[3],
+                    'cantidad': row[4],
+                    'usuario': row[5]
+                })
+        
         contexto = {
             'nombre': datos['nombre_usuario'],
             'perfil': datos['perfil'],
-            'negocio_activo': datos['negocio_activo']
+            'negocio_activo': negocio,
+            
+            # Métricas principales
+            'ventas_hoy': ventas_hoy,
+            'total_ventas_hoy': total_ventas_hoy,
+            'clientes_activos': clientes_activos,
+            'crecimiento_clientes': crecimiento_clientes,
+            'total_productos': total_productos,
+            'productos_stock_bajo': productos_stock_bajo,
+            'productos_sin_stock': productos_sin_stock,
+            'productos_disponibles': productos_disponibles,
+            'ingresos_mensuales': ingresos_mensuales,
+            'crecimiento_ingresos': crecimiento_ingresos,
+            
+            # Datos para gráficos
+            'ventas_labels': ventas_labels,
+            'ventas_data': ventas_data,
+            'categorias_labels': categorias_labels,
+            'categorias_data': categorias_data,
+            'pedidos_pendientes': pedidos_pendientes,
+            'pedidos_proceso': pedidos_proceso,
+            'pedidos_completados': pedidos_completados,
+            
+            # Listas
+            'productos_destacados': productos_destacados,
+            'pedidos_recientes': pedidos_recientes,
+            'movimientos_recientes': movimientos_recientes,
         }
+        
         return render(request, 'Vendedor/Dashboard_V.html', contexto)
         
     except Exception as e:
-        messages.error(request, f"Error: {str(e)}")
+        print(f"ERROR en vendedor_dash: {str(e)}")
+        messages.error(request, f"Error al cargar el dashboard: {str(e)}")
         return redirect('principal')
 
 # ==================== VISTAS VENDEDOR - PRODUCTOS ====================
@@ -767,9 +1057,15 @@ def obtener_datos_producto_P(request, producto_id):
 # ==================== VISTAS VENDEDOR - ELIMINAR PRODUCTO ====================
 @login_required(login_url='login')
 def eliminar_producto_P(request, producto_id):
-    """Vista para eliminar producto - CON REGISTRO DE STOCK"""
+    """Vista para eliminar producto - ELIMINACIÓN COMPLETA SIN RESTRICCIONES"""
     if request.method == 'POST':
         try:
+            print(f"=== DEBUG ELIMINAR_PRODUCTO: Iniciando eliminación producto {producto_id} ===")
+            
+            # Obtener el motivo de eliminación del formulario
+            motivo_eliminacion = request.POST.get('motivo_eliminacion', 'Sin motivo especificado')
+            print(f"DEBUG: Motivo de eliminación: {motivo_eliminacion}")
+            
             # Verificar permisos y obtener negocio seleccionado
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
             
@@ -792,41 +1088,97 @@ def eliminar_producto_P(request, producto_id):
             
             nombre_producto = producto.nom_prod
             stock_eliminado = producto.stock_prod
+
+            with connection.cursor() as cursor:
+                print(f"DEBUG: Iniciando eliminación completa para producto {producto_id}")
+                
+                # 1. OBTENER INFORMACIÓN DE VARIANTES
+                cursor.execute("""
+                    SELECT id_variante, nombre_variante, stock_variante 
+                    FROM variantes_producto 
+                    WHERE producto_id = %s
+                """, [producto_id])
+                variantes_info = cursor.fetchall()
+                print(f"DEBUG: Variantes encontradas: {len(variantes_info)}")
+                
+                # 2. ELIMINAR TODOS LOS MOVIMIENTOS DE STOCK RELACIONADOS CON LAS VARIANTES
+                for variante_id, nombre_variante, stock_variante in variantes_info:
+                    cursor.execute("""
+                        DELETE FROM movimientos_stock 
+                        WHERE variante_id = %s
+                    """, [variante_id])
+                    print(f"✅ DEBUG: Movimientos de variante {variante_id} eliminados: {cursor.rowcount}")
+                
+                # 3. ELIMINAR LAS VARIANTES
+                cursor.execute("""
+                    DELETE FROM variantes_producto 
+                    WHERE producto_id = %s
+                """, [producto_id])
+                print(f"✅ DEBUG: Variantes eliminadas: {cursor.rowcount}")
+                
+                # 4. ELIMINAR TODOS LOS MOVIMIENTOS DE STOCK DEL PRODUCTO PRINCIPAL
+                cursor.execute("""
+                    DELETE FROM movimientos_stock 
+                    WHERE producto_id = %s AND negocio_id = %s
+                """, [producto_id, negocio.pkid_neg])
+                print(f"✅ DEBUG: Movimientos del producto eliminados: {cursor.rowcount}")
+                
+                # 5. ELIMINAR PROMOCIONES RELACIONADAS
+                cursor.execute("""
+                    DELETE FROM promociones 
+                    WHERE fkproducto_id = %s AND fknegocio_id = %s
+                """, [producto_id, negocio.pkid_neg])
+                print(f"✅ DEBUG: Promociones eliminadas: {cursor.rowcount}")
+                
+                # 6. VERIFICAR SI HAY PEDIDOS RELACIONADOS
+                cursor.execute("""
+                    SELECT COUNT(*) FROM detalles_pedido 
+                    WHERE fkproducto_detalle = %s
+                """, [producto_id])
+                tiene_pedidos = cursor.fetchone()[0]
+                
+                if tiene_pedidos > 0:
+                    # Si tiene pedidos, no podemos eliminar, mejor desactivar
+                    print(f"⚠️ DEBUG: Producto tiene {tiene_pedidos} pedidos relacionados, desactivando en lugar de eliminar")
+                    
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET estado_prod = 'no_disponible', stock_prod = 0
+                        WHERE pkid_prod = %s
+                    """, [producto_id])
+                    
+                    messages.success(request, f"✅ Producto '{nombre_producto}' ha sido desactivado (tiene pedidos históricos). Motivo: {motivo_eliminacion}")
+                    return redirect('Crud_V')
             
-            # REGISTRAR MOVIMIENTO DE STOCK POR ELIMINACIÓN DEL PRODUCTO
-            if stock_eliminado > 0:
-                try:
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            INSERT INTO movimientos_stock 
-                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                             stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
-                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        """, [
-                            producto_id, 
-                            negocio.pkid_neg, 
-                            'salida', 
-                            'eliminacion_producto', 
-                            stock_eliminado, 
-                            stock_eliminado,  # Stock anterior
-                            0,  # Stock nuevo es 0 (producto eliminado)
-                            perfil.id, 
-                            datetime.now()
-                        ])
-                except Exception as e:
-                    print(f"Error registrando movimiento al eliminar producto (puede ignorarse): {e}")
+            # 7. FINALMENTE: Eliminar el producto (si no tiene pedidos)
+            # Usar SQL directo para evitar problemas con Django ORM
+            with connection.cursor() as cursor:
+                cursor.execute("DELETE FROM productos WHERE pkid_prod = %s", [producto_id])
+                print(f"✅ DEBUG: Producto {producto_id} eliminado físicamente")
             
-            # Ahora eliminar el producto
-            producto.delete()
-            
-            messages.success(request, f"Producto '{nombre_producto}' eliminado exitosamente.")
+            messages.success(request, f"✅ Producto '{nombre_producto}' eliminado exitosamente. Motivo: {motivo_eliminacion}")
             
         except Productos.DoesNotExist:
             messages.error(request, "El producto no existe o no tienes permisos para eliminarlo.")
         except Negocios.DoesNotExist:
             messages.error(request, "El negocio seleccionado no existe o no tienes permisos.")
         except Exception as e:
-            messages.error(request, f"Error al eliminar producto: {str(e)}")
+            print(f"❌ ERROR al eliminar producto: {str(e)}")
+            import traceback
+            print(f"TRACEBACK COMPLETO: {traceback.format_exc()}")
+            
+            # Si hay error de constraint, desactivar el producto
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET estado_prod = 'no_disponible', stock_prod = 0
+                        WHERE pkid_prod = %s
+                    """, [producto_id])
+                messages.success(request, f"✅ Producto '{nombre_producto}' ha sido desactivado debido a restricciones de base de datos. Motivo: {motivo_eliminacion}")
+            except Exception as e2:
+                print(f"❌ ERROR al desactivar producto: {str(e2)}")
+                messages.error(request, f"Error al eliminar/desactivar producto: {str(e)}")
     
     return redirect('Crud_V')
 
@@ -1097,7 +1449,7 @@ def configurar_negocio(request, negocio_id):
 # ==================== RESEÑAS DEL VENDEDOR ====================
 @login_required(login_url='login')
 def ver_resenas_vendedor(request):
-    """Vista para reseñas usando SQL directo - CON NUEVAS COLUMNAS"""
+    """Vista para reseñas usando SQL directo - CON INFORMACIÓN DE REPORTES"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -1106,7 +1458,7 @@ def ver_resenas_vendedor(request):
         
         negocio = datos['negocio_activo']
         
-        # CONSULTA ACTUALIZADA CON LAS NUEVAS COLUMNAS
+        # CONSULTA ACTUALIZADA CON INFORMACIÓN DE REPORTES
         with connection.cursor() as cursor:
             sql = """
             SELECT 
@@ -1117,21 +1469,36 @@ def ver_resenas_vendedor(request):
                 u.first_name,
                 u.username,
                 r.respuesta_vendedor,
-                r.fecha_respuesta
+                r.fecha_respuesta,
+                CASE WHEN rep.pkid_reporte IS NOT NULL THEN 1 ELSE 0 END as reportada
             FROM resenas_negocios r
             JOIN usuario_perfil up ON r.fkusuario_resena = up.id
             JOIN auth_user u ON up.fkuser_id = u.id
+            LEFT JOIN reportes rep ON r.pkid_resena = rep.fkresena_reporte 
+                AND rep.fknegocio_reportado = %s 
+                AND rep.estado_reporte = 'pendiente'
             WHERE r.fknegocio_resena = %s 
             AND r.estado_resena = 'activa'
             ORDER BY r.fecha_resena DESC
             """
-            cursor.execute(sql, [negocio.pkid_neg])
+            cursor.execute(sql, [negocio.pkid_neg, negocio.pkid_neg])
             resultados = cursor.fetchall()
         
-        # Procesar resultados CON RESPUESTAS
+        # Procesar resultados CON RESPUESTAS Y REPORTES
         resenas_completas = []
+        resenas_respondidas = 0
+        resenas_reportadas = 0
+        
         for row in resultados:
             tiene_respuesta = row[6] is not None and row[6].strip() != ''
+            reportada = bool(row[8])  # Convertir a booleano
+            
+            if tiene_respuesta:
+                resenas_respondidas += 1
+            
+            if reportada:
+                resenas_reportadas += 1
+            
             fecha_respuesta = row[7].strftime('%d %b %Y') if row[7] else ''
             
             resenas_completas.append({
@@ -1142,7 +1509,8 @@ def ver_resenas_vendedor(request):
                 'cliente': row[4] or row[5] or f"Usuario {row[0]}",
                 'respuesta': row[6] or '',
                 'tiene_respuesta': tiene_respuesta,
-                'fecha_respuesta': fecha_respuesta
+                'fecha_respuesta': fecha_respuesta,
+                'reportada': reportada  # Añadido campo reportada
             })
         
         # Calcular estadísticas
@@ -1160,6 +1528,8 @@ def ver_resenas_vendedor(request):
             'resenas': resenas_completas,
             'total_resenas': total_resenas,
             'promedio_estrellas': promedio_estrellas,
+            'resenas_respondidas': resenas_respondidas,
+            'resenas_reportadas': resenas_reportadas,  # Nueva estadística
         }
         
         return render(request, 'Vendedor/ver_resenas.html', contexto)
@@ -1507,7 +1877,7 @@ def ver_recibo_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def cambiar_estado_pedido(request, pedido_id):
-    """Vista para cambiar estado del pedido con manejo CORREGIDO de stock para variantes Y ENVÍO DE CORREOS"""
+    """Vista para cambiar estado del pedido - SOLO DESCONTAR AL ENTREGAR"""
     if request.method == 'POST':
         try:
             nuevo_estado = request.POST.get('nuevo_estado')
@@ -1521,7 +1891,6 @@ def cambiar_estado_pedido(request, pedido_id):
                 return redirect('principal')
             
             negocio = datos['negocio_activo']
-            perfil_id = datos['perfil'].id
             
             with connection.cursor() as cursor:
                 # 1. Obtener el estado actual del pedido
@@ -1545,253 +1914,39 @@ def cambiar_estado_pedido(request, pedido_id):
                     WHERE pkid_pedido = %s AND fknegocio_pedido = %s
                 """, [nuevo_estado, datetime.now(), pedido_id, negocio.pkid_neg])
                 
-                # 3. ✅ CORRECCIÓN CRÍTICA: OBTENER DETALLES DEL PEDIDO CON VARIANTES DESDE CARRITO_ITEM
-                if nuevo_estado in ['enviado', 'entregado'] and estado_actual not in ['enviado', 'entregado']:
-                    print("🔄 DEBUG: Descontando stock por envío/entrega - CON VARIANTES")
+                # 3. ✅ NUEVA LÓGICA: SOLO DESCONTAR STOCK CUANDO SE MARCA COMO "ENTREGADO"
+                if nuevo_estado == 'entregado' and estado_actual != 'entregado':
+                    print("🔄 DEBUG: Descontando stock por ENTREGA definitiva")
                     
-                    # ✅ NUEVA CONSULTA: Obtener productos con sus variantes desde carrito_item usando los nombres REALES de columnas
-                    cursor.execute("""
-                        SELECT 
-                            ci.fkproducto,
-                            ci.cantidad,
-                            ci.variante_id,
-                            ci.variante_seleccionada
-                        FROM carrito_item ci
-                        INNER JOIN carrito c ON ci.fkcarrito = c.pkid_carrito
-                        INNER JOIN pedidos p ON c.fkusuario_carrito = p.fkusuario_pedido
-                        WHERE p.pkid_pedido = %s
-                    """, [pedido_id])
+                    # Descontar stock definitivamente
+                    stock_descontado = descontar_stock_pedido_al_entregar(pedido_id)
                     
-                    items_carrito = cursor.fetchall()
-                    print(f"🔄 DEBUG: Items encontrados en carrito: {len(items_carrito)}")
-                    
-                    for (producto_id, cantidad, variante_id, variante_nombre) in items_carrito:
-                        
-                        print(f"🔄 DEBUG: Procesando producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
-                        
-                        if variante_id:
-                            # ✅ ES UNA VARIANTE - Descontar de la variante
-                            cursor.execute("""
-                                SELECT stock_variante, nombre_variante 
-                                FROM variantes_producto 
-                                WHERE id_variante = %s AND producto_id = %s
-                            """, [variante_id, producto_id])
-                            
-                            resultado_variante = cursor.fetchone()
-                            if resultado_variante:
-                                stock_variante, nombre_variante = resultado_variante
-                                nuevo_stock_variante = stock_variante - cantidad
-                                
-                                print(f"🔄 DEBUG: Variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
-                                
-                                if nuevo_stock_variante < 0:
-                                    print(f"⚠️ ADVERTENCIA: Stock negativo para variante {nombre_variante}, ajustando a 0")
-                                    nuevo_stock_variante = 0
-                                
-                                # Actualizar stock de la variante
-                                cursor.execute("""
-                                    UPDATE variantes_producto 
-                                    SET stock_variante = %s
-                                    WHERE id_variante = %s
-                                """, [nuevo_stock_variante, variante_id])
-                                
-                                # Registrar movimiento de salida para la variante
-                                try:
-                                    cursor.execute("""
-                                        INSERT INTO movimientos_stock 
-                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                                         stock_anterior, stock_nuevo, usuario_id, pedido_id, variante_id, descripcion_variante, fecha_movimiento)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """, [
-                                        producto_id, negocio.pkid_neg, 'salida', 'envio_pedido_variante', 
-                                        cantidad, stock_variante, nuevo_stock_variante,
-                                        perfil_id, pedido_id, variante_id, nombre_variante, datetime.now()
-                                    ])
-                                    print(f"🔄 DEBUG: Movimiento registrado para variante {nombre_variante}")
-                                except Exception as e:
-                                    print(f"🔄 DEBUG: Error registrando movimiento de variante: {e}")
-                            else:
-                                print(f"❌ ERROR: Variante {variante_id} no encontrada para producto {producto_id}")
-                        
-                        else:
-                            # ✅ ES PRODUCTO BASE - Descontar del producto base
-                            cursor.execute("""
-                                SELECT stock_prod, nom_prod FROM productos 
-                                WHERE pkid_prod = %s
-                            """, [producto_id])
-                            
-                            resultado_producto = cursor.fetchone()
-                            if resultado_producto:
-                                stock_actual, nombre_producto = resultado_producto
-                                nuevo_stock = stock_actual - cantidad
-                                print(f"🔄 DEBUG: Producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
-                                
-                                if nuevo_stock < 0:
-                                    print(f"⚠️ ADVERTENCIA: Stock negativo para {nombre_producto}, ajustando a 0")
-                                    nuevo_stock = 0
-                                
-                                # Actualizar stock del producto base
-                                cursor.execute("""
-                                    UPDATE productos 
-                                    SET stock_prod = %s,
-                                        estado_prod = CASE 
-                                            WHEN %s <= 0 THEN 'agotado'
-                                            ELSE 'disponible'
-                                        END
-                                    WHERE pkid_prod = %s
-                                """, [nuevo_stock, nuevo_stock, producto_id])
-                                
-                                # Registrar movimiento de salida para producto base
-                                try:
-                                    cursor.execute("""
-                                        INSERT INTO movimientos_stock 
-                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                                         stock_anterior, stock_nuevo, usuario_id, pedido_id, fecha_movimiento)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """, [
-                                        producto_id, negocio.pkid_neg, 'salida', 'envio_pedido', 
-                                        cantidad, stock_actual, nuevo_stock,
-                                        perfil_id, pedido_id, datetime.now()
-                                    ])
-                                    print(f"🔄 DEBUG: Movimiento registrado para producto base {nombre_producto}")
-                                except Exception as e:
-                                    print(f"🔄 DEBUG: Error registrando movimiento: {e}")
-                    
-                    messages.success(request, f"✅ Pedido {nuevo_estado}. Stock descontado correctamente.")
-                
-                elif nuevo_estado == 'cancelado' and estado_actual not in ['cancelado']:
-                    print("🔄 DEBUG: Procesando cancelación - reabasteciendo stock CON VARIANTES")
-                    
-                    # ✅ CORRECCIÓN: Obtener items del carrito para reabastecer variantes
-                    cursor.execute("""
-                        SELECT 
-                            ci.fkproducto,
-                            ci.cantidad,
-                            ci.variante_id,
-                            ci.variante_seleccionada
-                        FROM carrito_item ci
-                        INNER JOIN carrito c ON ci.fkcarrito = c.pkid_carrito
-                        INNER JOIN pedidos p ON c.fkusuario_carrito = p.fkusuario_pedido
-                        WHERE p.pkid_pedido = %s
-                    """, [pedido_id])
-                    
-                    items_carrito = cursor.fetchall()
-                    
-                    stock_reabastecido = False
-                    for (producto_id, cantidad, variante_id, variante_nombre) in items_carrito:
-                        
-                        print(f"🔄 DEBUG: Reabasteciendo producto ID: {producto_id}, Variante ID: {variante_id}, Cantidad: {cantidad}")
-                        
-                        if variante_id:
-                            # ✅ ES UNA VARIANTE - Reabastecer la variante
-                            cursor.execute("""
-                                SELECT stock_variante, nombre_variante 
-                                FROM variantes_producto 
-                                WHERE id_variante = %s
-                            """, [variante_id])
-                            
-                            resultado_variante = cursor.fetchone()
-                            if resultado_variante:
-                                stock_variante, nombre_variante = resultado_variante
-                                nuevo_stock_variante = stock_variante + cantidad
-                                print(f"🔄 DEBUG: Reabasteciendo variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
-                                
-                                # Actualizar stock de la variante
-                                cursor.execute("""
-                                    UPDATE variantes_producto 
-                                    SET stock_variante = %s
-                                    WHERE id_variante = %s
-                                """, [nuevo_stock_variante, variante_id])
-                                
-                                # Registrar movimiento de entrada para la variante
-                                try:
-                                    cursor.execute("""
-                                        INSERT INTO movimientos_stock 
-                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                                         stock_anterior, stock_nuevo, usuario_id, pedido_id, variante_id, descripcion_variante, fecha_movimiento)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """, [
-                                        producto_id, negocio.pkid_neg, 'entrada', 'cancelacion_pedido_variante', 
-                                        cantidad, stock_variante, nuevo_stock_variante,
-                                        perfil_id, pedido_id, variante_id, nombre_variante, datetime.now()
-                                    ])
-                                except Exception as e:
-                                    print(f"🔄 DEBUG: Error registrando movimiento de variante: {e}")
-                        
-                        else:
-                            # ✅ ES PRODUCTO BASE - Reabastecer producto base
-                            cursor.execute("""
-                                SELECT stock_prod, nom_prod FROM productos 
-                                WHERE pkid_prod = %s
-                            """, [producto_id])
-                            
-                            resultado_producto = cursor.fetchone()
-                            if resultado_producto:
-                                stock_actual, nombre_producto = resultado_producto
-                                nuevo_stock = stock_actual + cantidad
-                                print(f"🔄 DEBUG: Reabasteciendo producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
-                                
-                                # Actualizar stock del producto base
-                                cursor.execute("""
-                                    UPDATE productos 
-                                    SET stock_prod = %s,
-                                        estado_prod = CASE 
-                                            WHEN %s > 0 THEN 'disponible'
-                                            ELSE estado_prod
-                                        END
-                                    WHERE pkid_prod = %s
-                                """, [nuevo_stock, nuevo_stock, producto_id])
-                                
-                                # Registrar movimiento de entrada para producto base
-                                try:
-                                    cursor.execute("""
-                                        INSERT INTO movimientos_stock 
-                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                                         stock_anterior, stock_nuevo, usuario_id, pedido_id, fecha_movimiento)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """, [
-                                        producto_id, negocio.pkid_neg, 'entrada', 'cancelacion_pedido', 
-                                        cantidad, stock_actual, nuevo_stock,
-                                        perfil_id, pedido_id, datetime.now()
-                                    ])
-                                except Exception as e:
-                                    print(f"🔄 DEBUG: Error registrando movimiento: {e}")
-                        
-                        stock_reabastecido = True
-                    
-                    if stock_reabastecido:
-                        messages.success(request, f"✅ Pedido cancelado. Stock reabastecido. Motivo: {motivo_cancelacion}")
+                    if stock_descontado:
+                        messages.success(request, f"✅ Pedido marcado como ENTREGADO. Stock descontado definitivamente.")
                     else:
-                        messages.success(request, f"✅ Pedido cancelado. Motivo: {motivo_cancelacion}")
+                        messages.warning(request, f"⚠️ Pedido marcado como ENTREGADO, pero hubo problemas al descontar el stock.")
+                
+                # 4. ✅ CANCELACIÓN: No hacer nada con el stock (nunca se descontó)
+                elif nuevo_estado == 'cancelado' and estado_actual != 'cancelado':
+                    print("🔄 DEBUG: Cancelando pedido - NO se reabastece stock porque nunca se descontó")
+                    messages.success(request, f"✅ Pedido cancelado. Motivo: {motivo_cancelacion}")
                 
                 else:
-                    # Para otros cambios de estado
+                    # Para otros cambios de estado (confirmado, preparando, enviado)
                     messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}")
+                    print(f"🔄 DEBUG: Cambio de estado normal - no se afecta el stock")
                 
-                # 4. ✅ ENVIAR CORREO DE ACTUALIZACIÓN DE ESTADO - VERSIÓN MEJORADA
+                # 5. Enviar correo de actualización
                 try:
-                    print(f"📧 INTENTANDO ENVIAR CORREO: Pedido #{pedido_id}, Estado: {nuevo_estado}")
+                    print(f"📧 Intentando enviar correo para pedido #{pedido_id}")
                     correo_enviado = enviar_correo_estado_pedido(pedido_id, nuevo_estado)
                     if correo_enviado:
-                        print(f"✅ CORREO ENVIADO EXITOSAMENTE para pedido #{pedido_id}")
-                        messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}. Correo enviado al cliente.")
-                    else:
-                        print(f"⚠️ NO SE PUDO ENVIAR EL CORREO para pedido #{pedido_id}")
-                        messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}.")
-                        
+                        print(f"✅ Correo enviado exitosamente")
                 except Exception as e:
-                    print(f"❌ ERROR EN EL PROCESO DE ENVÍO DE CORREO: {e}")
-                    import traceback
-                    print(f"TRACEBACK CORREO:")
-                    print(f"{traceback.format_exc()}")
-                    # No fallar la operación si hay error en el correo
-                    messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}.")
+                    print(f"❌ Error en el proceso de envío de correo: {e}")
                 
         except Exception as e:
             print(f"❌ ERROR al cambiar estado: {str(e)}")
-            import traceback
-            print(f"TRACEBACK COMPLETO:")
-            print(f"{traceback.format_exc()}")
             messages.error(request, f"Error al cambiar el estado del pedido: {str(e)}")
     
     return redirect('gestionar_ventas')
@@ -2151,3 +2306,662 @@ def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
     except Exception as e:
         print(f"❌ Error enviando correo: {e}")
         return False
+    
+# ==================== FIN DE CÓDIGO PARA GESTIÓN DE VENTAS VENDEDOR ====================
+
+# En la función descargar_plantilla_productos en vendedor_views.py
+
+@login_required(login_url='login')
+def descargar_plantilla_productos(request):
+    """Vista para descargar plantilla Excel de productos"""
+    try:
+        # Crear un libro de Excel con pandas
+        with pd.ExcelWriter('plantilla_productos.xlsx', engine='openpyxl') as writer:
+            
+            # Hoja de INSTRUCCIONES MEJORADA
+            instrucciones_data = {
+                'SECCIÓN': [
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE', 
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '📋 PRODUCTOS BASE',
+                    '',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '🎨 VARIANTES (Opcional)',
+                    '',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE',
+                    '⚠️ IMPORTANTE'
+                ],
+                'COLUMNA': [
+                    'nombre*',
+                    'precio*',
+                    'descripcion',
+                    'stock_inicial', 
+                    'categoria*',
+                    'estado',
+                    '',
+                    'producto_base*',
+                    'nombre_variante*',
+                    'precio_adicional',
+                    'stock',
+                    'estado',
+                    '',
+                    'FORMATO',
+                    'OBLIGATORIOS',
+                    'CATEGORÍAS',
+                    'VINCULACIÓN'
+                ],
+                'DESCRIPCIÓN': [
+                    'Nombre único del producto (Ej: "Helado de Vainilla")',
+                    'Precio base del producto (Ej: 4000)',
+                    'Descripción opcional del producto',
+                    'Stock inicial (Ej: 10). Por defecto: 0',
+                    'Nombre de la categoría (Ej: "Helado"). Se crea automáticamente si no existe',
+                    'Estado: "disponible", "no_disponible" o "agotado". Por defecto: "disponible"',
+                    '',
+                    'Nombre EXACTO del producto base (debe existir en la hoja PRODUCTOS_BASE)',
+                    'Nombre único de la variante (Ej: "Vaso Grande")',
+                    'Precio adicional sobre el precio base (Ej: 1000). Por defecto: 0',
+                    'Stock de la variante (Ej: 5). Por defecto: 0',
+                    'Estado: "activa" o "inactiva". Por defecto: "activa"',
+                    '',
+                    'Los campos con * son obligatorios',
+                    'Los nombres de productos deben ser únicos',
+                    'Las categorías se crearán automáticamente si no existen',
+                    'Las variantes se vinculan por nombre EXACTO del producto base'
+                ]
+            }
+            df_instrucciones = pd.DataFrame(instrucciones_data)
+            df_instrucciones.to_excel(writer, sheet_name='INSTRUCCIONES', index=False)
+            
+            # Hoja de PRODUCTOS_BASE VACÍA con solo los encabezados
+            productos_data = {
+                'nombre*': [],
+                'precio*': [], 
+                'descripcion': [],
+                'stock_inicial': [],
+                'categoria*': [],
+                'estado': []
+            }
+            df_productos = pd.DataFrame(productos_data)
+            df_productos.to_excel(writer, sheet_name='PRODUCTOS_BASE', index=False)
+            
+            # Hoja de VARIANTES VACÍA con solo los encabezados
+            variantes_data = {
+                'producto_base*': [],
+                'nombre_variante*': [],
+                'precio_adicional': [],
+                'stock': [],
+                'estado': []
+            }
+            df_variantes = pd.DataFrame(variantes_data)
+            df_variantes.to_excel(writer, sheet_name='VARIANTES', index=False)
+        
+        # Leer el archivo generado y enviarlo como respuesta
+        with open('plantilla_productos.xlsx', 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="plantilla_productos.xlsx"'
+        
+        # Eliminar el archivo temporal
+        os.remove('plantilla_productos.xlsx')
+        
+        return response
+        
+    except Exception as e:
+        messages.error(request, f'Error al generar plantilla: {str(e)}')
+        return redirect('Crud_V')
+
+# En Software/views/vendedor_views.py - función importar_productos_excel
+
+@login_required(login_url='login')
+def importar_productos_excel(request):
+    """Vista para importar productos desde Excel - ACTUALIZADA CON REGISTRO DE VARIANTES"""
+    if request.method == 'POST' and request.FILES.get('archivo_excel'):
+        try:
+            archivo = request.FILES['archivo_excel']
+            sobrescribir = request.POST.get('sobrescribir_existentes') == 'on'
+            crear_categorias = request.POST.get('crear_categorias') == 'on'
+            
+            # Validar extensión
+            if not archivo.name.endswith(('.xlsx', '.xls')):
+                messages.error(request, '❌ Solo se permiten archivos Excel (.xlsx, .xls)')
+                return redirect('Crud_V')
+            
+            # Obtener datos del vendedor
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('Crud_V')
+            
+            negocio = datos['negocio_activo']
+            perfil_id = datos['perfil'].id
+            
+            # Leer el archivo Excel
+            try:
+                # Leer todas las hojas
+                df_productos = pd.read_excel(archivo, sheet_name='PRODUCTOS_BASE')
+                df_variantes = pd.read_excel(archivo, sheet_name='VARIANTES')
+            except Exception as e:
+                messages.error(request, f'❌ Error al leer el archivo Excel: {str(e)}')
+                return redirect('Crud_V')
+            
+            # Contadores para resultados
+            productos_creados = 0
+            productos_actualizados = 0
+            variantes_creadas = 0
+            movimientos_registrados = 0
+            errores = []
+            
+            # ========== PROCESAR PRODUCTOS BASE ==========
+            for index, row in df_productos.iterrows():
+                try:
+                    # Validar campos obligatorios
+                    if pd.isna(row['nombre*']) or pd.isna(row['precio*']) or pd.isna(row['categoria*']):
+                        errores.append(f"Fila {index+2}: Campos obligatorios faltantes")
+                        continue
+                    
+                    nombre = str(row['nombre*']).strip()
+                    precio = float(row['precio*'])
+                    descripcion = str(row['descripcion']) if not pd.isna(row['descripcion']) else ""
+                    stock = int(row['stock_inicial']) if not pd.isna(row['stock_inicial']) else 0
+                    categoria_nombre = str(row['categoria*']).strip()
+                    estado = str(row['estado']).lower() if not pd.isna(row['estado']) else 'disponible'
+                    
+                    # Buscar o crear categoría
+                    try:
+                        categoria = CategoriaProductos.objects.get(desc_cp__iexact=categoria_nombre)
+                    except CategoriaProductos.DoesNotExist:
+                        if crear_categorias:
+                            categoria = CategoriaProductos.objects.create(desc_cp=categoria_nombre)
+                        else:
+                            errores.append(f"'{nombre}': Categoría '{categoria_nombre}' no existe")
+                            continue
+                    
+                    # Verificar si el producto ya existe
+                    producto_existente = Productos.objects.filter(
+                        nom_prod__iexact=nombre,
+                        fknegocioasociado_prod=negocio
+                    ).first()
+                    
+                    stock_anterior = 0
+                    if producto_existente:
+                        stock_anterior = producto_existente.stock_prod
+                        
+                    if producto_existente and sobrescribir:
+                        # Actualizar producto existente
+                        producto_existente.precio_prod = precio
+                        producto_existente.desc_prod = descripcion
+                        producto_existente.stock_prod = stock
+                        producto_existente.fkcategoria_prod = categoria
+                        producto_existente.estado_prod = estado
+                        producto_existente.save()
+                        productos_actualizados += 1
+                        producto = producto_existente
+                    elif producto_existente:
+                        errores.append(f"'{nombre}': Ya existe (usar sobrescribir)")
+                        producto = producto_existente
+                    else:
+                        # Crear nuevo producto
+                        producto = Productos.objects.create(
+                            nom_prod=nombre,
+                            precio_prod=precio,
+                            desc_prod=descripcion,
+                            stock_prod=stock,
+                            fkcategoria_prod=categoria,
+                            estado_prod=estado,
+                            fknegocioasociado_prod=negocio
+                        )
+                        productos_creados += 1
+                    
+                    # ✅ REGISTRAR MOVIMIENTO DE STOCK PARA PRODUCTO BASE SI HAY STOCK INICIAL
+                    if stock > 0:
+                        try:
+                            with connection.cursor() as cursor:
+                                cursor.execute("""
+                                    INSERT INTO movimientos_stock 
+                                    (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                                     stock_anterior, stock_nuevo, usuario_id, fecha_movimiento)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                """, [
+                                    producto.pkid_prod,
+                                    negocio.pkid_neg,
+                                    'entrada',
+                                    'importacion_excel_producto',
+                                    stock,
+                                    stock_anterior,
+                                    stock,
+                                    perfil_id,
+                                    datetime.now()
+                                ])
+                            movimientos_registrados += 1
+                        except Exception as e:
+                            print(f"Error registrando movimiento producto {nombre}: {e}")
+                    
+                except Exception as e:
+                    nombre_producto = str(row['nombre*'])[:50] if not pd.isna(row['nombre*']) else f"Fila {index+2}"
+                    errores.append(f"'{nombre_producto}': {str(e)}")
+                    continue
+            
+            # ========== PROCESAR VARIANTES ==========
+            for index, row in df_variantes.iterrows():
+                try:
+                    # Validar campos obligatorios
+                    if pd.isna(row['producto_base*']) or pd.isna(row['nombre_variante*']):
+                        continue  # Saltar variantes incompletas
+                    
+                    producto_base_nombre = str(row['producto_base*']).strip()
+                    nombre_variante = str(row['nombre_variante*']).strip()
+                    precio_adicional = float(row['precio_adicional']) if not pd.isna(row['precio_adicional']) else 0
+                    stock_variante = int(row['stock']) if not pd.isna(row['stock']) else 0
+                    estado_variante = str(row['estado']).lower() if not pd.isna(row['estado']) else 'activa'
+                    
+                    # Buscar producto base
+                    try:
+                        producto_base = Productos.objects.get(
+                            nom_prod__iexact=producto_base_nombre,
+                            fknegocioasociado_prod=negocio
+                        )
+                    except Productos.DoesNotExist:
+                        errores.append(f"Variante '{nombre_variante}': Producto base '{producto_base_nombre}' no encontrado")
+                        continue
+                    
+                    # Verificar si la variante ya existe
+                    variante_existente = None
+                    stock_anterior_variante = 0
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT id_variante, stock_variante FROM variantes_producto 
+                            WHERE producto_id = %s AND nombre_variante = %s
+                        """, [producto_base.pkid_prod, nombre_variante])
+                        resultado = cursor.fetchone()
+                        if resultado:
+                            variante_existente = resultado[0]
+                            stock_anterior_variante = resultado[1]
+                    
+                    if variante_existente and sobrescribir:
+                        # Actualizar variante existente
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                UPDATE variantes_producto 
+                                SET precio_adicional = %s, stock_variante = %s, estado_variante = %s
+                                WHERE id_variante = %s
+                            """, [precio_adicional, stock_variante, estado_variante, variante_existente])
+                    elif not variante_existente:
+                        # Crear nueva variante
+                        sku_unico = f"VAR-{producto_base.pkid_prod}-{int(timezone.now().timestamp())}"
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                INSERT INTO variantes_producto 
+                                (producto_id, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante, fecha_creacion)
+                                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                            """, [
+                                producto_base.pkid_prod,
+                                nombre_variante,
+                                precio_adicional,
+                                stock_variante,
+                                estado_variante,
+                                sku_unico,
+                                timezone.now()
+                            ])
+                            variante_id = cursor.lastrowid
+                        variantes_creadas += 1
+                        
+                        # ✅ REGISTRAR MOVIMIENTO DE STOCK PARA VARIANTE SI HAY STOCK
+                        if stock_variante > 0:
+                            try:
+                                with connection.cursor() as cursor:
+                                    cursor.execute("""
+                                        INSERT INTO movimientos_stock 
+                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                                         stock_anterior, stock_nuevo, usuario_id, variante_id, descripcion_variante, fecha_movimiento)
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                    """, [
+                                        producto_base.pkid_prod,
+                                        negocio.pkid_neg,
+                                        'entrada',
+                                        'importacion_excel_variante',
+                                        stock_variante,
+                                        0,  # Stock anterior era 0
+                                        stock_variante,
+                                        perfil_id,
+                                        variante_id,
+                                        nombre_variante,
+                                        datetime.now()
+                                    ])
+                                movimientos_registrados += 1
+                            except Exception as e:
+                                print(f"Error registrando movimiento variante {nombre_variante}: {e}")
+                    
+                except Exception as e:
+                    nombre_var = str(row['nombre_variante*'])[:50] if not pd.isna(row['nombre_variante*']) else f"Variante fila {index+2}"
+                    errores.append(f"'{nombre_var}': {str(e)}")
+                    continue
+            
+            # ========== PREPARAR MENSAJE DE RESULTADO ==========
+            mensaje = f"✅ Importación completada: "
+            if productos_creados > 0:
+                mensaje += f"{productos_creados} productos creados, "
+            if productos_actualizados > 0:
+                mensaje += f"{productos_actualizados} productos actualizados, "
+            if variantes_creadas > 0:
+                mensaje += f"{variantes_creadas} variantes creadas, "
+            if movimientos_registrados > 0:
+                mensaje += f"{movimientos_registrados} movimientos registrados."
+            
+            if errores:
+                mensaje += f" ❌ Errores: {len(errores)}"
+                # Guardar errores en sesión para mostrarlos
+                request.session['importacion_errores'] = errores[:10]  # Máximo 10 errores
+            
+            messages.success(request, mensaje)
+            
+        except Exception as e:
+            messages.error(request, f'❌ Error en importación: {str(e)}')
+    
+    return redirect('Crud_V')
+
+
+# En Software/views/vendedor_views.py - función descontar_stock_pedido_al_entregar
+
+def descontar_stock_pedido_al_entregar(pedido_id):
+    """
+    DESCONTAR stock solo cuando el vendedor marca el pedido como ENTREGADO
+    ACTUALIZADA PARA REGISTRAR MOVIMIENTOS DE VARIANTES
+    """
+    try:
+        print(f"🔄 DEBUG descontar_stock_al_entregar: Descontando stock para pedido ENTREGADO {pedido_id}")
+        
+        # Obtener datos del pedido
+        with connection.cursor() as cursor:
+            # Obtener información del pedido y vendedor
+            cursor.execute("""
+                SELECT 
+                    p.pkid_pedido,
+                    p.fknegocio_pedido,
+                    n.fkpropietario_neg
+                FROM pedidos p
+                JOIN negocios n ON p.fknegocio_pedido = n.pkid_neg
+                WHERE p.pkid_pedido = %s
+            """, [pedido_id])
+            
+            pedido_info = cursor.fetchone()
+            if not pedido_info:
+                print("❌ ERROR: Pedido no encontrado")
+                return False
+            
+            pedido_id, negocio_id, propietario_id = pedido_info
+            
+            # ✅ CORRECCIÓN MEJORADA: Obtener items con información de variantes
+            cursor.execute("""
+                SELECT 
+                    dp.fkproducto_detalle,
+                    dp.cantidad_detalle,
+                    dp.precio_unitario,
+                    p.nom_prod,
+                    p.stock_prod,
+                    ci.variante_id,
+                    vp.nombre_variante,
+                    vp.stock_variante
+                FROM detalles_pedido dp
+                JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
+                LEFT JOIN carrito_item ci ON dp.fkpedido_detalle = ci.fkcarrito AND dp.fkproducto_detalle = ci.fkproducto
+                LEFT JOIN variantes_producto vp ON ci.variante_id = vp.id_variante
+                WHERE dp.fkpedido_detalle = %s
+            """, [pedido_id])
+            
+            items_pedido = cursor.fetchall()
+            print(f"🔄 DEBUG: Items encontrados en detalles_pedido: {len(items_pedido)}")
+            
+            movimientos_registrados = 0
+            
+            # Procesar productos del pedido
+            for (producto_id, cantidad, precio, nombre_producto, stock_actual, 
+                 variante_id, nombre_variante, stock_variante) in items_pedido:
+                
+                print(f"🔄 DEBUG: Procesando - Producto: {producto_id}, Variante: {variante_id}, Cantidad: {cantidad}")
+                
+                if variante_id and nombre_variante:
+                    # ✅ ES UNA VARIANTE - Descontar de la variante
+                    print(f"🔄 DEBUG: Procesando VARIANTE {nombre_variante}")
+                    
+                    nuevo_stock_variante = stock_variante - cantidad
+                    
+                    print(f"🔄 DEBUG: Variante {nombre_variante} - Stock: {stock_variante} -> {nuevo_stock_variante}")
+                    
+                    if nuevo_stock_variante < 0:
+                        print(f"⚠️ ADVERTENCIA: Stock negativo para variante {nombre_variante}, ajustando a 0")
+                        nuevo_stock_variante = 0
+                    
+                    # Actualizar stock de la variante
+                    cursor.execute("""
+                        UPDATE variantes_producto 
+                        SET stock_variante = %s
+                        WHERE id_variante = %s
+                    """, [nuevo_stock_variante, variante_id])
+                    
+                    # Registrar movimiento de salida para la variante
+                    try:
+                        cursor.execute("""
+                            INSERT INTO movimientos_stock 
+                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                             stock_anterior, stock_nuevo, usuario_id, pedido_id, variante_id, descripcion_variante, fecha_movimiento)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, [
+                            producto_id, negocio_id, 'salida', 'pedido_entregado_variante', 
+                            cantidad, stock_variante, nuevo_stock_variante,
+                            propietario_id, pedido_id, variante_id, nombre_variante, datetime.now()
+                        ])
+                        movimientos_registrados += 1
+                        print(f"✅ Movimiento registrado para variante {nombre_variante}")
+                    except Exception as e:
+                        print(f"⚠️ Error registrando movimiento de variante: {e}")
+                
+                else:
+                    # ✅ ES PRODUCTO BASE - Descontar del producto base
+                    print(f"🔄 DEBUG: Procesando PRODUCTO BASE {nombre_producto}")
+                    
+                    nuevo_stock = stock_actual - cantidad
+                    print(f"🔄 DEBUG: Producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
+                    
+                    if nuevo_stock < 0:
+                        print(f"⚠️ ADVERTENCIA: Stock negativo para {nombre_producto}, ajustando a 0")
+                        nuevo_stock = 0
+                    
+                    # Actualizar stock del producto base
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET stock_prod = %s,
+                            estado_prod = CASE 
+                                WHEN %s <= 0 THEN 'agotado'
+                                ELSE 'disponible'
+                            END
+                        WHERE pkid_prod = %s
+                    """, [nuevo_stock, nuevo_stock, producto_id])
+                    
+                    # Registrar movimiento de salida para producto base
+                    try:
+                        cursor.execute("""
+                            INSERT INTO movimientos_stock 
+                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                             stock_anterior, stock_nuevo, usuario_id, pedido_id, fecha_movimiento)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        """, [
+                            producto_id, negocio_id, 'salida', 'pedido_entregado', 
+                            cantidad, stock_actual, nuevo_stock,
+                            propietario_id, pedido_id, datetime.now()
+                        ])
+                        movimientos_registrados += 1
+                        print(f"✅ Movimiento registrado para producto base {nombre_producto}")
+                    except Exception as e:
+                        print(f"⚠️ Error registrando movimiento: {e}")
+        
+        print(f"✅ Stock descontado definitivamente para pedido ENTREGADO. Movimientos registrados: {movimientos_registrados}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERROR en descontar_stock_al_entregar: {str(e)}")
+        import traceback
+        print(f"TRACEBACK: {traceback.format_exc()}")
+        return False
+
+def reabastecer_stock_por_cancelacion(pedido_id):
+    """
+    SOLO para uso manual si es necesario reabastecer stock de un pedido cancelado
+    Esta función NO se usa en el flujo normal
+    """
+    try:
+        print(f"🔄 DEBUG reabastecer_stock: Reabasteciendo stock para pedido cancelado {pedido_id}")
+        
+        # Obtener datos del pedido
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    p.fknegocio_pedido,
+                    n.fkpropietario_neg
+                FROM pedidos p
+                JOIN negocios n ON p.fknegocio_pedido = n.pkid_neg
+                WHERE p.pkid_pedido = %s
+            """, [pedido_id])
+            
+            pedido_info = cursor.fetchone()
+            if not pedido_info:
+                return False
+            
+            negocio_id, propietario_id = pedido_info
+            
+            # Obtener items del carrito
+            cursor.execute("""
+                SELECT 
+                    ci.fkproducto,
+                    ci.cantidad,
+                    ci.variante_id,
+                    ci.variante_seleccionada
+                FROM carrito_item ci
+                INNER JOIN carrito c ON ci.fkcarrito = c.pkid_carrito
+                INNER JOIN pedidos p ON c.fkusuario_carrito = p.fkusuario_pedido
+                WHERE p.pkid_pedido = %s
+            """, [pedido_id])
+            
+            items_carrito = cursor.fetchall()
+            
+            for (producto_id, cantidad, variante_id, variante_nombre) in items_carrito:
+                
+                if variante_id:
+                    # Reabastecer variante
+                    cursor.execute("""
+                        SELECT stock_variante, nombre_variante 
+                        FROM variantes_producto 
+                        WHERE id_variante = %s
+                    """, [variante_id])
+                    
+                    resultado_variante = cursor.fetchone()
+                    if resultado_variante:
+                        stock_variante, nombre_variante = resultado_variante
+                        nuevo_stock_variante = stock_variante + cantidad
+                        
+                        cursor.execute("""
+                            UPDATE variantes_producto 
+                            SET stock_variante = %s
+                            WHERE id_variante = %s
+                        """, [nuevo_stock_variante, variante_id])
+                
+                else:
+                    # Reabastecer producto base
+                    cursor.execute("""
+                        SELECT stock_prod, nom_prod FROM productos 
+                        WHERE pkid_prod = %s
+                    """, [producto_id])
+                    
+                    resultado_producto = cursor.fetchone()
+                    if resultado_producto:
+                        stock_actual, nombre_producto = resultado_producto
+                        nuevo_stock = stock_actual + cantidad
+                        
+                        cursor.execute("""
+                            UPDATE productos 
+                            SET stock_prod = %s,
+                                estado_prod = CASE 
+                                    WHEN %s > 0 THEN 'disponible'
+                                    ELSE estado_prod
+                                END
+                            WHERE pkid_prod = %s
+                        """, [nuevo_stock, nuevo_stock, producto_id])
+        
+        print("✅ Stock reabastecido manualmente")
+        return True
+        
+    except Exception as e:
+        print(f"❌ ERROR en reabastecer_stock: {str(e)}")
+        return False
+    
+# ==================== REPORTAR RESEÑAS ====================
+@login_required(login_url='login')
+def reportar_resena(request, resena_id):
+    """Vista para reportar una reseña - CORREGIDA"""
+    if request.method == 'POST':
+        try:
+            # Obtener datos del vendedor
+            datos = obtener_datos_vendedor(request)
+            if not datos or not datos.get('negocio_activo'):
+                return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+            
+            negocio = datos['negocio_activo']
+            perfil = datos['perfil']
+            
+            # Verificar que la reseña pertenece al negocio del vendedor
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT pkid_resena FROM resenas_negocios WHERE pkid_resena = %s AND fknegocio_resena = %s",
+                    [resena_id, negocio.pkid_neg]
+                )
+                if not cursor.fetchone():
+                    return JsonResponse({'success': False, 'error': 'No puedes reportar esta reseña'})
+            
+            # Verificar si ya existe un reporte pendiente para esta reseña
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT pkid_reporte FROM reportes 
+                    WHERE fkresena_reporte = %s AND fknegocio_reportado = %s AND estado_reporte = 'pendiente'
+                """, [resena_id, negocio.pkid_neg])
+                
+                if cursor.fetchone():
+                    return JsonResponse({'success': False, 'error': 'Ya existe un reporte pendiente para esta reseña'})
+            
+            # Obtener datos del formulario
+            motivo = request.POST.get('motivo', 'otro')
+            descripcion = request.POST.get('descripcion', '')
+            
+            # Validar motivo
+            if not motivo:
+                return JsonResponse({'success': False, 'error': 'Debes seleccionar un motivo'})
+            
+            # Insertar el reporte en la base de datos
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO reportes 
+                    (fknegocio_reportado, fkresena_reporte, fkusuario_reporta, motivo, descripcion, estado_reporte, fecha_reporte)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    negocio.pkid_neg,
+                    resena_id,
+                    perfil.id,
+                    motivo,
+                    descripcion,
+                    'pendiente',
+                    datetime.now()
+                ])
+            
+            return JsonResponse({'success': True, 'message': 'Reporte enviado correctamente'})
+            
+        except Exception as e:
+            print(f"ERROR al reportar reseña: {str(e)}")
+            return JsonResponse({'success': False, 'error': 'Error interno del servidor'})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})

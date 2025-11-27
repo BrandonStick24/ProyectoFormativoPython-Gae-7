@@ -1,3 +1,4 @@
+<!-- templates/Vendedor/Stock_V.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
@@ -78,7 +79,6 @@
                     <option value="normal">Stock Normal</option>
                     <option value="bajo">Stock Bajo</option>
                     <option value="critico">Sin Stock</option>
-                    <option value="oferta">En Oferta</option>
                 </select>
             </div>
         </div>
@@ -166,39 +166,6 @@
         </div>
     </div>
 
-    <!-- Alertas de Stock Bajo Mejoradas -->
-    {% if productos_stock_bajo %}
-    <div class="alerta-stock-bajo">
-        <div class="alerta-header">
-            <i class="fas fa-exclamation-triangle"></i>
-            <h5>Productos que Necesitan Atención</h5>
-            <span class="badge-alerta">{{ productos_stock_bajo|length }}</span>
-        </div>
-        <div class="alerta-productos">
-            {% for producto in productos_stock_bajo|slice:":8" %}
-            <div class="producto-alerta">
-                <div class="producto-info">
-                    <span class="producto-nombre">{{ producto.nom_prod }}</span>
-                    <span class="producto-categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
-                </div>
-                <div class="producto-stock">
-                    <span class="stock-cantidad {% if producto.stock_prod == 0 %}stock-critico{% else %}stock-bajo{% endif %}">
-                        {{ producto.stock_prod }} uds
-                    </span>
-                    <button class="btn-accion-rapida" 
-                            data-bs-toggle="modal" 
-                            data-bs-target="#modalEntradaStock"
-                            data-producto-id="{{ producto.pkid_prod }}"
-                            data-producto-nombre="{{ producto.nom_prod }}">
-                        <i class="fas fa-plus"></i>
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
     <!-- Contenido Principal -->
     <div class="row g-4">
         <!-- Columna Izquierda - Gráficas y Tabla -->
@@ -213,12 +180,20 @@
                 </div>
             </div>
 
-            <!-- Productos con Stock Bajo -->
+            <!-- Productos con Stock Bajo - CORREGIDO -->
             <div class="seccion-tabla">
                 <div class="seccion-header">
-                    <h3><i class="fas fa-list me-2"></i>Productos con Stock Bajo</h3>
+                    <h3><i class="fas fa-exclamation-triangle me-2"></i>Productos con Stock Bajo</h3>
                     <a href="{% url 'Crud_V' %}" class="btn btn-primario btn-sm">Gestionar Todos</a>
                 </div>
+                
+                <!-- Debug: Mostrar información de productos_stock_bajo -->
+                {% if productos_stock_bajo %}
+                <div class="alert alert-info mb-3">
+                    <small><strong>DEBUG:</strong> Se encontraron {{ productos_stock_bajo|length }} productos con stock bajo</small>
+                </div>
+                {% endif %}
+                
                 {% if productos_stock_bajo %}
                 <div class="contenedor-tabla">
                     <table class="tabla-stock">
@@ -227,39 +202,56 @@
                                 <th>Producto</th>
                                 <th>Categoría</th>
                                 <th>Stock Actual</th>
+                                <th>Stock Total</th>
                                 <th>Estado</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for producto in productos_stock_bajo %}
-                            <tr class="producto-fila {% if producto.stock_prod == 0 %}fila-critica{% endif %}">
+                            {% for item in productos_stock_bajo %}
+                            <tr class="producto-fila {% if item.stock_total == 0 %}fila-critica{% endif %}">
                                 <td>
                                     <div class="producto-info-tabla">
-                                        <strong>{{ producto.nom_prod }}</strong>
-                                        {% if producto.pkid_prod in productos_oferta_ids %}
+                                        <strong>{{ item.producto.nom_prod }}</strong>
+                                        {% if item.producto.pkid_prod in productos_en_oferta_ids %}
                                         <span class="badge-oferta-tabla">
                                             <i class="fas fa-tag"></i> Oferta
+                                        </span>
+                                        {% endif %}
+                                        {% if item.tiene_variantes %}
+                                        <span class="badge-variante-tabla">
+                                            <i class="fas fa-layer-group"></i> Con Variantes
                                         </span>
                                         {% endif %}
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="categoria-tabla">{{ producto.fkcategoria_prod.desc_cp }}</span>
+                                    <span class="categoria-tabla">{{ item.producto.fkcategoria_prod.desc_cp }}</span>
                                 </td>
                                 <td>
-                                    <span class="stock-tabla {% if producto.stock_prod == 0 %}stock-critico{% else %}stock-bajo{% endif %}">
-                                        {{ producto.stock_prod }} uds
+                                    <span class="stock-tabla {% if item.producto.stock_prod == 0 %}stock-critico{% elif item.producto.stock_prod <= 5 %}stock-bajo{% endif %}">
+                                        {{ item.producto.stock_prod }} uds
                                     </span>
                                 </td>
                                 <td>
+                                    <span class="stock-total-tabla {% if item.stock_total == 0 %}stock-critico{% elif item.stock_total <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                        {{ item.stock_total }} uds
+                                    </span>
+                                    {% if item.tiene_variantes %}
+                                    <small class="text-muted d-block">(+{{ item.stock_variantes }} variantes)</small>
+                                    {% endif %}
+                                </td>
+                                <td>
                                     <div class="estado-stock">
-                                        {% if producto.stock_prod == 0 %}
+                                        {% if item.stock_total == 0 %}
                                         <i class="fas fa-times-circle estado-critico"></i>
                                         <span>Crítico</span>
-                                        {% else %}
+                                        {% elif item.stock_total <= 5 %}
                                         <i class="fas fa-exclamation-triangle estado-bajo"></i>
                                         <span>Bajo</span>
+                                        {% else %}
+                                        <i class="fas fa-check-circle estado-normal"></i>
+                                        <span>Normal</span>
                                         {% endif %}
                                     </div>
                                 </td>
@@ -268,15 +260,21 @@
                                         <button class="btn-accion btn-entrada" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#modalEntradaStock"
-                                                data-producto-id="{{ producto.pkid_prod }}"
-                                                data-producto-nombre="{{ producto.nom_prod }}"
+                                                data-producto-id="{{ item.producto.pkid_prod }}"
+                                                data-producto-nombre="{{ item.producto.nom_prod }}"
                                                 title="Agregar Stock">
                                             <i class="fas fa-plus"></i>
                                         </button>
-                                        <a href="{% url 'Crud_V' %}#producto-{{ producto.pkid_prod }}" 
+                                        <a href="{% url 'Crud_V' %}" 
                                            class="btn-accion btn-editar" title="Editar Producto">
                                             <i class="fas fa-edit"></i>
                                         </a>
+                                        {% if item.tiene_variantes %}
+                                        <a href="{% url 'gestionar_variantes' item.producto.pkid_prod %}" 
+                                           class="btn-accion btn-variante" title="Gestionar Variantes">
+                                            <i class="fas fa-layer-group"></i>
+                                        </a>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -289,6 +287,7 @@
                     <i class="fas fa-check-circle fa-3x"></i>
                     <h4>¡Excelente! Stock Optimizado</h4>
                     <p>No hay productos con stock bajo en este momento</p>
+                    <a href="{% url 'Crud_V' %}" class="btn btn-primario mt-3">Gestionar Productos</a>
                 </div>
                 {% endif %}
             </div>
@@ -300,22 +299,32 @@
             <div class="seccion-movimientos">
                 <div class="seccion-header">
                     <h3><i class="fas fa-history me-2"></i>Movimientos Recientes</h3>
-                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-secundario btn-sm">Ver Todos</a>
+                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-secundario btn-sm">Ver Reportes</a>
                 </div>
                 <div class="contenedor-movimientos">
                     {% if movimientos_recientes %}
                         {% for movimiento in movimientos_recientes %}
-                        <div class="movimiento-item {% if movimiento.tipo == 'entrada' %}movimiento-entrada{% else %}movimiento-salida{% endif %}">
+                        <div class="movimiento-item {% if movimiento.tipo == 'eliminacion' %}movimiento-eliminacion{% elif movimiento.tipo == 'entrada' %}movimiento-entrada{% else %}movimiento-salida{% endif %}">
                             <div class="movimiento-header">
                                 <span class="movimiento-producto">{{ movimiento.producto }}</span>
-                                <span class="movimiento-cantidad {% if movimiento.tipo == 'entrada' %}entrada{% else %}salida{% endif %}">
-                                    {% if movimiento.tipo == 'entrada' %}+{% else %}-{% endif %}{{ movimiento.cantidad }}
+                                <span class="movimiento-cantidad {% if movimiento.tipo == 'entrada' %}entrada{% elif movimiento.tipo == 'eliminacion' %}eliminacion{% else %}salida{% endif %}">
+                                    {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'eliminacion' %}🗑️{% else %}-{% endif %}{{ movimiento.cantidad }}
                                 </span>
                             </div>
                             <div class="movimiento-detalle">
                                 <span class="movimiento-motivo">{{ movimiento.motivo }}</span>
                                 <span class="movimiento-fecha">{{ movimiento.fecha }}</span>
                             </div>
+                            {% if movimiento.variante != 'Producto principal' %}
+                            <div class="movimiento-variante">
+                                <small class="text-muted">{{ movimiento.variante }}</small>
+                            </div>
+                            {% endif %}
+                            {% if movimiento.usuario %}
+                            <div class="movimiento-usuario">
+                                <small class="text-muted">Por: {{ movimiento.usuario }}</small>
+                            </div>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     {% else %}
@@ -340,11 +349,11 @@
                             <div class="oferta-info">
                                 <h6>{{ oferta.producto_nombre }}</h6>
                                 <div class="precios-oferta">
-                                    <span class="precio-original">${{ oferta.precio_original }}</span>
-                                    <span class="precio-actual">${{ oferta.precio_oferta }}</span>
+                                    <span class="precio-original">${{ oferta.precio_original|floatformat:0 }}</span>
+                                    <span class="precio-actual">${{ oferta.precio_oferta|floatformat:0 }}</span>
                                 </div>
                                 <div class="oferta-meta">
-                                    <span class="descuento">-{{ oferta.descuento }}%</span>
+                                    <span class="descuento">-{{ oferta.descuento|floatformat:0 }}%</span>
                                     <span class="stock-oferta">{{ oferta.stock_oferta }} uds</span>
                                 </div>
                             </div>
@@ -395,7 +404,7 @@
                 <h5 class="modal-title">Entrada de Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post" action="#">
+            <form method="post" action="{% url 'entrada_stock_producto' 0 %}" id="formEntradaStock">
                 {% csrf_token %}
                 <div class="modal-body">
                     <input type="hidden" id="producto_id_entrada" name="producto_id">
@@ -441,8 +450,8 @@
                         <label class="etiqueta-campo">Producto *</label>
                         <select class="control-formulario" name="producto_id" required>
                             <option value="">Seleccionar producto...</option>
-                            {% for producto in productos_stock_bajo %}
-                            <option value="{{ producto.pkid_prod }}">{{ producto.nom_prod }} ({{ producto.stock_prod }} uds)</option>
+                            {% for item in productos_stock_bajo %}
+                            <option value="{{ item.producto.pkid_prod }}">{{ item.producto.nom_prod }} ({{ item.stock_total }} uds)</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -535,19 +544,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Modal de entrada de stock
+    // Modal de entrada de stock - CORREGIDO
     const modalEntrada = document.getElementById('modalEntradaStock');
-    modalEntrada.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        const productoId = button.getAttribute('data-producto-id');
-        const productoNombre = button.getAttribute('data-producto-nombre');
-        
-        document.getElementById('producto_id_entrada').value = productoId;
-        document.getElementById('nombre_producto_entrada').textContent = productoNombre;
-        
-        const form = this.querySelector('form');
-        form.action = "{% url 'entrada_stock_producto' 0 %}".replace('0', productoId);
-    });
+    if (modalEntrada) {
+        modalEntrada.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            
+            document.getElementById('producto_id_entrada').value = productoId;
+            document.getElementById('nombre_producto_entrada').textContent = productoNombre;
+            
+            // Actualizar el action del formulario con el ID correcto
+            const form = document.getElementById('formEntradaStock');
+            form.action = "{% url 'entrada_stock_producto' 0 %}".replace('0', productoId);
+        });
+    }
 
     // Filtros de búsqueda
     const filtroStock = document.getElementById('filtro-stock');
@@ -783,121 +795,6 @@ document.addEventListener('DOMContentLoaded', function() {
     letter-spacing: 0.5px;
 }
 
-/* Alertas de Stock Bajo */
-.alerta-stock-bajo {
-    background: #FFFBEB;
-    border: 1px solid #FEF3C7;
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.alerta-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.alerta-header i {
-    color: #F59E0B;
-    font-size: 1.25rem;
-}
-
-.alerta-header h5 {
-    color: #92400E;
-    margin: 0;
-    font-weight: 600;
-}
-
-.badge-alerta {
-    background: #F59E0B;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.alerta-productos {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 0.75rem;
-}
-
-.producto-alerta {
-    background: white;
-    padding: 1rem;
-    border-radius: 8px;
-    border-left: 3px solid #F59E0B;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.2s ease;
-}
-
-.producto-alerta:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.producto-info {
-    flex: 1;
-}
-
-.producto-nombre {
-    display: block;
-    font-weight: 600;
-    color: #1F2937;
-    margin-bottom: 0.25rem;
-}
-
-.producto-categoria {
-    font-size: 0.8rem;
-    color: #6B7280;
-}
-
-.producto-stock {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.stock-cantidad {
-    padding: 0.3rem 0.6rem;
-    border-radius: 15px;
-    font-size: 0.8rem;
-    font-weight: 600;
-}
-
-.stock-bajo {
-    background: #FEF3C7;
-    color: #92400E;
-}
-
-.stock-critico {
-    background: #FEE2E2;
-    color: #DC2626;
-}
-
-.btn-accion-rapida {
-    width: 32px;
-    height: 32px;
-    border: none;
-    border-radius: 8px;
-    background: #4F46E5;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-accion-rapida:hover {
-    background: #4338CA;
-    transform: scale(1.05);
-}
-
 /* Secciones */
 .seccion-grafica,
 .seccion-tabla,
@@ -995,6 +892,22 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: 15px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+.stock-minimo-tabla {
+    color: #6B7280;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.stock-bajo {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.stock-critico {
+    background: #FEE2E2;
+    color: #DC2626;
 }
 
 .estado-stock {
@@ -1343,6 +1256,27 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: 0.85rem;
 }
 
+.movimiento-eliminacion {
+    border-left: 3px solid #DC2626;
+    background: #FEF2F2;
+}
+
+.movimiento-cantidad.eliminacion {
+    background: #DC2626;
+    color: white;
+}
+
+.movimiento-eliminacion .movimiento-producto {
+    color: #DC2626;
+    font-weight: 600;
+}
+
+.movimiento-usuario {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: #6B7280;
+}
+
 /* Optimizaciones para portátiles */
 @media (max-width: 1400px) {
     .contenedor-grafica {
@@ -1412,10 +1346,6 @@ document.addEventListener('DOMContentLoaded', function() {
     .contenedor-filtros {
         width: 100%;
         justify-content: space-between;
-    }
-    
-    .alerta-productos {
-        grid-template-columns: 1fr;
     }
     
     .contenedor-acciones {
