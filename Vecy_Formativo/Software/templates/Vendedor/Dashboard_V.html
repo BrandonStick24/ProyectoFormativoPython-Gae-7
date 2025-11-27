@@ -8,94 +8,213 @@
 <link rel="stylesheet" href="{% static 'vendedor/css/Dashboard_V.css' %}">
 <!-- Chart.js para gráficos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* Estilos adicionales para hacer el dashboard más compacto */
+.dashboard-compact .card {
+    margin-bottom: 1rem;
+}
+
+.dashboard-compact .card-header {
+    padding: 0.75rem 1rem;
+}
+
+.dashboard-compact .card-body {
+    padding: 1rem;
+}
+
+.dashboard-compact .list-group-item {
+    padding: 0.75rem 1rem;
+}
+
+.dashboard-compact .table-sm td, 
+.dashboard-compact .table-sm th {
+    padding: 0.5rem 0.75rem;
+}
+
+/* Alturas fijas para contenedores con scroll */
+.scroll-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.scroll-container-sm {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.scroll-container-lg {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Estilos para las tarjetas de métricas más compactas */
+.metric-card {
+    height: 100%;
+}
+
+.metric-card .card-body {
+    padding: 1rem;
+}
+
+.metric-icon {
+    font-size: 1.5rem;
+    opacity: 0.7;
+}
+
+/* Gráficos más compactos */
+.compact-chart {
+    height: 200px !important;
+}
+
+.medium-chart {
+    height: 250px !important;
+}
+
+/* Mejoras visuales para scrollbars */
+.scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.scroll-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.scroll-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Encabezado con información del negocio -->
-    <div class="row mb-4">
+<div class="container-fluid dashboard-compact">
+    <!-- Encabezado compacto -->
+    <div class="row mb-3">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">Dashboard - {{ negocio_activo.nom_neg }}</h1>
+                <h1 class="h4 mb-0 text-primary">Dashboard - {{ negocio_activo.nom_neg }}</h1>
                 <div class="text-end">
-                    <small class="text-muted">Última actualización: {% now "d/m/Y H:i" %}</small>
+                    <small class="text-muted">Actualizado: {% now "H:i" %}</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Tarjetas de Métricas Principales -->
+    <!-- Tarjetas de Métricas Principales - Más compactas -->
     <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card tarjeta-dashboard border-left-primary h-100">
-                <div class="card-body">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-primary">
+                <div class="card-body py-2">
                     <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                        <div class="col">
                             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                                 Ventas Hoy
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ventas_hoy }}</div>
-                            <div class="text-muted small">Total: ${{ total_ventas_hoy|floatformat:0 }}</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">{{ ventas_hoy }}</div>
+                            <div class="text-muted small">${{ total_ventas_hoy|floatformat:0 }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-shopping-cart fa-2x text-primary"></i>
+                            <i class="fas fa-shopping-cart metric-icon text-primary"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card tarjeta-dashboard border-left-success h-100">
-                <div class="card-body">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-success">
+                <div class="card-body py-2">
                     <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                        <div class="col">
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Clientes Activos
+                                Clientes
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ clientes_activos }}</div>
-                            <div class="text-muted small">+{{ crecimiento_clientes }}% esta semana</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">{{ clientes_activos }}</div>
+                            <div class="text-muted small">+{{ crecimiento_clientes }}%</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-success"></i>
+                            <i class="fas fa-users metric-icon text-success"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card tarjeta-dashboard border-left-warning h-100">
-                <div class="card-body">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-warning">
+                <div class="card-body py-2">
                     <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                        <div class="col">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 Productos
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_productos }}</div>
-                            <div class="text-muted small">{{ productos_stock_bajo }} bajos en stock</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">{{ total_productos }}</div>
+                            <div class="text-muted small">{{ productos_stock_bajo }} bajos</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-box fa-2x text-warning"></i>
+                            <i class="fas fa-box metric-icon text-warning"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card tarjeta-dashboard border-left-info h-100">
-                <div class="card-body">
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-info">
+                <div class="card-body py-2">
                     <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
+                        <div class="col">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Ingresos Mensuales
+                                Ingresos Mes
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">${{ ingresos_mensuales|floatformat:0 }}</div>
-                            <div class="text-muted small">{{ crecimiento_ingresos }}% vs mes anterior</div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">${{ ingresos_mensuales|floatformat:0 }}</div>
+                            <div class="text-muted small">{{ crecimiento_ingresos }}%</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-2x text-info"></i>
+                            <i class="fas fa-dollar-sign metric-icon text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-secondary">
+                <div class="card-body py-2">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
+                                Pedidos Activos
+                            </div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">{{ pedidos_activos }}</div>
+                            <div class="text-muted small">{{ pedidos_pendientes }} pendientes</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list metric-icon text-secondary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+            <div class="card metric-card border-left-danger">
+                <div class="card-body py-2">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Stock Bajo
+                            </div>
+                            <div class="h6 mb-0 font-weight-bold text-gray-800">{{ productos_stock_bajo }}</div>
+                            <div class="text-muted small">de {{ total_productos }} productos</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle metric-icon text-danger"></i>
                         </div>
                     </div>
                 </div>
@@ -103,59 +222,194 @@
         </div>
     </div>
 
-    <!-- Gráficos y Métricas -->
+    <!-- Primera Fila: Gráficos Principales -->
     <div class="row">
-        <!-- Gráfico de Ventas por Día -->
-        <div class="col-md-8 mb-4">
+        <!-- Gráfico de Ventas -->
+        <div class="col-xl-6 col-lg-6 mb-3">
             <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3">
+                <div class="card-header bg-white py-2">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-chart-line me-2"></i>Ventas de los Últimos 7 Días
+                            <i class="fas fa-chart-line me-1"></i>Ventas 7 Días
                         </h6>
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" 
-                                    data-bs-toggle="dropdown">
-                                Período
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item" href="#" onclick="cambiarPeriodo('7dias')">7 Días</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="cambiarPeriodo('30dias')">30 Días</a></li>
-                                <li><a class="dropdown-item" href="#" onclick="cambiarPeriodo('90dias')">90 Días</a></li>
-                            </ul>
-                        </div>
+                        <small class="text-muted">Total: ${{ total_ventas_semana|floatformat:0 }}</small>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2">
                     <div class="chart-container">
-                        <canvas id="ventasChart" height="250"></canvas>
+                        <canvas id="ventasChart" class="compact-chart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Métricas de Productos -->
-        <div class="col-md-4 mb-4">
+        <!-- Gráfico de Categorías -->
+        <div class="col-xl-6 col-lg-6 mb-3">
             <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold text-success">
-                        <i class="fas fa-boxes me-2"></i>Estado de Inventario
+                <div class="card-header bg-white py-2">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-chart-bar me-1"></i>Ventas por Categoría
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-2">
                     <div class="chart-container">
-                        <canvas id="inventarioChart" height="250"></canvas>
+                        <canvas id="categoriasChart" class="compact-chart"></canvas>
                     </div>
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between mb-2">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segunda Fila: Gráficos Secundarios y Listas -->
+    <div class="row">
+        <!-- Estado de Pedidos -->
+        <div class="col-xl-4 col-lg-4 mb-3">
+            <div class="card tarjeta-dashboard h-100">
+                <div class="card-header bg-white py-2">
+                    <h6 class="m-0 font-weight-bold text-warning">
+                        <i class="fas fa-clipboard-check me-1"></i>Estado de Pedidos
+                    </h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="chart-container">
+                        <canvas id="pedidosChart" class="compact-chart"></canvas>
+                    </div>
+                    <div class="row text-center mt-2">
+                        <div class="col-4">
+                            <div class="h6 mb-0 text-primary">{{ pedidos_pendientes }}</div>
+                            <small class="text-muted">Pendientes</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h6 mb-0 text-warning">{{ pedidos_proceso }}</div>
+                            <small class="text-muted">En Proceso</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h6 mb-0 text-success">{{ pedidos_completados }}</div>
+                            <small class="text-muted">Completados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos Destacados -->
+        <div class="col-xl-4 col-lg-4 mb-3">
+            <div class="card tarjeta-dashboard h-100">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-star me-1"></i>Productos Destacados
+                    </h6>
+                    <a href="{% url 'Crud_V' %}" class="btn btn-sm btn-outline-primary py-0">Ver todos</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="scroll-container-sm">
+                        <div class="list-group list-group-flush">
+                            {% for producto in productos_destacados %}
+                            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                                <div class="d-flex align-items-center">
+                                    {% if producto.img_prod %}
+                                    <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" 
+                                         class="img-thumbnail me-2" style="width: 35px; height: 35px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" 
+                                         style="width: 35px; height: 35px;">
+                                        <i class="fas fa-box text-muted"></i>
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold small">{{ producto.nom_prod|truncatechars:20 }}</div>
+                                        <small class="text-muted">${{ producto.precio_prod|floatformat:0 }}</small>
+                                    </div>
+                                </div>
+                                <span class="badge {% if producto.stock_prod > 5 %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                    {{ producto.stock_prod }}
+                                </span>
+                            </div>
+                            {% empty %}
+                            <div class="list-group-item text-center text-muted py-3">
+                                <i class="fas fa-box fa-lg mb-2"></i>
+                                <p class="small mb-0">No hay productos destacados</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pedidos Recientes -->
+        <div class="col-xl-4 col-lg-4 mb-3">
+            <div class="card tarjeta-dashboard h-100">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-clock me-1"></i>Pedidos Recientes
+                    </h6>
+                    <a href="{% url 'gestionar_ventas' %}" class="btn btn-sm btn-outline-primary py-0">Ver todos</a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="scroll-container-sm">
+                        <div class="list-group list-group-flush">
+                            {% for pedido in pedidos_recientes %}
+                            <div class="list-group-item py-2">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div>
+                                        <strong class="small">#{{ pedido.id }}</strong>
+                                        <div class="text-muted small">
+                                            {{ pedido.cliente_nombre|truncatechars:15 }}
+                                        </div>
+                                    </div>
+                                    <span class="badge 
+                                        {% if pedido.estado == 'pendiente' %}bg-warning
+                                        {% elif pedido.estado == 'confirmado' %}bg-info
+                                        {% elif pedido.estado == 'preparando' %}bg-primary
+                                        {% elif pedido.estado == 'enviado' %}bg-secondary
+                                        {% elif pedido.estado == 'entregado' %}bg-success
+                                        {% else %}bg-danger{% endif %} small">
+                                        {{ pedido.estado|title }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">${{ pedido.total|floatformat:0 }}</small>
+                                    <small class="text-muted">{{ pedido.fecha_creacion|timesince }}</small>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="list-group-item text-center text-muted py-3">
+                                <i class="fas fa-shopping-bag fa-lg mb-2"></i>
+                                <p class="small mb-0">No hay pedidos recientes</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tercera Fila: Inventario y Actividad -->
+    <div class="row">
+        <!-- Estado de Inventario -->
+        <div class="col-xl-4 col-lg-4 mb-3">
+            <div class="card tarjeta-dashboard h-100">
+                <div class="card-header bg-white py-2">
+                    <h6 class="m-0 font-weight-bold text-success">
+                        <i class="fas fa-boxes me-1"></i>Estado de Inventario
+                    </h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="chart-container">
+                        <canvas id="inventarioChart" class="compact-chart"></canvas>
+                    </div>
+                    <div class="mt-2">
+                        <div class="d-flex justify-content-between mb-1 small">
                             <span class="text-muted">Disponibles</span>
                             <span class="font-weight-bold">{{ productos_disponibles }}</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between mb-1 small">
                             <span class="text-muted">Stock Bajo</span>
                             <span class="font-weight-bold text-warning">{{ productos_stock_bajo }}</span>
                         </div>
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between small">
                             <span class="text-muted">Sin Stock</span>
                             <span class="font-weight-bold text-danger">{{ productos_sin_stock }}</span>
                         </div>
@@ -163,206 +417,59 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Segunda Fila de Gráficos -->
-    <div class="row">
-        <!-- Ventas por Categoría -->
-        <div class="col-md-6 mb-4">
+        <!-- Actividad Reciente -->
+        <div class="col-xl-8 col-lg-8 mb-3">
             <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold text-info">
-                        <i class="fas fa-chart-bar me-2"></i>Ventas por Categoría
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="categoriasChart" height="250"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Métricas de Pedidos -->
-        <div class="col-md-6 mb-4">
-            <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold text-warning">
-                        <i class="fas fa-clipboard-list me-2"></i>Estado de Pedidos
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="chart-container">
-                        <canvas id="pedidosChart" height="250"></canvas>
-                    </div>
-                    <div class="row text-center mt-3">
-                        <div class="col-4">
-                            <div class="border-right">
-                                <div class="h5 mb-0 text-primary">{{ pedidos_pendientes }}</div>
-                                <small class="text-muted">Pendientes</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="border-right">
-                                <div class="h5 mb-0 text-warning">{{ pedidos_proceso }}</div>
-                                <small class="text-muted">En Proceso</small>
-                            </div>
-                        </div>
-                        <div class="col-4">
-                            <div class="h5 mb-0 text-success">{{ pedidos_completados }}</div>
-                            <small class="text-muted">Completados</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Productos y Chats -->
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <div class="card-header bg-white py-2">
                     <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-box me-2"></i>Productos Destacados
+                        <i class="fas fa-history me-1"></i>Actividad Reciente
                     </h6>
-                    <a href="{% url 'Crud_V' %}" class="btn btn-sm btn-outline-primary">Ver todos</a>
                 </div>
                 <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for producto in productos_destacados %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                {% if producto.img_prod %}
-                                <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" 
-                                     class="img-thumbnail me-3" style="width: 40px; height: 40px; object-fit: cover;">
-                                {% else %}
-                                <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
-                                     style="width: 40px; height: 40px;">
-                                    <i class="fas fa-box text-muted"></i>
-                                </div>
-                                {% endif %}
-                                <div>
-                                    <div class="fw-bold">{{ producto.nom_prod }}</div>
-                                    <small class="text-muted">${{ producto.precio_prod|floatformat:0 }}</small>
-                                </div>
-                            </div>
-                            <span class="badge {% if producto.stock_prod > 5 %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                {% if producto.stock_prod > 5 %}
-                                En stock
-                                {% else %}
-                                Poco stock
-                                {% endif %}
-                            </span>
+                    <div class="scroll-container">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="small">Fecha</th>
+                                        <th class="small">Tipo</th>
+                                        <th class="small">Descripción</th>
+                                        <th class="small">Usuario</th>
+                                        <th class="small text-end">Cantidad</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for movimiento in movimientos_recientes %}
+                                    <tr>
+                                        <td class="text-nowrap small">{{ movimiento.fecha|date:"H:i" }}</td>
+                                        <td>
+                                            <span class="badge small
+                                                {% if movimiento.tipo == 'entrada' %}bg-success
+                                                {% elif movimiento.tipo == 'salida' %}bg-danger
+                                                {% else %}bg-warning{% endif %}">
+                                                {{ movimiento.tipo|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold small">{{ movimiento.producto|truncatechars:25 }}</div>
+                                            <small class="text-muted">{{ movimiento.motivo|truncatechars:30 }}</small>
+                                        </td>
+                                        <td class="small">{{ movimiento.usuario|truncatechars:15 }}</td>
+                                        <td class="text-end">
+                                            <span class="badge bg-info small">{{ movimiento.cantidad }}</span>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-3 small">
+                                            No hay actividad reciente
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted py-4">
-                            <i class="fas fa-box fa-2x mb-2"></i>
-                            <p>No hay productos destacados</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6">
-            <div class="card tarjeta-dashboard h-100">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-comments me-2"></i>Pedidos Recientes
-                    </h6>
-                    <a href="{% url 'gestionar_ventas' %}" class="btn btn-sm btn-outline-primary">Ver todos</a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for pedido in pedidos_recientes %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <strong>Pedido #{{ pedido.id }}</strong>
-                                    <div class="text-muted small">
-                                        {{ pedido.cliente_nombre }} - ${{ pedido.total|floatformat:0 }}
-                                    </div>
-                                </div>
-                                <span class="badge 
-                                    {% if pedido.estado == 'pendiente' %}bg-warning
-                                    {% elif pedido.estado == 'confirmado' %}bg-info
-                                    {% elif pedido.estado == 'preparando' %}bg-primary
-                                    {% elif pedido.estado == 'enviado' %}bg-secondary
-                                    {% elif pedido.estado == 'entregado' %}bg-success
-                                    {% else %}bg-danger{% endif %}">
-                                    {{ pedido.estado|title }}
-                                </span>
-                            </div>
-                            <div class="text-muted small">
-                                <i class="fas fa-clock me-1"></i>
-                                {{ pedido.fecha_creacion|timesince }} ago
-                            </div>
-                        </div>
-                        {% empty %}
-                        <div class="list-group-item text-center text-muted py-4">
-                            <i class="fas fa-shopping-bag fa-2x mb-2"></i>
-                            <p>No hay pedidos recientes</p>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Resumen de Actividad -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card tarjeta-dashboard">
-                <div class="card-header bg-white py-3">
-                    <h6 class="m-0 font-weight-bold">
-                        <i class="fas fa-history me-2"></i>Resumen de Actividad Reciente
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Tipo</th>
-                                    <th>Descripción</th>
-                                    <th>Usuario</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for movimiento in movimientos_recientes %}
-                                <tr>
-                                    <td class="text-nowrap">{{ movimiento.fecha|date:"d/m H:i" }}</td>
-                                    <td>
-                                        <span class="badge 
-                                            {% if movimiento.tipo == 'entrada' %}bg-success
-                                            {% elif movimiento.tipo == 'salida' %}bg-danger
-                                            {% else %}bg-warning{% endif %}">
-                                            {{ movimiento.tipo|title }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold">{{ movimiento.producto }}</div>
-                                        <small class="text-muted">{{ movimiento.motivo }}</small>
-                                    </td>
-                                    <td>{{ movimiento.usuario }}</td>
-                                    <td>
-                                        <span class="badge bg-info">{{ movimiento.cantidad }} unidades</span>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-3">
-                                        No hay actividad reciente
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             </div>
@@ -373,7 +480,7 @@
 
 {% block extra_js %}
 <script>
-// Datos para los gráficos (estos vendrían del contexto de Django)
+// Datos para los gráficos
 const datosDashboard = {
     ventasUltimosDias: {
         labels: {{ ventas_labels|safe }},
@@ -415,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
@@ -459,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
@@ -491,6 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
         options: {
             indexAxis: 'y',
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: false
@@ -537,25 +647,15 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
-            cutout: '70%',
+            maintainAspectRatio: false,
+            cutout: '60%',
             plugins: {
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 20,
-                        usePointStyle: true
-                    }
+                    display: false
                 }
             }
         }
     });
 });
-
-// Función para cambiar período (simulada)
-function cambiarPeriodo(periodo) {
-    // Aquí iría la lógica para recargar datos con diferente período
-    console.log('Cambiando período a:', periodo);
-    // En una implementación real, harías una petición AJAX para actualizar los datos
-}
 </script>
 {% endblock %}

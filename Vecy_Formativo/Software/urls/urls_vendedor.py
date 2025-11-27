@@ -68,6 +68,7 @@ urlpatterns = [
     
     path('vendedor/stock/entrada/<int:producto_id>/', vendedor_stock_views.entrada_stock_producto, name='entrada_stock_producto'),
     path('vendedor/stock/reporte/', vendedor_stock_views.reporte_movimientos_stock, name='reporte_movimientos_stock'),
+    
 
     # ==================== NUEVAS URLs PARA IMPORTACIÓN EXCEL ====================
     path('vendedor/productos/importar/excel/', vendedor_views.importar_productos_excel, name='importar_productos_excel'),

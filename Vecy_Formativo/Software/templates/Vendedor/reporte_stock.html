@@ -37,6 +37,11 @@
     background-color: #fffbf0;
 }
 
+.movimiento-row.eliminacion {
+    border-left: 4px solid #6c757d;
+    background-color: #f8f9fa;
+}
+
 .filtros-container {
     background: #f8f9fa;
     border-radius: 10px;
@@ -54,6 +59,80 @@
 .badge-ajuste {
     background-color: #ffc107;
     color: #000;
+}
+
+.badge-eliminacion {
+    background-color: #6c757d;
+}
+
+/* ✅ ESTILOS PARA LA TABLA CON SCROLL */
+.table-container {
+    max-height: 600px;
+    overflow: auto;
+    border: 1px solid #e3e6f0;
+    border-radius: 8px;
+}
+
+.table-container table {
+    margin-bottom: 0;
+}
+
+.table-container thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fc;
+    z-index: 10;
+    border-bottom: 2px solid #e3e6f0;
+}
+
+/* Personalizar scrollbar */
+.table-container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Asegurar que las celdas tengan un tamaño adecuado */
+.table-container table th,
+.table-container table td {
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+/* Columnas específicas con tamaños optimizados */
+.table-container table th:nth-child(1), /* Fecha/Hora */
+.table-container table td:nth-child(1) {
+    min-width: 150px;
+}
+
+.table-container table th:nth-child(2), /* Producto */
+.table-container table td:nth-child(2) {
+    min-width: 200px;
+    white-space: normal;
+}
+
+.table-container table th:nth-child(5), /* Motivo */
+.table-container table td:nth-child(5) {
+    min-width: 250px;
+    white-space: normal;
+}
+
+.table-container table th:nth-child(9), /* Pedido ID */
+.table-container table td:nth-child(9) {
+    min-width: 100px;
 }
 </style>
 {% endblock %}
@@ -76,7 +155,6 @@
                         <button onclick="window.print()" class="btn btn-light me-2">
                             <i class="fas fa-print me-1"></i>Imprimir
                         </button>
-                        <!-- ✅ CORREGIDO: Botón que regresa al dashboard de stock -->
                         <a href="{% url 'Stock_V' %}" class="btn btn-outline-light">
                             <i class="fas fa-arrow-left me-1"></i>Volver al Stock
                         </a>
@@ -88,7 +166,6 @@
 
     <!-- Estadísticas Resumen -->
     <div class="row mb-4">
-        <!-- En reporte_stock.html - Sección de estadísticas -->
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card stats-card border-start border-primary border-4">
                 <div class="card-body">
@@ -192,7 +269,7 @@
         </div>
     </div>
 
-    <!-- Tabla de Movimientos -->
+    <!-- Tabla de Movimientos CON SCROLL -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -202,10 +279,12 @@
                     </h5>
                     <span class="badge bg-primary">{{ movimientos|length }} registros</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body p-0"> <!-- ✅ Quitamos el padding para que el scroll ocupe todo el espacio -->
+                    
                     {% if movimientos %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
+                    <!-- ✅ CONTENEDOR CON SCROLL -->
+                    <div class="table-container">
+                        <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
                                     <th>Fecha/Hora</th>
@@ -216,7 +295,6 @@
                                     <th>Cantidad</th>
                                     <th>Stock Anterior</th>
                                     <th>Stock Nuevo</th>
-                                    <th>Usuario</th>
                                     <th>Pedido ID</th>
                                 </tr>
                             </thead>
@@ -230,22 +308,30 @@
                                         <strong>{{ movimiento.producto }}</strong>
                                     </td>
                                     <td>
-                                        {% if movimiento.variante_id != 'N/A' %}
+                                        {% if movimiento.es_variante %}
                                         <span class="badge bg-info">{{ movimiento.variante }}</span>
                                         {% else %}
                                         <span class="text-muted">Producto principal</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge badge-{{ movimiento.tipo }}">
-                                            {% if movimiento.tipo == 'entrada' %}
+                                        {% if movimiento.tipo == 'entrada' %}
+                                            <span class="badge badge-entrada">
                                                 <i class="fas fa-arrow-down me-1"></i>Entrada
-                                            {% elif movimiento.tipo == 'salida' %}
+                                            </span>
+                                        {% elif movimiento.tipo == 'salida' %}
+                                            <span class="badge badge-salida">
                                                 <i class="fas fa-arrow-up me-1"></i>Salida
-                                            {% else %}
+                                            </span>
+                                        {% elif movimiento.tipo == 'eliminacion' %}
+                                            <span class="badge badge-eliminacion">
+                                                <i class="fas fa-trash me-1"></i>Eliminación
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-ajuste">
                                                 <i class="fas fa-sliders-h me-1"></i>Ajuste
-                                            {% endif %}
-                                        </span>
+                                            </span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <small>{{ movimiento.motivo }}</small>
@@ -262,9 +348,6 @@
                                         <span class="badge {% if movimiento.stock_nuevo <= 0 %}bg-danger{% elif movimiento.stock_nuevo <= 5 %}bg-warning{% else %}bg-success{% endif %}">
                                             {{ movimiento.stock_nuevo }}
                                         </span>
-                                    </td>
-                                    <td>
-                                        <small>{{ movimiento.usuario }}</small>
                                     </td>
                                     <td>
                                         {% if movimiento.pedido_id != 'N/A' %}

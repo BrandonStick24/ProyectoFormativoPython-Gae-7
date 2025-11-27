@@ -1,4 +1,4 @@
-// static/javascript_V/Negocios_V.js - VERSIÓN MEJORADA
+// static/vendedor/js/Negocios_V.js
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -167,6 +167,152 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // ==================== MODAL DE EDICIÓN ====================
+    const modalEditar = document.getElementById('modalEditarNegocio');
+    if (modalEditar) {
+        modalEditar.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const negocioId = button.getAttribute('data-negocio-id');
+            const negocioNombre = button.getAttribute('data-negocio-nombre');
+            const negocioNIT = button.getAttribute('data-negocio-nit');
+            const negocioDireccion = button.getAttribute('data-negocio-direccion');
+            const negocioDescripcion = button.getAttribute('data-negocio-descripcion');
+            const negocioTipo = button.getAttribute('data-negocio-tipo');
+            const negocioImagen = button.getAttribute('data-negocio-imagen');
+            
+            console.log('Cargando datos del negocio:', {
+                id: negocioId,
+                nombre: negocioNombre,
+                nit: negocioNIT,
+                direccion: negocioDireccion,
+                descripcion: negocioDescripcion,
+                tipo: negocioTipo,
+                imagen: negocioImagen
+            });
+            
+            // Actualizar formulario
+            document.getElementById('editar_negocio_id').value = negocioId;
+            document.getElementById('editar_nom_neg').value = negocioNombre || '';
+            document.getElementById('editar_nit_neg').value = negocioNIT || '';
+            document.getElementById('editar_direcc_neg').value = negocioDireccion || '';
+            document.getElementById('editar_desc_neg').value = negocioDescripcion || '';
+            document.getElementById('editar_fktiponeg_neg').value = negocioTipo || '';
+            
+            // Actualizar acción del formulario
+            const form = document.getElementById('formEditarNegocio');
+            const actionUrl = form.getAttribute('action').replace('/0', '/' + negocioId);
+            form.setAttribute('action', actionUrl);
+            
+            // Manejar imagen actual
+            const imagenActual = document.getElementById('editar_imagen_actual');
+            const noImagen = document.getElementById('editar_no_image');
+            
+            if (negocioImagen && negocioImagen !== 'None' && negocioImagen !== '') {
+                imagenActual.src = negocioImagen;
+                imagenActual.style.display = 'block';
+                noImagen.style.display = 'none';
+                console.log('Imagen cargada:', negocioImagen);
+            } else {
+                imagenActual.style.display = 'none';
+                noImagen.style.display = 'flex';
+                console.log('No hay imagen disponible');
+            }
+            
+            // Actualizar título del modal
+            document.getElementById('modalEditarNegocioLabel').innerHTML = 
+                `<i class="fas fa-edit me-2"></i>Configurar: "${negocioNombre}"`;
+                
+            // Manejar error de imagen
+            imagenActual.onerror = function() {
+                console.log('Error al cargar la imagen');
+                this.style.display = 'none';
+                noImagen.style.display = 'flex';
+            };
+        });
+    }
+
+    // Validación del formulario de edición
+    const formEditar = document.getElementById('formEditarNegocio');
+    if (formEditar) {
+        formEditar.addEventListener('submit', function(e) {
+            const nombre = document.getElementById('editar_nom_neg').value.trim();
+            const nit = document.getElementById('editar_nit_neg').value.trim();
+            const tipo = document.getElementById('editar_fktiponeg_neg').value;
+            const direccion = document.getElementById('editar_direcc_neg').value.trim();
+            const descripcion = document.getElementById('editar_desc_neg').value;
+            
+            let errores = [];
+            
+            if (!nombre) {
+                errores.push('El nombre del negocio es obligatorio');
+            }
+            
+            if (!nit) {
+                errores.push('El NIT es obligatorio');
+            } else if (!validarNIT(nit)) {
+                errores.push('El NIT debe tener entre 8 y 11 caracteres numéricos');
+            }
+            
+            if (!tipo) {
+                errores.push('Debes seleccionar un tipo de negocio');
+            }
+            
+            if (!direccion) {
+                errores.push('La dirección es obligatoria');
+            }
+            
+            if (descripcion.length > 500) {
+                errores.push('La descripción no puede exceder los 500 caracteres');
+            }
+            
+            if (errores.length > 0) {
+                e.preventDefault();
+                mostrarAlerta('Por favor, corrige los siguientes errores:\n\n• ' + errores.join('\n• '), 'error');
+                return false;
+            }
+        });
+    }
+
+    // Vista previa de imagen en el modal de edición
+    const inputImagenEditar = document.getElementById('editar_img_neg');
+    if (inputImagenEditar) {
+        inputImagenEditar.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validar tamaño (5MB máximo)
+                if (file.size > 5 * 1024 * 1024) {
+                    mostrarAlerta('La imagen es demasiado grande. Máximo 5MB permitido.', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Validar tipo
+                const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
+                if (!tiposPermitidos.includes(file.type)) {
+                    mostrarAlerta('Solo se permiten imágenes JPG, PNG o GIF.', 'error');
+                    e.target.value = '';
+                    return;
+                }
+                
+                console.log('Imagen válida seleccionada para edición:', file.name);
+                
+                // Opcional: Mostrar vista previa de la nueva imagen
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imagenActual = document.getElementById('editar_imagen_actual');
+                    const noImagen = document.getElementById('editar_no_image');
+                    
+                    imagenActual.src = e.target.result;
+                    imagenActual.style.display = 'block';
+                    noImagen.style.display = 'none';
+                    
+                    document.getElementById('editar_texto_imagen').textContent = 'Vista previa de la nueva imagen';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
     // ==================== MEJORAS DE USABILIDAD ====================
     
     // Efectos hover mejorados
@@ -206,8 +352,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (this.value.length > 500) {
                 contador.classList.add('text-danger');
+                contadorSpan.classList.add('text-danger');
             } else {
                 contador.classList.remove('text-danger');
+                contadorSpan.classList.remove('text-danger');
             }
         });
         
@@ -218,19 +366,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ==================== FUNCIONES AUXILIARES ====================
     function mostrarAlerta(mensaje, tipo = 'info') {
+        // Primero, eliminar alertas existentes
+        const alertasExistentes = document.querySelectorAll('.alert');
+        alertasExistentes.forEach(alerta => {
+            if (alerta.parentNode && !alerta.classList.contains('alert-dismissible')) {
+                alerta.remove();
+            }
+        });
+        
         const alerta = document.createElement('div');
         alerta.className = `alert alert-${tipo} alert-dismissible fade show`;
         alerta.innerHTML = `
             <div class="d-flex align-items-center">
-                <i class="fas fa-${tipo === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+                <i class="fas fa-${tipo === 'error' ? 'exclamation-triangle' : tipo === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
                 <div>${mensaje}</div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
         
         const tarjetaBienvenida = document.querySelector('.tarjeta-bienvenida');
-        tarjetaBienvenida.parentNode.insertBefore(alerta, tarjetaBienvenida.nextSibling);
+        if (tarjetaBienvenida && tarjetaBienvenida.parentNode) {
+            tarjetaBienvenida.parentNode.insertBefore(alerta, tarjetaBienvenida.nextSibling);
+        }
         
+        // Auto-eliminar después de 5 segundos
         setTimeout(() => {
             if (alerta.parentNode) {
                 alerta.remove();
@@ -238,7 +397,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
+    // ==================== EVENT LISTENERS PARA BOTONES DE EDICIÓN ====================
+    
+    // Agregar event listeners a todos los botones de edición
+    const botonesEditar = document.querySelectorAll('.btn-editar-negocio');
+    botonesEditar.forEach(boton => {
+        boton.addEventListener('click', function() {
+            console.log('Botón editar clickeado:', {
+                id: this.getAttribute('data-negocio-id'),
+                nombre: this.getAttribute('data-negocio-nombre')
+            });
+        });
+    });
+
+    // ==================== MANEJO DE ERRORES DE IMAGEN ====================
+    
+    // Manejar errores de imagen en toda la página
+    document.querySelectorAll('img').forEach(img => {
+        img.addEventListener('error', function() {
+            console.log('Error al cargar imagen:', this.src);
+            // Puedes agregar lógica adicional aquí si es necesario
+        });
+    });
+
     // ==================== INICIALIZACIÓN ====================
-    console.log('Negocios_V.js cargado correctamente - Versión Cards');
+    console.log('Negocios_V.js cargado correctamente - Versión Modal de Edición');
     aplicarFiltros();
+    
+    // Debug: Verificar que los botones de edición estén funcionando
+    console.log('Botones de edición encontrados:', document.querySelectorAll('.btn-editar-negocio').length);
 });

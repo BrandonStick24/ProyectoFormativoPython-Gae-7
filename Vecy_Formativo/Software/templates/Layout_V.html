@@ -8,6 +8,187 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'vendedor/css/layout_V.css' %}">
+    
+    <!-- CSS adicional para el modal de editar perfil -->
+    <style>
+        /* Estilos específicos para el modal de editar perfil */
+        .modal-perfil .modal-content {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .modal-perfil .modal-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border-bottom: none;
+            padding: 1.25rem 1.5rem;
+        }
+        
+        .modal-perfil .modal-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .modal-perfil .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .modal-perfil .form-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .modal-perfil .form-control {
+            border: 2px solid var(--gray-200);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-perfil .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(95, 133, 219, 0.1);
+        }
+        
+        .modal-perfil .campo-clave {
+            position: relative;
+        }
+        
+        .modal-perfil .campo-clave .form-control {
+            padding-right: 2.5rem;
+        }
+        
+        .modal-perfil .btn-toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray-500);
+            cursor: pointer;
+            z-index: 2;
+            font-size: 0.9rem;
+        }
+        
+        .modal-perfil .btn-toggle-password:hover {
+            color: var(--primary);
+        }
+        
+        .modal-perfil .info-clave {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+        
+        .modal-perfil .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 6px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-perfil .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(95, 133, 219, 0.3);
+        }
+        
+        .modal-perfil .btn-secondary {
+            background: var(--gray-600);
+            border: none;
+            border-radius: 6px;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .modal-perfil .foto-perfil-container {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-perfil .foto-perfil {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--primary-light);
+            margin-bottom: 0.75rem;
+        }
+        
+        .modal-perfil .btn-cambiar-foto {
+            background: var(--gray-100);
+            border: 1px dashed var(--gray-300);
+            color: var(--gray-600);
+            border-radius: 6px;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-perfil .btn-cambiar-foto:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .seccion-datos {
+            background: var(--gray-50);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .seccion-datos h6 {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .campo-deshabilitado {
+            background-color: var(--gray-100);
+            color: var(--gray-600);
+            cursor: not-allowed;
+        }
+        
+        .texto-deshabilitado {
+            font-size: 0.8rem;
+            color: var(--gray-500);
+            margin-top: 0.25rem;
+        }
+        
+        /* Modal más compacto */
+        .modal-perfil .modal-dialog {
+            max-width: 500px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 576px) {
+            .modal-perfil .modal-body {
+                padding: 1.25rem;
+            }
+            
+            .modal-perfil .modal-dialog {
+                margin: 0.5rem;
+            }
+            
+            .modal-perfil .foto-perfil {
+                width: 70px;
+                height: 70px;
+            }
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -54,7 +235,7 @@
                         <i class="fas fa-store"></i>
                         Mis Negocios
                     </a>
-                    <a href="#" class="item-desplegable-personalizado">
+                    <a href="#" class="item-desplegable-personalizado" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
                         <i class="fas fa-user-edit"></i>
                         Editar Perfil
                     </a>
@@ -134,6 +315,102 @@
     </footer>
 
     <!-- ==================== MODALES DEL LAYOUT ==================== -->
+
+    <!-- Modal para Editar Perfil - MEJORADO Y COMPACTO -->
+    <div class="modal fade modal-perfil" id="modalEditarPerfil" tabindex="-1"
+        aria-labelledby="modalEditarPerfilLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarPerfilLabel">
+                        <i class="fas fa-user-edit me-2"></i>Editar Perfil
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarPerfil">
+                        <!-- Foto de Perfil -->
+                        <div class="foto-perfil-container">
+                            <img src="{% static 'img/default-avatar.png' %}" alt="Foto de perfil" class="foto-perfil" id="fotoPerfilPreview">
+                            <div>
+                                <button type="button" class="btn btn-cambiar-foto" id="btnCambiarFoto">
+                                    <i class="fas fa-camera me-1"></i>Cambiar Foto
+                                </button>
+                                <input type="file" id="inputFotoPerfil" accept="image/*" style="display: none;">
+                            </div>
+                        </div>
+
+                        <!-- Información Básica -->
+                        <div class="seccion-datos">
+                            <h6><i class="fas fa-user-circle"></i> Información Básica</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <label for="nombre" class="form-label">Nombre *</label>
+                                        <input type="text" class="form-control" id="nombre" name="nombre" 
+                                               value="{{ nombre }}" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-2">
+                                        <label for="apellido" class="form-label">Apellido *</label>
+                                        <input type="text" class="form-control" id="apellido" name="apellido" 
+                                               value="{{ perfil.apellido|default:'' }}" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label for="email" class="form-label">Correo Electrónico *</label>
+                                <input type="email" class="form-control" id="email" name="email"
+                                       value="{{ user.email }}" required>
+                            </div>
+                            <div class="mb-0">
+                                <label for="documento" class="form-label">Documento</label>
+                                <input type="text" class="form-control campo-deshabilitado" id="documento" 
+                                       value="{{ perfil.doc_user }}" disabled>
+                                <div class="texto-deshabilitado">No se puede modificar</div>
+                            </div>
+                        </div>
+
+                        <!-- Cambio de Contraseña (Opcional) -->
+                        <div class="seccion-datos">
+                            <h6><i class="fas fa-lock"></i> Cambio de Contraseña</h6>
+                            <div class="mb-2 campo-clave">
+                                <label for="claveActual" class="form-label">Contraseña Actual</label>
+                                <input type="password" class="form-control" id="claveActual" name="claveActual" placeholder="Opcional">
+                                <button type="button" class="btn-toggle-password" data-target="claveActual">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="mb-2 campo-clave">
+                                <label for="nuevaClave" class="form-label">Nueva Contraseña</label>
+                                <input type="password" class="form-control" id="nuevaClave" name="nuevaClave" placeholder="Opcional">
+                                <button type="button" class="btn-toggle-password" data-target="nuevaClave">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <div class="info-clave">
+                                    <small>Mínimo 8 caracteres (dejar vacío para no cambiar)</small>
+                                </div>
+                            </div>
+                            <div class="mb-0 campo-clave">
+                                <label for="confirmarClave" class="form-label">Confirmar Nueva Contraseña</label>
+                                <input type="password" class="form-control" id="confirmarClave" name="confirmarClave" placeholder="Opcional">
+                                <button type="button" class="btn-toggle-password" data-target="confirmarClave">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="guardarPerfil">
+                        <i class="fas fa-save me-1"></i>Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal para Programar Horario MEJORADO -->
     <div class="modal fade" id="modalProgramacion" tabindex="-1"
@@ -324,6 +601,223 @@
 
     <!-- JavaScript personalizado del Layout -->
     <script src="{% static 'vendedor/js/Layout_V.js' %}"></script>
+
+    <!-- JavaScript adicional para el modal de editar perfil -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Modal de Editar Perfil - Script inicializado');
+
+            // ==================== ELEMENTOS DEL DOM ====================
+            const elementosPerfil = {
+                modalEditarPerfil: document.getElementById('modalEditarPerfil'),
+                formEditarPerfil: document.getElementById('formEditarPerfil'),
+                guardarPerfil: document.getElementById('guardarPerfil'),
+                btnCambiarFoto: document.getElementById('btnCambiarFoto'),
+                inputFotoPerfil: document.getElementById('inputFotoPerfil'),
+                fotoPerfilPreview: document.getElementById('fotoPerfilPreview'),
+                btnTogglePasswords: document.querySelectorAll('.btn-toggle-password')
+            };
+
+            // ==================== FUNCIONALIDAD DE FOTO DE PERFIL ====================
+            if (elementosPerfil.btnCambiarFoto && elementosPerfil.inputFotoPerfil) {
+                elementosPerfil.btnCambiarFoto.addEventListener('click', function() {
+                    elementosPerfil.inputFotoPerfil.click();
+                });
+
+                elementosPerfil.inputFotoPerfil.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                elementosPerfil.fotoPerfilPreview.src = e.target.result;
+                                mostrarToast('✅ Foto de perfil cargada correctamente', 'success');
+                            };
+                            reader.readAsDataURL(file);
+                        } else {
+                            mostrarToast('❌ Por favor selecciona una imagen válida', 'error');
+                        }
+                    }
+                });
+            }
+
+            // ==================== FUNCIONALIDAD DE MOSTRAR/OCULTAR CONTRASEÑA ====================
+            if (elementosPerfil.btnTogglePasswords) {
+                elementosPerfil.btnTogglePasswords.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const targetId = this.getAttribute('data-target');
+                        const input = document.getElementById(targetId);
+                        
+                        if (input.type === 'password') {
+                            input.type = 'text';
+                            this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                        } else {
+                            input.type = 'password';
+                            this.innerHTML = '<i class="fas fa-eye"></i>';
+                        }
+                    });
+                });
+            }
+
+            // ==================== VALIDACIÓN DEL FORMULARIO ====================
+            if (elementosPerfil.guardarPerfil && elementosPerfil.formEditarPerfil) {
+                elementosPerfil.guardarPerfil.addEventListener('click', function() {
+                    if (validarFormularioPerfil()) {
+                        guardarPerfil();
+                    }
+                });
+            }
+
+            // ==================== FUNCIONES DE VALIDACIÓN ====================
+            function validarFormularioPerfil() {
+                const nombre = document.getElementById('nombre').value.trim();
+                const apellido = document.getElementById('apellido').value.trim();
+                const email = document.getElementById('email').value.trim();
+                const claveActual = document.getElementById('claveActual').value;
+                const nuevaClave = document.getElementById('nuevaClave').value;
+                const confirmarClave = document.getElementById('confirmarClave').value;
+
+                // Validar campos obligatorios
+                if (!nombre) {
+                    mostrarToast('❌ El nombre es obligatorio', 'error');
+                    document.getElementById('nombre').focus();
+                    return false;
+                }
+
+                if (!apellido) {
+                    mostrarToast('❌ El apellido es obligatorio', 'error');
+                    document.getElementById('apellido').focus();
+                    return false;
+                }
+
+                if (!email) {
+                    mostrarToast('❌ El email es obligatorio', 'error');
+                    document.getElementById('email').focus();
+                    return false;
+                }
+
+                // Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    mostrarToast('❌ Por favor ingresa un email válido', 'error');
+                    document.getElementById('email').focus();
+                    return false;
+                }
+
+                // Validar cambio de contraseña (solo si se intenta cambiar)
+                if (nuevaClave || confirmarClave) {
+                    if (!claveActual) {
+                        mostrarToast('❌ Para cambiar la contraseña debes ingresar la contraseña actual', 'error');
+                        document.getElementById('claveActual').focus();
+                        return false;
+                    }
+
+                    if (nuevaClave.length < 8) {
+                        mostrarToast('❌ La nueva contraseña debe tener al menos 8 caracteres', 'error');
+                        document.getElementById('nuevaClave').focus();
+                        return false;
+                    }
+
+                    if (nuevaClave !== confirmarClave) {
+                        mostrarToast('❌ Las contraseñas no coinciden', 'error');
+                        document.getElementById('confirmarClave').focus();
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // ==================== GUARDAR PERFIL ====================
+            function guardarPerfil() {
+                console.log('💾 Guardando perfil...');
+
+                // Mostrar loading en el botón
+                const btnGuardar = elementosPerfil.guardarPerfil;
+                const originalText = btnGuardar.innerHTML;
+                btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+                btnGuardar.disabled = true;
+
+                // Simular envío de datos (aquí iría la llamada AJAX real)
+                setTimeout(() => {
+                    // Restaurar botón
+                    btnGuardar.innerHTML = originalText;
+                    btnGuardar.disabled = false;
+
+                    mostrarToast('✅ Perfil actualizado correctamente', 'success');
+                    
+                    // Cerrar el modal después de guardar
+                    const modal = bootstrap.Modal.getInstance(elementosPerfil.modalEditarPerfil);
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    // Actualizar el nombre en el header si cambió
+                    const nuevoNombre = document.getElementById('nombre').value;
+                    const nombreUsuarioHeader = document.querySelector('.nombre-usuario');
+                    if (nombreUsuarioHeader && nuevoNombre) {
+                        nombreUsuarioHeader.textContent = nuevoNombre;
+                    }
+                }, 1500);
+            }
+
+            // ==================== INICIALIZACIÓN DEL MODAL ====================
+            if (elementosPerfil.modalEditarPerfil) {
+                elementosPerfil.modalEditarPerfil.addEventListener('show.bs.modal', function() {
+                    console.log('🔄 Abriendo modal de editar perfil');
+                    // Limpiar campos de contraseña al abrir el modal
+                    document.getElementById('claveActual').value = '';
+                    document.getElementById('nuevaClave').value = '';
+                    document.getElementById('confirmarClave').value = '';
+                });
+            }
+
+            // ==================== FUNCIÓN DE TOAST ====================
+            function mostrarToast(mensaje, tipo = 'info') {
+                // Reutilizar la función existente del layout o crear una simple
+                if (typeof window.mostrarToast === 'function') {
+                    window.mostrarToast(mensaje, tipo);
+                } else {
+                    // Fallback simple
+                    console.log(`Toast: ${mensaje} (${tipo})`);
+                    
+                    // Crear un toast simple si no existe la función
+                    const toastContainer = document.getElementById('toast-container') || crearToastContainer();
+                    const toast = document.createElement('div');
+                    toast.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} alert-dismissible fade show`;
+                    toast.style.cssText = 'margin-bottom: 10px; animation: slideInRight 0.3s ease;';
+                    toast.innerHTML = `
+                        ${mensaje}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    
+                    toastContainer.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.remove();
+                        }
+                    }, 5000);
+                }
+            }
+
+            function crearToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 9999;
+                    max-width: 300px;
+                `;
+                document.body.appendChild(container);
+                return container;
+            }
+
+            console.log('✅ Modal de Editar Perfil - Configuración completada');
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

@@ -1,3 +1,4 @@
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Layout VECY inicializado - SISTEMA COMPLETO CORREGIDO');
 
