@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VECY - {% block title %}Dashboard{% endblock %}</title>
+    <link rel="icon" href="{% static 'media/logo_chat.png' %}" type="image/png">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'vendedor/css/layout_V.css' %}">
@@ -187,6 +188,35 @@
                 height: 70px;
             }
         }
+        .logo-vecy {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: var(--radius-lg);
+            transition: transform var(--transition-base);
+        }
+
+        .logo-vecy:hover {
+            transform: scale(1.05);
+        }
+
+        .contenedor-logo {
+            width: 48px;
+            height: 48px;
+            background: var(--white);
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-md);
+            transition: transform var(--transition-base);
+            overflow: hidden;
+            padding: 2px;
+        }
+
+        .contenedor-logo:hover {
+            transform: scale(1.05);
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -195,8 +225,13 @@
     <!-- Encabezado -->
     <header class="encabezado-principal">
         <div class="encabezado-izquierda">
+            <!-- Botón hamburguesa para móvil -->
+            <button class="boton-menu-movil" id="botonMenuMovil">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <div class="contenedor-logo">
-                <i class="fas fa-store"></i>
+                <img src="{% static 'media/logo_chat.png' %}" alt="Logo VECY" class="logo-vecy">
             </div>
             <div class="nombre-marca">VECY</div>
         </div>
@@ -601,223 +636,6 @@
 
     <!-- JavaScript personalizado del Layout -->
     <script src="{% static 'vendedor/js/Layout_V.js' %}"></script>
-
-    <!-- JavaScript adicional para el modal de editar perfil -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Modal de Editar Perfil - Script inicializado');
-
-            // ==================== ELEMENTOS DEL DOM ====================
-            const elementosPerfil = {
-                modalEditarPerfil: document.getElementById('modalEditarPerfil'),
-                formEditarPerfil: document.getElementById('formEditarPerfil'),
-                guardarPerfil: document.getElementById('guardarPerfil'),
-                btnCambiarFoto: document.getElementById('btnCambiarFoto'),
-                inputFotoPerfil: document.getElementById('inputFotoPerfil'),
-                fotoPerfilPreview: document.getElementById('fotoPerfilPreview'),
-                btnTogglePasswords: document.querySelectorAll('.btn-toggle-password')
-            };
-
-            // ==================== FUNCIONALIDAD DE FOTO DE PERFIL ====================
-            if (elementosPerfil.btnCambiarFoto && elementosPerfil.inputFotoPerfil) {
-                elementosPerfil.btnCambiarFoto.addEventListener('click', function() {
-                    elementosPerfil.inputFotoPerfil.click();
-                });
-
-                elementosPerfil.inputFotoPerfil.addEventListener('change', function(e) {
-                    const file = e.target.files[0];
-                    if (file) {
-                        if (file.type.startsWith('image/')) {
-                            const reader = new FileReader();
-                            reader.onload = function(e) {
-                                elementosPerfil.fotoPerfilPreview.src = e.target.result;
-                                mostrarToast('✅ Foto de perfil cargada correctamente', 'success');
-                            };
-                            reader.readAsDataURL(file);
-                        } else {
-                            mostrarToast('❌ Por favor selecciona una imagen válida', 'error');
-                        }
-                    }
-                });
-            }
-
-            // ==================== FUNCIONALIDAD DE MOSTRAR/OCULTAR CONTRASEÑA ====================
-            if (elementosPerfil.btnTogglePasswords) {
-                elementosPerfil.btnTogglePasswords.forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        const targetId = this.getAttribute('data-target');
-                        const input = document.getElementById(targetId);
-                        
-                        if (input.type === 'password') {
-                            input.type = 'text';
-                            this.innerHTML = '<i class="fas fa-eye-slash"></i>';
-                        } else {
-                            input.type = 'password';
-                            this.innerHTML = '<i class="fas fa-eye"></i>';
-                        }
-                    });
-                });
-            }
-
-            // ==================== VALIDACIÓN DEL FORMULARIO ====================
-            if (elementosPerfil.guardarPerfil && elementosPerfil.formEditarPerfil) {
-                elementosPerfil.guardarPerfil.addEventListener('click', function() {
-                    if (validarFormularioPerfil()) {
-                        guardarPerfil();
-                    }
-                });
-            }
-
-            // ==================== FUNCIONES DE VALIDACIÓN ====================
-            function validarFormularioPerfil() {
-                const nombre = document.getElementById('nombre').value.trim();
-                const apellido = document.getElementById('apellido').value.trim();
-                const email = document.getElementById('email').value.trim();
-                const claveActual = document.getElementById('claveActual').value;
-                const nuevaClave = document.getElementById('nuevaClave').value;
-                const confirmarClave = document.getElementById('confirmarClave').value;
-
-                // Validar campos obligatorios
-                if (!nombre) {
-                    mostrarToast('❌ El nombre es obligatorio', 'error');
-                    document.getElementById('nombre').focus();
-                    return false;
-                }
-
-                if (!apellido) {
-                    mostrarToast('❌ El apellido es obligatorio', 'error');
-                    document.getElementById('apellido').focus();
-                    return false;
-                }
-
-                if (!email) {
-                    mostrarToast('❌ El email es obligatorio', 'error');
-                    document.getElementById('email').focus();
-                    return false;
-                }
-
-                // Validar formato de email
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                    mostrarToast('❌ Por favor ingresa un email válido', 'error');
-                    document.getElementById('email').focus();
-                    return false;
-                }
-
-                // Validar cambio de contraseña (solo si se intenta cambiar)
-                if (nuevaClave || confirmarClave) {
-                    if (!claveActual) {
-                        mostrarToast('❌ Para cambiar la contraseña debes ingresar la contraseña actual', 'error');
-                        document.getElementById('claveActual').focus();
-                        return false;
-                    }
-
-                    if (nuevaClave.length < 8) {
-                        mostrarToast('❌ La nueva contraseña debe tener al menos 8 caracteres', 'error');
-                        document.getElementById('nuevaClave').focus();
-                        return false;
-                    }
-
-                    if (nuevaClave !== confirmarClave) {
-                        mostrarToast('❌ Las contraseñas no coinciden', 'error');
-                        document.getElementById('confirmarClave').focus();
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            // ==================== GUARDAR PERFIL ====================
-            function guardarPerfil() {
-                console.log('💾 Guardando perfil...');
-
-                // Mostrar loading en el botón
-                const btnGuardar = elementosPerfil.guardarPerfil;
-                const originalText = btnGuardar.innerHTML;
-                btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
-                btnGuardar.disabled = true;
-
-                // Simular envío de datos (aquí iría la llamada AJAX real)
-                setTimeout(() => {
-                    // Restaurar botón
-                    btnGuardar.innerHTML = originalText;
-                    btnGuardar.disabled = false;
-
-                    mostrarToast('✅ Perfil actualizado correctamente', 'success');
-                    
-                    // Cerrar el modal después de guardar
-                    const modal = bootstrap.Modal.getInstance(elementosPerfil.modalEditarPerfil);
-                    if (modal) {
-                        modal.hide();
-                    }
-
-                    // Actualizar el nombre en el header si cambió
-                    const nuevoNombre = document.getElementById('nombre').value;
-                    const nombreUsuarioHeader = document.querySelector('.nombre-usuario');
-                    if (nombreUsuarioHeader && nuevoNombre) {
-                        nombreUsuarioHeader.textContent = nuevoNombre;
-                    }
-                }, 1500);
-            }
-
-            // ==================== INICIALIZACIÓN DEL MODAL ====================
-            if (elementosPerfil.modalEditarPerfil) {
-                elementosPerfil.modalEditarPerfil.addEventListener('show.bs.modal', function() {
-                    console.log('🔄 Abriendo modal de editar perfil');
-                    // Limpiar campos de contraseña al abrir el modal
-                    document.getElementById('claveActual').value = '';
-                    document.getElementById('nuevaClave').value = '';
-                    document.getElementById('confirmarClave').value = '';
-                });
-            }
-
-            // ==================== FUNCIÓN DE TOAST ====================
-            function mostrarToast(mensaje, tipo = 'info') {
-                // Reutilizar la función existente del layout o crear una simple
-                if (typeof window.mostrarToast === 'function') {
-                    window.mostrarToast(mensaje, tipo);
-                } else {
-                    // Fallback simple
-                    console.log(`Toast: ${mensaje} (${tipo})`);
-                    
-                    // Crear un toast simple si no existe la función
-                    const toastContainer = document.getElementById('toast-container') || crearToastContainer();
-                    const toast = document.createElement('div');
-                    toast.className = `alert alert-${tipo === 'error' ? 'danger' : tipo} alert-dismissible fade show`;
-                    toast.style.cssText = 'margin-bottom: 10px; animation: slideInRight 0.3s ease;';
-                    toast.innerHTML = `
-                        ${mensaje}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    `;
-                    
-                    toastContainer.appendChild(toast);
-                    
-                    setTimeout(() => {
-                        if (toast.parentNode) {
-                            toast.remove();
-                        }
-                    }, 5000);
-                }
-            }
-
-            function crearToastContainer() {
-                const container = document.createElement('div');
-                container.id = 'toast-container';
-                container.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    z-index: 9999;
-                    max-width: 300px;
-                `;
-                document.body.appendChild(container);
-                return container;
-            }
-
-            console.log('✅ Modal de Editar Perfil - Configuración completada');
-        });
-    </script>
 
     {% block extra_js %}{% endblock %}
 </body>
