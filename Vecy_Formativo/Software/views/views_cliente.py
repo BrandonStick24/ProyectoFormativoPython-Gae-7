@@ -20,17 +20,13 @@ from django.utils.html import strip_tags
 import os
 from django.contrib.auth.models import User
 
-# ==================== VISTAS PÚBLICAS ====================
 def principal(request):
-    # Obtener datos base
     negocios = Negocios.objects.filter(estado_neg='activo')
     categorias = CategoriaProductos.objects.all()[:20]
     tipo_negocios = TipoNegocio.objects.all()
     
-    # PRODUCTOS DISPONIBLES CON SUS VARIANTES
     todos_productos = Productos.objects.filter(estado_prod='disponible')
     
-    # Obtener variantes para cada producto
     productos_con_variantes = []
     for producto in todos_productos:
         variantes = VariantesProducto.objects.filter(
@@ -45,7 +41,6 @@ def principal(request):
         }
         productos_con_variantes.append(producto_data)
     
-    # PROMOCIONES ACTIVAS
     promociones_procesadas = []
     try:
         hoy = timezone.now().date()
@@ -85,7 +80,6 @@ def principal(request):
     except Exception:
         promociones_procesadas = []
     
-    # PRODUCTOS CON OFERTAS REALES
     productos_oferta = []
     
     for promocion_data in promociones_procesadas:
@@ -137,7 +131,6 @@ def principal(request):
         except (Productos.DoesNotExist, Negocios.DoesNotExist):
             continue
     
-    # NEGOCIOS CON CALIFICACIONES CALCULADAS
     negocios_con_calificaciones = []
     for negocio in negocios:
         resenas_negocio = ResenasNegocios.objects.filter(
@@ -154,14 +147,12 @@ def principal(request):
         negocio.total_resenas = promedio_calificacion['total_resenas'] or 0
         negocios_con_calificaciones.append(negocio)
     
-    # NEGOCIOS MEJOR CALIFICADOS
     negocios_mejor_calificados = sorted(
         [n for n in negocios_con_calificaciones if n.promedio_calificacion > 0],
         key=lambda x: x.promedio_calificacion,
         reverse=True
     )[:8]
     
-    # PRODUCTOS MÁS VENDIDOS (con variantes)
     productos_mas_vendidos_data = []
     productos_mas_vendidos = Productos.objects.filter(
         detallespedido__isnull=False,
@@ -197,7 +188,6 @@ def principal(request):
                 'tiene_variantes': variantes.exists()
             })
     
-    # PRODUCTOS MÁS BARATOS (con variantes)
     productos_baratos_data = []
     productos_baratos = todos_productos.order_by('precio_prod')[:8]
     for producto in productos_baratos:
@@ -211,7 +201,6 @@ def principal(request):
             'tiene_variantes': variantes.exists()
         })
     
-    # NUEVOS PRODUCTOS (con variantes)
     nuevos_productos_data = []
     nuevos_productos = todos_productos.order_by('-fecha_creacion')[:12]
     for producto in nuevos_productos:
@@ -225,7 +214,6 @@ def principal(request):
             'tiene_variantes': variantes.exists()
         })
     
-    # PRODUCTOS DESTACADOS (con variantes)
     productos_destacados_data = []
     productos_destacados = todos_productos.order_by('?')[:8]
     for producto in productos_destacados:
@@ -239,8 +227,22 @@ def principal(request):
             'tiene_variantes': variantes.exists()
         })
     
-    # CATEGORÍAS POPULARES
-    categorias_populares = categorias[:8]
+    # CATEGORÍAS POPULARES - ACTUALIZADO CON RELATED_NAME
+    categorias_populares = CategoriaProductos.objects.annotate(
+        num_productos=Count('productos', filter=Q(productos__estado_prod='disponible'))
+    ).filter(
+        num_productos__gt=0
+    ).order_by('-num_productos')[:8]
+    
+    # Si no hay suficientes categorías con productos, completar con las más recientes
+    if categorias_populares.count() < 8:
+        categorias_adicionales = CategoriaProductos.objects.exclude(
+            pkid_cp__in=[c.pkid_cp for c in categorias_populares]
+        ).annotate(
+            num_productos=Count('productos')
+        ).order_by('-fecha_creacion')[:8 - categorias_populares.count()]
+        
+        categorias_populares = list(categorias_populares) + list(categorias_adicionales)
     
     contexto = {
         'negocios': negocios_con_calificaciones[:12],
@@ -260,7 +262,6 @@ def principal(request):
     return render(request, 'cliente/principal.html', contexto)
 
 def productos_todos(request):
-    """Vista pública de todos los productos"""
     productos = Productos.objects.select_related(
         'fknegocioasociado_prod', 
         'fkcategoria_prod'
@@ -276,7 +277,6 @@ def productos_todos(request):
         num_productos=Count('productos')
     ).order_by('nom_neg')
     
-    # Filtros
     categoria_filtro = request.GET.get('categoria', '')
     negocio_filtro = request.GET.get('negocio', '')
     precio_min = request.GET.get('precio_min', '')
@@ -315,7 +315,6 @@ def productos_todos(request):
             Q(fknegocioasociado_prod__nom_neg__icontains=buscar)
         )
     
-    # Ordenar
     if ordenar_por == 'precio_asc':
         productos = productos.order_by('precio_prod')
     elif ordenar_por == 'precio_desc':
@@ -327,7 +326,6 @@ def productos_todos(request):
     elif ordenar_por == 'stock':
         productos = productos.order_by('-stock_prod')
     
-    # Preparar datos para el template
     productos_data = []
     for producto in productos:
         variantes = VariantesProducto.objects.filter(
@@ -349,7 +347,6 @@ def productos_todos(request):
             'descuento_porcentaje': 0,
         })
     
-    # Paginación
     paginator = Paginator(productos_data, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -372,7 +369,6 @@ def productos_todos(request):
     return render(request, 'Cliente/todos_productos.html', context)
 
 def productos_por_categoria(request, categoria_id):
-    """Vista pública de productos por categoría"""
     categoria = get_object_or_404(CategoriaProductos, pkid_cp=categoria_id)
     
     productos = Productos.objects.select_related(
@@ -391,7 +387,6 @@ def productos_por_categoria(request, categoria_id):
         num_productos=Count('productos')
     ).order_by('nom_neg')
     
-    # Filtros
     negocio_filtro = request.GET.get('negocio')
     precio_min = request.GET.get('precio_min')
     precio_max = request.GET.get('precio_max')
@@ -425,7 +420,6 @@ def productos_por_categoria(request, categoria_id):
     elif ordenar_por == 'stock':
         productos = productos.order_by('-stock_prod')
     
-    # Preparar datos para el template
     productos_data = []
     for producto in productos:
         variantes = VariantesProducto.objects.filter(
@@ -467,28 +461,23 @@ def productos_por_categoria(request, categoria_id):
         'total_productos': paginator.count,
     }
     
-    return render(request, 'Cliente/productos_todos.html', context)
+    return render(request, 'cliente/todos_productos.html', context)
 
 def detalle_negocio(request, id):
-    """Vista pública del detalle del negocio (accesible sin login)"""
-    # Obtener negocio y propietario
     negocio = get_object_or_404(Negocios, pkid_neg=id, estado_neg='activo')
     propietario = negocio.fkpropietario_neg
     tipo_negocio = negocio.fktiponeg_neg
 
-    # Productos del negocio
     productos = Productos.objects.filter(
         fknegocioasociado_prod=negocio,
         estado_prod='disponible'
     ).select_related('fkcategoria_prod')
     
-    # Reseñas del negocio
     resenas = ResenasNegocios.objects.filter(
         fknegocio_resena=negocio,
         estado_resena='activa'
     ).select_related('fkusuario_resena__fkuser')
 
-    # Calcular promedio
     promedio_calificacion = resenas.aggregate(
         promedio=Avg('estrellas'),
         total_resenas=Count('pkid_resena')
@@ -507,13 +496,10 @@ def detalle_negocio(request, id):
 
     return render(request, 'Cliente/detalle_neg.html', contexto)
 
-# ==================== VISTAS PRIVADAS ====================
 @never_cache
 @login_required(login_url='/auth/login/')
 def cliente_dashboard(request):
-    """Dashboard principal del cliente logueado"""
     try:
-        # Obtener el perfil del cliente
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
         from django.utils import timezone
@@ -522,9 +508,6 @@ def cliente_dashboard(request):
         from decimal import Decimal
         hoy = timezone.now().date()
 
-        print("=== DEBUG CLIENTE DASHBOARD INICIO ===")
-
-        # ========== CARRUSEL DE OFERTAS RECIENTES ==========
         ofertas_carrusel_data = []
         try:
             fecha_limite = hoy - timezone.timedelta(days=5)
@@ -534,7 +517,7 @@ def cliente_dashboard(request):
                     SELECT p.pkid_promo, p.titulo_promo, p.descripcion_promo, 
                            p.porcentaje_descuento, p.fecha_inicio, p.fecha_fin,
                            p.estado_promo, p.imagen_promo,
-                           p.fknegocio_id, p.fkproducto_id
+                           p.fknegocio_id, p.fkproducto_id, p.variante_id
                     FROM promociones p
                     INNER JOIN productos pr ON p.fkproducto_id = pr.pkid_prod
                     WHERE p.estado_promo = 'activa'
@@ -547,33 +530,51 @@ def cliente_dashboard(request):
                 """, [fecha_limite, hoy])
                 
                 ofertas_carrusel = cursor.fetchall()
-                print(f"🔄 Ofertas carrusel SQL encontradas: {len(ofertas_carrusel)}")
                 
-                for i, row in enumerate(ofertas_carrusel):
+                for row in ofertas_carrusel:
                     try:
-                        print(f"  🔍 Procesando oferta {i+1}: {row[1]} - Descuento: {row[3]}")
-                        
-                        # Procesar descuento de forma segura
                         descuento_valor = 0
                         if row[3] is not None:
                             try:
                                 descuento_valor = float(row[3])
-                                print(f"    ✅ Descuento procesado: {descuento_valor}%")
-                            except (ValueError, TypeError) as e:
-                                print(f"    ❌ Error en descuento: {e}")
+                            except (ValueError, TypeError):
                                 descuento_valor = 0
                         
-                        # Obtener producto y negocio
                         producto = Productos.objects.get(pkid_prod=row[9])
                         negocio = Negocios.objects.get(pkid_neg=row[8])
+                        variante_id = row[10]
                         
+                        # CALCULAR PRECIO CORRECTO CONSIDERANDO VARIANTES
                         precio_base = float(producto.precio_prod) if producto.precio_prod else 0
+                        variante_nombre = None
+                        
+                        # Si hay variante específica en la promoción
+                        if variante_id:
+                            try:
+                                variante = VariantesProducto.objects.get(
+                                    id_variante=variante_id,
+                                    producto=producto,
+                                    estado_variante='activa'
+                                )
+                                if variante.precio_adicional:
+                                    precio_base += float(variante.precio_adicional)
+                                variante_nombre = variante.nombre_variante
+                            except VariantesProducto.DoesNotExist:
+                                pass
+                        
                         ahorro_oferta = precio_base * (descuento_valor / 100)
+                        
+                        # CREAR TÍTULO CORTO Y DESCRIPCIÓN MEJORADA
+                        titulo_corto = f"{producto.nom_prod}"
+                        if variante_nombre:
+                            titulo_corto = f"{variante_nombre}"
+                        
+                        descripcion_corta = f"Oferta especial -{descuento_valor}% OFF"
                         
                         oferta_data = {
                             'pkid_promo': row[0],
-                            'titulo_promo': row[1],
-                            'descripcion_promo': row[2],
+                            'titulo_promo': titulo_corto,
+                            'descripcion_promo': descripcion_corta,
                             'porcentaje_descuento': descuento_valor,
                             'precio_base': precio_base,
                             'precio_final': precio_base - ahorro_oferta,
@@ -581,64 +582,59 @@ def cliente_dashboard(request):
                             'imagen_promo': row[7] or (producto.img_prod.url if producto.img_prod else None),
                             'fkproducto': producto,
                             'fknegocio': negocio,
+                            'variante_id': variante_id,
+                            'variante_nombre': variante_nombre,
                         }
                         
                         ofertas_carrusel_data.append(oferta_data)
-                        print(f"    ✅ Oferta agregada: {oferta_data['titulo_promo']}")
                         
-                    except Exception as e:
-                        print(f"    ❌ Error procesando oferta carrusel: {e}")
+                    except Exception:
                         continue
-        except Exception as e:
-            print(f"❌ Error obteniendo ofertas carrusel: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Ofertas carrusel finales: {len(ofertas_carrusel_data)}")
-
-        # ========== PRODUCTOS BARATOS (HASTA 50,000 PESOS) - CORREGIDO ==========
+        # PRODUCTOS BARATOS - CON CÁLCULO CORRECTO DE DESCUENTOS POR VARIANTE
         productos_baratos_data = []
         try:
-            # FILTRO CORREGIDO: Solo productos hasta 50,000 pesos
             productos_baratos = Productos.objects.filter(
                 estado_prod='disponible',
                 precio_prod__lte=50000
             ).order_by('precio_prod')[:12]
             
-            print(f"🔄 Productos baratos encontrados (hasta $50,000): {productos_baratos.count()}")
-            
-            for i, producto in enumerate(productos_baratos):
+            for producto in productos_baratos:
                 try:
-                    print(f"  🔍 Procesando producto barato {i+1}: {producto.nom_prod} - Precio: {producto.precio_prod}")
+                    # PRECIO BASE DEL PRODUCTO
+                    precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
+                    precio_final_producto = precio_base_producto
+                    descuento_porcentaje_producto = 0
+                    ahorro_producto = 0
                     
-                    precio_base = float(producto.precio_prod) if producto.precio_prod else 0
-                    precio_final = precio_base
-                    descuento_porcentaje = 0
-                    ahorro = 0
-                    
-                    # Verificar si tiene oferta activa usando SQL
+                    # BUSCAR PROMOCIÓN ACTIVA PARA EL PRODUCTO BASE
                     with connection.cursor() as cursor:
                         cursor.execute("""
-                            SELECT porcentaje_descuento 
-                            FROM promociones 
-                            WHERE fkproducto_id = %s 
-                            AND estado_promo = 'activa'
-                            AND fecha_inicio <= %s 
-                            AND fecha_fin >= %s
+                            SELECT p.porcentaje_descuento 
+                            FROM promociones p
+                            WHERE p.fkproducto_id = %s 
+                            AND p.variante_id IS NULL
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s 
+                            AND p.fecha_fin >= %s
+                            AND p.porcentaje_descuento > 0
                             LIMIT 1
                         """, [producto.pkid_prod, hoy, hoy])
                         
                         result = cursor.fetchone()
                         if result and result[0] is not None:
                             try:
-                                descuento_porcentaje = float(result[0])
-                                if descuento_porcentaje > 0:
-                                    precio_final = precio_base * (1 - (descuento_porcentaje / 100))
-                                    ahorro = precio_base - precio_final
-                                    print(f"    ✅ Descuento aplicado: {descuento_porcentaje}%")
-                            except (ValueError, TypeError) as e:
-                                print(f"    ❌ Error en descuento: {e}")
-                                pass
+                                descuento_porcentaje_producto = float(result[0])
+                                ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
+                                precio_final_producto = precio_base_producto - ahorro_producto
+                            except (ValueError, TypeError):
+                                descuento_porcentaje_producto = 0
+                                precio_final_producto = precio_base_producto
+                                ahorro_producto = 0
                     
-                    # CORRECCIÓN COMPLETA: OBTENER VARIANTES CON STOCK REAL INDIVIDUAL
+                    # VARIANTES DEL PRODUCTO - CON CÁLCULO INDEPENDIENTE PARA CADA UNA
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
                         producto=producto, 
@@ -651,53 +647,88 @@ def cliente_dashboard(request):
                             estado_variante='activa'
                         )
                         
-                        print(f"    🔍 Variantes encontradas para {producto.nom_prod}: {variantes.count()}")
-                        
                         for variante in variantes:
                             try:
-                                # USAR LOS CAMPOS CORRECTOS DEL MODELO VariantesProducto
+                                # CALCULAR PRECIO BASE DE LA VARIANTE
+                                precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                precio_base_variante = precio_base_producto + precio_adicional
+                                precio_final_variante = precio_base_variante
+                                descuento_porcentaje_variante = 0
+                                ahorro_variante = 0
+                                
+                                # ✅ CORRECCIÓN: BUSCAR DESCUENTO ESPECÍFICO PARA ESTA VARIANTE
+                                with connection.cursor() as cursor:
+                                    cursor.execute("""
+                                        SELECT p.porcentaje_descuento 
+                                        FROM promociones p
+                                        WHERE p.fkproducto_id = %s 
+                                        AND p.variante_id = %s
+                                        AND p.estado_promo = 'activa'
+                                        AND p.fecha_inicio <= %s 
+                                        AND p.fecha_fin >= %s
+                                        AND p.porcentaje_descuento > 0
+                                        LIMIT 1
+                                    """, [producto.pkid_prod, variante.id_variante, hoy, hoy])
+                                    
+                                    result_variante = cursor.fetchone()
+                                    if result_variante and result_variante[0] is not None:
+                                        try:
+                                            descuento_porcentaje_variante = float(result_variante[0])
+                                            ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                            precio_final_variante = precio_base_variante - ahorro_variante
+                                        except (ValueError, TypeError):
+                                            descuento_porcentaje_variante = 0
+                                            precio_final_variante = precio_base_variante
+                                            ahorro_variante = 0
+                                    else:
+                                        # Si no hay descuento específico para la variante, usar el del producto base
+                                        descuento_porcentaje_variante = descuento_porcentaje_producto
+                                        ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                        precio_final_variante = precio_base_variante - ahorro_variante
+                                
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
-                                    'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
-                                    'stock_variante': variante.stock_variante or 0,  # ✅ STOCK REAL INDIVIDUAL DE LA VARIANTE
+                                    'precio_adicional': precio_adicional,
+                                    'stock_variante': variante.stock_variante or 0,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
+                                    # PRECIOS CALCULADOS ESPECÍFICOS PARA LA VARIANTE
+                                    'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_final_calculado': round(precio_final_variante, 2),
+                                    'ahorro_calculado': round(ahorro_variante, 2),
+                                    'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                                    'tiene_descuento_calculado': descuento_porcentaje_variante > 0,
                                 }
                                 variantes_list.append(variante_data)
-                                print(f"    📦 Variante procesada: {variante.nombre_variante} (ID: {variante.id_variante}) - Precio adicional: ${variante_data['precio_adicional']} - Stock: {variante_data['stock_variante']}")
-                                
-                            except Exception as e:
-                                print(f"    ❌ Error procesando variante: {e}")
+                            except Exception:
                                 continue
                     
-                    # ✅ CORRECCIÓN: Stock del producto base SOLO para el producto base
+                    # SOLO MARCAR COMO "TIENE DESCUENTO" SI REALMENTE HAY UN DESCUENTO > 0
+                    tiene_descuento_real = descuento_porcentaje_producto > 0
+                    
                     producto_data = {
                         'producto': producto,
-                        'precio_base': precio_base,
-                        'precio_final': round(precio_final, 2),
-                        'tiene_descuento': descuento_porcentaje > 0,
-                        'descuento_porcentaje': descuento_porcentaje,
-                        'ahorro': round(ahorro, 2),
+                        'precio_base': precio_base_producto,
+                        'precio_final': round(precio_final_producto, 2),
+                        'tiene_descuento': tiene_descuento_real,
+                        'descuento_porcentaje': descuento_porcentaje_producto,
+                        'ahorro': round(ahorro_producto, 2),
                         'tiene_variantes': tiene_variantes,
                         'variantes': variantes_list,
-                        'stock': producto.stock_prod or 0,  # ✅ SOLO STOCK DEL PRODUCTO BASE
+                        'stock': producto.stock_prod or 0,
                     }
                     
                     productos_baratos_data.append(producto_data)
-                    print(f"    ✅ Producto barato agregado: {producto.nom_prod} - Precio final: ${precio_final} - Tiene variantes: {tiene_variantes} - Variantes: {len(variantes_list)} - Stock base: {producto.stock_prod}")
                     
-                except Exception as e:
-                    print(f"    ❌ Error procesando producto barato {producto.nom_prod}: {e}")
+                except Exception:
                     continue
                     
-        except Exception as e:
-            print(f"❌ Error obteniendo productos baratos: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Productos baratos finales (hasta $50,000): {len(productos_baratos_data)}")
-
-        # ========== PRODUCTOS DESTACADOS - CORREGIDO ==========
+        # PRODUCTOS DESTACADOS - CON CÁLCULO CORRECTO DE DESCUENTOS POR VARIANTE
         productos_destacados_data = []
         try:
             productos_vendidos = DetallesPedido.objects.filter(
@@ -708,43 +739,42 @@ def cliente_dashboard(request):
                 total_vendido=Sum('cantidad_detalle')
             ).order_by('-total_vendido')[:12]
             
-            print(f"🔄 Productos vendidos encontrados: {len(productos_vendidos)}")
-            
-            for i, item in enumerate(productos_vendidos):
+            for item in productos_vendidos:
                 try:
                     producto = Productos.objects.get(pkid_prod=item['fkproducto_detalle'])
-                    print(f"  🔍 Procesando producto destacado {i+1}: {producto.nom_prod} - Vendidos: {item['total_vendido']}")
                     
-                    precio_base = float(producto.precio_prod) if producto.precio_prod else 0
-                    precio_final = precio_base
-                    descuento_porcentaje = 0
-                    ahorro = 0
+                    # PRECIO BASE DEL PRODUCTO
+                    precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
+                    precio_final_producto = precio_base_producto
+                    descuento_porcentaje_producto = 0
+                    ahorro_producto = 0
                     
-                    # Verificar ofertas usando SQL
+                    # BUSCAR PROMOCIÓN ACTIVA PARA EL PRODUCTO BASE
                     with connection.cursor() as cursor:
                         cursor.execute("""
-                            SELECT porcentaje_descuento 
-                            FROM promociones 
-                            WHERE fkproducto_id = %s 
-                            AND estado_promo = 'activa'
-                            AND fecha_inicio <= %s 
-                            AND fecha_fin >= %s
+                            SELECT p.porcentaje_descuento 
+                            FROM promociones p
+                            WHERE p.fkproducto_id = %s 
+                            AND p.variante_id IS NULL
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s 
+                            AND p.fecha_fin >= %s
+                            AND p.porcentaje_descuento > 0
                             LIMIT 1
                         """, [producto.pkid_prod, hoy, hoy])
                         
                         result = cursor.fetchone()
                         if result and result[0] is not None:
                             try:
-                                descuento_porcentaje = float(result[0])
-                                if descuento_porcentaje > 0:
-                                    precio_final = precio_base * (1 - (descuento_porcentaje / 100))
-                                    ahorro = precio_base - precio_final
-                                    print(f"    ✅ Descuento aplicado: {descuento_porcentaje}%")
-                            except (ValueError, TypeError) as e:
-                                print(f"    ❌ Error en descuento: {e}")
-                                pass
+                                descuento_porcentaje_producto = float(result[0])
+                                ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
+                                precio_final_producto = precio_base_producto - ahorro_producto
+                            except (ValueError, TypeError):
+                                descuento_porcentaje_producto = 0
+                                precio_final_producto = precio_base_producto
+                                ahorro_producto = 0
                     
-                    # CORRECCIÓN COMPLETA: OBTENER VARIANTES CON STOCK REAL INDIVIDUAL
+                    # VARIANTES DEL PRODUCTO - CON CÁLCULO INDEPENDIENTE PARA CADA UNA
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
                         producto=producto, 
@@ -759,101 +789,164 @@ def cliente_dashboard(request):
                         
                         for variante in variantes:
                             try:
-                                # USAR LOS CAMPOS CORRECTOS DEL MODELO
+                                # CALCULAR PRECIO BASE DE LA VARIANTE
+                                precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                precio_base_variante = precio_base_producto + precio_adicional
+                                precio_final_variante = precio_base_variante
+                                descuento_porcentaje_variante = 0
+                                ahorro_variante = 0
+                                
+                                # ✅ CORRECCIÓN: BUSCAR DESCUENTO ESPECÍFICO PARA ESTA VARIANTE
+                                with connection.cursor() as cursor:
+                                    cursor.execute("""
+                                        SELECT p.porcentaje_descuento 
+                                        FROM promociones p
+                                        WHERE p.fkproducto_id = %s 
+                                        AND p.variante_id = %s
+                                        AND p.estado_promo = 'activa'
+                                        AND p.fecha_inicio <= %s 
+                                        AND p.fecha_fin >= %s
+                                        AND p.porcentaje_descuento > 0
+                                        LIMIT 1
+                                    """, [producto.pkid_prod, variante.id_variante, hoy, hoy])
+                                    
+                                    result_variante = cursor.fetchone()
+                                    if result_variante and result_variante[0] is not None:
+                                        try:
+                                            descuento_porcentaje_variante = float(result_variante[0])
+                                            ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                            precio_final_variante = precio_base_variante - ahorro_variante
+                                        except (ValueError, TypeError):
+                                            descuento_porcentaje_variante = 0
+                                            precio_final_variante = precio_base_variante
+                                            ahorro_variante = 0
+                                    else:
+                                        # Si no hay descuento específico para la variante, usar el del producto base
+                                        descuento_porcentaje_variante = descuento_porcentaje_producto
+                                        ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                        precio_final_variante = precio_base_variante - ahorro_variante
+                                
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
-                                    'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
-                                    'stock_variante': variante.stock_variante or 0,  # ✅ STOCK REAL INDIVIDUAL DE LA VARIANTE
+                                    'precio_adicional': precio_adicional,
+                                    'stock_variante': variante.stock_variante or 0,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
+                                    # PRECIOS CALCULADOS ESPECÍFICOS PARA LA VARIANTE
+                                    'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_final_calculado': round(precio_final_variante, 2),
+                                    'ahorro_calculado': round(ahorro_variante, 2),
+                                    'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                                    'tiene_descuento_calculado': descuento_porcentaje_variante > 0,
                                 }
                                 variantes_list.append(variante_data)
-                                print(f"    📦 Variante encontrada: {variante.nombre_variante} (ID: {variante.id_variante}) - Stock: {variante_data['stock_variante']}")
-                            except Exception as e:
-                                print(f"    ❌ Error procesando variante: {e}")
+                            except Exception:
                                 continue
+                    
+                    # SOLO MARCAR COMO "TIENE DESCUENTO" SI REALMENTE HAY UN DESCUENTO > 0
+                    tiene_descuento_real = descuento_porcentaje_producto > 0
                     
                     producto_data = {
                         'producto': producto,
-                        'precio_base': precio_base,
-                        'precio_final': round(precio_final, 2),
+                        'precio_base': precio_base_producto,
+                        'precio_final': round(precio_final_producto, 2),
                         'total_vendido': item['total_vendido'],
-                        'tiene_descuento': descuento_porcentaje > 0,
-                        'descuento_porcentaje': descuento_porcentaje,
-                        'ahorro': round(ahorro, 2),
+                        'tiene_descuento': tiene_descuento_real,
+                        'descuento_porcentaje': descuento_porcentaje_producto,
+                        'ahorro': round(ahorro_producto, 2),
                         'tiene_variantes': tiene_variantes,
                         'variantes': variantes_list,
-                        'stock': producto.stock_prod or 0,  # ✅ SOLO STOCK DEL PRODUCTO BASE
+                        'stock': producto.stock_prod or 0,
                     }
                     
                     productos_destacados_data.append(producto_data)
-                    print(f"    ✅ Producto destacado agregado: {producto.nom_prod} - Variantes: {len(variantes_list)} - Stock base: {producto.stock_prod}")
                     
                 except Productos.DoesNotExist:
-                    print(f"    ❌ Producto no encontrado: {item['fkproducto_detalle']}")
                     continue
-                except Exception as e:
-                    print(f"    ❌ Error procesando producto destacado: {e}")
+                except Exception:
                     continue
-        except Exception as e:
-            print(f"❌ Error obteniendo productos destacados: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Productos destacados finales: {len(productos_destacados_data)}")
-
-        # ========== PRODUCTOS EN OFERTA - CORREGIDO ==========
+        # PRODUCTOS OFERTA - MANTENER LA LÓGICA ACTUAL (QUE YA FUNCIONA BIEN)
         productos_oferta_data = []
         try:
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT DISTINCT pr.pkid_prod, pr.nom_prod, pr.precio_prod, 
-                           pr.desc_prod, pr.stock_prod, pr.img_prod,
-                           p.porcentaje_descuento, pr.fknegocioasociado_prod
-                    FROM productos pr
-                    INNER JOIN promociones p ON pr.pkid_prod = p.fkproducto_id
+                    SELECT p.pkid_promo, p.titulo_promo, p.descripcion_promo,
+                           p.porcentaje_descuento, p.fkproducto_id, p.variante_id,
+                           pr.nom_prod, pr.precio_prod, pr.desc_prod, 
+                           pr.stock_prod, pr.img_prod, pr.fknegocioasociado_prod
+                    FROM promociones p
+                    INNER JOIN productos pr ON p.fkproducto_id = pr.pkid_prod
                     WHERE pr.estado_prod = 'disponible'
                     AND p.estado_promo = 'activa'
                     AND p.fecha_inicio <= %s
                     AND p.fecha_fin >= %s
+                    AND p.porcentaje_descuento > 0
                     LIMIT 12
                 """, [hoy, hoy])
                 
                 productos_oferta_rows = cursor.fetchall()
-                print(f"🔄 Productos oferta SQL encontrados: {len(productos_oferta_rows)}")
                 
-                for i, row in enumerate(productos_oferta_rows):
+                for row in productos_oferta_rows:
                     try:
-                        print(f"  🔍 Procesando producto oferta {i+1}: {row[1]} - Precio: {row[2]}")
-                        
-                        producto_id = row[0]
+                        producto_id = row[4]
                         producto = Productos.objects.get(pkid_prod=producto_id)
+                        variante_id = row[5]
                         
-                        precio_base = float(row[2]) if row[2] else 0
+                        precio_base = float(row[7]) if row[7] else 0
                         precio_final = precio_base
                         descuento_porcentaje = 0
                         ahorro = 0
+                        variante_info = None
                         
-                        # Procesar descuento
-                        if row[6] is not None:
+                        if row[3] is not None:
                             try:
-                                descuento_porcentaje = float(row[6])
+                                descuento_porcentaje = float(row[3])
                                 if descuento_porcentaje > 0:
-                                    precio_final = precio_base * (1 - (descuento_porcentaje / 100))
-                                    ahorro = precio_base - precio_final
-                                    print(f"    ✅ Descuento aplicado: {descuento_porcentaje}%")
-                            except (ValueError, TypeError) as e:
-                                print(f"    ❌ Error en descuento: {e}")
+                                    # SI HAY VARIANTE ESPECÍFICA EN LA OFERTA
+                                    if variante_id:
+                                        try:
+                                            variante = VariantesProducto.objects.get(
+                                                id_variante=variante_id,
+                                                producto=producto,
+                                                estado_variante='activa'
+                                            )
+                                            # CALCULAR PRECIO CON VARIANTE
+                                            precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                            precio_base += precio_adicional
+                                            ahorro = precio_base * (descuento_porcentaje / 100)
+                                            precio_final = precio_base - ahorro
+                                            
+                                            variante_info = {
+                                                'id': variante.id_variante,
+                                                'nombre': variante.nombre_variante,
+                                                'precio_adicional': precio_adicional,
+                                                'stock': variante.stock_variante or 0,
+                                                'imagen': variante.imagen_variante.url if variante.imagen_variante else None
+                                            }
+                                        except VariantesProducto.DoesNotExist:
+                                            # Si no existe la variante, usar producto base
+                                            ahorro = precio_base * (descuento_porcentaje / 100)
+                                            precio_final = precio_base - ahorro
+                                    else:
+                                        # OFERTA EN PRODUCTO BASE
+                                        ahorro = precio_base * (descuento_porcentaje / 100)
+                                        precio_final = precio_base - ahorro
+                            except (ValueError, TypeError):
                                 pass
                         
-                        # CORRECCIÓN COMPLETA: OBTENER VARIANTES CON STOCK REAL INDIVIDUAL
+                        # VARIANTES PARA EL PRODUCTO (si no hay variante específica en oferta)
                         variantes_list = []
                         tiene_variantes = VariantesProducto.objects.filter(
                             producto=producto, 
                             estado_variante='activa'
                         ).exists()
                         
-                        if tiene_variantes:
+                        if tiene_variantes and not variante_info:
                             variantes = VariantesProducto.objects.filter(
                                 producto=producto,
                                 estado_variante='activa'
@@ -861,46 +954,56 @@ def cliente_dashboard(request):
                             
                             for variante in variantes:
                                 try:
-                                    # USAR LOS CAMPOS CORRECTOS DEL MODELO
+                                    # CALCULAR PRECIOS PARA VARIANTES CON DESCUENTO
+                                    precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                    precio_base_variante = precio_base + precio_adicional
+                                    
+                                    if descuento_porcentaje > 0:
+                                        ahorro_variante = precio_base_variante * (descuento_porcentaje / 100)
+                                        precio_final_variante = precio_base_variante - ahorro_variante
+                                    else:
+                                        precio_final_variante = precio_base_variante
+                                        ahorro_variante = 0
+                                    
                                     variante_data = {
                                         'id_variante': variante.id_variante,
                                         'nombre_variante': variante.nombre_variante,
-                                        'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
-                                        'stock_variante': variante.stock_variante or 0,  # ✅ STOCK REAL INDIVIDUAL DE LA VARIANTE
+                                        'precio_adicional': precio_adicional,
+                                        'stock_variante': variante.stock_variante or 0,
                                         'imagen_variante': variante.imagen_variante,
                                         'estado_variante': variante.estado_variante,
                                         'sku_variante': variante.sku_variante,
+                                        'precio_base_calculado': round(precio_base_variante, 2),
+                                        'precio_final_calculado': round(precio_final_variante, 2),
+                                        'ahorro_calculado': round(ahorro_variante, 2),
                                     }
                                     variantes_list.append(variante_data)
-                                    print(f"    📦 Variante encontrada: {variante.nombre_variante} (ID: {variante.id_variante}) - Stock: {variante_data['stock_variante']}")
-                                except Exception as e:
-                                    print(f"    ❌ Error procesando variante: {e}")
+                                except Exception:
                                     continue
                         
                         producto_data = {
                             'producto': producto,
                             'precio_base': precio_base,
                             'precio_final': round(precio_final, 2),
+                            'precio_original': precio_base,
                             'tiene_descuento': descuento_porcentaje > 0,
                             'descuento_porcentaje': descuento_porcentaje,
+                            'descuento_monto': round(ahorro, 2),
                             'ahorro': round(ahorro, 2),
                             'tiene_variantes': tiene_variantes,
                             'variantes': variantes_list,
-                            'stock': row[4] or 0,  # ✅ SOLO STOCK DEL PRODUCTO BASE
+                            'variante': variante_info,
+                            'stock': row[9] or 0,
                         }
                         
                         productos_oferta_data.append(producto_data)
-                        print(f"    ✅ Producto oferta agregado: {producto.nom_prod} - Variantes: {len(variantes_list)} - Stock base: {row[4]}")
                         
-                    except Exception as e:
-                        print(f"    ❌ Error procesando producto oferta: {e}")
+                    except Exception:
                         continue
-        except Exception as e:
-            print(f"❌ Error obteniendo productos oferta: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Productos oferta finales: {len(productos_oferta_data)}")
-
-        # ========== NEGOCIOS DESTACADOS ==========
+        # NEGOCIOS DESTACADOS (mantener igual)
         negocios_destacados_data = []
         try:
             negocios_con_resenas = Negocios.objects.filter(
@@ -911,22 +1014,17 @@ def cliente_dashboard(request):
                 promedio_calificacion__gte=4.0
             ).order_by('-promedio_calificacion')[:6]
             
-            print(f"🔄 Negocios destacados encontrados: {negocios_con_resenas.count()}")
-            
             for negocio in negocios_con_resenas:
                 try:
-                    # Contar reseñas únicas
                     total_resenas = ResenasNegocios.objects.filter(
                         fknegocio_resena=negocio
                     ).count()
                     
-                    # Contar productos disponibles con stock
                     total_productos_disponibles = Productos.objects.filter(
                         fknegocioasociado_prod=negocio,
                         estado_prod='disponible'
                     ).count()
                     
-                    # Calcular productos en oferta usando SQL
                     with connection.cursor() as cursor:
                         cursor.execute("""
                             SELECT COUNT(DISTINCT pr.pkid_prod)
@@ -950,23 +1048,16 @@ def cliente_dashboard(request):
                     }
                     
                     negocios_destacados_data.append(negocio_data)
-                    print(f"✅ Negocio destacado agregado: {negocio.nom_neg} - Reseñas: {total_resenas}, Productos: {total_productos_disponibles}")
                     
-                except Exception as e:
-                    print(f"❌ Error procesando negocio destacado: {e}")
+                except Exception:
                     continue
-        except Exception as e:
-            print(f"❌ Error obteniendo negocios destacados: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Negocios destacados finales: {len(negocios_destacados_data)}")
-
-        # ========== OTROS NEGOCIOS ACTIVOS ==========
         otros_negocios_data = []
         try:
-            # Obtener IDs de negocios destacados para excluirlos
             negocios_destacados_ids = [neg['negocio'].pkid_neg for neg in negocios_destacados_data]
             
-            # Obtener negocios activos que NO están en los destacados
             otros_negocios = Negocios.objects.filter(
                 estado_neg='activo'
             ).exclude(
@@ -975,22 +1066,17 @@ def cliente_dashboard(request):
                 promedio_calificacion=Avg('resenasnegocios__estrellas')
             ).order_by('-promedio_calificacion')[:6]
             
-            print(f"🔄 Otros negocios encontrados: {otros_negocios.count()}")
-            
             for negocio in otros_negocios:
                 try:
-                    # Contar reseñas únicas
                     total_resenas = ResenasNegocios.objects.filter(
                         fknegocio_resena=negocio
                     ).count()
                     
-                    # Contar productos disponibles con stock
                     total_productos_disponibles = Productos.objects.filter(
                         fknegocioasociado_prod=negocio,
                         estado_prod='disponible'
                     ).count()
                     
-                    # Calcular productos en oferta usando SQL
                     with connection.cursor() as cursor:
                         cursor.execute("""
                             SELECT COUNT(DISTINCT pr.pkid_prod)
@@ -1014,17 +1100,12 @@ def cliente_dashboard(request):
                     }
                     
                     otros_negocios_data.append(negocio_data)
-                    print(f"✅ Otro negocio agregado: {negocio.nom_neg} - Reseñas: {total_resenas}, Productos: {total_productos_disponibles}")
                     
-                except Exception as e:
-                    print(f"❌ Error procesando otro negocio: {e}")
+                except Exception:
                     continue
-        except Exception as e:
-            print(f"❌ Error obteniendo otros negocios: {e}")
+        except Exception:
+            pass
 
-        print(f"📦 Otros negocios finales: {len(otros_negocios_data)}")
-
-        # ========== CARRITO Y FAVORITOS ==========
         carrito_count = 0
         favoritos_count = 0
         
@@ -1036,40 +1117,17 @@ def cliente_dashboard(request):
             favoritos_count = Favoritos.objects.filter(
                 fkusuario=perfil_cliente
             ).count()
-        except Exception as e:
-            print(f"❌ Error obteniendo carrito/favoritos: {e}")
+        except Exception:
+            pass
 
-        # ========== PEDIDOS PENDIENTES ==========
         pedidos_pendientes_count = 0
         try:
             pedidos_pendientes_count = Pedidos.objects.filter(
                 fkusuario_pedido=perfil_cliente,
                 estado_pedido__in=['pendiente', 'confirmado', 'preparando']
             ).count()
-            print(f"📋 Pedidos pendientes encontrados: {pedidos_pendientes_count}")
-        except Exception as e:
-            print(f"❌ Error contando pedidos pendientes: {e}")
-
-        print("=== RESUMEN FINAL ===")
-        print(f"🎯 Ofertas carrusel: {len(ofertas_carrusel_data)}")
-        print(f"💰 Productos baratos (hasta $50,000): {len(productos_baratos_data)}")
-        print(f"⭐ Productos destacados: {len(productos_destacados_data)}")
-        print(f"🔥 Productos oferta: {len(productos_oferta_data)}")
-        print(f"🏆 Negocios destacados: {len(negocios_destacados_data)}")
-        print(f"🏪 Otros negocios: {len(otros_negocios_data)}")
-        print(f"🛒 Carrito: {carrito_count}")
-        print(f"❤️ Favoritos: {favoritos_count}")
-        print(f"📋 Pedidos pendientes: {pedidos_pendientes_count}")
-        
-        # DEBUG DETALLADO: Verificar productos con variantes
-        productos_con_variantes = [p for p in productos_baratos_data if p['tiene_variantes']]
-        print(f"🔍 Productos con variantes: {len(productos_con_variantes)}")
-        for p in productos_con_variantes:
-            print(f"   📦 {p['producto'].nom_prod}: {len(p['variantes'])} variantes")
-            for v in p['variantes']:
-                print(f"      🎯 Variante: {v['nombre_variante']} (ID: {v['id_variante']}) - Precio adicional: ${v['precio_adicional']} - Stock: {v['stock_variante']}")
-        
-        print("=== DEBUG CLIENTE DASHBOARD FIN ===")
+        except Exception:
+            pass
 
         context = {
             'perfil': perfil_cliente,
@@ -1077,7 +1135,6 @@ def cliente_dashboard(request):
             'favoritos_count': favoritos_count,
             'pedidos_pendientes_count': pedidos_pendientes_count,
             
-            # Secciones principales
             'ofertas_carrusel': ofertas_carrusel_data,
             'productos_baratos': productos_baratos_data,
             'productos_destacados': productos_destacados_data,
@@ -1085,7 +1142,6 @@ def cliente_dashboard(request):
             'negocios_destacados': negocios_destacados_data,
             'otros_negocios': otros_negocios_data,
             
-            # Flags
             'hay_ofertas_activas': len(ofertas_carrusel_data) > 0,
             'hay_productos_baratos': len(productos_baratos_data) > 0,
             'hay_otros_negocios': len(otros_negocios_data) > 0,
@@ -1094,10 +1150,7 @@ def cliente_dashboard(request):
         return render(request, 'Cliente/Cliente.html', context)
         
     except Exception as e:
-        print(f"❌ Error en dashboard cliente: {e}")
-        import traceback
-        traceback.print_exc()
-        
+        print(f"Error en cliente_dashboard: {str(e)}")
         return render(request, 'Cliente/Cliente.html', {
             'carrito_count': 0,
             'favoritos_count': 0,
@@ -1111,41 +1164,34 @@ def cliente_dashboard(request):
             'hay_ofertas_activas': False,
             'hay_productos_baratos': False,
             'hay_otros_negocios': False,
-        })    
-
+        })
+        
 @login_required(login_url='/auth/login/')
 def detalle_negocio_logeado(request, id):
-    """Vista detallada del negocio para el cliente logueado - VERSIÓN COMPLETAMENTE CORREGIDA CON PAGINACIÓN"""
     try:
-        # Obtener negocio y relaciones
         negocio = get_object_or_404(
             Negocios.objects.select_related('fkpropietario_neg', 'fktiponeg_neg'), 
             pkid_neg=id, 
             estado_neg='activo'
         )
         
-        # Obtener perfil del cliente logueado
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # PRODUCTOS DEL NEGOCIO - CON MANEJO COMPLETO DE VARIANTES Y OFERTAS
         productos = Productos.objects.filter(
             fknegocioasociado_prod=negocio,
             estado_prod='disponible'
         ).select_related('fkcategoria_prod')
         
-        # Preparar productos con manejo completo de variantes y ofertas
         productos_list = []
         hoy = timezone.now().date()
         
         for producto in productos:
-            # Precio base del producto
             precio_base = float(producto.precio_prod) if producto.precio_prod else 0
             precio_final = precio_base
             descuento_porcentaje = 0
             ahorro = 0
             tiene_descuento = False
             
-            # Verificar si tiene oferta activa usando SQL
             with connection.cursor() as cursor:
                 cursor.execute("""
                     SELECT porcentaje_descuento 
@@ -1168,7 +1214,6 @@ def detalle_negocio_logeado(request, id):
                     except (ValueError, TypeError):
                         pass
             
-            # OBTENER VARIANTES CON STOCK INDIVIDUAL
             variantes_list = []
             tiene_variantes = VariantesProducto.objects.filter(
                 producto=producto, 
@@ -1191,17 +1236,14 @@ def detalle_negocio_logeado(request, id):
                             'imagen_variante': variante.imagen_variante,
                         }
                         variantes_list.append(variante_data)
-                    except Exception as e:
-                        print(f"❌ Error procesando variante: {e}")
+                    except Exception:
                         continue
             
-            # Calcular stock total (producto base + variantes)
             stock_total = producto.stock_prod or 0
             if tiene_variantes:
                 stock_variantes = sum(variante['stock_variante'] for variante in variantes_list)
                 stock_total += stock_variantes
             
-            # Datos completos del producto
             producto_data = {
                 'producto': producto,
                 'precio_base': precio_base,
@@ -1211,39 +1253,32 @@ def detalle_negocio_logeado(request, id):
                 'ahorro': round(ahorro, 2),
                 'tiene_variantes': tiene_variantes,
                 'variantes': variantes_list,
-                'stock': stock_total,  # Stock total considerando variantes
+                'stock': stock_total,
             }
             productos_list.append(producto_data)
         
-        # RESEÑAS DEL NEGOCIO - CON PAGINACIÓN (5 POR PÁGINA)
         resenas_list = ResenasNegocios.objects.filter(
             fknegocio_resena=negocio,
             estado_resena='activa'
         ).select_related('fkusuario_resena__fkuser').order_by('-fecha_resena')
         
-        # ✅ PAGINACIÓN: Mostrar solo 5 reseñas inicialmente
-        paginator = Paginator(resenas_list, 5)  # 5 reseñas por página
-        page_number = request.GET.get('page', 1)  # Página actual, por defecto 1
+        paginator = Paginator(resenas_list, 5)
+        page_number = request.GET.get('page', 1)
         resenas_paginadas = paginator.get_page(page_number)
         
-        # ✅ CÁLCULO CORRECTO DE ESTADÍSTICAS DE RESEÑAS
         total_resenas = resenas_list.count()
         
-        # Calcular promedio de calificación
         promedio_calificacion = resenas_list.aggregate(
             promedio=Avg('estrellas')
         )['promedio'] or 0
         
-        # ✅ CÁLCULO CORRECTO DE DISTRIBUCIÓN POR ESTRELLAS
         distribucion_estrellas = []
         conteo_estrellas = {5: 0, 4: 0, 3: 0, 2: 0, 1: 0}
         
-        # Contar reseñas por cada cantidad de estrellas
         for resena in resenas_list:
             if resena.estrellas in conteo_estrellas:
                 conteo_estrellas[resena.estrellas] += 1
         
-        # Crear distribución con porcentajes
         for estrellas in [5, 4, 3, 2, 1]:
             cantidad = conteo_estrellas[estrellas]
             porcentaje = (cantidad / total_resenas * 100) if total_resenas > 0 else 0
@@ -1254,34 +1289,29 @@ def detalle_negocio_logeado(request, id):
                 'porcentaje': round(porcentaje, 1)
             })
         
-        # ✅ CREAR DICCIONARIO DE ESTADÍSTICAS COMPATIBLE CON EL TEMPLATE
         estadisticas_resenas = {
             'promedio': round(promedio_calificacion, 1),
             'total_resenas': total_resenas,
             'distribucion': distribucion_estrellas,
         }
         
-        # ✅ AGREGAR CAMPOS INDIVIDUALES PARA COMPATIBILIDAD CON EL TEMPLATE
         for item in distribucion_estrellas:
             estrellas = item['estrellas']
             estadisticas_resenas[f'porcentaje_{estrellas}'] = item['porcentaje']
             estadisticas_resenas[f'{estrellas}_estrellas'] = item['cantidad']
         
-        # ✅ ASEGURAR QUE TODOS LOS CAMPOS EXISTAN (incluso si no hay reseñas)
         for star in [5, 4, 3, 2, 1]:
             if f'porcentaje_{star}' not in estadisticas_resenas:
                 estadisticas_resenas[f'porcentaje_{star}'] = 0
             if f'{star}_estrellas' not in estadisticas_resenas:
                 estadisticas_resenas[f'{star}_estrellas'] = 0
         
-        # Verificar si el usuario actual ya reseñó este negocio
         usuario_ya_reseno = ResenasNegocios.objects.filter(
             fknegocio_resena=negocio,
             fkusuario_resena=perfil_cliente,
             estado_resena='activa'
         ).exists()
         
-        # Obtener la reseña del usuario actual si existe
         reseña_usuario_actual = None
         if usuario_ya_reseno:
             reseña_usuario_actual = ResenasNegocios.objects.filter(
@@ -1290,21 +1320,12 @@ def detalle_negocio_logeado(request, id):
                 estado_resena='activa'
             ).first()
         
-        # Obtener carrito del usuario
         carrito_count = 0
         try:
             carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=perfil_cliente)
             carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-        except Exception as e:
-            print(f"⚠️ Error obteniendo carrito: {e}")
-        
-        # DEBUG: Mostrar estadísticas en consola del servidor
-        print(f"📊 ESTADÍSTICAS DE RESEÑAS PARA {negocio.nom_neg}:")
-        print(f"   - Promedio: {estadisticas_resenas['promedio']}")
-        print(f"   - Total reseñas: {total_resenas}")
-        print(f"   - Distribución:")
-        for item in distribucion_estrellas:
-            print(f"     {item['estrellas']} estrellas: {item['cantidad']} ({item['porcentaje']}%)")
+        except Exception:
+            pass
         
         contexto = {
             'negocio': negocio,
@@ -1312,7 +1333,7 @@ def detalle_negocio_logeado(request, id):
             'tipo_negocio': negocio.fktiponeg_neg,
             'productos': productos_list,
             'perfil_cliente': perfil_cliente,
-            'resenas': resenas_paginadas,  # ✅ Ahora es objeto paginado
+            'resenas': resenas_paginadas,
             'estadisticas_resenas': estadisticas_resenas,
             'distribucion_estrellas': distribucion_estrellas,
             'usuario_ya_reseno': usuario_ya_reseno,
@@ -1321,11 +1342,10 @@ def detalle_negocio_logeado(request, id):
             'es_vista_logeada': True,
             'nombre': f"{request.user.first_name} {request.user.last_name}",
             
-            # Flags para el template
             'hay_productos': len(productos_list) > 0,
             'hay_resenas': total_resenas > 0,
-            'total_resenas': total_resenas,  # ✅ Total para mostrar
-            'hay_mas_resenas': resenas_paginadas.has_next(),  # ✅ Para botón "Ver más"
+            'total_resenas': total_resenas,
+            'hay_mas_resenas': resenas_paginadas.has_next(),
             'pagina_actual': page_number,
             'total_paginas': paginator.num_pages,
         }
@@ -1336,15 +1356,11 @@ def detalle_negocio_logeado(request, id):
         messages.error(request, 'Complete su perfil para acceder a esta funcionalidad.')
         return redirect('completar_perfil')
     except Exception as e:
-        print(f"❌ ERROR en detalle_negocio_logeado: {e}")
-        import traceback
-        traceback.print_exc()
         messages.error(request, f'Error al cargar el detalle del negocio: {str(e)}')
         return redirect('cliente_dashboard')  
 
 @login_required
 def reportar_negocio(request):
-    """Vista para reportar un negocio o reseña"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -1354,39 +1370,32 @@ def reportar_negocio(request):
             motivo = data.get('motivo')
             descripcion = data.get('descripcion', '')
             
-            # Validaciones
             if not negocio_id or not asunto or not motivo:
                 return JsonResponse({
                     'success': False, 
                     'message': 'Faltan campos obligatorios'
                 })
             
-            # Obtener perfil del usuario
             perfil_usuario = UsuarioPerfil.objects.get(fkuser=request.user)
             
-            # Obtener negocio
             negocio = Negocios.objects.get(pkid_neg=negocio_id)
             
-            # Determinar tipo de reporte
             tipo_reporte = 'resena' if reseña_id else 'negocio'
             reseña_obj = None
             
             if tipo_reporte == 'resena':
-                # Verificar que la reseña existe y pertenece al negocio
                 reseña_obj = ResenasNegocios.objects.get(
                     pkid_resena=reseña_id,
                     fknegocio_resena=negocio,
                     estado_resena='activa'
                 )
                 
-                # Verificar que el usuario no reporte su propia reseña
                 if reseña_obj.fkusuario_resena == perfil_usuario:
                     return JsonResponse({
                         'success': False, 
                         'message': 'No puedes reportar tu propia reseña'
                     })
                 
-                # Verificar que el usuario no haya reportado esta reseña antes
                 reporte_existente = Reportes.objects.filter(
                     fknegocio_reportado=negocio,
                     fkresena_reporte=reseña_obj,
@@ -1401,14 +1410,12 @@ def reportar_negocio(request):
                     })
             
             else:
-                # Verificar que el usuario no reporte su propio negocio
                 if negocio.fkpropietario_neg == perfil_usuario:
                     return JsonResponse({
                         'success': False, 
                         'message': 'No puedes reportar tu propio negocio'
                     })
                 
-                # Verificar que el usuario no haya reportado este negocio antes
                 reporte_existente = Reportes.objects.filter(
                     fknegocio_reportado=negocio,
                     fkusuario_reporta=perfil_usuario,
@@ -1421,7 +1428,6 @@ def reportar_negocio(request):
                         'message': 'Ya has reportado este negocio anteriormente'
                     })
             
-            # Crear el reporte
             reporte = Reportes(
                 fknegocio_reportado=negocio,
                 fkresena_reporte=reseña_obj,
@@ -1465,7 +1471,6 @@ def reportar_negocio(request):
 
 @login_required
 def obtener_opciones_reporte(request):
-    """Obtener opciones de reporte para el modal"""
     tipo = request.GET.get('tipo')
     
     opciones = {
@@ -1490,12 +1495,7 @@ def obtener_opciones_reporte(request):
     
     return JsonResponse({'opciones': opciones.get(tipo, [])})
 
-# ==================== FUNCIONES DE GESTIÓN DE STOCK ====================
-
 def descontar_stock_pedido(pedido):
-    """
-    Descontar stock cuando se procesa un pedido
-    """
     try:
         detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
         
@@ -1503,16 +1503,13 @@ def descontar_stock_pedido(pedido):
             producto = detalle.fkproducto_detalle
             cantidad = detalle.cantidad_detalle
             
-            # Buscar el item del carrito original para obtener información de variantes
             try:
-                # Intentar encontrar si era un producto con variante
                 carrito_item = CarritoItem.objects.filter(
                     fkproducto=producto,
                     variante_id__isnull=False
                 ).first()
                 
                 if carrito_item and carrito_item.variante_id:
-                    # Es una variante - descontar stock de la variante
                     variante = VariantesProducto.objects.get(
                         id_variante=carrito_item.variante_id,
                         producto=producto
@@ -1520,42 +1517,32 @@ def descontar_stock_pedido(pedido):
                     if variante.stock_variante >= cantidad:
                         variante.stock_variante -= cantidad
                         variante.save()
-                        print(f"✅ Stock descontado - Variante: {variante.nombre_variante}, Cantidad: {cantidad}, Stock restante: {variante.stock_variante}")
                     else:
-                        print(f"⚠️ Stock insuficiente en variante: {variante.nombre_variante}")
+                        pass
                 
                 else:
-                    # Es producto base - descontar stock del producto
                     if producto.stock_prod >= cantidad:
                         producto.stock_prod -= cantidad
                         producto.save()
-                        print(f"✅ Stock descontado - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock restante: {producto.stock_prod}")
                     else:
-                        print(f"⚠️ Stock insuficiente en producto: {producto.nom_prod}")
+                        pass
                         
             except VariantesProducto.DoesNotExist:
-                # Si no existe la variante, descontar del producto base
                 if producto.stock_prod >= cantidad:
                     producto.stock_prod -= cantidad
                     producto.save()
-                    print(f"✅ Stock descontado (fallback) - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock restante: {producto.stock_prod}")
                 else:
-                    print(f"⚠️ Stock insuficiente en producto (fallback): {producto.nom_prod}")
+                    pass
             
-            except Exception as e:
-                print(f"❌ Error al descontar stock para {producto.nom_prod}: {e}")
+            except Exception:
                 continue
         
         return True
         
-    except Exception as e:
-        print(f"❌ Error general en descontar_stock_pedido: {e}")
+    except Exception:
         return False
 
 def restaurar_stock_pedido(pedido):
-    """
-    Restaurar stock cuando se cancela un pedido
-    """
     try:
         detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
         
@@ -1563,50 +1550,37 @@ def restaurar_stock_pedido(pedido):
             producto = detalle.fkproducto_detalle
             cantidad = detalle.cantidad_detalle
             
-            # Buscar el item del carrito original para obtener información de variantes
             try:
-                # Intentar encontrar si era un producto con variante
                 carrito_item = CarritoItem.objects.filter(
                     fkproducto=producto,
                     variante_id__isnull=False
                 ).first()
                 
                 if carrito_item and carrito_item.variante_id:
-                    # Es una variante - restaurar stock de la variante
                     variante = VariantesProducto.objects.get(
                         id_variante=carrito_item.variante_id,
                         producto=producto
                     )
                     variante.stock_variante += cantidad
                     variante.save()
-                    print(f"✅ Stock restaurado - Variante: {variante.nombre_variante}, Cantidad: {cantidad}, Stock actual: {variante.stock_variante}")
                 
                 else:
-                    # Es producto base - restaurar stock del producto
                     producto.stock_prod += cantidad
                     producto.save()
-                    print(f"✅ Stock restaurado - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock actual: {producto.stock_prod}")
                         
             except VariantesProducto.DoesNotExist:
-                # Si no existe la variante, restaurar al producto base
                 producto.stock_prod += cantidad
                 producto.save()
-                print(f"✅ Stock restaurado (fallback) - Producto: {producto.nom_prod}, Cantidad: {cantidad}, Stock actual: {producto.stock_prod}")
             
-            except Exception as e:
-                print(f"❌ Error al restaurar stock para {producto.nom_prod}: {e}")
+            except Exception:
                 continue
         
         return True
         
-    except Exception as e:
-        print(f"❌ Error general en restaurar_stock_pedido: {e}")
+    except Exception:
         return False
 
 def validar_stock_pedido(pedido):
-    """
-    Validar que hay suficiente stock para todos los items del pedido
-    """
     try:
         detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
         
@@ -1614,14 +1588,12 @@ def validar_stock_pedido(pedido):
             producto = detalle.fkproducto_detalle
             cantidad = detalle.cantidad_detalle
             
-            # Buscar información de variantes
             carrito_item = CarritoItem.objects.filter(
                 fkproducto=producto,
                 variante_id__isnull=False
             ).first()
             
             if carrito_item and carrito_item.variante_id:
-                # Validar stock de variante
                 try:
                     variante = VariantesProducto.objects.get(
                         id_variante=carrito_item.variante_id,
@@ -1630,11 +1602,9 @@ def validar_stock_pedido(pedido):
                     if variante.stock_variante < cantidad:
                         return False, f"Stock insuficiente para {producto.nom_prod} - {variante.nombre_variante}"
                 except VariantesProducto.DoesNotExist:
-                    # Si la variante no existe, validar producto base
                     if producto.stock_prod < cantidad:
                         return False, f"Stock insuficiente para {producto.nom_prod}"
             else:
-                # Validar stock de producto base
                 if producto.stock_prod < cantidad:
                     return False, f"Stock insuficiente para {producto.nom_prod}"
         
@@ -1646,8 +1616,6 @@ def validar_stock_pedido(pedido):
 @login_required(login_url='/auth/login/')
 @require_POST
 def agregar_al_carrito(request):
-    """Agregar producto al carrito - CON validación de stock pero SIN descontarlo"""
-    
     try:
         data = json.loads(request.body)
         producto_id = data.get('producto_id')
@@ -1657,20 +1625,17 @@ def agregar_al_carrito(request):
         if not producto_id:
             return JsonResponse({'success': False, 'message': 'ID de producto requerido'}, status=400)
         
-        # Obtener usuario y producto
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         producto = Productos.objects.get(pkid_prod=producto_id)
         
         if producto.estado_prod != 'disponible':
             return JsonResponse({'success': False, 'message': 'Producto no disponible'}, status=400)
         
-        # Precio base del producto
-        precio_final = float(producto.precio_prod)
+        precio_base = float(producto.precio_prod)
+        precio_final = precio_base
         variante_nombre = None
         variante_id_int = None
-        
-        # ✅ VALIDAR STOCK AL AGREGAR AL CARRITO
-        aplicar_descuento = True  # Por defecto SÍ aplica descuento al producto base
+        hoy = timezone.now().date()
         
         if variante_id and variante_id != 'base':
             try:
@@ -1681,99 +1646,83 @@ def agregar_al_carrito(request):
                     estado_variante='activa'
                 )
                 
-                print(f"🔍 DEBUG: Procesando variante ID {variante_id_int} - {variante.nombre_variante}")
-                print(f"🔍 DEBUG: Stock variante: {variante.stock_variante}, Cantidad solicitada: {cantidad}")
-                
-                # ✅ VALIDAR STOCK DE LA VARIANTE
                 if variante.stock_variante < cantidad:
                     return JsonResponse({
                         'success': False, 
                         'message': f'Stock insuficiente. Solo quedan {variante.stock_variante} unidades de esta variante'
                     }, status=400)
                 
-                # Sumar precio adicional si existe
                 if variante.precio_adicional and float(variante.precio_adicional) > 0:
-                    precio_final += float(variante.precio_adicional)
-                    print(f"🔍 DEBUG: Precio con variante - Base: {producto.precio_prod}, Adicional: {variante.precio_adicional}, Total: {precio_final}")
+                    precio_base += float(variante.precio_adicional)
+                    precio_final = precio_base
                     
                 variante_nombre = variante.nombre_variante
-                
-                # ✅ LAS VARIANTES NO TIENEN DESCUENTO
-                aplicar_descuento = False
-                print(f"🔍 DEBUG: Variante detectada - NO se aplicarán descuentos")
                 
             except ValueError:
                 return JsonResponse({'success': False, 'message': 'ID de variante inválido'}, status=400)
             except VariantesProducto.DoesNotExist:
                 return JsonResponse({'success': False, 'message': 'Variante no encontrada'}, status=404)
         else:
-            # ✅ VALIDAR STOCK DEL PRODUCTO BASE
-            print(f"🔍 DEBUG: Producto base - Stock: {producto.stock_prod}, Cantidad solicitada: {cantidad}")
             if (producto.stock_prod or 0) < cantidad:
                 return JsonResponse({
                     'success': False, 
                     'message': f'Stock insuficiente. Solo quedan {producto.stock_prod} unidades'
                 }, status=400)
         
-        # ✅ APLICAR OFERTAS SOLO SI CORRESPONDE (NO PARA VARIANTES)
-        precio_original = precio_final  # Guardar precio sin descuento para debug
+        precio_original = precio_base
         
-        if aplicar_descuento:
-            hoy = timezone.now().date()
+        # ✅ CORRECCIÓN: APLICAR DESCUENTO TANTO A PRODUCTOS BASE COMO A VARIANTES
+        with connection.cursor() as cursor:
+            if variante_id_int:
+                # Buscar promoción específica para la variante
+                cursor.execute("""
+                    SELECT porcentaje_descuento 
+                    FROM promociones 
+                    WHERE (fkproducto_id = %s AND variante_id = %s)
+                    AND estado_promo = 'activa'
+                    AND fecha_inicio <= %s 
+                    AND fecha_fin >= %s
+                    LIMIT 1
+                """, [producto_id, variante_id_int, hoy, hoy])
+            else:
+                # Buscar promoción para el producto base
+                cursor.execute("""
+                    SELECT porcentaje_descuento 
+                    FROM promociones 
+                    WHERE fkproducto_id = %s 
+                    AND estado_promo = 'activa'
+                    AND fecha_inicio <= %s 
+                    AND fecha_fin >= %s
+                    LIMIT 1
+                """, [producto_id, hoy, hoy])
             
-            try:
-                with connection.cursor() as cursor:
-                    cursor.execute("""
-                        SELECT porcentaje_descuento 
-                        FROM promociones 
-                        WHERE fkproducto_id = %s 
-                        AND estado_promo = 'activa'
-                        AND fecha_inicio <= %s 
-                        AND fecha_fin >= %s
-                        LIMIT 1
-                    """, [producto_id, hoy, hoy])
-                    
-                    result = cursor.fetchone()
-                    if result and result[0]:
-                        descuento = float(result[0])
-                        if descuento > 0:
-                            precio_original = precio_final
-                            precio_final = precio_final * (1 - (descuento / 100))
-                            print(f"🔍 DEBUG: Descuento aplicado - Porcentaje: {descuento}%, Original: {precio_original}, Final: {precio_final}")
-            except Exception as e:
-                print(f"🔍 DEBUG: Error al verificar descuento: {e}")
-                pass
-        else:
-            print(f"🔍 DEBUG: No se aplica descuento (es variante)")
+            result = cursor.fetchone()
+            if result and result[0]:
+                descuento = float(result[0])
+                if descuento > 0:
+                    precio_original = precio_final
+                    precio_final = precio_final * (1 - (descuento / 100))
         
-        # Crear o actualizar carrito
         carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=perfil_cliente)
         
-        # ✅ VERIFICAR SI EL PRODUCTO YA EXISTE EN EL CARRITO
         item_existente = None
         
         if variante_id_int:
-            # Buscar item con misma variante
             item_existente = CarritoItem.objects.filter(
                 fkcarrito=carrito,
                 fkproducto=producto,
                 variante_id=variante_id_int
             ).first()
-            print(f"🔍 DEBUG: Buscando item existente con variante {variante_id_int} - Encontrado: {item_existente is not None}")
         else:
-            # Buscar item sin variante
             item_existente = CarritoItem.objects.filter(
                 fkcarrito=carrito,
                 fkproducto=producto,
                 variante_id__isnull=True
             ).first()
-            print(f"🔍 DEBUG: Buscando item existente sin variante - Encontrado: {item_existente is not None}")
         
         if item_existente:
-            # ✅ SI EXISTE, ACTUALIZAR CANTIDAD
             nueva_cantidad = item_existente.cantidad + cantidad
             
-            # ✅ VALIDAR STOCK NUEVAMENTE PARA LA NUEVA CANTIDAD TOTAL
             stock_disponible = producto.stock_prod
             if variante_id_int:
                 stock_disponible = variante.stock_variante
@@ -1785,14 +1734,12 @@ def agregar_al_carrito(request):
                 }, status=400)
             
             item_existente.cantidad = nueva_cantidad
-            item_existente.precio_unitario = precio_final  # Actualizar precio por si hay cambios
+            item_existente.precio_unitario = precio_final
             item_existente.save()
             
             mensaje = 'Cantidad actualizada en el carrito'
-            print(f"🔍 DEBUG: Item actualizado - Nueva cantidad: {nueva_cantidad}, Precio: {precio_final}")
             
         else:
-            # ✅ SI NO EXISTE, CREAR NUEVO ITEM
             nuevo_item = CarritoItem.objects.create(
                 fkcarrito=carrito,
                 fkproducto=producto,
@@ -1803,14 +1750,14 @@ def agregar_al_carrito(request):
                 variante_id=variante_id_int
             )
             mensaje = 'Producto agregado al carrito exitosamente'
-            print(f"🔍 DEBUG: Nuevo item creado - Cantidad: {cantidad}, Precio: {precio_final}, Variante: {variante_nombre}")
         
         carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         
-        # ✅ CONSTRUIR NOMBRE COMPLETO DEL PRODUCTO CON VARIANTE
         nombre_producto_completo = producto.nom_prod
         if variante_nombre:
             nombre_producto_completo = f"{producto.nom_prod} - {variante_nombre}"
+        
+        ahorro_total = (precio_original - precio_final) * cantidad
         
         response_data = {
             'success': True,
@@ -1818,9 +1765,12 @@ def agregar_al_carrito(request):
             'carrito_count': carrito_count,
             'producto_nombre': nombre_producto_completo,
             'precio_unitario': precio_final,
+            'precio_original': precio_original,
             'cantidad': cantidad,
             'subtotal': precio_final * cantidad,
-            'tiene_descuento': aplicar_descuento and precio_final < precio_original,
+            'tiene_descuento': precio_final < precio_original,
+            'descuento_porcentaje': ((precio_original - precio_final) / precio_original * 100) if precio_original > 0 else 0,
+            'ahorro_total': ahorro_total,
             'item_actualizado': item_existente is not None,
             'es_variante': variante_id_int is not None,
         }
@@ -1828,29 +1778,21 @@ def agregar_al_carrito(request):
         if variante_nombre:
             response_data['variante_nombre'] = variante_nombre
         
-        print(f"🔍 DEBUG: Respuesta final - {response_data}")
-        
         return JsonResponse(response_data)
         
     except Productos.DoesNotExist:
-        print(f"❌ ERROR: Producto no encontrado - ID: {producto_id}")
         return JsonResponse({'success': False, 'message': 'Producto no encontrado'}, status=404)
     except UsuarioPerfil.DoesNotExist:
-        print(f"❌ ERROR: Perfil de usuario no encontrado")
         return JsonResponse({'success': False, 'message': 'Perfil de usuario no encontrado'}, status=404)
     except Exception as e:
-        print(f"❌ ERROR: Error interno del servidor: {e}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({
             'success': False, 
             'message': 'Error interno del servidor'
         }, status=500)
-
+             
 @login_required(login_url='/auth/login/')
 @require_POST
 def actualizar_cantidad_carrito(request):
-    """Actualizar cantidad de un item en el carrito - VERSIÓN CORREGIDA"""
     try:
         data = json.loads(request.body)
         item_id = data.get('item_id')
@@ -1866,11 +1808,9 @@ def actualizar_cantidad_carrito(request):
         if nueva_cantidad <= 0:
             item.delete()
         else:
-            # ✅ CORRECCIÓN: VERIFICAR STOCK SEGÚN SI ES VARIANTE O PRODUCTO BASE
             stock_disponible = 0
             
             if item.variante_id:
-                # Es una variante - verificar stock de la variante específica
                 try:
                     variante = VariantesProducto.objects.get(
                         id_variante=item.variante_id,
@@ -1878,18 +1818,14 @@ def actualizar_cantidad_carrito(request):
                         estado_variante='activa'
                     )
                     stock_disponible = variante.stock_variante or 0
-                    print(f"🔍 DEBUG actualizar_cantidad: Variante {variante.nombre_variante} - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
                 except VariantesProducto.DoesNotExist:
                     return JsonResponse({
                         'success': False,
                         'message': 'La variante seleccionada ya no está disponible'
                     })
             else:
-                # Es producto base - verificar stock del producto
                 stock_disponible = item.fkproducto.stock_prod or 0
-                print(f"🔍 DEBUG actualizar_cantidad: Producto base - Stock disponible: {stock_disponible}, Nueva cantidad: {nueva_cantidad}")
             
-            # Verificar stock disponible
             if stock_disponible < nueva_cantidad:
                 return JsonResponse({
                     'success': False,
@@ -1899,7 +1835,6 @@ def actualizar_cantidad_carrito(request):
             item.cantidad = nueva_cantidad
             item.save()
         
-        # Obtener nuevo conteo
         carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         
         return JsonResponse({
@@ -1908,13 +1843,11 @@ def actualizar_cantidad_carrito(request):
         })
         
     except Exception as e:
-        print(f"❌ ERROR actualizar_cantidad: {e}")
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
 
 @login_required(login_url='/auth/login/')
 @require_POST
 def eliminar_item_carrito(request):
-    """Eliminar item del carrito - VERSIÓN CORREGIDA"""
     try:
         data = json.loads(request.body)
         item_id = data.get('item_id')
@@ -1925,7 +1858,6 @@ def eliminar_item_carrito(request):
         item = CarritoItem.objects.get(pkid_item=item_id, fkcarrito=carrito)
         item.delete()
         
-        # Obtener nuevo conteo
         carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         
         return JsonResponse({
@@ -1934,17 +1866,13 @@ def eliminar_item_carrito(request):
         })
         
     except Exception as e:
-        print(f"❌ ERROR eliminar_item: {e}")
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
           
 @login_required(login_url='/auth/login/')
 def ver_carrito(request):
-    """Vista para ver el carrito del usuario"""
     try:
-        # Obtener perfil del usuario
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # Obtener carrito del usuario
         try:
             carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
             items_carrito = CarritoItem.objects.filter(fkcarrito=carrito).select_related(
@@ -1954,30 +1882,55 @@ def ver_carrito(request):
             items_carrito = []
             carrito = None
         
-        # Calcular totales
         total_carrito = 0
+        ahorro_total = 0
         items_detallados = []
-        
+        hoy = timezone.now().date()
+
         for item in items_carrito:
-            subtotal = float(item.precio_unitario) * item.cantidad
+            # ✅ CORRECCIÓN: OBTENER IMAGEN DE LA VARIANTE SI EXISTE
+            imagen_producto = item.fkproducto.img_prod.url if item.fkproducto.img_prod else None
             
-            # Verificar si el producto tiene oferta activa
-            precio_original = float(item.fkproducto.precio_prod)
-            tiene_oferta = item.precio_unitario < precio_original
+            precio_base = float(item.fkproducto.precio_prod)
+            precio_original = precio_base
+            
+            if item.variante_id:
+                try:
+                    variante = VariantesProducto.objects.get(id_variante=item.variante_id)
+                    if variante.imagen_variante:
+                        imagen_producto = variante.imagen_variante.url
+                    if variante.precio_adicional:
+                        precio_original += float(variante.precio_adicional)
+                except VariantesProducto.DoesNotExist:
+                    pass
+            
+            precio_actual = float(item.precio_unitario)
+            subtotal = precio_actual * item.cantidad
+            
+            # Calcular si tiene descuento
+            tiene_oferta = precio_actual < precio_original
+            ahorro_item = (precio_original - precio_actual) * item.cantidad if tiene_oferta else 0
+            descuento_porcentaje = ((precio_original - precio_actual) / precio_original * 100) if precio_original > 0 else 0
             
             items_detallados.append({
                 'item': item,
+                'imagen': imagen_producto,
                 'subtotal': subtotal,
                 'tiene_oferta': tiene_oferta,
                 'precio_original': precio_original,
-                'ahorro': (precio_original - float(item.precio_unitario)) * item.cantidad if tiene_oferta else 0
+                'precio_actual': precio_actual,
+                'descuento_porcentaje': descuento_porcentaje,
+                'ahorro': ahorro_item
             })
             
             total_carrito += subtotal
+            if tiene_oferta:
+                ahorro_total += ahorro_item
         
         context = {
             'items_carrito': items_detallados,
             'total_carrito': total_carrito,
+            'ahorro_total': ahorro_total,
             'carrito_count': len(items_carrito),
             'carrito_vacio': len(items_carrito) == 0
         }
@@ -1988,13 +1941,13 @@ def ver_carrito(request):
         return render(request, 'Cliente/carrito.html', {
             'items_carrito': [],
             'total_carrito': 0,
+            'ahorro_total': 0,
             'carrito_count': 0,
             'carrito_vacio': True
         })
-
+        
 @login_required(login_url='/auth/login/')
 def carrito_data(request):
-    """Obtener datos del carrito para AJAX - VERSIÓN MEJORADA PARA VARIANTES"""
     try:
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
@@ -2004,57 +1957,96 @@ def carrito_data(request):
         carrito_items = []
         subtotal = 0
         ahorro_total = 0
-        
+        hoy = timezone.now().date()
+
         for item in items:
-            # ✅ CONSTRUIR NOMBRE COMPLETO CON VARIANTE
             nombre_completo = item.fkproducto.nom_prod
             if item.variante_seleccionada:
                 nombre_completo = f"{item.fkproducto.nom_prod} - {item.variante_seleccionada}"
             
-            # Obtener precio base del producto
             precio_base = float(item.fkproducto.precio_prod)
             
-            # ✅ CORRECCIÓN: Si hay variante, sumar precio adicional al precio base
             precio_original = precio_base
             stock_disponible = item.fkproducto.stock_prod or 0
+            
+            # ✅ CORRECCIÓN: OBTENER IMAGEN DE LA VARIANTE SI EXISTE
+            imagen_producto = item.fkproducto.img_prod.url if item.fkproducto.img_prod else None
             
             if item.variante_id:
                 try:
                     variante = VariantesProducto.objects.get(id_variante=item.variante_id)
                     if variante.precio_adicional:
                         precio_original += float(variante.precio_adicional)
-                    # ✅ IMPORTANTE: Obtener stock de la variante específica
+                        precio_base += float(variante.precio_adicional)
                     stock_disponible = variante.stock_variante or 0
-                    print(f"🔍 DEBUG carrito_data: Variante {variante.nombre_variante} - Stock: {stock_disponible}")
+                    
+                    # ✅ USAR IMAGEN DE LA VARIANTE SI TIENE UNA
+                    if variante.imagen_variante:
+                        imagen_producto = variante.imagen_variante.url
+                        
                 except VariantesProducto.DoesNotExist:
-                    print(f"⚠️ WARNING: Variante no encontrada - ID: {item.variante_id}")
                     pass
             
             precio_actual = float(item.precio_unitario)
             
-            # ✅ CORREGIDO: Solo calcular ahorro si es producto base (sin variante) y realmente hay descuento
-            tiene_oferta = (item.variante_id is None) and (precio_actual < precio_original)
-            ahorro_item = (precio_original - precio_actual) * item.cantidad if tiene_oferta else 0
+            # ✅ CORRECCIÓN: VERIFICAR SI HAY DESCUENTO PARA ESTE PRODUCTO/VARIANTE
+            tiene_oferta = False
+            ahorro_item = 0
+            
+            # Buscar promociones activas para este producto
+            with connection.cursor() as cursor:
+                if item.variante_id:
+                    # Buscar promoción específica para la variante
+                    cursor.execute("""
+                        SELECT porcentaje_descuento 
+                        FROM promociones 
+                        WHERE (fkproducto_id = %s AND variante_id = %s)
+                        AND estado_promo = 'activa'
+                        AND fecha_inicio <= %s 
+                        AND fecha_fin >= %s
+                        LIMIT 1
+                    """, [item.fkproducto.pkid_prod, item.variante_id, hoy, hoy])
+                else:
+                    # Buscar promoción para el producto base
+                    cursor.execute("""
+                        SELECT porcentaje_descuento 
+                        FROM promociones 
+                        WHERE fkproducto_id = %s 
+                        AND estado_promo = 'activa'
+                        AND fecha_inicio <= %s 
+                        AND fecha_fin >= %s
+                        LIMIT 1
+                    """, [item.fkproducto.pkid_prod, hoy, hoy])
+                
+                result = cursor.fetchone()
+                if result and result[0] is not None:
+                    try:
+                        descuento_porcentaje = float(result[0])
+                        if descuento_porcentaje > 0:
+                            precio_con_descuento = precio_original * (1 - (descuento_porcentaje / 100))
+                            tiene_oferta = precio_actual <= precio_con_descuento  # Considerar que tiene oferta si el precio actual es menor o igual al precio con descuento
+                            ahorro_item = (precio_original - precio_actual) * item.cantidad
+                    except (ValueError, TypeError):
+                        pass
+            
+            # Si no se encontró oferta en promociones, verificar si el precio actual es menor al original
+            if not tiene_oferta and precio_actual < precio_original:
+                tiene_oferta = True
+                ahorro_item = (precio_original - precio_actual) * item.cantidad
             
             carrito_items.append({
                 'id': item.pkid_item,
-                'nombre': nombre_completo,  # ✅ USAR NOMBRE COMPLETO
+                'nombre': nombre_completo,
                 'negocio': item.fknegocio.nom_neg,
                 'cantidad': item.cantidad,
                 'precio_unitario': precio_actual,
                 'precio_original': precio_original,
                 'tiene_oferta': tiene_oferta,
-                'imagen': item.fkproducto.img_prod.url if item.fkproducto.img_prod else None,
-                'variante': item.variante_seleccionada,  # ✅ INCLUIR INFO DE VARIANTE
-                'es_variante': bool(item.variante_id),  # ✅ INDICAR SI ES VARIANTE
-                'stock_disponible': stock_disponible,  # ✅ INCLUIR STOCK DISPONIBLE
-                'debug_info': {
-                    'precio_base': precio_base,
-                    'precio_original': precio_original,
-                    'precio_actual': precio_actual,
-                    'variante_id': item.variante_id,
-                    'stock_disponible': stock_disponible
-                }
+                'imagen': imagen_producto,
+                'variante': item.variante_seleccionada,
+                'es_variante': bool(item.variante_id),
+                'stock_disponible': stock_disponible,
+                'ahorro_item': ahorro_item,  # ✅ AGREGAR AHORRO INDIVIDUAL
             })
             
             subtotal += precio_actual * item.cantidad
@@ -2070,24 +2062,17 @@ def carrito_data(request):
                 'total': subtotal
             },
             'carrito_count': len(carrito_items),
-            'debug_total_items': len(carrito_items)
         }
-        
-        print(f"🔍 DEBUG carrito_data: Respuesta - {len(carrito_items)} items, Subtotal: {subtotal}")
         
         return JsonResponse(response_data)
         
     except Exception as e:
-        print(f"❌ ERROR carrito_data: {e}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'success': False, 'items': [], 'totales': {}})
-
+    
 @login_required(login_url='/auth/login/')
 @require_POST
 @csrf_exempt
 def procesar_pedido(request):
-    """Procesar pedido del carrito - CON descuento de stock"""
     try:
         data = json.loads(request.body)
         metodo_pago = data.get('metodo_pago')
@@ -2095,7 +2080,6 @@ def procesar_pedido(request):
         banco = data.get('banco', None)
         datos_billetera = data.get('datos_billetera', {})
 
-        # Obtener usuario autenticado y perfil
         auth_user = request.user
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
 
@@ -2112,13 +2096,8 @@ def procesar_pedido(request):
         negocios_involucrados = {}
         items_detallados = []
 
-        print(f"🔍 DEBUG procesar_pedido: Procesando {items_carrito.count()} items del carrito")
-
-        # ✅ PRIMERO VALIDAR STOCK DE TODOS LOS ITEMS
         for item_carrito in items_carrito:
-            # Validar stock antes de procesar el pedido
             if item_carrito.variante_id:
-                # Validar stock de variante
                 try:
                     variante = VariantesProducto.objects.get(
                         id_variante=item_carrito.variante_id,
@@ -2136,24 +2115,16 @@ def procesar_pedido(request):
                         'message': f'La variante de {item_carrito.fkproducto.nom_prod} ya no está disponible'
                     }, status=400)
             else:
-                # Validar stock de producto base
                 if (item_carrito.fkproducto.stock_prod or 0) < item_carrito.cantidad:
                     return JsonResponse({
                         'success': False, 
                         'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
                     }, status=400)
 
-        # ✅ SI PASÓ LA VALIDACIÓN DE STOCK, CREAR EL PEDIDO
         for item_carrito in items_carrito:
             monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
             total_pedido += monto_item
             negocio = item_carrito.fknegocio
-            
-            print(f"🔍 DEBUG procesar_pedido: Item - {item_carrito.fkproducto.nom_prod}, "
-                  f"Variante: {item_carrito.variante_seleccionada}, "
-                  f"Precio: {item_carrito.precio_unitario}, "
-                  f"Cantidad: {item_carrito.cantidad}, "
-                  f"Subtotal: {monto_item}")
             
             if negocio in negocios_involucrados:
                 negocios_involucrados[negocio] += monto_item
@@ -2178,9 +2149,6 @@ def procesar_pedido(request):
                 mayor_monto = monto
                 negocio_principal = negocio
 
-        print(f"🔍 DEBUG procesar_pedido: Total pedido: {total_pedido}, Negocio principal: {negocio_principal.nom_neg}")
-
-        # CREAR EL PEDIDO
         pedido = Pedidos.objects.create(
             fkusuario_pedido=perfil_cliente,
             fknegocio_pedido=negocio_principal,
@@ -2193,7 +2161,6 @@ def procesar_pedido(request):
             fecha_actualizacion=timezone.now()
         )
 
-        # ✅ CREAR DETALLES DEL PEDIDO
         for item_carrito in items_carrito:
             DetallesPedido.objects.create(
                 fkpedido_detalle=pedido,
@@ -2202,13 +2169,11 @@ def procesar_pedido(request):
                 precio_unitario=item_carrito.precio_unitario
             )
 
-        # ✅ DESCONTAR STOCK DEL PEDIDO
         stock_descontado = descontar_stock_pedido(pedido)
         
         if not stock_descontado:
-            print("⚠️ ADVERTENCIA: No se pudo descontar el stock correctamente")
+            pass
 
-        # Crear pagos para cada negocio involucrado
         for negocio, monto in negocios_involucrados.items():
             if metodo_pago in ['transferencia', 'nequi', 'daviplata', 'pse']:
                 estado_pago = 'pagado'
@@ -2227,24 +2192,18 @@ def procesar_pedido(request):
                 estado_pago=estado_pago,
                 metodo_pago=metodo_pago
             )
-            print(f"🔍 DEBUG procesar_pedido: Pago creado para negocio {negocio.nom_neg} - Monto: {monto}")
 
-        # Limpiar carrito
         items_carrito.delete()
-        print(f"🔍 DEBUG procesar_pedido: Carrito limpiado")
 
-        # ✅ ENVIAR COMPROBANTE POR CORREO
         try:
             email_cliente = auth_user.email
             if email_cliente:
                 enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados)
-                print(f"📧 DEBUG procesar_pedido: Correo enviado a: {email_cliente}")
             else:
-                print("⚠️ DEBUG procesar_pedido: El usuario no tiene email configurado")
-        except Exception as e:
-            print(f"⚠️ DEBUG procesar_pedido: Error enviando correo: {e}")
+                pass
+        except Exception:
+            pass
 
-        # Formatear fecha para la respuesta JSON (hora Colombia)
         fecha_colombia = timezone.localtime(pedido.fecha_pedido)
         fecha_formateada = fecha_colombia.strftime("%d/%m/%Y %I:%M %p").lower()
 
@@ -2260,20 +2219,15 @@ def procesar_pedido(request):
             'negocio_principal': negocio_principal.nom_neg,
             'correo_enviado': bool(email_cliente),
             'stock_validado': True,
-            'stock_descontado': stock_descontado,  # ✅ INDICAR QUE SE DESCONTÓ EL STOCK
+            'stock_descontado': stock_descontado,
         }
 
-        print(f"🔍 DEBUG procesar_pedido: Pedido {pedido.pkid_pedido} procesado exitosamente - STOCK DESCONTADO")
         return JsonResponse(response_data)
 
     except Exception as e:
-        print(f"❌ ERROR procesar_pedido: {e}")
-        import traceback
-        traceback.print_exc()
         return JsonResponse({'success': False, 'message': 'Error interno del servidor al procesar el pedido'}, status=500)  
 
 def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados):
-    """Enviar comprobante de pedido por correo electrónico"""
     try:
         fecha_colombia = timezone.localtime(pedido.fecha_pedido)
         
@@ -2326,7 +2280,6 @@ def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_
 
 @login_required(login_url='/auth/login/')
 def guardar_resena(request):
-    """Guardar reseña del negocio - PERMITE MÚLTIPLES RESEÑAS"""
     if request.method == 'POST':
         try:
             estrellas = int(request.POST.get('estrellas', 5))
@@ -2334,7 +2287,6 @@ def guardar_resena(request):
             negocio_id = request.POST.get('fknegocio_resena')
             es_vista_logeada = request.POST.get('es_vista_logeada', False)
 
-            # Validaciones básicas
             if not negocio_id:
                 messages.error(request, 'ID de negocio requerido')
                 return redirect('cliente_dashboard')
@@ -2346,14 +2298,10 @@ def guardar_resena(request):
                 else:
                     return redirect('detalle_negocio', id=negocio_id)
 
-            # Obtener perfil del cliente
             perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
             
-            # Obtener negocio
             negocio = get_object_or_404(Negocios, pkid_neg=negocio_id)
 
-            # ✅ CORRECCIÓN: PERMITIR MÚLTIPLES RESEÑAS DEL MISMO USUARIO
-            # Crear nueva reseña sin verificar si ya existe
             resena = ResenasNegocios(
                 fkusuario_resena=perfil_cliente,
                 fknegocio_resena=negocio,
@@ -2366,7 +2314,6 @@ def guardar_resena(request):
 
             messages.success(request, '¡Reseña guardada exitosamente!')
             
-            # Redirigir según la vista de origen
             if es_vista_logeada:
                 return redirect('detalle_negocio_logeado', id=negocio_id)
             else:
@@ -2387,14 +2334,11 @@ def guardar_resena(request):
                     return redirect('detalle_negocio', id=negocio_id)
             return redirect('cliente_dashboard')
     
-    # Si no es POST, redirigir al dashboard
     return redirect('cliente_dashboard')
 
 @login_required(login_url='/auth/login/')
 def productos_filtrados_logeado(request):
-    """Vista de productos filtrados para usuarios logueados - VERSIÓN CORREGIDA"""
     
-    # Obtener parámetros de filtro de la URL
     filtro_tipo = request.GET.get('filtro', '')
     categoria_id = request.GET.get('categoria', '')
     precio_min = request.GET.get('precio_min', '')
@@ -2402,17 +2346,14 @@ def productos_filtrados_logeado(request):
     ordenar = request.GET.get('ordenar', '')
     buscar = request.GET.get('buscar', '')
     
-    # Query base
     productos = Productos.objects.filter(estado_prod='disponible')
     
-    # Aplicar filtros según el parámetro
     if filtro_tipo == 'ofertas':
         from django.db import connection
         from datetime import date
         
         hoy = date.today()
         
-        # Consulta directa SQL para evitar problemas de serialización JSON
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT DISTINCT fkproducto_id 
@@ -2425,7 +2366,6 @@ def productos_filtrados_logeado(request):
             resultados = cursor.fetchall()
             productos_con_ofertas_ids = [row[0] for row in resultados if row[0] is not None]
         
-        # Filtrar productos
         if productos_con_ofertas_ids:
             productos = productos.filter(pkid_prod__in=productos_con_ofertas_ids)
         else:
@@ -2434,46 +2374,38 @@ def productos_filtrados_logeado(request):
         titulo_filtro = "Ofertas Especiales"
     
     elif filtro_tipo == 'destacados':
-        # Filtrar productos destacados (con stock disponible)
         productos = productos.filter(stock_prod__gt=0)
         titulo_filtro = "Productos Destacados"
     
     elif filtro_tipo == 'economicos':
-        # Filtrar productos económicos (precio más bajo)
         productos = productos.order_by('precio_prod')
         titulo_filtro = "Productos Baratos"
     
     elif filtro_tipo == 'nuevos':
-        # Filtrar productos nuevos (recientemente agregados)
         productos = productos.order_by('-fecha_creacion')
         titulo_filtro = "Nuevos Productos"
     
     elif filtro_tipo == 'mas-vendidos':
-        # Filtrar productos con stock disponible
         productos = productos.filter(stock_prod__gt=0)
         titulo_filtro = "Productos Disponibles"
     
     else:
         titulo_filtro = "Todos los Productos"
 
-    # Aplicar búsqueda por texto
     if buscar:
         productos = productos.filter(
             models.Q(nom_prod__icontains=buscar) |
             models.Q(desc_prod__icontains=buscar)
         )
 
-    # Aplicar filtro por categoría si se especifica
     if categoria_id:
         productos = productos.filter(fkcategoria_prod_id=categoria_id)
     
-    # Aplicar filtro por rango de precios
     if precio_min:
         productos = productos.filter(precio_prod__gte=precio_min)
     if precio_max:
         productos = productos.filter(precio_prod__lte=precio_max)
     
-    # Aplicar ordenamiento
     if ordenar == 'precio_asc':
         productos = productos.order_by('precio_prod')
     elif ordenar == 'precio_desc':
@@ -2485,20 +2417,16 @@ def productos_filtrados_logeado(request):
     elif ordenar == 'stock':
         productos = productos.order_by('-stock_prod')
     else:
-        # Orden por defecto
         productos = productos.order_by('-fecha_creacion')
     
-    # Obtener categorías para el filtro
     categorias = CategoriaProductos.objects.annotate(
         num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
     )
     
-    # Obtener negocios para el filtro
     negocios = Negocios.objects.annotate(
         num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
     ).filter(estado_neg='activo')
     
-    # Preparar datos para el template
     productos_data = []
     for producto in productos:
         producto_data = {
@@ -2513,7 +2441,6 @@ def productos_filtrados_logeado(request):
             'variantes': []
         }
         
-        # Verificar si tiene variantes
         variantes = VariantesProducto.objects.filter(
             producto=producto, 
             estado_variante='activa'
@@ -2522,7 +2449,6 @@ def productos_filtrados_logeado(request):
         if variantes.exists():
             producto_data['tiene_variantes'] = True
             
-            # Preparar datos detallados de variantes
             variantes_detalladas = []
             for variante in variantes:
                 variante_data = {
@@ -2537,7 +2463,6 @@ def productos_filtrados_logeado(request):
             
             producto_data['variantes'] = variantes_detalladas
         
-        # Consulta directa para promociones
         from django.db import connection
         from datetime import date
         
@@ -2559,7 +2484,6 @@ def productos_filtrados_logeado(request):
             porcentaje_descuento, titulo_promo = resultado
             
             try:
-                # Convertir el descuento
                 descuento = float(porcentaje_descuento)
                 
                 producto_data['precio_final'] = float(producto.precio_prod) * (1 - descuento / 100)
@@ -2571,28 +2495,22 @@ def productos_filtrados_logeado(request):
         
         productos_data.append(producto_data)
     
-    # Paginación
     paginator = Paginator(productos_data, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # ==================== OBTENER CARRITO COUNT ====================
     carrito_count = 0
     try:
-        # Obtener perfil del usuario
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # Intentar obtener el carrito existente
         try:
             carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
             carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         except Carrito.DoesNotExist:
-            # Si no existe carrito, crear uno vacío
             carrito = Carrito.objects.create(fkusuario_carrito=perfil_cliente)
             carrito_count = 0
             
-    except Exception as e:
-        print(f"❌ Error obteniendo carrito count: {e}")
+    except Exception:
         carrito_count = 0
     
     context = {
@@ -2614,26 +2532,23 @@ def productos_filtrados_logeado(request):
         'precio_max_actual': precio_max,
         'ordenar_actual': ordenar,
         'titulo_filtro': titulo_filtro,
-        'carrito_count': carrito_count,  # ✅ AÑADIDO - ESTO ES LO QUE FALTABA
+        'carrito_count': carrito_count,
     }
     
     return render(request, 'Cliente/productos_filtros_logeado.html', context)
 
 @login_required(login_url='/auth/login/')
 def mis_pedidos_data(request):
-    """Obtener los datos de los pedidos del usuario para el panel lateral"""
     try:
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
-        # Obtener pedidos del usuario ordenados por fecha más reciente
         pedidos = Pedidos.objects.filter(
             fkusuario_pedido=perfil_cliente
-        ).order_by('-fecha_pedido')[:10]  # Últimos 10 pedidos
+        ).order_by('-fecha_pedido')[:10]
         
         pedidos_data = []
         
         for pedido in pedidos:
-            # Obtener detalles del pedido
             detalles = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
             
             productos_data = []
@@ -2645,12 +2560,10 @@ def mis_pedidos_data(request):
                     'imagen': detalle.fkproducto_detalle.img_prod.url if detalle.fkproducto_detalle.img_prod else None
                 })
             
-            # Calcular si se puede cancelar (menos de 1 hora)
             tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
             puede_cancelar = (tiempo_transcurrido < timedelta(hours=1) and 
                             pedido.estado_pedido in ['pendiente', 'confirmado'])
             
-            # Calcular tiempo restante para cancelar
             tiempo_restante = None
             if puede_cancelar:
                 tiempo_restante_segundos = timedelta(hours=1).total_seconds() - tiempo_transcurrido.total_seconds()
@@ -2660,7 +2573,6 @@ def mis_pedidos_data(request):
                 if horas > 0:
                     tiempo_restante = f"{horas}h {minutos}min"
             
-            # Mapear estados a texto legible
             estados_display = {
                 'pendiente': 'Pendiente',
                 'confirmado': 'Confirmado', 
@@ -2696,7 +2608,6 @@ def mis_pedidos_data(request):
             'success': False,
             'message': 'Error al cargar los pedidos'
         })
-
 @login_required(login_url='/auth/login/')
 def cancelar_pedido(request):
     """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
