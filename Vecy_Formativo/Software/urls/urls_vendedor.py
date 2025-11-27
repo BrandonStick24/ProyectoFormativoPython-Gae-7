@@ -64,12 +64,11 @@ urlpatterns = [
     path('ofertas/verificar-estado/', vendedor_ofertas_views.verificar_estado_ofertas, name='verificar_estado_ofertas'),
 
     # ==================== URLs DE STOCK VENDEDOR ====================
-    path('vendedor/stock/', vendedor_stock_views.Stock_V, name='Stock_V'),
-    path('vendedor/stock/ajustar/<int:producto_id>/', vendedor_views.ajustar_stock_producto, name='ajustar_stock_producto'),
+    
     path('vendedor/stock/entrada/<int:producto_id>/', vendedor_stock_views.entrada_stock_producto, name='entrada_stock_producto'),
     path('vendedor/stock/reporte/', vendedor_stock_views.reporte_movimientos_stock, name='reporte_movimientos_stock'),
 
-     # ==================== NUEVAS URLs PARA IMPORTACIÓN EXCEL ====================
+    # ==================== NUEVAS URLs PARA IMPORTACIÓN EXCEL ====================
     path('vendedor/productos/importar/excel/', vendedor_views.importar_productos_excel, name='importar_productos_excel'),
     path('vendedor/productos/descargar-plantilla/', vendedor_views.descargar_plantilla_productos, name='descargar_plantilla_productos'),
        
