@@ -7,25 +7,28 @@
 <div class="container-fluid">
     <!-- Header de la página -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-flag text-warning me-2"></i>
+        <h1 class="h3 mb-0 text-corporate">
+            <i class="fas fa-flag me-2"></i>
             Reseñas Reportadas
         </h1>
         <div class="d-flex gap-2">
-            <button class="btn btn-outline-secondary" id="btnFiltros">
+            <button class="btn btn-outline-corporate" id="btnFiltros">
                 <i class="fas fa-filter me-2"></i>Filtros
             </button>
         </div>
     </div>
 
     <!-- Filtros (inicialmente ocultos) -->
-    <div class="card mb-4 d-none" id="panelFiltros">
+    <div class="card mb-4 card-filtros" id="panelFiltros">
+        <div class="card-header bg-corporate-light">
+            <h5 class="mb-0 text-corporate"><i class="fas fa-sliders-h me-2"></i>Filtros de Búsqueda</h5>
+        </div>
         <div class="card-body">
             <form method="GET" action="{% url 'gestion_resenas_reportadas' %}">
                 <div class="row g-3">
                     <div class="col-md-3">
-                        <label class="form-label">Estado</label>
-                        <select class="form-select" name="estado" id="filtroEstado">
+                        <label class="form-label fw-bold">Estado</label>
+                        <select class="form-select form-select-sm" name="estado" id="filtroEstado">
                             <option value="">Todos</option>
                             <option value="pendiente" {% if estado_filter == 'pendiente' %}selected{% endif %}>Pendiente</option>
                             <option value="revisado" {% if estado_filter == 'revisado' %}selected{% endif %}>Revisado</option>
@@ -33,8 +36,8 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Gravedad</label>
-                        <select class="form-select" name="gravedad" id="filtroGravedad">
+                        <label class="form-label fw-bold">Gravedad</label>
+                        <select class="form-select form-select-sm" name="gravedad" id="filtroGravedad">
                             <option value="">Todas</option>
                             <option value="alta" {% if gravedad_filter == 'alta' %}selected{% endif %}>Alta</option>
                             <option value="media" {% if gravedad_filter == 'media' %}selected{% endif %}>Media</option>
@@ -42,15 +45,15 @@
                         </select>
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label">Fecha</label>
-                        <input type="date" class="form-control" name="fecha" id="filtroFecha" value="{{ fecha_filter }}">
+                        <label class="form-label fw-bold">Fecha</label>
+                        <input type="date" class="form-control form-control-sm" name="fecha" id="filtroFecha" value="{{ fecha_filter }}">
                     </div>
                     <div class="col-md-3 d-flex align-items-end gap-2">
-                        <button type="submit" class="btn btn-primary w-100">
-                            Aplicar Filtros
+                        <button type="submit" class="btn btn-corporate btn-sm w-100">
+                            <i class="fas fa-search me-1"></i>Aplicar
                         </button>
-                        <a href="{% url 'gestion_resenas_reportadas' %}" class="btn btn-outline-secondary">
-                            Limpiar
+                        <a href="{% url 'gestion_resenas_reportadas' %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-undo me-1"></i>Limpiar
                         </a>
                     </div>
                 </div>
@@ -61,60 +64,60 @@
     <!-- Estadísticas rápidas -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="card bg-primary text-white">
+            <div class="card card-statistic bg-white border-corporate">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ total_reportes }}</h4>
-                            <p class="mb-0">Total Reportes</p>
+                            <h3 class="mb-0 text-corporate">{{ total_reportes }}</h3>
+                            <p class="mb-0 text-muted">Total Reportes</p>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-flag fa-2x"></i>
+                            <i class="fas fa-flag fa-2x text-corporate"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-dark">
+            <div class="card card-statistic bg-white border-warning">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ pendientes }}</h4>
-                            <p class="mb-0">Pendientes</p>
+                            <h3 class="mb-0 text-warning">{{ pendientes }}</h3>
+                            <p class="mb-0 text-muted">Pendientes</p>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-clock fa-2x"></i>
+                            <i class="fas fa-clock fa-2x text-warning"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-success text-white">
+            <div class="card card-statistic bg-white border-success">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ resueltos }}</h4>
-                            <p class="mb-0">Resueltos</p>
+                            <h3 class="mb-0 text-success">{{ resueltos }}</h3>
+                            <p class="mb-0 text-muted">Resueltos</p>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-check-circle fa-2x"></i>
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-danger text-white">
+            <div class="card card-statistic bg-white border-danger">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h4 class="mb-0">{{ alta_prioridad }}</h4>
-                            <p class="mb-0">Alta Prioridad</p>
+                            <h3 class="mb-0 text-danger">{{ alta_prioridad }}</h3>
+                            <p class="mb-0 text-muted">Alta Prioridad</p>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
                         </div>
                     </div>
                 </div>
@@ -123,35 +126,38 @@
     </div>
 
     <!-- Lista de reseñas reportadas -->
-    <div class="card">
-        <div class="card-body">
+    <div class="card main-card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom">
+            <h5 class="mb-0 text-corporate fw-bold"><i class="fas fa-list me-2"></i>Lista de Reseñas Reportadas</h5>
+        </div>
+        <div class="card-body p-0">
             {% if reseñas_reportadas %}
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Reseña</th>
-                            <th>Negocio</th>
-                            <th>Motivo Reporte</th>
-                            <th>Reportes</th>
-                            <th>Gravedad</th>
-                            <th>Estado</th>
-                            <th>Fecha Reporte</th>
-                            <th>Acciones</th>
+                            <th class="border-0 ps-4">Reseña</th>
+                            <th class="border-0">Negocio</th>
+                            <th class="border-0">Motivo Reporte</th>
+                            <th class="border-0">Reportes</th>
+                            <th class="border-0">Gravedad</th>
+                            <th class="border-0">Estado</th>
+                            <th class="border-0">Fecha Reporte</th>
+                            <th class="border-0 pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for reporte in reseñas_reportadas %}
-                        <tr>
-                            <td>
+                        <tr class="align-middle">
+                            <td class="ps-4">
                                 <div class="d-flex align-items-start">
                                     <div class="flex-shrink-0">
                                         <img src="{% if reporte.usuario_imagen %}{{ reporte.usuario_imagen }}{% else %}{% static 'img/default-avatar.png' %}{% endif %}" 
-                                             alt="Avatar" class="rounded-circle" width="40" height="40">
+                                             alt="Avatar" class="rounded-circle avatar-img" width="45" height="45">
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <strong>{{ reporte.usuario_nombre }}</strong>
-                                        <div class="text-warning">
+                                        <strong class="d-block text-dark">{{ reporte.usuario_nombre }}</strong>
+                                        <div class="text-warning mb-1">
                                             {% for i in "12345" %}
                                                 {% if forloop.counter <= reporte.estrellas %}
                                                     <i class="fas fa-star"></i>
@@ -160,49 +166,50 @@
                                                 {% endif %}
                                             {% endfor %}
                                         </div>
-                                        <small class="text-muted">{{ reporte.comentario|truncatewords:10 }}</small>
+                                        <small class="text-muted comment-preview">{{ reporte.comentario|truncatewords:10 }}</small>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <strong>{{ reporte.negocio_nombre }}</strong>
+                                <strong class="text-dark">{{ reporte.negocio_nombre }}</strong>
                                 <br>
                                 <small class="text-muted">{{ reporte.negocio_categoria }}</small>
                             </td>
                             <td>
                                 {% for motivo in reporte.motivos_reportes %}
-                                <span class="badge bg-danger mb-1">{{ motivo }}</span><br>
+                                <span class="badge motivo-badge mb-1">{{ motivo }}</span><br>
                                 {% endfor %}
                             </td>
                             <td>
-                                <span class="badge bg-warning text-dark">{{ reporte.total_reportes }}</span>
+                                <span class="badge report-count">{{ reporte.total_reportes }}</span>
                             </td>
                             <td>
                                 {% if reporte.gravedad == 'alta' %}
-                                    <span class="badge bg-danger">Alta</span>
+                                    <span class="badge gravedad-alta">Alta</span>
                                 {% elif reporte.gravedad == 'media' %}
-                                    <span class="badge bg-warning text-dark">Media</span>
+                                    <span class="badge gravedad-media">Media</span>
                                 {% else %}
-                                    <span class="badge bg-info">Baja</span>
+                                    <span class="badge gravedad-baja">Baja</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if reporte.estado_db == 'activa' %}
-                                    <span class="badge bg-success">Activa</span>
+                                    <span class="badge estado-activa">Activa</span>
                                 {% elif reporte.estado_db == 'eliminada' %}
-                                    <span class="badge bg-danger">Eliminada</span>
+                                    <span class="badge estado-eliminada">Eliminada</span>
                                 {% else %}
-                                    <span class="badge bg-warning text-dark">{{ reporte.estado }}</span>
+                                    <span class="badge estado-pendiente">{{ reporte.estado }}</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <small>{{ reporte.ultimo_reporte|date:"d/m/Y H:i" }}</small>
+                                <small class="text-muted fecha-text">{{ reporte.ultimo_reporte|date:"d/m/Y H:i" }}</small>
                             </td>
-                            <td>
-                                <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-primary" 
+                            <td class="pe-4">
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-corporate btn-action" 
                                             data-bs-toggle="modal" 
-                                            data-bs-target="#modalDetalle{{ reporte.id }}">
+                                            data-bs-target="#modalDetalle{{ reporte.id }}"
+                                            title="Ver detalles">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     {% if reporte.estado_db == 'activa' %}
@@ -210,8 +217,9 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="resena_id" value="{{ reporte.id }}">
                                         <input type="hidden" name="accion" value="aprobar">
-                                        <button type="submit" class="btn btn-sm btn-outline-success" 
-                                                onclick="return confirm('¿Estás seguro de que deseas aprobar esta reseña? Se mantendrá activa.')">
+                                        <button type="submit" class="btn btn-outline-success btn-action" 
+                                                onclick="return confirm('¿Estás seguro de que deseas aprobar esta reseña? Se mantendrá activa.')"
+                                                title="Aprobar reseña">
                                             <i class="fas fa-check"></i>
                                         </button>
                                     </form>
@@ -219,8 +227,9 @@
                                         {% csrf_token %}
                                         <input type="hidden" name="resena_id" value="{{ reporte.id }}">
                                         <input type="hidden" name="accion" value="eliminar">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" 
-                                                onclick="return confirm('¿Estás seguro de que deseas eliminar esta reseña? Esta acción no se puede deshacer.')">
+                                        <button type="submit" class="btn btn-outline-danger btn-action" 
+                                                onclick="return confirm('¿Estás seguro de que deseas eliminar esta reseña? Esta acción no se puede deshacer.')"
+                                                title="Eliminar reseña">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>
@@ -232,73 +241,118 @@
                         <!-- Modal para detalles -->
                         <div class="modal fade" id="modalDetalle{{ reporte.id }}" tabindex="-1">
                             <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Detalles del Reporte</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                <div class="modal-content border-0 shadow-lg">
+                                    <div class="modal-header bg-corporate text-white">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-info-circle me-2"></i>Detalles del Reporte
+                                        </h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
                                     <div class="modal-body">
                                         <div class="row">
                                             <div class="col-md-6">
-                                                <h6>Información de la Reseña</h6>
-                                                <p><strong>Usuario:</strong> {{ reporte.usuario_nombre }}</p>
-                                                <p><strong>Email:</strong> {{ reporte.usuario_email }}</p>
-                                                <p><strong>Calificación:</strong> 
-                                                    <span class="text-warning">
-                                                        {% for i in "12345" %}
-                                                            {% if forloop.counter <= reporte.estrellas %}
-                                                                <i class="fas fa-star"></i>
-                                                            {% else %}
-                                                                <i class="far fa-star"></i>
-                                                            {% endif %}
-                                                        {% endfor %}
-                                                    </span>
-                                                </p>
-                                                <p><strong>Comentario:</strong></p>
-                                                <p class="border p-2 rounded">{{ reporte.comentario }}</p>
-                                                <p><strong>Fecha Reseña:</strong> {{ reporte.fecha_resena|date:"d/m/Y H:i" }}</p>
+                                                <div class="info-section">
+                                                    <h6 class="section-title text-corporate">
+                                                        <i class="fas fa-comment me-2"></i>Información de la Reseña
+                                                    </h6>
+                                                    <div class="info-item">
+                                                        <strong>Usuario:</strong> {{ reporte.usuario_nombre }}
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Email:</strong> {{ reporte.usuario_email }}
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Calificación:</strong> 
+                                                        <span class="text-warning">
+                                                            {% for i in "12345" %}
+                                                                {% if forloop.counter <= reporte.estrellas %}
+                                                                    <i class="fas fa-star"></i>
+                                                                {% else %}
+                                                                    <i class="far fa-star"></i>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                        </span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Comentario:</strong>
+                                                        <div class="comment-box">{{ reporte.comentario }}</div>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Fecha Reseña:</strong> {{ reporte.fecha_resena|date:"d/m/Y H:i" }}
+                                                    </div>
+                                                </div>
                                             </div>
                                             <div class="col-md-6">
-                                                <h6>Información del Negocio</h6>
-                                                <p><strong>Negocio:</strong> {{ reporte.negocio_nombre }}</p>
-                                                <p><strong>Categoría:</strong> {{ reporte.negocio_categoria }}</p>
-                                                <p><strong>Dirección:</strong> {{ reporte.negocio_direccion }}</p>
-                                                
-                                                <h6 class="mt-4">Información de Reportes</h6>
-                                                <p><strong>Total Reportes:</strong> {{ reporte.total_reportes }}</p>
-                                                <p><strong>Gravedad:</strong> 
-                                                    {% if reporte.gravedad == 'alta' %}
-                                                        <span class="badge bg-danger">Alta</span>
-                                                    {% elif reporte.gravedad == 'media' %}
-                                                        <span class="badge bg-warning text-dark">Media</span>
-                                                    {% else %}
-                                                        <span class="badge bg-info">Baja</span>
-                                                    {% endif %}
-                                                </p>
-                                                <p><strong>Motivos:</strong></p>
-                                                <ul>
-                                                    {% for motivo in reporte.motivos_reportes %}
-                                                    <li>{{ motivo }}</li>
-                                                    {% endfor %}
-                                                </ul>
-                                                
-                                                <h6 class="mt-4">Usuarios que Reportaron</h6>
-                                                {% for usuario in reporte.usuarios_reportan %}
-                                                <div class="border-bottom pb-2 mb-2">
-                                                    <strong>{{ usuario.nombre }}</strong><br>
-                                                    <small>Email: {{ usuario.email }}</small><br>
-                                                    <small>Motivo: {{ usuario.motivo }}</small><br>
-                                                    <small>Fecha: {{ usuario.fecha|date:"d/m/Y H:i" }}</small>
-                                                    {% if usuario.descripcion %}
-                                                    <br><small>Descripción: {{ usuario.descripcion }}</small>
-                                                    {% endif %}
+                                                <div class="info-section">
+                                                    <h6 class="section-title text-corporate">
+                                                        <i class="fas fa-store me-2"></i>Información del Negocio
+                                                    </h6>
+                                                    <div class="info-item">
+                                                        <strong>Negocio:</strong> {{ reporte.negocio_nombre }}
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Categoría:</strong> {{ reporte.negocio_categoria }}
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Dirección:</strong> {{ reporte.negocio_direccion }}
+                                                    </div>
                                                 </div>
-                                                {% endfor %}
+
+                                                <div class="info-section mt-4">
+                                                    <h6 class="section-title text-corporate">
+                                                        <i class="fas fa-flag me-2"></i>Información de Reportes
+                                                    </h6>
+                                                    <div class="info-item">
+                                                        <strong>Total Reportes:</strong> 
+                                                        <span class="badge report-count">{{ reporte.total_reportes }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Gravedad:</strong> 
+                                                        {% if reporte.gravedad == 'alta' %}
+                                                            <span class="badge gravedad-alta">Alta</span>
+                                                        {% elif reporte.gravedad == 'media' %}
+                                                            <span class="badge gravedad-media">Media</span>
+                                                        {% else %}
+                                                            <span class="badge gravedad-baja">Baja</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <strong>Motivos:</strong>
+                                                        <div class="motivos-list">
+                                                            {% for motivo in reporte.motivos_reportes %}
+                                                            <span class="badge motivo-badge">{{ motivo }}</span>
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="info-section mt-4">
+                                                    <h6 class="section-title text-corporate">
+                                                        <i class="fas fa-users me-2"></i>Usuarios que Reportaron
+                                                    </h6>
+                                                    <div class="users-list">
+                                                        {% for usuario in reporte.usuarios_reportan %}
+                                                        <div class="user-report-item">
+                                                            <strong>{{ usuario.nombre }}</strong>
+                                                            <div class="user-details">
+                                                                <small>Email: {{ usuario.email }}</small><br>
+                                                                <small>Motivo: {{ usuario.motivo }}</small><br>
+                                                                <small>Fecha: {{ usuario.fecha|date:"d/m/Y H:i" }}</small>
+                                                                {% if usuario.descripcion %}
+                                                                <br><small>Descripción: {{ usuario.descripcion }}</small>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    <div class="modal-footer bg-light">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                            <i class="fas fa-times me-1"></i>Cerrar
+                                        </button>
                                         {% if reporte.estado_db == 'activa' %}
                                         <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
                                             {% csrf_token %}
@@ -306,7 +360,7 @@
                                             <input type="hidden" name="accion" value="eliminar">
                                             <button type="submit" class="btn btn-danger" 
                                                     onclick="return confirm('¿Estás seguro de que deseas eliminar esta reseña?')">
-                                                Eliminar Reseña
+                                                <i class="fas fa-trash me-1"></i>Eliminar Reseña
                                             </button>
                                         </form>
                                         {% endif %}
@@ -321,23 +375,27 @@
 
             <!-- Paginación -->
             {% if reseñas_reportadas.has_other_pages %}
-            <nav aria-label="Page navigation">
+            <nav aria-label="Page navigation" class="mt-4 px-4">
                 <ul class="pagination justify-content-center">
                     {% if reseñas_reportadas.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ reseñas_reportadas.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Anterior</a>
+                        <a class="page-link text-corporate" href="?page={{ reseñas_reportadas.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
                     </li>
                     {% endif %}
 
                     {% for i in reseñas_reportadas.paginator.page_range %}
                     <li class="page-item {% if reseñas_reportadas.number == i %}active{% endif %}">
-                        <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                        <a class="page-link text-corporate" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
                     </li>
                     {% endfor %}
 
                     {% if reseñas_reportadas.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ reseñas_reportadas.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Siguiente</a>
+                        <a class="page-link text-corporate" href="?page={{ reseñas_reportadas.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
                     </li>
                     {% endif %}
                 </ul>
@@ -345,7 +403,7 @@
             {% endif %}
 
             {% else %}
-            <div class="text-center py-5">
+            <div class="text-center py-5 empty-state">
                 <i class="fas fa-flag fa-4x text-muted mb-3"></i>
                 <h4 class="text-muted">No hay reseñas reportadas</h4>
                 <p class="text-muted">No se han encontrado reportes de reseñas pendientes de revisión.</p>
@@ -361,25 +419,433 @@
     document.getElementById('btnFiltros').addEventListener('click', function() {
         const panel = document.getElementById('panelFiltros');
         panel.classList.toggle('d-none');
+        
+        // Cambiar ícono
+        const icon = this.querySelector('i');
+        if (panel.classList.contains('d-none')) {
+            icon.className = 'fas fa-filter me-2';
+        } else {
+            icon.className = 'fas fa-times me-2';
+        }
     });
 </script>
 
 <style>
-    .table td {
-        vertical-align: middle;
+    :root {
+        --corporate-blue: #3B82F6;
+        --corporate-light: #EFF6FF;
+        --corporate-dark: #1D4ED8;
+        --border-color: #E5E7EB;
+        --border-radius: 12px;
+        --box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+        --transition: all 0.3s ease;
     }
+
+    .text-corporate { color: var(--corporate-blue) !important; }
     
-    .badge {
-        font-size: 0.75em;
+    .bg-corporate { background-color: var(--corporate-blue) !important; }
+    .bg-corporate-light { background-color: var(--corporate-light) !important; }
+
+    .border-corporate { border-left: 4px solid var(--corporate-blue) !important; }
+    .border-warning { border-left: 4px solid #F59E0B !important; }
+    .border-success { border-left: 4px solid #10B981 !important; }
+    .border-danger { border-left: 4px solid #EF4444 !important; }
+
+    .btn-corporate {
+        background-color: var(--corporate-blue);
+        border-color: var(--corporate-blue);
+        color: white;
+        font-weight: 500;
     }
-    
-    .btn-group .btn {
-        border-radius: 0.375rem;
+
+    .btn-corporate:hover {
+        background-color: var(--corporate-dark);
+        border-color: var(--corporate-dark);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
-    
+
+    .btn-outline-corporate {
+        border-color: var(--corporate-blue);
+        color: var(--corporate-blue);
+        font-weight: 500;
+    }
+
+    .btn-outline-corporate:hover {
+        background-color: var(--corporate-blue);
+        border-color: var(--corporate-blue);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .container-fluid {
+        background-color: #F9FAFB;
+        min-height: 100vh;
+        padding: 24px;
+    }
+
     .card {
         border: none;
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        transition: var(--transition);
+        margin-bottom: 1.5rem;
+        background: white;
+    }
+
+    .card:hover {
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.12);
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 1.5rem;
+    }
+
+    .card-statistic {
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        position: relative;
+        overflow: hidden;
+        transition: var(--transition);
+    }
+
+    .card-statistic:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+    }
+
+    .card-statistic .card-body {
+        padding: 1.5rem;
+    }
+
+    .card-statistic h3 {
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        font-size: 2rem;
+    }
+
+    .card-statistic p {
+        margin-bottom: 0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #6B7280 !important;
+    }
+
+    .card-statistic i {
+        opacity: 0.9;
+    }
+
+    .table {
+        margin-bottom: 0;
+        background: white;
+        border-radius: var(--border-radius);
+    }
+
+    .table thead th {
+        background-color: #F9FAFB;
+        color: #374151;
+        border: none;
+        padding: 1.25rem 0.75rem;
+        font-weight: 600;
+        text-transform: none;
+        font-size: 0.9rem;
+        letter-spacing: 0;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .table tbody td {
+        padding: 1.25rem 0.75rem;
+        border-bottom: 1px solid #F3F4F6;
+        vertical-align: middle;
+        transition: var(--transition);
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #F9FAFB;
+        transform: scale(1.002);
+    }
+
+    .avatar-img {
+        border: 3px solid #EFF6FF;
+        object-fit: cover;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
+    }
+
+    .badge {
+        font-size: 0.75em;
+        font-weight: 600;
+        padding: 0.5em 0.75em;
+        border-radius: 8px;
+        border: 1px solid transparent;
+    }
+
+    .motivo-badge {
+        background-color: #EFF6FF;
+        color: var(--corporate-blue);
+        border-color: #BFDBFE;
+    }
+
+    .report-count {
+        background-color: #FEF3C7;
+        color: #D97706;
+        border-color: #FCD34D;
+    }
+
+    .gravedad-alta {
+        background-color: #FEE2E2;
+        color: #DC2626;
+        border-color: #FCA5A5;
+    }
+
+    .gravedad-media {
+        background-color: #FEF3C7;
+        color: #D97706;
+        border-color: #FCD34D;
+    }
+
+    .gravedad-baja {
+        background-color: #EFF6FF;
+        color: var(--corporate-blue);
+        border-color: #BFDBFE;
+    }
+
+    .estado-activa {
+        background-color: #D1FAE5;
+        color: #065F46;
+        border-color: #A7F3D0;
+    }
+
+    .estado-eliminada {
+        background-color: #FEE2E2;
+        color: #DC2626;
+        border-color: #FCA5A5;
+    }
+
+    .estado-pendiente {
+        background-color: #FEF3C7;
+        color: #D97706;
+        border-color: #FCD34D;
+    }
+
+    .btn-action {
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        transition: var(--transition);
+        border: 1px solid var(--border-color);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
+    }
+
+    .btn-group .btn {
+        margin-right: 0.4rem;
+    }
+
+    .btn-group .btn:last-child {
+        margin-right: 0;
+    }
+
+    .comment-preview {
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .fecha-text {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #6B7280;
+    }
+
+    /* Modal Styles */
+    .modal-content {
+        border-radius: var(--border-radius);
+        border: none;
+        box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
+    }
+
+    .modal-header {
+        border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 1.5rem;
+    }
+
+    .info-section {
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--corporate-light);
+        font-size: 1.1rem;
+    }
+
+    .info-item {
+        margin-bottom: 1rem;
+        padding: 0.5rem 0;
+    }
+
+    .info-item strong {
+        color: #374151;
+        font-weight: 600;
+    }
+
+    .comment-box {
+        background-color: var(--corporate-light);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 0.5rem;
+        line-height: 1.5;
+        font-size: 0.95rem;
+        color: #374151;
+    }
+
+    .motivos-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .users-list {
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .users-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .users-list::-webkit-scrollbar-thumb {
+        background: var(--corporate-blue);
+        border-radius: 3px;
+    }
+
+    .user-report-item {
+        background-color: #F9FAFB;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: var(--transition);
+    }
+
+    .user-report-item:hover {
+        background-color: var(--corporate-light);
+        border-color: var(--corporate-blue);
+    }
+
+    .user-report-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .user-details {
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        color: #6B7280;
+    }
+
+    /* Pagination */
+    .pagination .page-link {
+        border: 1px solid var(--border-color);
+        margin: 0 0.25rem;
+        border-radius: 8px;
+        transition: var(--transition);
+        font-weight: 500;
+        color: #6B7280;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: var(--corporate-blue);
+        border-color: var(--corporate-blue);
+        color: white;
+    }
+
+    .pagination .page-link:hover {
+        background-color: var(--corporate-light);
+        border-color: var(--corporate-blue);
+        color: var(--corporate-blue);
+    }
+
+    /* Empty State */
+    .empty-state {
+        padding: 4rem 1rem;
+    }
+
+    .empty-state i {
+        opacity: 0.4;
+    }
+
+    /* Card Filtros */
+    .card-filtros {
+        border-left: 4px solid var(--corporate-blue);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-select, .form-control {
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        transition: var(--transition);
+        font-size: 0.9rem;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: var(--corporate-blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .container-fluid {
+            padding: 16px;
+        }
+        
+        .card-statistic .card-body {
+            padding: 1.25rem;
+        }
+        
+        .card-statistic h3 {
+            font-size: 1.75rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.85rem;
+        }
+        
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+        
+        .btn-group .btn {
+            margin-right: 0;
+        }
+        
+        .table thead th,
+        .table tbody td {
+            padding: 1rem 0.5rem;
+        }
     }
 </style>
 {% endblock %}
