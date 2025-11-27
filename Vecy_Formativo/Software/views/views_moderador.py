@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 import json
 from Software.models import Negocios, UsuarioPerfil, Pedidos, DetallesPedido, ResenasNegocios, AuthUser, Roles, TipoDocumento, UsuariosRoles, TipoNegocio, Productos, CategoriaProductos, Reportes
 from django.utils import timezone
+from django.db import connection
 from django.db.models import Count, Avg
 from django.contrib import messages
 from django.db.models import Q
@@ -1560,11 +1561,10 @@ def api_usuarios_correos(request):
         return JsonResponse({'error': str(e)}, status=500)
  
 # VISTA PARA RESEÑAS REPORTADAS - COMPLETAMENTE CORREGIDA
-# En views_moderador.py - AGREGAR ESTA VISTA
-
+# VISTA PARA RESEÑAS REPORTADAS - CON SQL PURO
 @login_required(login_url='/auth/login/')
 def gestion_resenas_reportadas(request):
-    """Vista para gestión de reseñas reportadas por parte del moderador - CORREGIDA"""
+    """Vista para gestión de reseñas reportadas usando SQL puro"""
     try:
         # Verificar si el usuario está autenticado
         if not request.user.is_authenticated:
@@ -1594,39 +1594,40 @@ def gestion_resenas_reportadas(request):
             accion = request.POST.get('accion')
             
             try:
-                resena = ResenasNegocios.objects.get(pkid_resena=resena_id)
-                
-                if accion == 'aprobar':
-                    # Aprobar la reseña (mantenerla activa)
-                    resena.estado_resena = 'activa'
-                    resena.save()
+                with connection.cursor() as cursor:
+                    if accion == 'aprobar':
+                        # Aprobar la reseña (mantenerla activa)
+                        cursor.execute(
+                            "UPDATE resenas_negocios SET estado_resena = 'activa' WHERE pkid_resena = %s",
+                            [resena_id]
+                        )
+                        
+                        # Actualizar reportes relacionados
+                        cursor.execute(
+                            "UPDATE reportes SET estado_reporte = 'revisado' WHERE fkresena_reporte = %s AND estado_reporte = 'pendiente'",
+                            [resena_id]
+                        )
+                        
+                        messages.success(request, 'Reseña aprobada correctamente')
                     
-                    # Actualizar reportes relacionados
-                    Reportes.objects.filter(
-                        fkresena_reporte=resena_id,
-                        estado_reporte='pendiente'
-                    ).update(estado_reporte='revisado')
+                    elif accion == 'eliminar':
+                        # Eliminar la reseña (cambiar estado a eliminada)
+                        cursor.execute(
+                            "UPDATE resenas_negocios SET estado_resena = 'eliminada' WHERE pkid_resena = %s",
+                            [resena_id]
+                        )
+                        
+                        # Actualizar reportes relacionados
+                        cursor.execute(
+                            "UPDATE reportes SET estado_reporte = 'resuelto' WHERE fkresena_reporte = %s AND estado_reporte = 'pendiente'",
+                            [resena_id]
+                        )
+                        
+                        messages.success(request, 'Reseña eliminada correctamente')
                     
-                    messages.success(request, 'Reseña aprobada correctamente')
-                
-                elif accion == 'eliminar':
-                    # Eliminar la reseña (cambiar estado a eliminada)
-                    resena.estado_resena = 'eliminada'
-                    resena.save()
-                    
-                    # Actualizar reportes relacionados
-                    Reportes.objects.filter(
-                        fkresena_reporte=resena_id,
-                        estado_reporte='pendiente'
-                    ).update(estado_reporte='resuelto')
-                    
-                    messages.success(request, 'Reseña eliminada correctamente')
-                
-                else:
-                    messages.error(request, 'Acción no válida')
-                    
-            except ResenasNegocios.DoesNotExist:
-                messages.error(request, 'Reseña no encontrada')
+                    else:
+                        messages.error(request, 'Acción no válida')
+                        
             except Exception as e:
                 messages.error(request, f'Error al procesar la solicitud: {str(e)}')
             
@@ -1637,91 +1638,94 @@ def gestion_resenas_reportadas(request):
         gravedad_filter = request.GET.get('gravedad', '')
         fecha_filter = request.GET.get('fecha', '')
         
-        # CONSULTA PRINCIPAL: Obtener reportes de reseñas PENDIENTES
-        reportes_pendientes = Reportes.objects.filter(
-            estado_reporte='pendiente',
-            fkresena_reporte__isnull=False
-        ).select_related(
-            'fkresena_reporte',
-            'fkresena_reporte__fknegocio_resena',
-            'fkresena_reporte__fknegocio_resena__fktiponeg_neg',
-            'fkresena_reporte__fkusuario_resena__fkuser',
-            'fkusuario_reporta__fkuser'
-        )
+        # CONSULTA SQL PRINCIPAL: Obtener reseñas que tienen reportes pendientes
+        sql = """
+        SELECT 
+            rn.pkid_resena as id,
+            rn.comentario,
+            rn.estrellas,
+            rn.fecha_resena,
+            rn.estado_resena as estado_db,
+            n.pkid_neg as negocio_id,
+            n.nom_neg as negocio_nombre,
+            tn.desc_tiponeg as negocio_categoria,
+            n.direcc_neg as negocio_direccion,
+            up.id as usuario_id,
+            CONCAT(au.first_name, ' ', au.last_name) as usuario_nombre,
+            au.email as usuario_email,
+            au.username as usuario_username,
+            up.img_user as usuario_imagen,
+            COUNT(rep.pkid_reporte) as total_reportes,
+            MAX(rep.fecha_reporte) as ultimo_reporte
+        FROM reportes rep
+        INNER JOIN resenas_negocios rn ON rep.fkresena_reporte = rn.pkid_resena
+        INNER JOIN negocios n ON rn.fknegocio_resena = n.pkid_neg
+        INNER JOIN tipo_negocio tn ON n.fktiponeg_neg = tn.pkid_tiponeg
+        INNER JOIN usuario_perfil up ON rn.fkusuario_resena = up.id
+        INNER JOIN auth_user au ON up.fkuser_id = au.id
+        WHERE rep.estado_reporte = 'pendiente'
+        AND rep.fkresena_reporte IS NOT NULL
+        """
         
-        # Aplicar filtros a los reportes
+        params = []
+        
+        # Aplicar filtros
         if estado_filter:
-            reportes_pendientes = reportes_pendientes.filter(estado_reporte=estado_filter)
+            sql += " AND rep.estado_reporte = %s"
+            params.append(estado_filter)
         
         if fecha_filter:
-            reportes_pendientes = reportes_pendientes.filter(fecha_reporte__date=fecha_filter)
+            sql += " AND DATE(rep.fecha_reporte) = %s"
+            params.append(fecha_filter)
         
-        # Agrupar reportes por reseña
-        reseñas_ids = reportes_pendientes.values_list('fkresena_reporte', flat=True).distinct()
+        sql += " GROUP BY rn.pkid_resena, n.pkid_neg, up.id, au.id ORDER BY ultimo_reporte DESC"
         
-        # Obtener las reseñas con sus datos completos
-        reseñas_query = ResenasNegocios.objects.filter(
-            pkid_resena__in=reseñas_ids
-        ).select_related(
-            'fknegocio_resena',
-            'fknegocio_resena__fktiponeg_neg',
-            'fkusuario_resena__fkuser'
-        )
+        # Ejecutar consulta principal
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            columns = [col[0] for col in cursor.description]
+            reseñas_base = [dict(zip(columns, row)) for row in cursor.fetchall()]
         
-        # Ordenar por fecha de reseña (más recientes primero)
-        reseñas_list = reseñas_query.order_by('-fecha_resena')
-        
-        # Preparar datos para el template
+        # Para cada reseña, obtener los detalles de los reportes
         reseñas_data = []
-        for resena in reseñas_list:
-            # Obtener información del negocio
-            negocio = resena.fknegocio_resena
+        for reseña in reseñas_base:
+            # Obtener motivos y usuarios que reportaron para esta reseña
+            sql_reportes = """
+            SELECT 
+                rep.motivo,
+                rep.descripcion,
+                rep.fecha_reporte,
+                CONCAT(au2.first_name, ' ', au2.last_name) as reportero_nombre,
+                au2.email as reportero_email
+            FROM reportes rep
+            INNER JOIN usuario_perfil up2 ON rep.fkusuario_reporta = up2.id
+            INNER JOIN auth_user au2 ON up2.fkuser_id = au2.id
+            WHERE rep.fkresena_reporte = %s 
+            AND rep.estado_reporte = 'pendiente'
+            ORDER BY rep.fecha_reporte DESC
+            """
             
-            # Obtener información del usuario que hizo la reseña
-            usuario = resena.fkusuario_resena.fkuser
-            nombre_usuario = f"{usuario.first_name} {usuario.last_name}".strip()
-            if not nombre_usuario:
-                nombre_usuario = usuario.username
+            with connection.cursor() as cursor:
+                cursor.execute(sql_reportes, [reseña['id']])
+                columns_reportes = [col[0] for col in cursor.description]
+                reportes_detalle = [dict(zip(columns_reportes, row)) for row in cursor.fetchall()]
             
-            # Obtener reportes PENDIENTES para esta reseña específica
-            reportes_resena = reportes_pendientes.filter(fkresena_reporte=resena.pkid_resena)
+            # Obtener motivos únicos
+            motivos_reportes = list(set([reporte['motivo'] for reporte in reportes_detalle]))
             
-            # Contar reportes y obtener motivos
-            total_reportes = reportes_resena.count()
-            motivos_reportes = list(reportes_resena.values_list('motivo', flat=True).distinct())
-            
-            # Obtener información de los usuarios que reportaron
+            # Preparar información de usuarios que reportaron
             usuarios_reportan_info = []
-            for reporte in reportes_resena:
-                user_reporter = reporte.fkusuario_reporta.fkuser
-                nombre_reporter = f"{user_reporter.first_name} {user_reporter.last_name}".strip()
-                if not nombre_reporter:
-                    nombre_reporter = user_reporter.username
-                
+            for reporte in reportes_detalle:
                 usuarios_reportan_info.append({
-                    'nombre': nombre_reporter,
-                    'email': user_reporter.email,
-                    'motivo': reporte.motivo,
-                    'descripcion': reporte.descripcion,
-                    'fecha': reporte.fecha_reporte
+                    'nombre': reporte['reportero_nombre'] or reporte['reportero_email'],
+                    'email': reporte['reportero_email'],
+                    'motivo': reporte['motivo'],
+                    'descripcion': reporte['descripcion'] or 'Sin descripción adicional',
+                    'fecha': reporte['fecha_reporte']
                 })
             
-            # Manejar imagen del usuario
-            imagen_usuario = ''
-            try:
-                perfil_usuario = UsuarioPerfil.objects.get(fkuser=usuario)
-                if perfil_usuario.img_user:
-                    imagen_usuario = perfil_usuario.img_user.url
-                else:
-                    imagen_usuario = '/static/img/default-avatar.png'
-            except UsuarioPerfil.DoesNotExist:
-                imagen_usuario = '/static/img/default-avatar.png'
-            
-            # Obtener el último reporte
-            ultimo_reporte_obj = reportes_resena.order_by('-fecha_reporte').first()
-            ultimo_reporte = ultimo_reporte_obj.fecha_reporte if ultimo_reporte_obj else resena.fecha_resena
-            
             # Determinar gravedad basada en número de reportes
+            total_reportes = reseña['total_reportes']
             if total_reportes >= 3:
                 gravedad = 'alta'
             elif total_reportes == 2:
@@ -1733,47 +1737,75 @@ def gestion_resenas_reportadas(request):
             if gravedad_filter and gravedad != gravedad_filter:
                 continue
             
+            # Manejar imagen del usuario
+            imagen_usuario = ''
+            if reseña['usuario_imagen']:
+                try:
+                    imagen_usuario = reseña['usuario_imagen']
+                except:
+                    imagen_usuario = '/static/img/default-avatar.png'
+            else:
+                imagen_usuario = '/static/img/default-avatar.png'
+            
             reseñas_data.append({
-                'id': resena.pkid_resena,
-                'comentario': resena.comentario or 'Sin comentario',
-                'estrellas': resena.estrellas,
-                'fecha_resena': resena.fecha_resena,
-                'estado': 'Activa' if resena.estado_resena == 'activa' else 'Eliminada',
-                'estado_db': resena.estado_resena,
+                'id': reseña['id'],
+                'comentario': reseña['comentario'] or 'Sin comentario',
+                'estrellas': reseña['estrellas'],
+                'fecha_resena': reseña['fecha_resena'],
+                'estado': 'Activa' if reseña['estado_db'] == 'activa' else 'Eliminada',
+                'estado_db': reseña['estado_db'],
                 'gravedad': gravedad,
                 
                 # Información del negocio
-                'negocio_id': negocio.pkid_neg,
-                'negocio_nombre': negocio.nom_neg,
-                'negocio_categoria': negocio.fktiponeg_neg.desc_tiponeg if negocio.fktiponeg_neg else 'Sin categoría',
-                'negocio_direccion': negocio.direcc_neg,
+                'negocio_id': reseña['negocio_id'],
+                'negocio_nombre': reseña['negocio_nombre'],
+                'negocio_categoria': reseña['negocio_categoria'],
+                'negocio_direccion': reseña['negocio_direccion'],
                 
                 # Información del usuario que hizo la reseña
-                'usuario_id': usuario.id,
-                'usuario_nombre': nombre_usuario,
-                'usuario_email': usuario.email,
+                'usuario_id': reseña['usuario_id'],
+                'usuario_nombre': reseña['usuario_nombre'] or reseña['usuario_username'],
+                'usuario_email': reseña['usuario_email'],
                 'usuario_imagen': imagen_usuario,
-                'usuario_username': usuario.username,
+                'usuario_username': reseña['usuario_username'],
                 
                 # Información de reportes
                 'total_reportes': total_reportes,
                 'motivos_reportes': motivos_reportes,
                 'usuarios_reportan': usuarios_reportan_info,
-                'ultimo_reporte': ultimo_reporte,
+                'ultimo_reporte': reseña['ultimo_reporte'],
             })
         
         # Calcular estadísticas para las tarjetas
-        total_reportes_count = reportes_pendientes.count()
-        pendientes_count = reportes_pendientes.filter(estado_reporte='pendiente').count()
-        resueltos_count = Reportes.objects.filter(
-            estado_reporte='resuelto',
-            fkresena_reporte__isnull=False
-        ).count()
+        with connection.cursor() as cursor:
+            # Total de reportes pendientes de reseñas
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'pendiente' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            total_reportes_count = cursor.fetchone()[0]
+            
+            # Reportes pendientes
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'pendiente' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            pendientes_count = cursor.fetchone()[0]
+            
+            # Reportes resueltos de reseñas
+            cursor.execute("""
+                SELECT COUNT(*) FROM reportes 
+                WHERE estado_reporte = 'resuelto' 
+                AND fkresena_reporte IS NOT NULL
+            """)
+            resueltos_count = cursor.fetchone()[0]
         
         # Para alta prioridad, contamos reseñas con múltiples reportes
         alta_prioridad_count = 0
         for resena_data in reseñas_data:
-            if resena_data['total_reportes'] >= 3:  # Considerar alta prioridad si tiene 3+ reportes
+            if resena_data['total_reportes'] >= 3:
                 alta_prioridad_count += 1
         
         # Paginación
