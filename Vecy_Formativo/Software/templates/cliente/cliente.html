@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}VECY - Tu Mercado Local Digital{% endblock %}
 
 {% block extra_css %}
@@ -144,7 +143,7 @@
         </div>
     </section>
 
-    <!-- OFERTAS ESPECIALES -->
+    <!-- OFERTAS ESPECIALES - VERSIÓN CORREGIDA -->
     <section id="vecy-offers" class="vecy-section vecy-gradient-bg-3">
         <div class="container">
             <div class="vecy-section-header">
@@ -165,77 +164,122 @@
             {% if productos_oferta %}
             <div class="vecy-offers-grid">
                 {% for producto_data in productos_oferta|slice:":6" %}
-                {% with producto=producto_data.producto %}
-                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
-                <div class="vecy-offer-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                    <div class="vecy-offer-badge">
-                        <i class="fas fa-fire"></i> Oferta
-                    </div>
-
-                    <div class="vecy-offer-media">
-                        {% if producto.img_prod %}
-                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-offer-image">
-                        {% else %}
-                        <div class="vecy-offer-placeholder">
-                            <i class="fas fa-tag"></i>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="vecy-offer-content">
-                        <h3 class="vecy-offer-title">{{ producto.nom_prod }}</h3>
-
-                        <div class="vecy-offer-store">
-                            <i class="fas fa-store"></i>
-                            {{ producto.fknegocioasociado_prod.nom_neg }}
+                    <!-- OFERTA DE VARIANTE ESPECÍFICA -->
+                    {% if producto_data.variante %}
+                    <div class="vecy-offer-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                        <div class="vecy-offer-badge">
+                            <i class="fas fa-fire"></i> Oferta Variante
                         </div>
 
-                        <div class="vecy-offer-price">
-                            <div class="vecy-price-comparison">
-                                <span class="vecy-offer-final">${{ producto_data.precio_final|floatformat:0 }}</span>
-                                <span class="vecy-offer-original">${{ producto_data.precio_base|floatformat:0 }}</span>
-                            </div>
-                            <div class="vecy-discount-tag">
-                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
-                            </div>
-                        </div>
-
-                        <div class="vecy-offer-savings">
-                            <i class="fas fa-piggy-bank me-1"></i>
-                            Ahorras ${{ producto_data.ahorro|floatformat:0 }}
-                        </div>
-
-                        <!-- STOCK MEJORADO PARA VARIANTES -->
-                        <div class="vecy-offer-stock">
-                            {% if producto_data.tiene_variantes %}
-                            <div class="variant-stock-info stock-available">
-                                <i class="fas fa-cubes me-1"></i>
-                                Múltiples variantes disponibles
-                            </div>
+                        <div class="vecy-offer-media">
+                            <!-- IMAGEN ESPECÍFICA DE LA VARIANTE EN OFERTA -->
+                            {% if producto_data.variante.imagen %}
+                            <img src="{{ producto_data.variante.imagen }}" alt="{{ producto_data.variante.nombre }}" class="vecy-offer-image">
+                            {% elif producto_data.producto.img_prod %}
+                            <img src="{{ producto_data.producto.img_prod.url }}" alt="{{ producto_data.variante.nombre }}" class="vecy-offer-image">
                             {% else %}
-                            <div class="vecy-stock-bar">
-                                <div class="vecy-stock-progress"
-                                    style="width: {% widthratio producto_data.stock 50 100 %}%"></div>
+                            <div class="vecy-offer-placeholder">
+                                <i class="fas fa-tag"></i>
                             </div>
-                            <span>{{ producto_data.stock }} disponibles</span>
                             {% endif %}
                         </div>
 
-                        {% if producto_data.tiene_variantes %}
-                        <button class="vecy-offer-btn" onclick="showVariantsModal('{{ producto.pkid_prod }}')">
-                            <i class="fas fa-list-alt me-2"></i>
-                            Ver Opciones
-                        </button>
-                        {% else %}
-                        <button class="vecy-offer-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
-                            <i class="fas fa-cart-plus me-2"></i>
-                            Aprovechar Oferta
-                        </button>
-                        {% endif %}
+                        <div class="vecy-offer-content">
+                            <!-- SOLO NOMBRE DE LA VARIANTE EN OFERTA -->
+                            <h3 class="vecy-offer-title">{{ producto_data.variante.nombre }}</h3>
+
+                            <div class="vecy-offer-store">
+                                <i class="fas fa-store"></i>
+                                {{ producto_data.producto.fknegocioasociado_prod.nom_neg }}
+                            </div>
+
+                            <div class="vecy-offer-price">
+                                <div class="vecy-price-comparison">
+                                    <span class="vecy-offer-final">${{ producto_data.precio_final|floatformat:0 }}</span>
+                                    <span class="vecy-offer-original">${{ producto_data.precio_original|floatformat:0 }}</span>
+                                </div>
+                                <div class="vecy-discount-tag">
+                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                                </div>
+                            </div>
+
+                            <div class="vecy-offer-savings">
+                                <i class="fas fa-piggy-bank me-1"></i>
+                                Ahorras ${{ producto_data.descuento_monto|floatformat:0 }}
+                            </div>
+
+                            <!-- STOCK DE LA VARIANTE ESPECÍFICA -->
+                            <div class="vecy-offer-stock">
+                                <div class="vecy-stock-bar">
+                                    <div class="vecy-stock-progress"
+                                        style="width: {% widthratio producto_data.variante.stock 50 100 %}%"></div>
+                                </div>
+                                <span>{{ producto_data.variante.stock }} disponibles</span>
+                            </div>
+
+                            <button class="vecy-offer-btn" 
+                                    onclick="addToCartWithSpecificVariant('{{ producto_data.producto.pkid_prod }}', '{{ producto_data.variante.id }}')">
+                                <i class="fas fa-cart-plus me-2"></i>
+                                Aprovechar Oferta
+                            </button>
+                        </div>
                     </div>
-                </div>
-                {% endif %}
-                {% endwith %}
+                    
+                    <!-- OFERTA DE PRODUCTO BASE (SIN VARIANTE ESPECÍFICA) -->
+                    {% else %}
+                    <div class="vecy-offer-card" data-aos="zoom-in" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                        <div class="vecy-offer-badge">
+                            <i class="fas fa-fire"></i> Oferta
+                        </div>
+
+                        <div class="vecy-offer-media">
+                            {% if producto_data.producto.img_prod %}
+                            <img src="{{ producto_data.producto.img_prod.url }}" alt="{{ producto_data.producto.nom_prod }}" class="vecy-offer-image">
+                            {% else %}
+                            <div class="vecy-offer-placeholder">
+                                <i class="fas fa-tag"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="vecy-offer-content">
+                            <h3 class="vecy-offer-title">{{ producto_data.producto.nom_prod }}</h3>
+
+                            <div class="vecy-offer-store">
+                                <i class="fas fa-store"></i>
+                                {{ producto_data.producto.fknegocioasociado_prod.nom_neg }}
+                            </div>
+
+                            <div class="vecy-offer-price">
+                                <div class="vecy-price-comparison">
+                                    <span class="vecy-offer-final">${{ producto_data.precio_final|floatformat:0 }}</span>
+                                    <span class="vecy-offer-original">${{ producto_data.precio_original|floatformat:0 }}</span>
+                                </div>
+                                <div class="vecy-discount-tag">
+                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                                </div>
+                            </div>
+
+                            <div class="vecy-offer-savings">
+                                <i class="fas fa-piggy-bank me-1"></i>
+                                Ahorras ${{ producto_data.descuento_monto|floatformat:0 }}
+                            </div>
+
+                            <div class="vecy-offer-stock">
+                                <div class="vecy-stock-bar">
+                                    <div class="vecy-stock-progress"
+                                        style="width: {% widthratio producto_data.producto.stock_prod 50 100 %}%"></div>
+                                </div>
+                                <span>{{ producto_data.producto.stock_prod }} disponibles</span>
+                            </div>
+
+                            <button class="vecy-offer-btn" onclick="addToCart('{{ producto_data.producto.pkid_prod }}')">
+                                <i class="fas fa-cart-plus me-2"></i>
+                                Aprovechar Oferta
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
                 {% endfor %}
             </div>
             {% else %}
@@ -250,7 +294,7 @@
         </div>
     </section>
 
-    <!-- PRODUCTOS BARATOS CON VARIANTES REALES - VERSIÓN CORREGIDA -->
+    <!-- PRODUCTOS BARATOS CON VARIANTES - CARTA HORIZONTAL CORREGIDA -->
     <section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
         <div class="container">
             <div class="vecy-section-header">
@@ -274,7 +318,7 @@
                 {% with producto=producto_data.producto %}
                 {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
 
-                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN MEJORADA -->
+                <!-- COMPONENTE CON VARIANTES REALES - CARTA HORIZONTAL CORREGIDA -->
                 {% if producto_data.tiene_variantes and producto_data.variantes %}
                 <div class="product-card-with-variants" data-aos="fade-up" 
                      data-aos-delay="{{ forloop.counter0|add:1 }}00"
@@ -337,7 +381,7 @@
                             {% endif %}
                         </div>
 
-                        <!-- Sección de precio y botón -->
+                        <!-- Sección de precio y botón CORREGIDA -->
                         <div class="product-price-section mt-3">
                             <div class="vecy-price-section">
                                 <div class="vecy-price-main">
@@ -350,7 +394,7 @@
                                 </div>
                                 {% if producto_data.tiene_descuento %}
                                 <div class="vecy-savings-badge">
-                                    Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro|floatformat:0 }}
                                 </div>
                                 {% endif %}
                             </div>
@@ -375,25 +419,27 @@
                              data-variant-stock="{{ producto_data.stock }}"
                              data-variant-precio-adicional="0"
                              data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-ahorro="{{ producto_data.ahorro|default:0 }}"
                              data-is-base="true">
                         </div>
                         
-                        <!-- VARIANTES ADICIONALES -->
+                        <!-- VARIANTES ADICIONALES - USANDO PRECIOS PRECALCULADOS -->
                         {% for variante in producto_data.variantes %}
-                        {% with precio_base_variante=producto_data.precio_base|add:variante.precio_adicional %}
-                        {% with precio_final_variante=producto_data.precio_final|add:variante.precio_adicional %}
                         <div data-variant 
                              data-variant-id="{{ variante.id_variante }}"
                              data-variant-name="{{ variante.nombre_variante }}"
                              data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
-                             data-variant-price="{{ precio_base_variante|floatformat:0 }}"
+                             data-variant-price="{{ variante.precio_base_calculado|floatformat:0 }}"
                              data-variant-stock="{{ variante.stock_variante }}"
                              data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
-                             data-variant-precio-final="{{ precio_final_variante|floatformat:0 }}"
+                             data-variant-precio-final="{{ variante.precio_final_calculado|floatformat:0 }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-ahorro="{{ variante.ahorro_calculado|default:0 }}"
                              data-is-base="false">
                         </div>
-                        {% endwith %}
-                        {% endwith %}
                         {% endfor %}
                     </div>
                 </div>
@@ -457,7 +503,7 @@
                             </div>
                             {% if producto_data.tiene_descuento %}
                             <div class="vecy-savings-badge">
-                                Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro|floatformat:0 }}
                             </div>
                             {% endif %}
                         </div>
@@ -477,7 +523,7 @@
         </div>
     </section>
 
-    <!-- PRODUCTOS DESTACADOS -->
+    <!-- PRODUCTOS DESTACADOS - CON CARTA HORIZONTAL Y ETIQUETA ESPECIAL -->
     <section id="vecy-featured" class="vecy-section vecy-gradient-bg-2">
         <div class="container">
             <div class="vecy-section-header">
@@ -500,8 +546,145 @@
                 {% for producto_data in productos_destacados|slice:":8" %}
                 {% with producto=producto_data.producto %}
                 {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
-                <div class="vecy-product-card vecy-featured-card" data-aos="fade-up"
-                    data-aos-delay="{{ forloop.counter0|add:1 }}00">
+
+                <!-- COMPONENTE CON VARIANTES REALES - CARTA HORIZONTAL PARA DESTACADOS -->
+                {% if producto_data.tiene_variantes and producto_data.variantes %}
+                <div class="product-card-with-variants featured-horizontal-card" data-aos="fade-up" 
+                     data-aos-delay="{{ forloop.counter0|add:1 }}00"
+                     data-product-id="{{ producto.pkid_prod }}">
+                    
+                    <!-- ETIQUETA ESPECIAL PARA PRODUCTOS DESTACADOS -->
+                    <div class="featured-special-badge">
+                        <i class="fas fa-crown me-1"></i>
+                        PRODUCTO DESTACADO
+                        {% if producto_data.total_vendido %}
+                        <span class="sales-count">• {{ producto_data.total_vendido }} vendidos</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Indicador de selección -->
+                    <div class="selection-indicator">
+                        <i class="fas fa-check"></i>
+                    </div>
+
+                    <div class="product-image-container">
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/ffd700/ffffff?text=DESTACADO{% endif %}" 
+                             alt="{{ producto.nom_prod }}" class="product-main-image" 
+                             id="mainProductImage-featured-{{ producto.pkid_prod }}">
+                    </div>
+
+                    <div class="product-info-container">
+                        <div>
+                            <!-- Título del producto -->
+                            <h3 class="vecy-product-title featured-title" id="productTitle-featured-{{ producto.pkid_prod }}">
+                                {{ producto.nom_prod }}
+                            </h3>
+
+                            <!-- Información de la tienda -->
+                            <div class="vecy-store-info">
+                                <i class="fas fa-store"></i>
+                                <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                            </div>
+
+                            <!-- Información de stock MEJORADA -->
+                            <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                                <i class="fas fa-box"></i>
+                                <span id="stockInfo-featured-{{ producto.pkid_prod }}">
+                                    {% if producto_data.tiene_variantes %}
+                                    Múltiples opciones disponibles
+                                    {% else %}
+                                    {{ producto_data.stock }} disponibles
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <!-- Descripción del producto -->
+                            <div class="product-description">
+                                <p class="product-description-text" id="description-featured-{{ producto.pkid_prod }}">
+                                    {{ producto.desc_prod|default:"Producto destacado por su alta calidad y excelente relación calidad-precio. Múltiples opciones disponibles." }}
+                                </p>
+                            </div>
+
+                            <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
+                            {% if producto_data.variantes %}
+                            <div class="variants-container">
+                                <div class="variants-label">
+                                    <i class="fas fa-list-alt me-2"></i>
+                                    Opciones disponibles:
+                                </div>
+                                <div class="variants-grid" id="variantsGrid-featured-{{ producto.pkid_prod }}">
+                                    <!-- Las miniaturas se generarán con JavaScript -->
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sección de precio y botón CORREGIDA -->
+                        <div class="product-price-section mt-3">
+                            <div class="vecy-price-section">
+                                <div class="vecy-price-main">
+                                    <span class="vecy-current-price" id="price-featured-{{ producto.pkid_prod }}">
+                                        ${{ producto_data.precio_final|floatformat:0 }}
+                                    </span>
+                                    {% if producto_data.tiene_descuento %}
+                                    <span class="vecy-original-price">${{ producto_data.precio_base|floatformat:0 }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if producto_data.tiene_descuento %}
+                                <div class="vecy-savings-badge featured-savings">
+                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <button class="vecy-add-cart-btn featured-cart-btn" 
+                                    onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
+                                    id="addToCartBtn-featured-{{ producto.pkid_prod }}">
+                                <i class="fas fa-cart-plus me-2"></i>
+                                Agregar al Carrito
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
+                    <div class="variantes-reales-data" style="display: none;">
+                        <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+                        <div data-variant 
+                             data-variant-id="base"
+                             data-variant-name="{{ producto.nom_prod }} - Estándar"
+                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+                             data-variant-stock="{{ producto_data.stock }}"
+                             data-variant-precio-adicional="0"
+                             data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-ahorro="{{ producto_data.ahorro|default:0 }}"
+                             data-is-base="true">
+                        </div>
+                        
+                        <!-- VARIANTES ADICIONALES - USANDO PRECIOS PRECALCULADOS -->
+                        {% for variante in producto_data.variantes %}
+                        <div data-variant 
+                             data-variant-id="{{ variante.id_variante }}"
+                             data-variant-name="{{ variante.nombre_variante }}"
+                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
+                             data-variant-price="{{ variante.precio_base_calculado|floatformat:0 }}"
+                             data-variant-stock="{{ variante.stock_variante }}"
+                             data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
+                             data-variant-precio-final="{{ variante.precio_final_calculado|floatformat:0 }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-ahorro="{{ variante.ahorro_calculado|default:0 }}"
+                             data-is-base="false">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PRODUCTO DESTACADO SIN VARIANTES (TARJETA ORIGINAL MEJORADA) -->
+                {% else %}
+                <div class="vecy-product-card vecy-featured-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
                     <div class="vecy-product-media">
                         <div class="vecy-image-container">
                             {% if producto.img_prod %}
@@ -574,7 +757,7 @@
                             </div>
                             {% if producto_data.tiene_descuento %}
                             <div class="vecy-savings-badge">
-                                Ahorras ${{ producto_data.ahorro|floatformat:0 }}
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro|floatformat:0 }}
                             </div>
                             {% endif %}
                         </div>
@@ -592,6 +775,7 @@
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
                 {% endif %}
                 {% endwith %}
                 {% endfor %}
@@ -838,9 +1022,70 @@
         console.log("✅ Scroll suave configurado");
     }
 
-    // Funciones específicas de la página cliente
+    // Funciones específicas para manejo de variantes
+    function addToCartWithSpecificVariant(productId, variantId) {
+        console.log(`Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
+        
+        fetch('{% url "agregar_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                producto_id: productId,
+                variante_id: variantId,
+                cantidad: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                vecyShowNotification(data.message, 'success');
+                if (data.carrito_count !== undefined) {
+                    updateCartCount(data.carrito_count);
+                }
+            } else {
+                vecyShowNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            vecyShowNotification('Error al agregar al carrito', 'error');
+        });
+    }
+
     function quickView(productId) {
         vecyShowNotification('Función de vista rápida para producto: ' + productId, 'info');
+    }
+
+    // Función de utilidad para mostrar notificaciones
+    function vecyShowNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    // Función para actualizar contador del carrito
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'flex' : 'none';
+        });
     }
 
     // Inicialización completa

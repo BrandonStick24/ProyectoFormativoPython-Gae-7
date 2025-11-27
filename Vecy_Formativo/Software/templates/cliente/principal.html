@@ -13,44 +13,167 @@
 
 {% block content %}
 <div class="vecy-homepage">
-    <!-- CARRUSEL PRINCIPAL -->
+    <!-- CARRUSEL PRINCIPAL CON OFERTAS REALES -->
     <section class="vecy-section compact">
         <div class="container-fluid px-0">
             <div id="vecyOffersCarousel" class="carousel slide vecy-carousel" data-bs-ride="carousel">
                 <div class="carousel-inner">
-                    <div class="carousel-item vecy-carousel-item active">
-                        <img src="https://images.unsplash.com/photo-1607082350899-7e105aa886ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Bienvenido a VECY">
-                        <div class="vecy-carousel-caption">
-                            <h2 class="vecy-carousel-title">Bienvenido a VECY</h2>
-                            <p class="vecy-carousel-text">Tu mercado local digital con los mejores productos y servicios de tu comunidad</p>
-                            <a href="#vecy-categories" class="vecy-carousel-btn">
-                                <i class="fas fa-shopping-bag me-2"></i>Explorar Productos
-                            </a>
+                    {% if productos_oferta %}
+                        {% for oferta_data in productos_oferta|slice:":3" %}
+                        {% with producto=oferta_data.producto %}
+                        <div class="carousel-item vecy-carousel-item {% if forloop.first %}active{% endif %}">
+                            <!-- Imagen de la oferta -->
+                            {% if oferta_data.variante and oferta_data.variante.imagen %}
+                                <img src="{{ oferta_data.variante.imagen }}" class="vecy-carousel-image" alt="{{ oferta_data.variante.nombre }}">
+                            {% elif producto.img_prod %}
+                                <img src="{{ producto.img_prod.url }}" class="vecy-carousel-image" alt="{{ producto.nom_prod }}">
+                            {% else %}
+                                <img src="https://images.unsplash.com/photo-1607082350899-7e105aa886ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="{{ producto.nom_prod }}">
+                            {% endif %}
+                            
+                            <div class="vecy-carousel-caption">
+                                <!-- Badge de oferta -->
+                                <div class="vecy-offer-badge">
+                                    <span class="vecy-discount-percent">-{{ oferta_data.descuento_porcentaje|floatformat:0 }}%</span>
+                                    <span class="vecy-offer-text">OFERTA ESPECIAL</span>
+                                </div>
+                                
+                                <h2 class="vecy-carousel-title">
+                                    {% if oferta_data.variante %}
+                                        {{ oferta_data.variante.nombre }}
+                                    {% else %}
+                                        {{ producto.nom_prod }}
+                                    {% endif %}
+                                </h2>
+                                
+                                <p class="vecy-carousel-text">
+                                    {{ producto.desc_prod|default:"¡Aprovecha esta increíble oferta!"|truncatewords:15 }}
+                                </p>
+                                
+                                <!-- Precios -->
+                                <div class="vecy-carousel-prices">
+                                    {% if oferta_data.tiene_descuento %}
+                                    <span class="vecy-carousel-original-price">${{ oferta_data.precio_original|floatformat:0 }}</span>
+                                    <span class="vecy-carousel-current-price">${{ oferta_data.precio_final|floatformat:0 }}</span>
+                                    <span class="vecy-carousel-save">Ahorras ${{ oferta_data.descuento_monto|floatformat:0 }}</span>
+                                    {% else %}
+                                    <span class="vecy-carousel-current-price">${{ oferta_data.precio_original|floatformat:0 }}</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Información del negocio -->
+                                <div class="vecy-carousel-store">
+                                    <i class="fas fa-store"></i>
+                                    {{ producto.fknegocioasociado_prod.nom_neg }}
+                                </div>
+                                
+                                <div class="vecy-carousel-actions">
+                                    {% if user.is_authenticated %}
+                                    <button class="vecy-carousel-btn" onclick="agregarOfertaAlCarrito('{{ producto.pkid_prod }}', '{{ oferta_data.variante.id|default:'base' }}')">
+                                        <i class="fas fa-cart-plus me-2"></i>Agregar al Carrito
+                                    </button>
+                                    {% else %}
+                                    <button class="vecy-carousel-btn" onclick="showLoginAlert()">
+                                        <i class="fas fa-cart-plus me-2"></i>Agregar al Carrito
+                                    </button>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'detalle_negocio' id=producto.fknegocioasociado_prod.pkid_neg %}" class="vecy-carousel-btn vecy-carousel-btn-secondary">
+                                        <i class="fas fa-store me-2"></i>Ver Negocio
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="carousel-item vecy-carousel-item">
-                        <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Nuevos Productos">
-                        <div class="vecy-carousel-caption">
-                            <h2 class="vecy-carousel-title">Nuevos Ingresos</h2>
-                            <p class="vecy-carousel-text">Descubre los productos más recientes agregados por nuestros negocios locales</p>
-                            <a href="#vecy-new-products" class="vecy-carousel-btn">
-                                <i class="fas fa-star me-2"></i>Ver Novedades
-                            </a>
+                        {% endwith %}
+                        {% endfor %}
+                        
+                        <!-- Si hay menos de 3 ofertas, completar con slides genéricos -->
+                        {% if productos_oferta|length < 3 %}
+                        <div class="carousel-item vecy-carousel-item {% if productos_oferta|length == 0 %}active{% endif %}">
+                            <img src="https://images.unsplash.com/photo-1607082350899-7e105aa886ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Bienvenido a VECY">
+                            <div class="vecy-carousel-caption">
+                                <h2 class="vecy-carousel-title">Bienvenido a VECY</h2>
+                                <p class="vecy-carousel-text">Tu mercado local digital con los mejores productos y servicios de tu comunidad</p>
+                                <a href="#vecy-categories" class="vecy-carousel-btn">
+                                    <i class="fas fa-shopping-bag me-2"></i>Explorar Productos
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="carousel-item vecy-carousel-item">
-                        <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Negocios Locales">
-                        <div class="vecy-carousel-caption">
-                            <h2 class="vecy-carousel-title">Negocios Locales</h2>
-                            <p class="vecy-carousel-text">Apoya el comercio local y descubre tesoros únicos en tu comunidad</p>
-                            <a href="#vecy-businesses" class="vecy-carousel-btn">
-                                <i class="fas fa-store me-2"></i>Ver Negocios
-                            </a>
+                        {% endif %}
+                        
+                        {% if productos_oferta|length < 2 %}
+                        <div class="carousel-item vecy-carousel-item">
+                            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Nuevos Productos">
+                            <div class="vecy-carousel-caption">
+                                <h2 class="vecy-carousel-title">Nuevos Ingresos</h2>
+                                <p class="vecy-carousel-text">Descubre los productos más recientes agregados por nuestros negocios locales</p>
+                                <a href="#vecy-new-products" class="vecy-carousel-btn">
+                                    <i class="fas fa-star me-2"></i>Ver Novedades
+                                </a>
+                            </div>
                         </div>
-                    </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <!-- Carrusel por defecto cuando no hay ofertas -->
+                        <div class="carousel-item vecy-carousel-item active">
+                            <img src="https://images.unsplash.com/photo-1607082350899-7e105aa886ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Bienvenido a VECY">
+                            <div class="vecy-carousel-caption">
+                                <h2 class="vecy-carousel-title">Bienvenido a VECY</h2>
+                                <p class="vecy-carousel-text">Tu mercado local digital con los mejores productos y servicios de tu comunidad</p>
+                                <a href="#vecy-categories" class="vecy-carousel-btn">
+                                    <i class="fas fa-shopping-bag me-2"></i>Explorar Productos
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="carousel-item vecy-carousel-item">
+                            <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Nuevos Productos">
+                            <div class="vecy-carousel-caption">
+                                <h2 class="vecy-carousel-title">Nuevos Ingresos</h2>
+                                <p class="vecy-carousel-text">Descubre los productos más recientes agregados por nuestros negocios locales</p>
+                                <a href="#vecy-new-products" class="vecy-carousel-btn">
+                                    <i class="fas fa-star me-2"></i>Ver Novedades
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="carousel-item vecy-carousel-item">
+                            <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" class="vecy-carousel-image" alt="Negocios Locales">
+                            <div class="vecy-carousel-caption">
+                                <h2 class="vecy-carousel-title">Negocios Locales</h2>
+                                <p class="vecy-carousel-text">Apoya el comercio local y descubre tesoros únicos en tu comunidad</p>
+                                <a href="#vecy-businesses" class="vecy-carousel-btn">
+                                    <i class="fas fa-store me-2"></i>Ver Negocios
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
+                
+                <!-- Indicadores del carrusel -->
+                {% if productos_oferta %}
+                <div class="carousel-indicators">
+                    {% for oferta_data in productos_oferta|slice:":3" %}
+                    <button type="button" data-bs-target="#vecyOffersCarousel" data-bs-slide-to="{{ forloop.counter0 }}" 
+                            class="{% if forloop.first %}active{% endif %}" aria-current="{% if forloop.first %}true{% endif %}" 
+                            aria-label="Oferta {{ forloop.counter }}"></button>
+                    {% endfor %}
+                    
+                    {% if productos_oferta|length < 3 %}
+                        {% with total_slides=productos_oferta|length %}
+                        {% for i in "xx" %}
+                            {% if forloop.counter0|add:total_slides < 3 %}
+                            <button type="button" data-bs-target="#vecyOffersCarousel" 
+                                    data-bs-slide-to="{{ forloop.counter0|add:total_slides }}" 
+                                    aria-label="Slide {{ forloop.counter|add:total_slides }}"></button>
+                            {% endif %}
+                        {% endfor %}
+                        {% endwith %}
+                    {% endif %}
+                </div>
+                {% endif %}
+                
                 <button class="carousel-control-prev" type="button" data-bs-target="#vecyOffersCarousel" data-bs-slide="prev">
                     <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                     <span class="visually-hidden">Anterior</span>
@@ -63,139 +186,173 @@
         </div>
     </section>
 
-    <!-- CATEGORÍAS -->
-    <section id="vecy-categories" class="vecy-section compact bg-pattern-1">
-        <div class="container">
-            <div class="vecy-section-header">
-                <h2 class="vecy-section-title">Explorar Categorías</h2>
-                <p class="vecy-section-subtitle">Encuentra productos organizados por tus categorías favoritas</p>
-            </div>
-            
-            <div class="vecy-categories-grid">
-                {% for categoria in categorias_populares %}
-                <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                    <div class="vecy-category-icon">
-                        {% if "helado" in categoria.desc_cp.lower %}
-                            <i class="fas fa-ice-cream"></i>
-                        {% elif "abarrote" in categoria.desc_cp.lower or "alimento" in categoria.desc_cp.lower %}
-                            <i class="fas fa-shopping-basket"></i>
-                        {% elif "bebida" in categoria.desc_cp.lower %}
-                            <i class="fas fa-wine-bottle"></i>
-                        {% elif "jugo" in categoria.desc_cp.lower %}
-                            <i class="fas fa-glass-whiskey"></i>
-                        {% elif "agua" in categoria.desc_cp.lower %}
-                            <i class="fas fa-tint"></i>
-                        {% elif "lácteo" in categoria.desc_cp.lower %}
-                            <i class="fas fa-cheese"></i>
-                        {% elif "carne" in categoria.desc_cp.lower or "embutido" in categoria.desc_cp.lower %}
-                            <i class="fas fa-drumstick-bite"></i>
-                        {% elif "fruta" in categoria.desc_cp.lower %}
-                            <i class="fas fa-apple-alt"></i>
-                        {% elif "verdura" in categoria.desc_cp.lower %}
-                            <i class="fas fa-carrot"></i>
-                        {% elif "panadería" in categoria.desc_cp.lower or "pan" in categoria.desc_cp.lower %}
-                            <i class="fas fa-bread-slice"></i>
-                        {% elif "repostería" in categoria.desc_cp.lower %}
-                            <i class="fas fa-birthday-cake"></i>
-                        {% elif "dulce" in categoria.desc_cp.lower or "snack" in categoria.desc_cp.lower %}
-                            <i class="fas fa-cookie"></i>
-                        {% elif "comida" in categoria.desc_cp.lower %}
-                            <i class="fas fa-utensils"></i>
-                        {% elif "cereal" in categoria.desc_cp.lower or "grano" in categoria.desc_cp.lower %}
-                            <i class="fas fa-seedling"></i>
-                        {% elif "salsa" in categoria.desc_cp.lower or "condimento" in categoria.desc_cp.lower %}
-                            <i class="fas fa-mortar-pestle"></i>
-                        {% elif "aceite" in categoria.desc_cp.lower %}
-                            <i class="fas fa-oil-can"></i>
-                        {% elif "limpieza" in categoria.desc_cp.lower %}
-                            <i class="fas fa-broom"></i>
-                        {% elif "desinfectante" in categoria.desc_cp.lower %}
-                            <i class="fas fa-spray-can"></i>
-                        {% elif "detergente" in categoria.desc_cp.lower or "jabón" in categoria.desc_cp.lower %}
-                            <i class="fas fa-pump-soap"></i>
-                        {% elif "utensilio" in categoria.desc_cp.lower %}
-                            <i class="fas fa-toolbox"></i>
-                        {% elif "papel" in categoria.desc_cp.lower %}
-                            <i class="fas fa-toilet-paper"></i>
-                        {% elif "cabello" in categoria.desc_cp.lower %}
-                            <i class="fas fa-user"></i>
-                        {% elif "piel" in categoria.desc_cp.lower %}
-                            <i class="fas fa-spa"></i>
-                        {% elif "higiene" in categoria.desc_cp.lower %}
-                            <i class="fas fa-hand-sparkles"></i>
-                        {% elif "perfumería" in categoria.desc_cp.lower %}
-                            <i class="fas fa-wind"></i>
-                        {% elif "mascota" in categoria.desc_cp.lower %}
-                            <i class="fas fa-paw"></i>
-                        {% elif "ropa" in categoria.desc_cp.lower %}
-                            <i class="fas fa-tshirt"></i>
-                        {% elif "calzado" in categoria.desc_cp.lower %}
-                            <i class="fas fa-shoe-prints"></i>
-                        {% elif "accesorio" in categoria.desc_cp.lower %}
-                            <i class="fas fa-gem"></i>
-                        {% elif "electrónic" in categoria.desc_cp.lower %}
-                            <i class="fas fa-plug"></i>
-                        {% elif "celular" in categoria.desc_cp.lower %}
-                            <i class="fas fa-mobile-alt"></i>
-                        {% elif "computador" in categoria.desc_cp.lower or "tablet" in categoria.desc_cp.lower %}
-                            <i class="fas fa-laptop"></i>
-                        {% elif "electrodoméstico" in categoria.desc_cp.lower %}
-                            <i class="fas fa-blender"></i>
-                        {% elif "juguete" in categoria.desc_cp.lower %}
-                            <i class="fas fa-gamepad"></i>
-                        {% elif "papelería" in categoria.desc_cp.lower %}
-                            <i class="fas fa-pencil-alt"></i>
-                        {% elif "ferretería" in categoria.desc_cp.lower or "herramienta" in categoria.desc_cp.lower %}
-                            <i class="fas fa-tools"></i>
-                        {% elif "decoración" in categoria.desc_cp.lower %}
-                            <i class="fas fa-couch"></i>
-                        {% elif "artesanal" in categoria.desc_cp.lower %}
-                            <i class="fas fa-palette"></i>
-                        {% elif "souvenir" in categoria.desc_cp.lower %}
-                            <i class="fas fa-gift"></i>
-                        {% elif "flor" in categoria.desc_cp.lower %}
-                            <i class="fas fa-seedling"></i>
-                        {% else %}
-                            <i class="fas fa-shopping-bag"></i>
-                        {% endif %}
-                    </div>
-                    <h3 class="vecy-category-name">{{ categoria.desc_cp }}</h3>
-                    <p class="vecy-category-count">{{ forloop.counter|add:5 }}0+ productos</p>
-                </a>
-                {% empty %}
-                <!-- Categorías por defecto -->
-                <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="100">
-                    <div class="vecy-category-icon">
-                        <i class="fas fa-utensils"></i>
-                    </div>
-                    <h3 class="vecy-category-name">Alimentos</h3>
-                    <p class="vecy-category-count">150+ productos</p>
-                </a>
-                <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="200">
-                    <div class="vecy-category-icon">
-                        <i class="fas fa-laptop"></i>
-                    </div>
-                    <h3 class="vecy-category-name">Tecnología</h3>
-                    <p class="vecy-category-count">80+ productos</p>
-                </a>
-                <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="300">
-                    <div class="vecy-category-icon">
-                        <i class="fas fa-home"></i>
-                    </div>
-                    <h3 class="vecy-category-name">Hogar</h3>
-                    <p class="vecy-category-count">120+ productos</p>
-                </a>
-                <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="400">
-                    <div class="vecy-category-icon">
-                        <i class="fas fa-tshirt"></i>
-                    </div>
-                    <h3 class="vecy-category-name">Moda</h3>
-                    <p class="vecy-category-count">200+ productos</p>
-                </a>
-                {% endfor %}
-            </div>
+      <!-- CATEGORÍAS -->
+<section id="vecy-categories" class="vecy-section compact bg-pattern-1">
+    <div class="container">
+        <div class="vecy-section-header">
+            <h2 class="vecy-section-title">Explorar Categorías</h2>
+            <p class="vecy-section-subtitle">Encuentra productos organizados por tus categorías favoritas</p>
         </div>
-    </section>
+        
+        <div class="vecy-categories-grid">
+            {% for categoria in categorias_populares %}
+            <a href="{% url 'productos_por_categoria' categoria_id=categoria.pkid_cp %}" class="vecy-category-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="vecy-category-icon">
+                    {% if "helados" in categoria.desc_cp.lower %}
+                        <img src="{% static 'img/heladería.jpg' %}" alt="Helados" class="category-image">
+                    {% elif "entrada" in categoria.desc_cp.lower or "aperitivo" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/entradas.png' %}" alt="Entradas" class="category-image">
+                    {% elif "plato" in categoria.desc_cp.lower and "principal" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/platos-principales.png' %}" alt="Platos Principales" class="category-image">
+                    {% elif "especialidad" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/especialidades.png' %}" alt="Especialidades" class="category-image">
+                    {% elif "menú" in categoria.desc_cp.lower or "menu" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/menu.png' %}" alt="Menú" class="category-image">
+                    {% elif "infantil" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/infantil.png' %}" alt="Infantil" class="category-image">
+                    {% elif "compartir" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/compartir.png' %}" alt="Compartir" class="category-image">
+                    {% elif "combo" in categoria.desc_cp.lower or "promocion" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/combos.png' %}" alt="Combos" class="category-image">
+                    {% elif "internacional" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/internacional.png' %}" alt="Internacional" class="category-image">
+                    {% elif "local" in categoria.desc_cp.lower or "tradicional" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/tradicional.png' %}" alt="Tradicional" class="category-image">
+                    {% elif "gourmet" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/gourmet.png' %}" alt="Gourmet" class="category-image">
+                    {% elif "casera" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/casera.png' %}" alt="Casera" class="category-image">
+                    {% elif "regional" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/regional.png' %}" alt="Regional" class="category-image">
+                    {% elif "desayuno" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/desayunos.png' %}" alt="Desayunos" class="category-image">
+                    {% elif "almuerzo" in categoria.desc_cp.lower %}
+                        <img src="{% static 'img/almuerzos.jpg' %}" alt="Almuerzos" class="category-image">
+                    {% elif "cena" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/cenas.png' %}" alt="Cenas" class="category-image">
+                    {% elif "brunch" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/brunch.png' %}" alt="Brunch" class="category-image">
+                    {% elif "snack" in categoria.desc_cp.lower or "merienda" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/snacks.png' %}" alt="Snacks" class="category-image">
+                    {% elif "nocturno" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/nocturno.png' %}" alt="Nocturno" class="category-image">
+                    {% elif "carne" in categoria.desc_cp.lower or "ave" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/carnes.png' %}" alt="Carnes" class="category-image">
+                    {% elif "pescado" in categoria.desc_cp.lower or "marisco" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/pescados.png' %}" alt="Pescados" class="category-image">
+                    {% elif "vegetariano" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/vegetariano.png' %}" alt="Vegetariano" class="category-image">
+                    {% elif "vegano" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/vegano.png' %}" alt="Vegano" class="category-image">
+                    {% elif "gluten" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/sin-gluten.png' %}" alt="Sin Gluten" class="category-image">
+                    {% elif "organico" in categoria.desc_cp.lower or "natural" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/organico.png' %}" alt="Orgánico" class="category-image">
+                    {% elif "caloría" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/bajo-calorias.png' %}" alt="Bajo en Calorías" class="category-image">
+                    {% elif "keto" in categoria.desc_cp.lower or "low carb" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/keto.png' %}" alt="Keto" class="category-image">
+                    {% elif "parrilla" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/parrilla.png' %}" alt="Parrilla" class="category-image">
+                    {% elif "horno" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/horno.png' %}" alt="Horno" class="category-image">
+                    {% elif "frito" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/fritos.png' %}" alt="Fritos" class="category-image">
+                    {% elif "vapor" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/al-vapor.png' %}" alt="Al Vapor" class="category-image">
+                    {% elif "bebida" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/bebidas.png' %}" alt="Bebidas" class="category-image">
+                    {% elif "alcohol" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/alcoholicas.png' %}" alt="Alcohólicas" class="category-image">
+                    {% elif "coctel" in categoria.desc_cp.lower or "trago" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/cocteles.png' %}" alt="Cócteles" class="category-image">
+                    {% elif "vino" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/vinos.png' %}" alt="Vinos" class="category-image">
+                    {% elif "cerveza" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/cervezas.png' %}" alt="Cervezas" class="category-image">
+                    {% elif "café" in categoria.desc_cp.lower or "te" in categoria.desc_cp.lower or "té" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/cafe-te.png' %}" alt="Café y Té" class="category-image">
+                    {% elif "jugo" in categoria.desc_cp.lower or "batido" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/jugos-batidos.png' %}" alt="Jugos y Batidos" class="category-image">
+                    {% elif "agua" in categoria.desc_cp.lower or "refresco" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/aguas-refrescos.png' %}" alt="Aguas y Refrescos" class="category-image">
+                    {% elif "postre" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/postres.png' %}" alt="Postres" class="category-image">
+                    {% elif "pastelería" in categoria.desc_cp.lower or "pasteleria" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/pasteleria.png' %}" alt="Pastelería" class="category-image">
+                    {% elif "dulce" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/dulces.png' %}" alt="Dulces" class="category-image">
+                    {% elif "temporada" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/temporada.png' %}" alt="Temporada" class="category-image">
+                    {% elif "ofert" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/ofertas.png' %}" alt="Ofertas" class="category-image">
+                    {% elif "novedad" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/novedades.png' %}" alt="Novedades" class="category-image">
+                    {% elif "chef" in categoria.desc_cp.lower or "recomienda" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/recomendaciones.png' %}" alt="Recomendaciones" class="category-image">
+                    {% elif "favorito" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/favoritos.png' %}" alt="Favoritos" class="category-image">
+                    {% elif "catering" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/catering.png' %}" alt="Catering" class="category-image">
+                    {% elif "llevar" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/para-llevar.png' %}" alt="Para Llevar" class="category-image">
+                    {% elif "delivery" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/delivery.png' %}" alt="Delivery" class="category-image">
+                    {% elif "evento" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/eventos.png' %}" alt="Eventos" class="category-image">
+                    {% elif "degustacion" in categoria.desc_cp.lower or "degustación" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/degustacion.png' %}" alt="Degustación" class="category-image">
+                    {% elif "rapido" in categoria.desc_cp.lower or "rápido" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/rapidos.png' %}" alt="Rápidos" class="category-image">
+                    {% elif "mercado" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/mercado.png' %}" alt="Mercado" class="category-image">
+                    {% elif "fresco" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/frescos.png' %}" alt="Frescos" class="category-image">
+                    {% elif "artesanal" in categoria.desc_cp.lower %}
+                        <img src="{% static 'cliente/img/categorias/artesanal.png' %}" alt="Artesanal" class="category-image">
+                    {% else %}
+                        <img src="{% static 'cliente/img/categorias/general.png' %}" alt="{{ categoria.desc_cp }}" class="category-image">
+                    {% endif %}
+                </div>
+                <h3 class="vecy-category-name">{{ categoria.desc_cp }}</h3>
+                <p class="vecy-category-count">
+                    {{ categoria.num_productos|default:0 }}+ producto{{ categoria.num_productos|default:0|pluralize }}
+                </p>
+            </a>
+            {% empty %}
+            <!-- Categorías por defecto cuando no hay datos -->
+            <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="100">
+                <div class="vecy-category-icon">
+                    <img src="{% static 'cliente/img/categorias/alimentos.png' %}" alt="Alimentos" class="category-image">
+                </div>
+                <h3 class="vecy-category-name">Alimentos</h3>
+                <p class="vecy-category-count">150+ productos</p>
+            </a>
+            <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="200">
+                <div class="vecy-category-icon">
+                    <img src="{% static 'cliente/img/categorias/bebidas.png' %}" alt="Bebidas" class="category-image">
+                </div>
+                <h3 class="vecy-category-name">Bebidas</h3>
+                <p class="vecy-category-count">80+ productos</p>
+            </a>
+            <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="300">
+                <div class="vecy-category-icon">
+                    <img src="{% static 'cliente/img/categorias/limpieza.png' %}" alt="Limpieza" class="category-image">
+                </div>
+                <h3 class="vecy-category-name">Limpieza</h3>
+                <p class="vecy-category-count">120+ productos</p>
+            </a>
+            <a href="#" class="vecy-category-card" data-aos="fade-up" data-aos-delay="400">
+                <div class="vecy-category-icon">
+                    <img src="{% static 'cliente/img/categorias/higiene.png' %}" alt="Higiene" class="category-image">
+                </div>
+                <h3 class="vecy-category-name">Higiene</h3>
+                <p class="vecy-category-count">90+ productos</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</section>
 
     <!-- PRODUCTOS EN OFERTA -->
     <section id="vecy-special-offers" class="vecy-section compact bg-pattern-2">
@@ -1264,6 +1421,71 @@
         once: true,
         offset: 80
     });
+
+    // Función para agregar ofertas al carrito
+    function agregarOfertaAlCarrito(productoId, varianteId) {
+        const data = {
+            'producto_id': productoId,
+            'cantidad': 1,
+            'variante_id': varianteId === 'base' ? null : varianteId
+        };
+
+        fetch('{% url "agregar_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Agregado al carrito!',
+                    text: data.message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+                
+                // Actualizar contador del carrito si existe
+                if (data.carrito_count !== undefined) {
+                    const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count');
+                    cartCountElements.forEach(element => {
+                        element.textContent = data.carrito_count;
+                    });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: data.message,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error al agregar al carrito',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        });
+    }
 
     // Datos CORREGIDOS para las variantes - CON ImageField
     const productVariantsData = {

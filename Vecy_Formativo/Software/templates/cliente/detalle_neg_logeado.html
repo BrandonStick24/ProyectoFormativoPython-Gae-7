@@ -772,6 +772,240 @@
         OBTENER_OPCIONES: "{% url 'obtener_opciones_reporte' %}"
     };
 
+    // ==================== SISTEMA DE VARIANTES HORIZONTALES ====================
+    function inicializarSistemaVariantes() {
+        console.log("🔄 Inicializando sistema de variantes...");
+        
+        const productosConVariantes = document.querySelectorAll('.product-card-with-variants');
+        console.log(`📦 Encontrados ${productosConVariantes.length} productos con variantes`);
+        
+        productosConVariantes.forEach(producto => {
+            const productId = producto.getAttribute('data-product-id');
+            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+            const variantsData = producto.querySelector('.variantes-reales-data');
+            
+            if (variantsGrid && variantsData) {
+                console.log(`🔧 Procesando producto ${productId}`);
+                
+                // FORZAR ESTILOS HORIZONTALES
+                variantsGrid.style.cssText = `
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    overflow-x: auto !important;
+                    overflow-y: hidden !important;
+                    gap: 12px !important;
+                    padding: 12px 8px !important;
+                    width: 100% !important;
+                    min-height: 95px !important;
+                    scrollbar-width: thin !important;
+                    scrollbar-color: #3598db #f1f5f9 !important;
+                `;
+                
+                generarMiniaturasVariantes(productId, variantsGrid, variantsData);
+            } else {
+                console.log(`❌ No se pudo encontrar variantsGrid o variantsData para ${productId}`);
+            }
+        });
+        
+        console.log(`✅ Sistema de variantes inicializado para ${productosConVariantes.length} productos`);
+    }
+
+    function generarMiniaturasVariantes(productId, variantsGrid, variantsData) {
+        console.log(`🎨 Generando miniaturas para producto ${productId}`);
+        
+        // Limpiar grid existente
+        variantsGrid.innerHTML = '';
+        
+        // Obtener todas las variantes
+        const variantes = variantsData.querySelectorAll('[data-variant]');
+        console.log(`📊 ${variantes.length} variantes encontradas para producto ${productId}`);
+        
+        variantes.forEach((variante, index) => {
+            const variantId = variante.getAttribute('data-variant-id');
+            const variantName = variante.getAttribute('data-variant-name');
+            const variantImage = variante.getAttribute('data-variant-image');
+            const variantPrice = variante.getAttribute('data-variant-precio-final') || variante.getAttribute('data-variant-price');
+            const variantStock = parseInt(variante.getAttribute('data-variant-stock'));
+            const isBase = variante.getAttribute('data-is-base') === 'true';
+            
+            console.log(`  📦 Variante ${index}: ${variantName}, Stock: ${variantStock}, Base: ${isBase}`);
+            
+            // Crear miniatura
+            const variantThumb = document.createElement('div');
+            variantThumb.className = `variant-thumb ${variantStock === 0 ? 'variant-disabled' : ''} ${index === 0 ? 'selected' : ''}`;
+            variantThumb.setAttribute('data-variant-id', variantId);
+            variantThumb.setAttribute('data-product-id', productId);
+            
+            // Determinar estado de stock
+            let stockClass = 'stock-available';
+            let stockText = 'Disponible';
+            
+            if (variantStock === 0) {
+                stockClass = 'stock-unavailable';
+                stockText = 'Agotado';
+            } else if (variantStock < 10) {
+                stockClass = 'stock-low';
+                stockText = `${variantStock} disp`;
+            } else {
+                stockText = `${variantStock} disp`;
+            }
+            
+            variantThumb.innerHTML = `
+                <div class="variant-image-container">
+                    ${variantImage ? 
+                        `<img src="${variantImage}" alt="${variantName}" onerror="this.src='https://via.placeholder.com/300x200/3598db/ffffff?text=VECY'">` : 
+                        `<div class="variant-image-placeholder">
+                            <i class="fas fa-cube"></i>
+                         </div>`
+                    }
+                    ${isBase ? `<div class="base-badge">Base</div>` : ''}
+                    ${index === 0 ? `<div class="variant-selection-indicator"><i class="fas fa-check"></i></div>` : ''}
+                </div>
+                <div class="variant-info">
+                    <div class="variant-name">${variantName}</div>
+                    <div class="variant-price">$${variantPrice}</div>
+                    <div class="variant-stock-info ${stockClass}">${stockText}</div>
+                </div>
+            `;
+            
+            // Agregar evento click
+            variantThumb.addEventListener('click', function() {
+                if (variantStock === 0) return;
+                
+                seleccionarVariante(productId, variantId);
+            });
+            
+            variantsGrid.appendChild(variantThumb);
+        });
+        
+        // Seleccionar primera variante por defecto
+        if (variantes.length > 0) {
+            const primeraVariante = variantes[0];
+            const primeraVariantId = primeraVariante.getAttribute('data-variant-id');
+            const primeraVariantStock = parseInt(primeraVariante.getAttribute('data-variant-stock'));
+            
+            if (primeraVariantStock > 0) {
+                seleccionarVariante(productId, primeraVariantId);
+            }
+        }
+        
+        console.log(`✅ Generadas ${variantes.length} miniaturas para producto ${productId}`);
+    }
+
+    function seleccionarVariante(productId, variantId) {
+        console.log(`🎯 Seleccionando variante ${variantId} para producto ${productId}`);
+        
+        const producto = document.querySelector(`[data-product-id="${productId}"]`);
+        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        const variantsData = producto.querySelector('.variantes-reales-data');
+        
+        if (!variantsGrid || !variantsData) return;
+        
+        // Remover selección anterior
+        const thumbsAnteriores = variantsGrid.querySelectorAll('.variant-thumb.selected');
+        thumbsAnteriores.forEach(thumb => {
+            thumb.classList.remove('selected');
+            const indicator = thumb.querySelector('.variant-selection-indicator');
+            if (indicator) indicator.remove();
+        });
+        
+        // Agregar selección nueva
+        const thumbSeleccionado = variantsGrid.querySelector(`[data-variant-id="${variantId}"]`);
+        if (thumbSeleccionado) {
+            thumbSeleccionado.classList.add('selected');
+            
+            // Agregar indicador de selección
+            const selectionIndicator = document.createElement('div');
+            selectionIndicator.className = 'variant-selection-indicator';
+            selectionIndicator.innerHTML = '<i class="fas fa-check"></i>';
+            thumbSeleccionado.querySelector('.variant-image-container').appendChild(selectionIndicator);
+        }
+        
+        // Actualizar información del producto
+        const varianteSeleccionada = variantsData.querySelector(`[data-variant-id="${variantId}"]`);
+        if (varianteSeleccionada) {
+            const variantName = varianteSeleccionada.getAttribute('data-variant-name');
+            const variantImage = varianteSeleccionada.getAttribute('data-variant-image');
+            const variantPrice = varianteSeleccionada.getAttribute('data-variant-precio-final') || varianteSeleccionada.getAttribute('data-variant-price');
+            const variantStock = parseInt(varianteSeleccionada.getAttribute('data-variant-stock'));
+            
+            // Actualizar imagen principal
+            const mainImage = document.getElementById(`mainProductImage-${productId}`);
+            if (mainImage && variantImage) {
+                mainImage.src = variantImage;
+            }
+            
+            // Actualizar precio
+            const priceElement = document.getElementById(`price-${productId}`);
+            if (priceElement) {
+                priceElement.textContent = `$${variantPrice}`;
+            }
+            
+            // Actualizar stock
+            const stockElement = document.getElementById(`stockInfo-${productId}`);
+            if (stockElement) {
+                let stockText = 'Múltiples opciones disponibles';
+                if (variantStock === 0) {
+                    stockText = 'Agotado';
+                } else if (variantStock < 10) {
+                    stockText = `${variantStock} disponibles`;
+                }
+                stockElement.textContent = stockText;
+            }
+            
+            // Actualizar botón
+            const addToCartBtn = document.getElementById(`addToCartBtn-${productId}`);
+            if (addToCartBtn) {
+                if (variantStock === 0) {
+                    addToCartBtn.disabled = true;
+                    addToCartBtn.innerHTML = '<i class="fas fa-times me-2"></i>Agotado';
+                } else {
+                    addToCartBtn.disabled = false;
+                    addToCartBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>Agregar al Carrito';
+                }
+            }
+            
+            console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
+        }
+    }
+
+    function addToCartWithVariant(productId) {
+        const producto = document.querySelector(`[data-product-id="${productId}"]`);
+        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        
+        if (!variantsGrid) {
+            // Si no hay variantes, usar función normal
+            addToCart(productId);
+            return;
+        }
+        
+        // Obtener variante seleccionada
+        const varianteSeleccionada = variantsGrid.querySelector('.variant-thumb.selected');
+        if (!varianteSeleccionada) {
+            alert('Por favor selecciona una variante');
+            return;
+        }
+        
+        const variantId = varianteSeleccionada.getAttribute('data-variant-id');
+        const variantStock = parseInt(varianteSeleccionada.querySelector('.variant-stock-info').textContent);
+        
+        if (variantStock === 0) {
+            alert('Esta variante está agotada');
+            return;
+        }
+        
+        console.log(`🛒 Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
+        
+        // Usar el sistema modular del carrito
+        if (window.vecyCarritoSystem) {
+            window.vecyCarritoSystem.addToCartWithVariant(productId);
+        } else {
+            // Fallback si el sistema no está disponible
+            alert(`Producto agregado al carrito: ${productId} - Variante: ${variantId}`);
+        }
+    }
+
     // ==================== SISTEMA DE MAPAS ====================
     function initMap() {
         // Coordenadas exactas de Fosca, Cundinamarca, Colombia
@@ -1095,6 +1329,14 @@
         alert('Función de vista rápida');
     }
 
+    function addToCart(productId) {
+        if (window.vecyCarritoSystem) {
+            window.vecyCarritoSystem.addToCart(productId);
+        } else {
+            alert(`Producto ${productId} agregado al carrito`);
+        }
+    }
+
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -1110,15 +1352,99 @@
         return cookieValue;
     }
 
-    // ==================== INICIALIZACIÓN ====================
+    // ==================== INICIALIZACIÓN GARANTIZADA ====================
+    console.log("🎯 VECY DETALLE NEGOCIO - CARGANDO SISTEMAS...");
+
+    // INICIALIZACIÓN DIRECTA Y FORZADA
+    function forzarInicializacionVariantes() {
+        console.log("💥 FORZANDO inicialización de variantes...");
+        
+        const productosConVariantes = document.querySelectorAll('.product-card-with-variants');
+        console.log(`📦 Encontrados ${productosConVariantes.length} productos con variantes para forzar`);
+        
+        productosConVariantes.forEach((producto, index) => {
+            const productId = producto.getAttribute('data-product-id');
+            if (!productId) return;
+
+            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+            const variantsData = producto.querySelector('.variantes-reales-data');
+            
+            if (variantsGrid && variantsData) {
+                console.log(`🔧 Forzando variantes para producto ${productId}`);
+                
+                // Forzar estilo horizontal INMEDIATAMENTE
+                variantsGrid.style.cssText = `
+                    display: flex !important;
+                    flex-direction: row !important;
+                    flex-wrap: nowrap !important;
+                    overflow-x: auto !important;
+                    overflow-y: hidden !important;
+                    gap: 12px !important;
+                    padding: 12px 8px !important;
+                    width: 100% !important;
+                    min-height: 95px !important;
+                `;
+                
+                generarMiniaturasVariantes(productId, variantsGrid, variantsData);
+            } else {
+                console.log(`❌ No se pudo forzar variantes para ${productId}`);
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("🚀 DOM Cargado - Iniciando sistemas...");
+        
         inicializarSistemaRating();
         inicializarSistemaEstrellas();
         initMap();
+        
+        // INICIALIZACIÓN DE VARIANTES CON RETRASO
+        setTimeout(() => {
+            console.log("🔄 Inicializando sistema de variantes con timeout...");
+            inicializarSistemaVariantes();
+        }, 300);
     });
 
     window.addEventListener('load', function() {
+        console.log("📦 Window Loaded - Ejecutando animaciones...");
         setTimeout(animarBarrasRating, 1000);
+        
+        // SEGUNDA INICIALIZACIÓN DE VARIANTES
+        setTimeout(() => {
+            console.log("🔄 Inicializando sistema de variantes después de load...");
+            inicializarSistemaVariantes();
+        }, 500);
     });
+
+    // EJECUTAR INMEDIATAMENTE Y CON MÚLTIPOS INTENTOS
+    setTimeout(forzarInicializacionVariantes, 200);
+    setTimeout(forzarInicializacionVariantes, 800);
+    setTimeout(forzarInicializacionVariantes, 1500);
+
+    // Función global para compatibilidad
+    function addToCartWithVariant(productId) {
+        if (window.vecyCarritoSystem) {
+            window.vecyCarritoSystem.addToCartWithVariant(productId);
+        } else {
+            // Fallback si el sistema modular no está disponible
+            const producto = document.querySelector(`[data-product-id="${productId}"]`);
+            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+            
+            if (variantsGrid) {
+                const varianteSeleccionada = variantsGrid.querySelector('.variant-thumb.selected');
+                if (varianteSeleccionada) {
+                    const variantId = varianteSeleccionada.getAttribute('data-variant-id');
+                    alert(`Producto agregado al carrito: ${productId} - Variante: ${variantId}`);
+                } else {
+                    alert('Por favor selecciona una variante');
+                }
+            } else {
+                addToCart(productId);
+            }
+        }
+    }
+
+    console.log("✅ VECY DETALLE NEGOCIO - SISTEMAS CARGADOS");
 </script>
 {% endblock %}

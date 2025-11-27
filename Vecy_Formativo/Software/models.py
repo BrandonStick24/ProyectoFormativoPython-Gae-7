@@ -305,6 +305,11 @@ class Productos(models.Model):
     fknegocioasociado_prod = models.ForeignKey(Negocios, models.DO_NOTHING, db_column='fknegocioasociado_prod')
     img_prod = models.ImageField(upload_to='productos/', null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fkcategoria_prod = models.ForeignKey(
+        CategoriaProductos, 
+        models.DO_NOTHING, 
+        db_column='fkcategoria_prod',
+        related_name='productos')
 
     class Meta:
         managed = True

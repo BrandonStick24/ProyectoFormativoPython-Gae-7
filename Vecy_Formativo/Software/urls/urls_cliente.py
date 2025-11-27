@@ -39,7 +39,7 @@ urlpatterns = [
     path('mis-pedidos-data/', views_cliente.mis_pedidos_data, name='mis_pedidos_data'),
     path('cancelar-pedido/', views_cliente.cancelar_pedido, name='cancelar_pedido'),
     path('guardar-resena/', views_cliente.guardar_resena, name='guardar_resena'),
-    
+    path('categoria/<int:categoria_id>/', views_cliente.productos_por_categoria, name='productos_por_categoria'),
     # Productos filtrados (logueado)
     path('productos-filtrados/', views_cliente.productos_filtrados_logeado, name='productos_filtrados_logeado'),
 ]
