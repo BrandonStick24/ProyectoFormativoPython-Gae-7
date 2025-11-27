@@ -251,9 +251,11 @@ def entrada_stock_producto(request, producto_id):
     # IMPORTANTE: Esta función redirige a Stock_V porque se usa desde el dashboard de stock
     return redirect('Stock_V')
 
+# En Software/views/vendedor_stock_views.py - función reporte_movimientos_stock COMPLETA
+
 @login_required(login_url='login')
 def reporte_movimientos_stock(request):
-    """Vista para ver reporte completo de movimientos de stock - COMPLETAMENTE CORREGIDA"""
+    """Vista para ver reporte completo de movimientos de stock - MEJORADA PARA VARIANTES"""
     try:
         print("🔄 DEBUG: reporte_movimientos_stock - INICIANDO")
         datos = obtener_datos_vendedor(request)
@@ -271,7 +273,7 @@ def reporte_movimientos_stock(request):
         
         print(f"🔄 DEBUG: Filtros - Desde: {fecha_desde}, Hasta: {fecha_hasta}, Tipo: {tipo_movimiento}")
         
-        # ✅ CONSULTA DE MOVIMIENTOS CON FILTROS - MEJORADA
+        # ✅ CONSULTA DE MOVIMIENTOS CON MEJOR INFORMACIÓN DE VARIANTES
         movimientos = []
         query = """
             SELECT 
@@ -286,10 +288,11 @@ def reporte_movimientos_stock(request):
                 COALESCE(ped.pkid_pedido, 'N/A') as pedido_id,
                 COALESCE(ms.variante_id, 'N/A') as variante_id,
                 COALESCE(ms.descripcion_variante, '') as descripcion_variante,
-                COALESCE(v.nombre_variante, 'Producto principal') as nombre_variante
+                COALESCE(vp.nombre_variante, 'Producto principal') as nombre_variante,
+                ms.fecha_movimiento as fecha_completa
             FROM movimientos_stock ms
             LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
-            LEFT JOIN variantes_producto v ON ms.variante_id = v.id_variante
+            LEFT JOIN variantes_producto vp ON ms.variante_id = vp.id_variante
             LEFT JOIN usuario_perfil up ON ms.usuario_id = up.id
             LEFT JOIN auth_user u ON up.fkuser_id = u.id
             LEFT JOIN pedidos ped ON ms.pedido_id = ped.pkid_pedido
@@ -318,7 +321,7 @@ def reporte_movimientos_stock(request):
             print(f"🔄 DEBUG: Movimientos encontrados: {len(resultados)}")
             
             for row in resultados:
-                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, descripcion_variante, nombre_variante = row
+                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, descripcion_variante, nombre_variante, fecha_completa = row
                 
                 # ✅ CONVERTIR VALORES NUMÉRICOS DE FORMA SEGURA
                 try:
@@ -332,20 +335,43 @@ def reporte_movimientos_stock(request):
                 
                 # ✅ DETERMINAR SI ES VARIANTE O PRODUCTO PRINCIPAL
                 variante_info = 'Producto principal'
+                es_variante = False
                 if variante_id != 'N/A' and nombre_variante:
                     variante_info = nombre_variante
+                    es_variante = True
                 
-                # ✅ MEJORAR VISUALIZACIÓN DE MOTIVOS DE ELIMINACIÓN
+                # ✅ MEJORAR VISUALIZACIÓN DE MOTIVOS
                 motivo_display = str(motivo) if motivo else "Sin motivo"
-                if 'eliminacion_producto:' in motivo_display:
-                    motivo_display = f"ELIMINACIÓN PRODUCTO: {motivo_display.replace('eliminacion_producto:', '')}"
+                
+                # Motivos de importación Excel
+                if 'importacion_excel_variante' in motivo_display:
+                    motivo_display = "📥 IMPORTACIÓN EXCEL (Variante)"
+                elif 'importacion_excel_producto' in motivo_display:
+                    motivo_display = "📥 IMPORTACIÓN EXCEL (Producto)"
+                elif 'creacion_variante' in motivo_display:
+                    motivo_display = "🆕 CREACIÓN VARIANTE"
+                elif 'pedido_entregado_variante' in motivo_display:
+                    motivo_display = "📦 PEDIDO ENTREGADO (Variante)"
+                elif 'pedido_entregado' in motivo_display:
+                    motivo_display = "📦 PEDIDO ENTREGADO"
+                elif 'eliminacion_producto:' in motivo_display:
+                    motivo_display = f"🗑️ ELIMINACIÓN PRODUCTO: {motivo_display.replace('eliminacion_producto:', '')}"
                 elif 'eliminacion_variante:' in motivo_display:
-                    motivo_display = f"ELIMINACIÓN VARIANTE: {motivo_display.replace('eliminacion_variante:', '')}"
+                    motivo_display = f"🗑️ ELIMINACIÓN VARIANTE: {motivo_display.replace('eliminacion_variante:', '')}"
+                elif 'ajuste_stock_variante' in motivo_display:
+                    motivo_display = "⚙️ AJUSTE STOCK VARIANTE"
+                elif 'ajuste manual' in motivo_display.lower():
+                    motivo_display = "⚙️ AJUSTE MANUAL"
+                elif 'compra_proveedor' in motivo_display:
+                    motivo_display = "📦 COMPRA PROVEEDOR"
+                elif 'devolucion_cliente' in motivo_display:
+                    motivo_display = "🔄 DEVOLUCIÓN CLIENTE"
                 
                 movimientos.append({
                     'fecha': fecha.strftime('%d/%m/%Y %H:%M') if fecha else 'N/A',
                     'producto': producto,
                     'variante': variante_info,
+                    'es_variante': es_variante,
                     'tipo': tipo,
                     'motivo': motivo_display,
                     'cantidad': cantidad_int,
@@ -354,7 +380,8 @@ def reporte_movimientos_stock(request):
                     'usuario': usuario,
                     'pedido_id': pedido_id,
                     'variante_id': variante_id,
-                    'descripcion_variante': descripcion_variante
+                    'descripcion_variante': descripcion_variante,
+                    'fecha_completa': fecha_completa
                 })
         
         # ✅ ESTADÍSTICAS PARA EL REPORTE - COMPLETAMENTE CORREGIDAS
@@ -366,6 +393,8 @@ def reporte_movimientos_stock(request):
             'total_salidas': 0,
             'total_ajustes': 0,
             'total_eliminaciones': 0,
+            'movimientos_variantes': 0,
+            'movimientos_productos': 0,
         }
         
         try:
@@ -378,7 +407,9 @@ def reporte_movimientos_stock(request):
                         COALESCE(SUM(CASE WHEN tipo_movimiento = 'entrada' THEN cantidad ELSE 0 END), 0) as total_entradas,
                         COALESCE(SUM(CASE WHEN tipo_movimiento = 'salida' THEN cantidad ELSE 0 END), 0) as total_salidas,
                         COALESCE(SUM(CASE WHEN tipo_movimiento = 'ajuste' THEN cantidad ELSE 0 END), 0) as total_ajustes,
-                        SUM(CASE WHEN motivo LIKE '%%eliminacion%%' THEN 1 ELSE 0 END) as total_eliminaciones
+                        SUM(CASE WHEN motivo LIKE '%%eliminacion%%' THEN 1 ELSE 0 END) as total_eliminaciones,
+                        SUM(CASE WHEN variante_id IS NOT NULL THEN 1 ELSE 0 END) as movimientos_variantes,
+                        SUM(CASE WHEN variante_id IS NULL THEN 1 ELSE 0 END) as movimientos_productos
                     FROM movimientos_stock 
                     WHERE negocio_id = %s
                 """, [str(negocio.pkid_neg)])  # ✅ CONVERTIR A STRING EXPLÍCITAMENTE
@@ -394,6 +425,8 @@ def reporte_movimientos_stock(request):
                         'total_salidas': int(stats[3]) if stats[3] is not None else 0,
                         'total_ajustes': int(stats[4]) if stats[4] is not None else 0,
                         'total_eliminaciones': int(stats[5]) if stats[5] is not None else 0,
+                        'movimientos_variantes': int(stats[6]) if stats[6] is not None else 0,
+                        'movimientos_productos': int(stats[7]) if stats[7] is not None else 0,
                     }
         except Exception as e:
             print(f"❌ ERROR en consulta de estadísticas: {e}")

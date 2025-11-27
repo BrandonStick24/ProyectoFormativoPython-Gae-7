@@ -128,9 +128,11 @@ def gestionar_variantes(request, producto_id):
         messages.error(request, f"Error al cargar variantes: {str(e)}")
         return redirect('Crud_V')
     
+# En Software/views/vendedor_variantes_views.py - función crear_variante
+
 @login_required(login_url='login')
 def crear_variante(request, producto_id):
-    """Vista para crear una nueva variante - CORREGIDA"""
+    """Vista para crear una nueva variante - ACTUALIZADA CON MEJOR REGISTRO"""
     if request.method == 'POST':
         try:
             print(f"=== DEBUG CREAR VARIANTE: Producto ID {producto_id} ===")
@@ -141,6 +143,7 @@ def crear_variante(request, producto_id):
                 return redirect('Crud_V')
             
             negocio = datos['negocio_activo']
+            perfil_id = datos['perfil'].id
             
             # Verificar que el producto pertenece al negocio
             producto = Productos.objects.get(
@@ -213,7 +216,7 @@ def crear_variante(request, producto_id):
                 variante_id = cursor.lastrowid
                 print(f"DEBUG: Variante creada - ID: {variante_id}")
             
-            # REGISTRAR MOVIMIENTO DE STOCK POR CREACIÓN DE VARIANTE
+            # ✅ REGISTRAR MOVIMIENTO DE STOCK POR CREACIÓN DE VARIANTE - MEJORADO
             if stock_inicial > 0:
                 try:
                     with connection.cursor() as cursor:
@@ -230,12 +233,12 @@ def crear_variante(request, producto_id):
                             stock_inicial,
                             0,  # Stock anterior era 0
                             stock_inicial,
-                            datos['perfil'].id,
+                            perfil_id,
                             datetime.now(),
                             variante_id,
                             nombre_variante
                         ])
-                    print("DEBUG: Movimiento de stock registrado")
+                    print("DEBUG: Movimiento de stock registrado para variante")
                 except Exception as e:
                     print(f"ERROR registrando movimiento: {e}")
             
