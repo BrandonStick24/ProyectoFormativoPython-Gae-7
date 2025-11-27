@@ -257,16 +257,10 @@
         const filterEstado = document.getElementById('filterEstado');
         const btnFiltrar = document.getElementById('btnFiltrar');
         const btnLimpiar = document.getElementById('btnLimpiar');
-        const tablaUsuarios = document.getElementById('tablaUsuarios');
         const filasUsuarios = document.querySelectorAll('.fila-usuario');
         const filtrosInfo = document.getElementById('filtrosInfo');
         const textoFiltros = document.getElementById('textoFiltros');
         const contadorResultados = document.getElementById('contadorResultados');
-        const filaVacia = document.getElementById('filaVacia');
-
-        // Modals
-        const modalPerfil = new bootstrap.Modal(document.getElementById('modalPerfil'));
-        const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
 
         // Función para aplicar filtros
         function aplicarFiltros() {
@@ -277,22 +271,20 @@
             let resultados = 0;
             let filtrosAplicados = [];
 
-            // Ocultar fila vacía si existe
-            if (filaVacia) {
-                filaVacia.style.display = 'none';
-            }
-
             // Aplicar filtros a cada fila
             filasUsuarios.forEach(fila => {
-                const nombre = fila.getAttribute('data-nombre');
-                const email = fila.getAttribute('data-email');
-                const documento = fila.getAttribute('data-documento');
-                const rol = fila.getAttribute('data-rol');
-                const estado = fila.getAttribute('data-estado');
+                const nombre = fila.getAttribute('data-nombre') || '';
+                const email = fila.getAttribute('data-email') || '';
+                const documento = fila.getAttribute('data-documento') || '';
+                const rol = fila.getAttribute('data-rol') || '';
+                const estado = fila.getAttribute('data-estado') || '';
 
                 let coincideBusqueda = true;
                 let coincideRol = true;
                 let coincideEstado = true;
+
+                console.log('Fila:', {nombre, email, documento, rol, estado});
+                console.log('Filtros:', {searchTerm, rolFilter, estadoFilter});
 
                 // Filtro de búsqueda
                 if (searchTerm) {
@@ -301,15 +293,16 @@
                         email.includes(searchTerm) ||
                         documento.includes(searchTerm)
                     );
-                    if (searchTerm && !filtrosAplicados.includes(`Búsqueda: "${searchTerm}"`)) {
+                    if (coincideBusqueda && !filtrosAplicados.includes(`Búsqueda: "${searchTerm}"`)) {
                         filtrosAplicados.push(`Búsqueda: "${searchTerm}"`);
                     }
                 }
 
-                // Filtro de rol
+                // Filtro de rol - CORREGIDO: convertir a minúsculas para comparar
                 if (rolFilter) {
-                    coincideRol = (rol === rolFilter);
-                    if (rolFilter && !filtrosAplicados.includes(`Rol: ${rolFilter}`)) {
+                    // Convertir ambos a minúsculas para comparación case-insensitive
+                    coincideRol = (rol.toLowerCase() === rolFilter.toLowerCase());
+                    if (coincideRol && !filtrosAplicados.includes(`Rol: ${rolFilter}`)) {
                         filtrosAplicados.push(`Rol: ${rolFilter}`);
                     }
                 }
@@ -317,7 +310,7 @@
                 // Filtro de estado
                 if (estadoFilter) {
                     coincideEstado = (estado === estadoFilter);
-                    if (estadoFilter && !filtrosAplicados.includes(`Estado: ${estadoFilter}`)) {
+                    if (coincideEstado && !filtrosAplicados.includes(`Estado: ${estadoFilter}`)) {
                         filtrosAplicados.push(`Estado: ${estadoFilter}`);
                     }
                 }
@@ -331,6 +324,8 @@
                 }
             });
 
+            console.log('Resultados encontrados:', resultados);
+
             // Mostrar información de filtros
             if (filtrosAplicados.length > 0) {
                 textoFiltros.textContent = filtrosAplicados.join(', ');
@@ -341,11 +336,21 @@
             }
 
             // Mostrar mensaje si no hay resultados
+            const tablaUsuarios = document.getElementById('tablaUsuarios');
+            const filaVaciaOriginal = document.getElementById('filaVacia');
+            let filaVaciaFiltros = document.getElementById('filaVaciaFiltros');
+
             if (resultados === 0 && filasUsuarios.length > 0) {
-                if (!document.getElementById('filaVaciaFiltros')) {
-                    const nuevaFilaVacia = document.createElement('tr');
-                    nuevaFilaVacia.id = 'filaVaciaFiltros';
-                    nuevaFilaVacia.innerHTML = `
+                // Ocultar fila vacía original si existe
+                if (filaVaciaOriginal) {
+                    filaVaciaOriginal.style.display = 'none';
+                }
+                
+                // Crear mensaje de no resultados si no existe
+                if (!filaVaciaFiltros) {
+                    filaVaciaFiltros = document.createElement('tr');
+                    filaVaciaFiltros.id = 'filaVaciaFiltros';
+                    filaVaciaFiltros.innerHTML = `
                         <td colspan="7" class="text-center text-muted py-4">
                             <i class="fas fa-search fa-2x mb-2"></i>
                             <p>No se encontraron usuarios con los filtros aplicados</p>
@@ -354,12 +359,23 @@
                             </button>
                         </td>
                     `;
-                    tablaUsuarios.appendChild(nuevaFilaVacia);
+                    tablaUsuarios.appendChild(filaVaciaFiltros);
+                } else {
+                    filaVaciaFiltros.style.display = '';
                 }
             } else {
-                const filaVaciaFiltros = document.getElementById('filaVaciaFiltros');
+                // Ocultar mensaje de no resultados
                 if (filaVaciaFiltros) {
-                    filaVaciaFiltros.remove();
+                    filaVaciaFiltros.style.display = 'none';
+                }
+                
+                // Mostrar fila vacía original si no hay usuarios en absoluto
+                if (filaVaciaOriginal) {
+                    if (resultados === 0 && filasUsuarios.length === 0) {
+                        filaVaciaOriginal.style.display = '';
+                    } else {
+                        filaVaciaOriginal.style.display = 'none';
+                    }
                 }
             }
         }
@@ -404,7 +420,7 @@
             }
         });
 
-        // Función para mostrar perfil de usuario (CARGADO INSTANTÁNEAMENTE)
+        // Función para mostrar perfil de usuario
         function mostrarPerfilUsuario(button) {
             const usuarioId = button.getAttribute('data-usuario-id');
             const usuarioNombre = button.getAttribute('data-usuario-nombre');
@@ -417,7 +433,7 @@
             const usuarioFechaRegistro = button.getAttribute('data-usuario-fecha-registro');
             const usuarioImg = button.getAttribute('data-usuario-img');
 
-            // Construir el contenido del modal inmediatamente
+            // Construir el contenido del modal
             let imagenHTML = '';
             if (usuarioImg) {
                 imagenHTML = `<img src="${usuarioImg}" alt="${usuarioNombre}" class="img-fluid rounded-circle mb-3" style="max-width: 150px;">`;
@@ -465,7 +481,6 @@
                                 </div>
                             </div>
                         </div>
-                       
                     </div>
                 </div>
             `;
@@ -473,7 +488,7 @@
             // Actualizar y mostrar el modal
             document.getElementById('modalPerfilTitulo').textContent = `Perfil de ${usuarioNombre}`;
             document.getElementById('modalPerfilContenido').innerHTML = contenidoHTML;
-            modalPerfil.show();
+            new bootstrap.Modal(document.getElementById('modalPerfil')).show();
         }
 
         // Función para confirmar eliminación
@@ -481,17 +496,11 @@
             document.getElementById('textoEliminacion').innerHTML = 
                 `¿Está seguro que desea eliminar al usuario <strong>${usuarioNombre}</strong>?`;
             document.getElementById('usuarioIdEliminar').value = usuarioId;
-            modalEliminar.show();
+            new bootstrap.Modal(document.getElementById('modalEliminar')).show();
         }
 
-        // Limpiar modals al cerrar
-        document.getElementById('modalPerfil').addEventListener('hidden.bs.modal', function () {
-            document.getElementById('modalPerfilContenido').innerHTML = '';
-        });
-
-        document.getElementById('modalEliminar').addEventListener('hidden.bs.modal', function () {
-            document.getElementById('usuarioIdEliminar').value = '';
-        });
+        // Hacer la función limpiarFiltros disponible globalmente
+        window.limpiarFiltros = limpiarFiltros;
 
         // Aplicar filtros inicialmente si hay parámetros en la URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -502,8 +511,8 @@
             aplicarFiltros();
         }
 
-        // Hacer la función limpiarFiltros disponible globalmente
-        window.limpiarFiltros = limpiarFiltros;
+        // Aplicar filtros al cargar la página para mostrar todos los usuarios
+        aplicarFiltros();
     });
 </script>
 {% endblock %}

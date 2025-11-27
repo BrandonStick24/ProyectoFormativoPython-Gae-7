@@ -10,6 +10,9 @@ urlpatterns = [
     path('moderador/gestion-negocios/', views_moderador.gestion_negocios, name='gestion_negocios'),
     path('moderador/enviar-correos/', views_moderador.enviar_correos, name='enviar_correos'),
     
+    # ==================== URLs MODERADOR - RESEÑAS REPORTADAS ====================
+    path('moderador/resenas-reportadas/', views_moderador.gestion_resenas_reportadas, name='gestion_resenas_reportadas'),
+    
     # ==================== APIs MODERADOR - NEGOCIOS ====================
     path('moderador/api/negocio/<int:negocio_id>/', views_moderador.detalle_negocio_json, name='detalle_negocio_json'),
     path('moderador/api/negocio/<int:negocio_id>/resenas/', views_moderador.resenas_negocio_json, name='resenas_negocio_json'),
@@ -23,10 +26,6 @@ urlpatterns = [
     
     # ==================== APIs MODERADOR - CORREOS ====================
     path('moderador/enviar-correo-masivo/', views_moderador.enviar_correo_masivo, name='enviar_correo_masivo'),
-
-    # ==================== APIs MODERADOR - RESEÑAS ====================
-   path('moderador/gestion-resenas/', views_moderador.gestion_resenas_reportadas, name='gestion_resenas_reportadas'),
-
 ]
 
 if settings.DEBUG:
