@@ -112,7 +112,7 @@
                 </div>
                 <div class="meta-item">
                     <i class="fas fa-id-card"></i>
-                    <span>NIT: {{ negocio_activo.nit_neg }}</span>
+                    <span>RUT: {{ negocio_activo.nit_neg }}</span>
                 </div>
             </div>
         </div>
@@ -120,9 +120,18 @@
             <span class="estado-badge activo">
                 <i class="fas fa-check-circle"></i> Seleccionado
             </span>
-            <a href="{% url 'configurar_negocio' negocio_activo.pkid_neg %}" class="btn btn-warning btn-sm">
+            <button class="btn btn-warning btn-sm btn-editar-negocio" 
+                    data-bs-toggle="modal" 
+                    data-bs-target="#modalEditarNegocio"
+                    data-negocio-id="{{ negocio_activo.pkid_neg }}"
+                    data-negocio-nombre="{{ negocio_activo.nom_neg }}"
+                    data-negocio-nit="{{ negocio_activo.nit_neg }}"
+                    data-negocio-direccion="{{ negocio_activo.direcc_neg }}"
+                    data-negocio-descripcion="{{ negocio_activo.desc_neg }}"
+                    data-negocio-tipo="{{ negocio_activo.fktiponeg_neg.pkid_tiponeg }}"
+                    data-negocio-imagen="{% if negocio_activo.img_neg %}{{ negocio_activo.img_neg.url }}{% endif %}">
                 <i class="fas fa-edit"></i> Configurar
-            </a>
+            </button>
         </div>
     </div>
 </div>
@@ -192,9 +201,18 @@
                     </button>
                     <ul class="dropdown-menu w-100">
                         <li>
-                            <a class="dropdown-item" href="{% url 'configurar_negocio' negocio.pkid_neg %}">
+                            <button class="dropdown-item btn-editar-negocio" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#modalEditarNegocio"
+                                    data-negocio-id="{{ negocio.pkid_neg }}"
+                                    data-negocio-nombre="{{ negocio.nom_neg }}"
+                                    data-negocio-nit="{{ negocio.nit_neg }}"
+                                    data-negocio-direccion="{{ negocio.direcc_neg }}"
+                                    data-negocio-descripcion="{{ negocio.desc_neg }}"
+                                    data-negocio-tipo="{{ negocio.fktiponeg_neg.pkid_tiponeg }}"
+                                    data-negocio-imagen="{% if negocio.img_neg %}{{ negocio.img_neg.url }}{% endif %}">
                                 <i class="fas fa-edit"></i> Editar Negocio
-                            </a>
+                            </button>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
@@ -239,7 +257,6 @@
     {% endif %}
 </div>
 
-<!-- Los modales se mantienen igual -->
 <!-- Modal Agregar Negocio -->
 <div class="modal fade" id="modalAgregarNegocio" tabindex="-1" aria-labelledby="modalAgregarNegocioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -318,86 +335,98 @@
     </div>
 </div>
 
-<!-- Modal Editar Negocio -->
+<!-- Modal para Editar Negocio -->
 <div class="modal fade" id="modalEditarNegocio" tabindex="-1" aria-labelledby="modalEditarNegocioLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalEditarNegocioLabel">
-                    <i class="fas fa-edit me-2"></i>Editar Negocio
+                    <i class="fas fa-edit me-2"></i>Configurar Negocio
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formEditarNegocio" method="post" action="" enctype="multipart/form-data">
+            <form id="formEditarNegocio" method="post" action="{% url 'configurar_negocio' 0 %}" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" id="editar_negocio_id" name="negocio_id">
                 <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="editar_nom_neg" class="form-label">Nombre del Negocio *</label>
-                                <input type="text" class="form-control" id="editar_nom_neg" name="nom_neg" required>
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-{% if message.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                                    <span>{{ message }}</span>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <h5 class="section-title">
+                        <i class="fas fa-info-circle me-2"></i>Información Básica
+                    </h5>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label for="editar_nom_neg" class="form-label">Nombre del Negocio *</label>
+                            <input type="text" class="form-control" id="editar_nom_neg" name="nom_neg" required>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="editar_nit_neg" class="form-label">NIT *</label>
-                                <input type="text" class="form-control" id="editar_nit_neg" name="nit_neg" maxlength="11" required>
-                                <div class="form-text">Máximo 11 caracteres numéricos</div>
-                            </div>
+                            <label for="editar_nit_neg" class="form-label">RUT *</label>
+                            <input type="text" class="form-control" id="editar_nit_neg" name="nit_neg" required maxlength="11">
+                            <div class="form-text">Máximo 11 caracteres numéricos</div>
                         </div>
                     </div>
 
-                    <div class="row">
+                    <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="editar_fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
-                                <select class="form-control" id="editar_fktiponeg_neg" name="fktiponeg_neg" required>
-                                    <option value="">Selecciona un tipo</option>
-                                    {% for tipo in tipos_negocio %}
+                            <label for="editar_fktiponeg_neg" class="form-label">Tipo de Negocio *</label>
+                            <select class="form-select" id="editar_fktiponeg_neg" name="fktiponeg_neg" required>
+                                <option value="">Selecciona un tipo</option>
+                                {% for tipo in tipos_negocio %}
                                     <option value="{{ tipo.pkid_tiponeg }}">{{ tipo.desc_tiponeg }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="editar_img_neg" class="form-label">Imagen del Negocio</label>
-                                <input type="file" class="form-control" id="editar_img_neg" name="img_neg" accept="image/*">
-                                <div class="form-text">Dejar vacío para mantener la imagen actual</div>
-                            </div>
+                            <label for="editar_img_neg" class="form-label">Imagen del Negocio</label>
+                            <input type="file" class="form-control" id="editar_img_neg" name="img_neg" accept="image/*">
+                            <div class="form-text">Formatos: JPG, PNG, GIF (máx. 5MB)</div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="editar_direcc_neg" class="form-label">Dirección *</label>
                         <input type="text" class="form-control" id="editar_direcc_neg" name="direcc_neg" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="editar_desc_neg" class="form-label">Descripción del Negocio</label>
-                        <textarea class="form-control" id="editar_desc_neg" name="desc_neg" rows="3"></textarea>
-                        <div class="form-text">Máximo 500 caracteres</div>
+                    <div class="mb-4">
+                        <label for="editar_desc_neg" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="editar_desc_neg" name="desc_neg" rows="3" placeholder="Describe tu negocio..."></textarea>
+                        <div class="form-text">Opcional. Máximo 500 caracteres.</div>
                     </div>
 
-                    <!-- Vista previa de imagen actual -->
-                    <div class="mb-3">
-                        <label class="form-label">Imagen Actual</label>
-                        <div class="current-image-preview">
-                            <img id="editar_imagen_actual" src="" class="current-image" style="display: none;">
-                            <div id="editar_no_image" class="image-placeholder">
-                                <i class="fas fa-store fa-2x"></i>
-                                <span class="mt-2">Sin imagen</span>
+                    <h5 class="section-title">
+                        <i class="fas fa-image me-2"></i>Imagen Actual
+                    </h5>
+                    <div class="mb-4 text-center">
+                        <div id="editar_imagen_actual_container">
+                            <img id="editar_imagen_actual" src="" alt="Imagen actual" class="current-image mb-2" style="display: none;">
+                            <div id="editar_no_image" class="image-placeholder mx-auto">
+                                <div class="text-center">
+                                    <i class="fas fa-store fa-2x mb-2"></i>
+                                    <p class="small mb-0">Sin imagen</p>
+                                </div>
                             </div>
                         </div>
+                        <p class="text-muted small" id="editar_texto_imagen">Imagen actual del negocio</p>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times"></i> Cancelar
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Actualizar Negocio
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
                     </button>
                 </div>
             </form>

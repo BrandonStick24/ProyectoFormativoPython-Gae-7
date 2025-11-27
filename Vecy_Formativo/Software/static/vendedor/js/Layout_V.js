@@ -19,7 +19,15 @@ document.addEventListener('DOMContentLoaded', function() {
         botonDesplegableUsuario: document.getElementById('botonDesplegableUsuario'),
         menuDesplegableUsuario: document.getElementById('menuDesplegableUsuario'),
         botonDesplegableNotificaciones: document.getElementById('botonDesplegableNotificaciones'),
-        botonReportarProblema: document.getElementById('botonReportarProblema')
+        botonReportarProblema: document.getElementById('botonReportarProblema'),
+        botonMenuMovil: document.getElementById('botonMenuMovil'),
+        // Elementos del modal de perfil
+        modalEditarPerfil: document.getElementById('modalEditarPerfil'),
+        formEditarPerfil: document.getElementById('formEditarPerfil'),
+        guardarPerfil: document.getElementById('guardarPerfil'),
+        btnCambiarFoto: document.getElementById('btnCambiarFoto'),
+        inputFotoPerfil: document.getElementById('inputFotoPerfil'),
+        fotoPerfilPreview: document.getElementById('fotoPerfilPreview')
     };
 
     // ==================== CONFIGURACIÓN Y ESTADO ====================
@@ -516,6 +524,163 @@ document.addEventListener('DOMContentLoaded', function() {
         }).join('');
     }
 
+    // ==================== MODAL DE EDITAR PERFIL ====================
+
+    function inicializarModalPerfil() {
+        // ==================== FUNCIONALIDAD DE FOTO DE PERFIL ====================
+        if (elementos.btnCambiarFoto && elementos.inputFotoPerfil) {
+            elementos.btnCambiarFoto.addEventListener('click', function() {
+                elementos.inputFotoPerfil.click();
+            });
+
+            elementos.inputFotoPerfil.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            elementos.fotoPerfilPreview.src = e.target.result;
+                            mostrarToast('✅ Foto de perfil cargada correctamente', 'success');
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        mostrarToast('❌ Por favor selecciona una imagen válida', 'error');
+                    }
+                }
+            });
+        }
+
+        // ==================== FUNCIONALIDAD DE MOSTRAR/OCULTAR CONTRASEÑA ====================
+        const btnTogglePasswords = document.querySelectorAll('.btn-toggle-password');
+        if (btnTogglePasswords) {
+            btnTogglePasswords.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const input = document.getElementById(targetId);
+                    
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                    } else {
+                        input.type = 'password';
+                        this.innerHTML = '<i class="fas fa-eye"></i>';
+                    }
+                });
+            });
+        }
+
+        // ==================== VALIDACIÓN DEL FORMULARIO ====================
+        if (elementos.guardarPerfil && elementos.formEditarPerfil) {
+            elementos.guardarPerfil.addEventListener('click', function() {
+                if (validarFormularioPerfil()) {
+                    guardarPerfil();
+                }
+            });
+        }
+
+        // ==================== INICIALIZACIÓN DEL MODAL ====================
+        if (elementos.modalEditarPerfil) {
+            elementos.modalEditarPerfil.addEventListener('show.bs.modal', function() {
+                console.log('🔄 Abriendo modal de editar perfil');
+                // Limpiar campos de contraseña al abrir el modal
+                document.getElementById('claveActual').value = '';
+                document.getElementById('nuevaClave').value = '';
+                document.getElementById('confirmarClave').value = '';
+            });
+        }
+    }
+
+    function validarFormularioPerfil() {
+        const nombre = document.getElementById('nombre').value.trim();
+        const apellido = document.getElementById('apellido').value.trim();
+        const email = document.getElementById('email').value.trim();
+        const claveActual = document.getElementById('claveActual').value;
+        const nuevaClave = document.getElementById('nuevaClave').value;
+        const confirmarClave = document.getElementById('confirmarClave').value;
+
+        // Validar campos obligatorios
+        if (!nombre) {
+            mostrarToast('❌ El nombre es obligatorio', 'error');
+            document.getElementById('nombre').focus();
+            return false;
+        }
+
+        if (!apellido) {
+            mostrarToast('❌ El apellido es obligatorio', 'error');
+            document.getElementById('apellido').focus();
+            return false;
+        }
+
+        if (!email) {
+            mostrarToast('❌ El email es obligatorio', 'error');
+            document.getElementById('email').focus();
+            return false;
+        }
+
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            mostrarToast('❌ Por favor ingresa un email válido', 'error');
+            document.getElementById('email').focus();
+            return false;
+        }
+
+        // Validar cambio de contraseña (solo si se intenta cambiar)
+        if (nuevaClave || confirmarClave) {
+            if (!claveActual) {
+                mostrarToast('❌ Para cambiar la contraseña debes ingresar la contraseña actual', 'error');
+                document.getElementById('claveActual').focus();
+                return false;
+            }
+
+            if (nuevaClave.length < 8) {
+                mostrarToast('❌ La nueva contraseña debe tener al menos 8 caracteres', 'error');
+                document.getElementById('nuevaClave').focus();
+                return false;
+            }
+
+            if (nuevaClave !== confirmarClave) {
+                mostrarToast('❌ Las contraseñas no coinciden', 'error');
+                document.getElementById('confirmarClave').focus();
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function guardarPerfil() {
+        console.log('💾 Guardando perfil...');
+
+        // Mostrar loading en el botón
+        const btnGuardar = elementos.guardarPerfil;
+        const originalText = btnGuardar.innerHTML;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+        btnGuardar.disabled = true;
+
+        // Simular envío de datos (aquí iría la llamada AJAX real)
+        setTimeout(() => {
+            // Restaurar botón
+            btnGuardar.innerHTML = originalText;
+            btnGuardar.disabled = false;
+
+            mostrarToast('✅ Perfil actualizado correctamente', 'success');
+            
+            // Cerrar el modal después de guardar
+            const modal = bootstrap.Modal.getInstance(elementos.modalEditarPerfil);
+            if (modal) {
+                modal.hide();
+            }
+
+            // Actualizar el nombre en el header si cambió
+            const nuevoNombre = document.getElementById('nombre').value;
+            const nombreUsuarioHeader = document.querySelector('.nombre-usuario');
+            if (nombreUsuarioHeader && nuevoNombre) {
+                nombreUsuarioHeader.textContent = nuevoNombre;
+            }
+        }, 1500);
+    }
+
     // ==================== FUNCIONES DE UTILIDAD ====================
 
     function mostrarToast(mensaje, tipo = 'info') {
@@ -565,6 +730,33 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==================== FUNCIONALIDADES DEL HEADER ====================
 
     function inicializarHeader() {
+        // Botón hamburguesa para móvil
+        const botonMenuMovil = document.getElementById('botonMenuMovil');
+        const barraLateral = document.querySelector('.barra-lateral');
+        
+        if (botonMenuMovil && barraLateral) {
+            botonMenuMovil.addEventListener('click', function() {
+                barraLateral.classList.toggle('mostrar');
+                
+                // Opcional: cerrar el menú al hacer clic fuera
+                if (barraLateral.classList.contains('mostrar')) {
+                    setTimeout(() => {
+                        document.addEventListener('click', cerrarMenuAlClicExterno);
+                    }, 100);
+                }
+            });
+        }
+        
+        function cerrarMenuAlClicExterno(e) {
+            const barraLateral = document.querySelector('.barra-lateral');
+            const botonMenuMovil = document.getElementById('botonMenuMovil');
+            
+            if (!barraLateral.contains(e.target) && !botonMenuMovil.contains(e.target)) {
+                barraLateral.classList.remove('mostrar');
+                document.removeEventListener('click', cerrarMenuAlClicExterno);
+            }
+        }
+
         // Menú desplegable del usuario
         if (elementos.botonDesplegableUsuario && elementos.menuDesplegableUsuario) {
             elementos.botonDesplegableUsuario.addEventListener('click', function(e) {
@@ -639,6 +831,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         cargarConfiguracion();
         inicializarModalProgramacion();
+        inicializarModalPerfil();
         inicializarHeader();
         
         console.log('✅ Gestión de horarios inicializada correctamente');

@@ -511,3 +511,4 @@ def registrar_movimiento_pedido(pedido_id, tipo_movimiento, motivo):
     except Exception as e:
         print(f"Error registrando movimiento de pedido: {e}")
         return False
+    

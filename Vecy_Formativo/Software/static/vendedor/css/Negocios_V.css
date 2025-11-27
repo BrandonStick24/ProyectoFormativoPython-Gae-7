@@ -1,4 +1,4 @@
-/* static/css_Vendedor/Negocios_V.css - VERSIÓN CON CARDS */
+/* static/vendedor/css/Negocio_V.css */
 /* ===== ESTILOS BASE UNIFICADOS ===== */
 .tarjeta-bienvenida {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -597,4 +597,385 @@
     .estadistica-numero {
         font-size: 2rem;
     }
+}
+
+/* ===== ESTILOS PARA MODAL DE EDICIÓN ===== */
+.section-title {
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.current-image {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    object-fit: cover;
+}
+
+.image-placeholder {
+    width: 150px;
+    height: 150px;
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    background-color: #f9fafb;
+}
+
+/* Mejoras para el modal */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #55AD9B, #95D2B3);
+    color: white;
+    border-radius: 15px 15px 0 0;
+    border-bottom: none;
+    padding: 1.5rem;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    border-top: 1px solid #e5e7eb;
+    padding: 1rem 1.5rem;
+}
+
+/* Responsive para el modal */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 0.5rem;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+        max-height: 60vh;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .current-image {
+        max-width: 120px;
+        max-height: 120px;
+    }
+    
+    .image-placeholder {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+/* ===== ESTILOS PARA MODAL DE EDICIÓN UNIFICADO ===== */
+.section-title {
+    color: #374151;
+    border-bottom: 2px solid #4F46E5;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.section-title i {
+    color: #4F46E5;
+}
+
+.current-image {
+    max-width: 150px;
+    max-height: 150px;
+    border-radius: 12px;
+    border: 3px solid #E5E7EB;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-placeholder {
+    width: 150px;
+    height: 150px;
+    border: 3px dashed #D1D5DB;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9CA3AF;
+    background: linear-gradient(135deg, #F9FAFB, #F3F4F6);
+    transition: all 0.3s ease;
+}
+
+.image-placeholder:hover {
+    border-color: #4F46E5;
+    background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+}
+
+/* Mejoras para el modal unificado */
+.modal-content {
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 25px 50px rgba(79, 70, 229, 0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    color: white;
+    border-radius: 20px 20px 0 0;
+    border-bottom: none;
+    padding: 1.5rem 2rem;
+    position: relative;
+}
+
+.modal-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #4F46E5, #7C3AED, #4F46E5);
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 2rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    background: #F9FAFB;
+}
+
+.modal-footer {
+    border-top: 1px solid #E5E7EB;
+    padding: 1.5rem 2rem;
+    background: white;
+    border-radius: 0 0 20px 20px;
+}
+
+/* Estilos específicos para formularios en modales */
+.modal .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.modal .form-control,
+.modal .form-select {
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus {
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    outline: none;
+}
+
+.modal .form-text {
+    font-size: 0.8rem;
+    color: #6B7280;
+    margin-top: 0.25rem;
+}
+
+/* Botones del modal unificados */
+.modal .btn-primary {
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.modal .btn-primary:hover {
+    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+}
+
+.modal .btn-outline-secondary {
+    border: 2px solid #6B7280;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #6B7280;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.modal .btn-outline-secondary:hover {
+    background: #6B7280;
+    color: white;
+    border-color: #6B7280;
+    transform: translateY(-2px);
+}
+
+/* Alertas en modales */
+.modal .alert {
+    border-radius: 10px;
+    border: none;
+    font-size: 0.9rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modal .alert-success {
+    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+    color: #065F46;
+    border-left: 4px solid #10B981;
+}
+
+.modal .alert-warning {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    color: #92400E;
+    border-left: 4px solid #F59E0B;
+}
+
+.modal .alert-danger {
+    background: linear-gradient(135deg, #FEE2E2, #FECACA);
+    color: #DC2626;
+    border-left: 4px solid #EF4444;
+}
+
+.modal .alert-info {
+    background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+    color: #1E40AF;
+    border-left: 4px solid #3B82F6;
+}
+
+/* Efectos hover para elementos del modal */
+.modal .form-control:hover,
+.modal .form-select:hover {
+    border-color: #9CA3AF;
+}
+
+.modal .image-placeholder:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive para el modal unificado */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 1rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+        max-height: 60vh;
+    }
+    
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .modal-footer {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .current-image {
+        max-width: 120px;
+        max-height: 120px;
+    }
+    
+    .image-placeholder {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .section-title {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.25rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem 1.25rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
+    
+    .current-image {
+        max-width: 100px;
+        max-height: 100px;
+    }
+    
+    .image-placeholder {
+        width: 100px;
+        height: 100px;
+    }
+}
+
+/* Animaciones para el modal */
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal.fade .modal-dialog {
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+/* Efectos de focus mejorados */
+.modal .form-control:focus,
+.modal .form-select:focus {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
 }
