@@ -1,3 +1,4 @@
+// static/vendedor/js/Layout_V.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Layout VECY inicializado - SISTEMA COMPLETO CORREGIDO');
 
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==================== FUNCIONES PRINCIPALES ====================
 
     function cargarConfiguracion() {
+        // Primero cargar desde localStorage como respaldo
         const guardado = localStorage.getItem('configuracionHorariosNegocio');
         if (guardado) {
             try {
@@ -51,20 +53,40 @@ document.addEventListener('DOMContentLoaded', function() {
                     ...configCargada,
                     programaciones: configCargada.programaciones || []
                 };
-                console.log('✅ Configuración cargada:', configuracionHorarios);
+                console.log('✅ Configuración cargada de localStorage:', configuracionHorarios);
             } catch (e) {
                 console.error('❌ Error al cargar configuración:', e);
-                configuracionHorarios = {
-                    horarioApertura: '08:00',
-                    horarioCierre: '18:00',
-                    programacionAutomatica: false,
-                    estadoActual: 'cerrado',
-                    programaciones: []
-                };
             }
         }
-        actualizarUIEstadoNegocio();
+        
+        // ✅ NUEVO: Cargar estado real desde el servidor
+        cargarEstadoAperturaServidor();
         iniciarVerificadorAutomatico();
+    }
+
+    // ✅ NUEVA FUNCIÓN: Cargar estado de apertura desde el servidor
+    function cargarEstadoAperturaServidor() {
+        fetch('/auth/vendedor/obtener-estado-apertura/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.estado_apertura) {
+                console.log('✅ Estado de apertura cargado desde servidor:', data.estado_apertura);
+                
+                // Actualizar configuración local con el estado real del servidor
+                configuracionHorarios.estadoActual = data.estado_apertura;
+                
+                // Sincronizar localStorage
+                guardarConfiguracion();
+                
+                // Actualizar UI
+                actualizarUIEstadoNegocio();
+            } else {
+                console.warn('⚠️ No se pudo cargar estado del servidor, usando local');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error cargando estado del servidor:', error);
+        });
     }
 
     function guardarConfiguracion() {
@@ -109,7 +131,54 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarToast(mensaje, 'success');
         
         console.log(`🔄 Estado cambiado: ${estadoAnterior} → ${configuracionHorarios.estadoActual} (${motivo})`);
+        
+        // ✅ NUEVO: Enviar el estado al servidor via AJAX
+        enviarEstadoAperturaServidor(configuracionHorarios.estadoActual);
     }
+
+    // ✅ NUEVA FUNCIÓN: Enviar estado de apertura al servidor
+    function enviarEstadoAperturaServidor(estadoApertura) {
+        fetch('/auth/vendedor/actualizar-estado-apertura/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                estado_apertura: estadoApertura
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Estado de apertura actualizado en servidor:', estadoApertura);
+            } else {
+                console.error('❌ Error al actualizar estado en servidor:', data.error);
+                mostrarToast('❌ Error al guardar estado en servidor', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en petición:', error);
+            mostrarToast('❌ Error de conexión', 'error');
+        });
+    }
+
+    // ✅ NUEVA FUNCIÓN: Obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
 
     function registrarEnHistorial(estado, tipo) {
         const historial = JSON.parse(localStorage.getItem('historialEstados') || '[]');

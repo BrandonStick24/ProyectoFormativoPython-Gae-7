@@ -73,6 +73,10 @@ urlpatterns = [
     # ==================== NUEVAS URLs PARA IMPORTACIÓN EXCEL ====================
     path('vendedor/productos/importar/excel/', vendedor_views.importar_productos_excel, name='importar_productos_excel'),
     path('vendedor/productos/descargar-plantilla/', vendedor_views.descargar_plantilla_productos, name='descargar_plantilla_productos'),
+
+    # apertura
+    path('vendedor/actualizar-estado-apertura/', vendedor_views.actualizar_estado_apertura, name='actualizar_estado_apertura'),
+    path('vendedor/obtener-estado-apertura/', vendedor_views.obtener_estado_apertura, name='obtener_estado_apertura'),
        
 ]
 
