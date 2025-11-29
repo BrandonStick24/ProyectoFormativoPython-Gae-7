@@ -1,3 +1,4 @@
+// static/vendedor/js/Layout_V.js
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Layout VECY inicializado - SISTEMA COMPLETO CORREGIDO');
 
@@ -36,12 +37,14 @@ document.addEventListener('DOMContentLoaded', function() {
         horarioCierre: '18:00',
         programacionAutomatica: false,
         estadoActual: 'cerrado',
-        programaciones: []
+        programaciones: [],
+        diasServicio: [] // ← NUEVO: Array para días de servicio
     };
 
     // ==================== FUNCIONES PRINCIPALES ====================
 
     function cargarConfiguracion() {
+        // Primero cargar desde localStorage como respaldo
         const guardado = localStorage.getItem('configuracionHorariosNegocio');
         if (guardado) {
             try {
@@ -49,22 +52,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 configuracionHorarios = {
                     ...configuracionHorarios,
                     ...configCargada,
-                    programaciones: configCargada.programaciones || []
+                    programaciones: configCargada.programaciones || [],
+                    diasServicio: configCargada.diasServicio || [] // ← NUEVO: Cargar días de servicio
                 };
-                console.log('✅ Configuración cargada:', configuracionHorarios);
+                console.log('✅ Configuración cargada de localStorage:', configuracionHorarios);
             } catch (e) {
                 console.error('❌ Error al cargar configuración:', e);
-                configuracionHorarios = {
-                    horarioApertura: '08:00',
-                    horarioCierre: '18:00',
-                    programacionAutomatica: false,
-                    estadoActual: 'cerrado',
-                    programaciones: []
-                };
             }
         }
-        actualizarUIEstadoNegocio();
-        iniciarVerificadorAutomatico();
+        
+        // ✅ NUEVO: Cargar configuración completa desde el servidor
+        cargarConfiguracionDesdeServidor().then(() => {
+            iniciarVerificadorAutomatico();
+        });
+    }
+
+    // ✅ NUEVA FUNCIÓN: Cargar configuración completa desde el servidor
+    function cargarConfiguracionDesdeServidor() {
+        return new Promise((resolve) => {
+            // Primero cargar días de servicio
+            fetch('/auth/vendedor/obtener-dias-servicio/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.dias_servicio) {
+                    configuracionHorarios.diasServicio = data.dias_servicio;
+                    console.log('✅ Días de servicio cargados desde servidor:', data.dias_servicio);
+                } else {
+                    console.warn('⚠️ No se pudieron cargar días de servicio del servidor');
+                }
+                
+                // Luego cargar estado de apertura
+                return fetch('/auth/vendedor/obtener-estado-apertura/');
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.estado_apertura) {
+                    configuracionHorarios.estadoActual = data.estado_apertura;
+                    console.log('✅ Estado de apertura cargado desde servidor:', data.estado_apertura);
+                } else {
+                    console.warn('⚠️ No se pudo cargar estado del servidor, usando local');
+                }
+                
+                // ✅ CARGAR HORARIOS DESDE EL SERVIDOR
+                return cargarHorariosDesdeServidor();
+            })
+            .then(() => {
+                // Sincronizar localStorage
+                guardarConfiguracion();
+                actualizarUIEstadoNegocio();
+                resolve();
+            })
+            .catch(error => {
+                console.error('❌ Error cargando configuración del servidor:', error);
+                // Usar configuración local como fallback
+                resolve();
+            });
+        });
     }
 
     function guardarConfiguracion() {
@@ -109,6 +152,52 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarToast(mensaje, 'success');
         
         console.log(`🔄 Estado cambiado: ${estadoAnterior} → ${configuracionHorarios.estadoActual} (${motivo})`);
+        
+        // ✅ NUEVO: Enviar el estado al servidor via AJAX
+        enviarEstadoAperturaServidor(configuracionHorarios.estadoActual);
+    }
+
+    // ✅ NUEVA FUNCIÓN: Enviar estado de apertura al servidor
+    function enviarEstadoAperturaServidor(estadoApertura) {
+        fetch('/auth/vendedor/actualizar-estado-apertura/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                estado_apertura: estadoApertura
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Estado de apertura actualizado en servidor:', estadoApertura);
+            } else {
+                console.error('❌ Error al actualizar estado en servidor:', data.error);
+                mostrarToast('❌ Error al guardar estado en servidor', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en petición:', error);
+            mostrarToast('❌ Error de conexión', 'error');
+        });
+    }
+
+    // ✅ NUEVA FUNCIÓN: Obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 
     function registrarEnHistorial(estado, tipo) {
@@ -164,10 +253,22 @@ document.addEventListener('DOMContentLoaded', function() {
     function verificarEstadoAutomatico() {
         console.log('⏰ INICIANDO VERIFICACIÓN AUTOMÁTICA - Hora:', obtenerHoraStringBogota());
         
-        // Primero verificar programaciones específicas
+        // Primero verificar si hoy es día de servicio
+        const esDiaServicio = esDiaDeServicio();
+        
+        if (!esDiaServicio) {
+            console.log('📅 Hoy NO es día de servicio, verificando si debemos cerrar');
+            // Si no es día de servicio y está abierto, cerrar
+            if (configuracionHorarios.estadoActual === 'abierto') {
+                console.log('🔒 Cerrando negocio porque hoy no es día de servicio');
+                cambiarEstadoNegocio(false, 'no_es_dia_servicio');
+            }
+            return;
+        }
+        
+        // Si es día de servicio, continuar con la verificación normal
         const cambiosProgramaciones = verificarProgramacionesEspecificas();
         
-        // Si no hubo cambios por programaciones, verificar horario automático
         if (!cambiosProgramaciones && configuracionHorarios.programacionAutomatica) {
             verificarHorarioAutomatico();
         }
@@ -402,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         actualizarListaProgramaciones();
+        cargarDiasServicio(); // ← NUEVO: Cargar días de servicio en el modal
     }
 
     function programarDesdeModal(tipo) {
@@ -458,11 +560,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Actualizar configuración local
         configuracionHorarios.horarioApertura = horarioApertura;
         configuracionHorarios.horarioCierre = horarioCierre;
         configuracionHorarios.programacionAutomatica = habilitarProgramacion;
         
+        // Guardar en localStorage
         guardarConfiguracion();
+        
+        // ✅ ENVIAR HORARIOS AL SERVIDOR
+        enviarHorariosServidor(horarioApertura, horarioCierre, habilitarProgramacion);
         
         const modal = bootstrap.Modal.getInstance(elementos.modalProgramacion);
         if (modal) {
@@ -522,6 +629,173 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             `;
         }).join('');
+    }
+
+    // ==================== GESTIÓN DE DÍAS DE SERVICIO ====================
+
+    function inicializarDiasServicio() {
+        console.log('🔄 Inicializando gestión de días de servicio');
+        
+        // Cargar días guardados al abrir el modal
+        if (elementos.modalProgramacion) {
+            elementos.modalProgramacion.addEventListener('show.bs.modal', function() {
+                cargarDiasServicio();
+            });
+        }
+        
+        // Event listeners para los botones de días
+        document.querySelectorAll('.btn-dia-servicio').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const dia = this.getAttribute('data-dia');
+                toggleDiaServicio(dia, this);
+            });
+        });
+        
+        // Guardar días al guardar la configuración
+        if (elementos.guardarProgramacion) {
+            elementos.guardarProgramacion.addEventListener('click', function() {
+                guardarDiasServicio();
+            });
+        }
+    }
+
+    function toggleDiaServicio(dia, elemento) {
+        const estaSeleccionado = elemento.classList.contains('btn-primary');
+        
+        if (estaSeleccionado) {
+            // Deseleccionar
+            elemento.classList.remove('btn-primary');
+            elemento.classList.add('btn-outline-primary');
+        } else {
+            // Seleccionar
+            elemento.classList.remove('btn-outline-primary');
+            elemento.classList.add('btn-primary');
+        }
+        
+        actualizarListaDiasSeleccionados();
+    }
+
+    function actualizarListaDiasSeleccionados() {
+        const contenedor = document.getElementById('listaDiasSeleccionados');
+        if (!contenedor) return;
+        
+        const diasSeleccionados = obtenerDiasSeleccionados();
+        
+        if (diasSeleccionados.length === 0) {
+            contenedor.innerHTML = '<span class="text-muted">No hay días seleccionados</span>';
+            return;
+        }
+        
+        contenedor.innerHTML = diasSeleccionados.map(dia => {
+            const diaTexto = dia.charAt(0).toUpperCase() + dia.slice(1);
+            return `
+                <span class="badge bg-primary d-flex align-items-center">
+                    ${diaTexto}
+                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size: 0.7rem;" data-dia="${dia}"></button>
+                </span>
+            `;
+        }).join('');
+        
+        // Event listeners para eliminar días
+        contenedor.querySelectorAll('.btn-close').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const dia = this.getAttribute('data-dia');
+                const botonDia = document.querySelector(`.btn-dia-servicio[data-dia="${dia}"]`);
+                if (botonDia) {
+                    botonDia.classList.remove('btn-primary');
+                    botonDia.classList.add('btn-outline-primary');
+                    actualizarListaDiasSeleccionados();
+                }
+            });
+        });
+    }
+
+    function obtenerDiasSeleccionados() {
+        const dias = [];
+        document.querySelectorAll('.btn-dia-servicio.btn-primary').forEach(btn => {
+            dias.push(btn.getAttribute('data-dia'));
+        });
+        return dias;
+    }
+
+    function cargarDiasServicio() {
+        console.log('📅 Cargando días de servicio guardados');
+        
+        // Resetear todos los botones
+        document.querySelectorAll('.btn-dia-servicio').forEach(btn => {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline-primary');
+        });
+        
+        // Cargar desde la configuración
+        if (configuracionHorarios.diasServicio && Array.isArray(configuracionHorarios.diasServicio)) {
+            configuracionHorarios.diasServicio.forEach(dia => {
+                const botonDia = document.querySelector(`.btn-dia-servicio[data-dia="${dia}"]`);
+                if (botonDia) {
+                    botonDia.classList.remove('btn-outline-primary');
+                    botonDia.classList.add('btn-primary');
+                }
+            });
+        }
+        
+        actualizarListaDiasSeleccionados();
+    }
+
+    function guardarDiasServicio() {
+        const diasSeleccionados = obtenerDiasSeleccionados();
+        configuracionHorarios.diasServicio = diasSeleccionados;
+        
+        console.log('💾 Guardando días de servicio:', diasSeleccionados);
+        
+        // Guardar en localStorage
+        guardarConfiguracion();
+        
+        // Enviar al servidor via AJAX
+        enviarDiasServicioServidor(diasSeleccionados);
+    }
+
+    function enviarDiasServicioServidor(diasServicio) {
+        fetch('/auth/vendedor/actualizar-dias-servicio/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                dias_servicio: diasServicio
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Días de servicio actualizados en servidor:', diasServicio);
+                mostrarToast('✅ Días de servicio guardados correctamente', 'success');
+            } else {
+                console.error('❌ Error al actualizar días de servicio:', data.error);
+                mostrarToast('❌ Error al guardar días de servicio', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en petición:', error);
+            mostrarToast('❌ Error de conexión', 'error');
+        });
+    }
+
+    // Nueva función para verificar si hoy es día de servicio
+    function esDiaDeServicio() {
+        if (!configuracionHorarios.diasServicio || configuracionHorarios.diasServicio.length === 0) {
+            console.log('📅 No hay días de servicio configurados, asumiendo todos los días');
+            return true; // Si no hay configuración, asumir todos los días
+        }
+        
+        const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];
+        const hoy = new Date().getDay();
+        const diaHoy = diasSemana[hoy];
+        
+        const esDiaValido = configuracionHorarios.diasServicio.includes(diaHoy);
+        console.log(`📅 Verificación día de servicio: Hoy es ${diaHoy}, ¿es día de servicio? ${esDiaValido}`);
+        
+        return esDiaValido;
     }
 
     // ==================== MODAL DE EDITAR PERFIL ====================
@@ -833,10 +1107,12 @@ document.addEventListener('DOMContentLoaded', function() {
         inicializarModalProgramacion();
         inicializarModalPerfil();
         inicializarHeader();
+        inicializarDiasServicio(); // ← AÑADIR ESTA LÍNEA
         
         console.log('✅ Gestión de horarios inicializada correctamente');
         console.log('📊 Estado actual:', configuracionHorarios.estadoActual);
         console.log('📋 Programaciones pendientes:', obtenerProgramacionesPendientes().length);
+        console.log('📅 Días de servicio:', configuracionHorarios.diasServicio || 'No configurados');
         
         // Mostrar estado inicial
         mostrarToast(`Negocio ${configuracionHorarios.estadoActual === 'abierto' ? 'ABIERTO' : 'CERRADO'}`, 'info');
@@ -849,4 +1125,72 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ==================== EJECUTAR INICIALIZACIÓN ====================
     inicializar();
+
+    // ✅ NUEVA FUNCIÓN: Enviar horarios al servidor
+    function enviarHorariosServidor(horarioApertura, horarioCierre, programacionAutomatica) {
+        fetch('/auth/vendedor/actualizar-horarios/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                horario_apertura: horarioApertura,
+                horario_cierre: horarioCierre,
+                programacion_automatica: programacionAutomatica
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ Horarios actualizados en servidor:', {
+                    horario_apertura: horarioApertura,
+                    horario_cierre: horarioCierre,
+                    programacion_automatica: programacionAutomatica
+                });
+            } else {
+                console.error('❌ Error al actualizar horarios:', data.error);
+                mostrarToast('❌ Error al guardar horarios en servidor', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en petición:', error);
+            mostrarToast('❌ Error de conexión', 'error');
+        });
+    }
+
+    // ✅ NUEVA FUNCIÓN: Cargar horarios desde el servidor
+    function cargarHorariosDesdeServidor() {
+        return fetch('/auth/vendedor/obtener-horarios/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Actualizar configuración local con datos del servidor
+                    if (data.horario_apertura) {
+                        configuracionHorarios.horarioApertura = data.horario_apertura;
+                        if (elementos.horarioApertura) {
+                            elementos.horarioApertura.value = data.horario_apertura;
+                        }
+                    }
+                    if (data.horario_cierre) {
+                        configuracionHorarios.horarioCierre = data.horario_cierre;
+                        if (elementos.horarioCierre) {
+                            elementos.horarioCierre.value = data.horario_cierre;
+                        }
+                    }
+                    if (data.programacion_automatica !== undefined) {
+                        configuracionHorarios.programacionAutomatica = data.programacion_automatica;
+                        if (elementos.habilitarProgramacion) {
+                            elementos.habilitarProgramacion.checked = data.programacion_automatica;
+                        }
+                    }
+                    console.log('✅ Horarios cargados desde servidor:', data);
+                } else {
+                    console.warn('⚠️ No se pudieron cargar horarios del servidor');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error cargando horarios del servidor:', error);
+            });
+    }
 });
