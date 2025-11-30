@@ -963,113 +963,59 @@ def verificar_moderador_login(request):
         messages.error(request, "Perfil de usuario no encontrado.")
         return redirect('principal')
 
-# ==================== FUNCIONES PARA CORREOS ====================
+# ====================================================================
+# ==================== FUNCIONES PARA CORREOS ========================
+# ====================================================================
 
 def obtener_destinatarios_por_ids(usuario_ids):
     """
-    Obtiene correos de usuarios específicos por sus IDs
+    Obtiene correos de usuarios específicos por sus IDs - CORREGIDA
     """
     try:
         correos = []
+        print(f"🔍 DEBUG - Buscando destinatarios para IDs: {usuario_ids}")
+        
         for usuario_id in usuario_ids:
             try:
+                # Convertir a entero si es string
+                if isinstance(usuario_id, str):
+                    usuario_id = int(usuario_id)
+                
                 perfil = UsuarioPerfil.objects.get(id=usuario_id)
                 email = perfil.fkuser.email
+                
                 if email and '@' in email:
                     correos.append(email)
+                    print(f"✅ DEBUG - Encontrado: {email} para ID {usuario_id}")
+                else:
+                    print(f"⚠️ DEBUG - Email inválido para ID {usuario_id}: {email}")
+                    
             except UsuarioPerfil.DoesNotExist:
-                print(f"Usuario con ID {usuario_id} no encontrado")
+                print(f"❌ DEBUG - Usuario con ID {usuario_id} no encontrado")
+                continue
+            except ValueError as e:
+                print(f"❌ DEBUG - ID inválido {usuario_id}: {e}")
+                continue
+            except Exception as e:
+                print(f"❌ DEBUG - Error con ID {usuario_id}: {e}")
                 continue
         
+        print(f"📧 DEBUG - Correos finales: {correos}")
         return correos
         
     except Exception as e:
-        print(f"Error obteniendo destinatarios por IDs: {str(e)}")
+        print(f"❌ ERROR en obtener_destinatarios_por_ids: {str(e)}")
         return []
 
-def obtener_destinatarios_usuarios():
+def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_adjuntos=None, urgente=False, es_test=True):
     """
-    Obtiene todos los correos de usuarios excluyendo moderadores
-    """
-    try:
-        # Obtener perfiles de moderadores
-        perfiles_moderadores = UsuariosRoles.objects.filter(
-            fkrol__desc_rol='MODERADOR'
-        ).values_list('fkperfil_id', flat=True)
-        
-        # Obtener usuarios excluyendo moderadores
-        usuarios_perfiles = UsuarioPerfil.objects.select_related('fkuser').exclude(
-            id__in=perfiles_moderadores
-        )
-        
-        # Extraer correos válidos
-        correos = []
-        for perfil in usuarios_perfiles:
-            email = perfil.fkuser.email
-            if email and '@' in email:  # Validación básica de email
-                correos.append(email)
-        
-        return correos
-        
-    except Exception as e:
-        print(f"Error obteniendo destinatarios: {str(e)}")
-        return []
-
-def enviar_correo_promocional(destinatarios, asunto, mensaje_html, imagen_promocion=None, es_test=True):
-    """
-    Función para enviar correos promocionales
+    Función CORREGIDA para enviar correos simples con archivos adjuntos
     """
     try:
         if es_test:
             # En modo test, enviar solo al admin
             destinatarios = [settings.EMAIL_HOST_USER]
-        
-        # Crear versión de texto plano
-        text_content = f"""
-        {asunto}
-        
-        {mensaje_html}
-        
-        Saludos,
-        El equipo de Vecy
-        """
-        
-        # Enviar correo
-        email = EmailMultiAlternatives(
-            subject=asunto,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=destinatarios,
-        )
-        email.attach_alternative(mensaje_html, "text/html")
-        
-        # Adjuntar imagen si se proporciona
-        if imagen_promocion:
-            email.attach(imagen_promocion.name, imagen_promocion.read(), imagen_promocion.content_type)
-        
-        email.send(fail_silently=False)
-        
-        return {
-            'success': True,
-            'enviados_a': destinatarios,
-            'total': len(destinatarios)
-        }
-        
-    except Exception as e:
-        print(f"ERROR enviando correo promocional: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-def enviar_correo_simple(destinatarios, asunto, mensaje_html, urgente=False, es_test=True):
-    """
-    Función para enviar correos simples
-    """
-    try:
-        if es_test:
-            # En modo test, enviar solo al admin
-            destinatarios = [settings.EMAIL_HOST_USER]
+            print(f"🔍 DEBUG - Modo TEST activado. Enviando a: {destinatarios}")
         
         # Agregar prefijo de urgente si es necesario
         if urgente:
@@ -1093,96 +1039,40 @@ def enviar_correo_simple(destinatarios, asunto, mensaje_html, urgente=False, es_
             to=destinatarios,
         )
         email.attach_alternative(mensaje_html, "text/html")
+        
+        # CORRECCIÓN: Adjuntar archivos de manera segura
+        if archivos_adjuntos:
+            for archivo in archivos_adjuntos:
+                try:
+                    # Leer el archivo en modo binario
+                    archivo.seek(0)  # Asegurarse de estar al inicio del archivo
+                    contenido = archivo.read()
+                    
+                    # Adjuntar el archivo
+                    email.attach(
+                        filename=archivo.name,
+                        content=contenido,
+                        mimetype=archivo.content_type or 'application/octet-stream'
+                    )
+                    print(f"✅ DEBUG - Archivo adjuntado: {archivo.name}")
+                except Exception as attach_error:
+                    print(f"❌ ERROR adjuntando archivo {archivo.name}: {str(attach_error)}")
+                    continue
+        
         email.send(fail_silently=False)
+        
+        print(f"✅ DEBUG - Correo enviado exitosamente a {len(destinatarios)} destinatarios")
         
         return {
             'success': True,
             'enviados_a': destinatarios,
             'total': len(destinatarios),
-            'urgente': urgente
+            'urgente': urgente,
+            'archivos_adjuntos': len(archivos_adjuntos) if archivos_adjuntos else 0
         }
         
     except Exception as e:
-        print(f"ERROR enviando correo simple: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-def enviar_notificacion_simple(usuario, accion):
-    """
-    Función para enviar notificaciones usando plantilla HTML
-    """
-    try:
-        # Determinar el correo destino
-        correo_destino = usuario.email
-        
-        # Si no tiene correo o no es válido, enviar al admin
-        if not correo_destino or '@' not in correo_destino:
-            correo_destino = settings.EMAIL_HOST_USER
-        
-        # Determinar el mensaje según la acción
-        if accion == 'bloquear':
-            asunto = '🔒 Tu cuenta ha sido bloqueada'
-            estado_actual = 'Bloqueada'
-            mensaje_personalizado = 'Tu cuenta ha sido bloqueada temporalmente. Si crees que esto es un error, por favor contacta con nuestro equipo de soporte.'
-        elif accion == 'eliminar':
-            asunto = '❌ Tu cuenta ha sido eliminada'
-            estado_actual = 'Eliminada'
-            mensaje_personalizado = 'Tu cuenta ha sido eliminada de nuestro sistema. Si crees que esto es un error, por favor contacta con nuestro equipo de soporte.'
-        else:  # desbloquear
-            asunto = '✅ Tu cuenta ha sido activada'
-            estado_actual = 'Activa'
-            mensaje_personalizado = 'Tu cuenta ha sido activada. Ya puedes acceder nuevamente a todos nuestros servicios.'
-        
-        # Contexto para la plantilla
-        context = {
-            'nombre_usuario': usuario.first_name or usuario.username,
-            'username': usuario.username,
-            'email': usuario.email,
-            'accion': accion,
-            'estado_actual': estado_actual,
-            'fecha_accion': timezone.now().strftime("%d/%m/%Y %H:%M"),
-            'mensaje_personalizado': mensaje_personalizado,
-        }
-        
-        # Renderizar la plantilla HTML
-        html_content = render_to_string('Moderador/bloqueo_usuario.html', context)
-        
-        # Crear versión de texto plano
-        text_content = f"""
-        Hola {usuario.username},
-        
-        {mensaje_personalizado}
-        
-        Detalles:
-        - Usuario: {usuario.username}
-        - Correo: {usuario.email}
-        - Fecha: {context['fecha_accion']}
-        - Estado actual: {estado_actual}
-        
-        Saludos,
-        El equipo de Vecy
-        """
-        
-        # Enviar correo con HTML y texto plano
-        email = EmailMultiAlternatives(
-            subject=asunto,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[correo_destino],
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send(fail_silently=False)
-        
-        return {
-            'success': True,
-            'enviado_a': correo_destino,
-            'accion': accion
-        }
-        
-    except Exception as e:
-        print(f"ERROR enviando correo: {str(e)}")
+        print(f"❌ ERROR enviando correo simple: {str(e)}")
         return {
             'success': False,
             'error': str(e)
@@ -1251,7 +1141,7 @@ def enviar_correos(request):
                 'nombre': nombre_completo,
                 'email': user.email,
                 'documento': perfil_usuario.doc_user,
-                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc if perfil_usuario.fktipodoc_user else 'No especificado',
                 'estado': perfil_usuario.estado_user,
                 'rol': rol_principal,
                 'fecha_registro': user.date_joined.strftime("%d/%m/%Y")
@@ -1282,218 +1172,72 @@ def enviar_correos(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def enviar_correo_masivo(request):
-    """API para enviar correos masivos SOLO a usuarios seleccionados - CORREGIDA"""
+    """API para enviar correos masivos SOLO a usuarios seleccionados - VERSIÓN CORREGIDA Y SIMPLIFICADA"""
     try:
-        # Verificar permisos de moderador - CORREGIDO
-        perfil = UsuarioPerfil.objects.get(fkuser=request.user)
-        es_moderador = UsuariosRoles.objects.filter(
-            fkperfil=perfil, 
-            fkrol__desc_rol__iexact='moderador'
-        ).exists()
+        print("🔍 DEBUG: Iniciando envío de correo masivo")
         
-        if not es_moderador:
-            return JsonResponse({'success': False, 'error': 'No tienes permisos de moderador'})
+        # Verificar permisos
+        if not is_moderator(request.user):
+            return JsonResponse({'success': False, 'error': 'No tienes permisos'}, status=403)
 
-        # CORRECCIÓN: Usar request.POST y request.FILES en lugar de json.loads
-        destinatarios_ids = request.POST.getlist('destinatarios[]')
-        # Si no viene como lista, intentar parsear como JSON
-        if not destinatarios_ids and 'destinatarios' in request.POST:
-            try:
-                destinatarios_data = request.POST.get('destinatarios')
-                if destinatarios_data:
-                    destinatarios_ids = json.loads(destinatarios_data)
-            except:
-                destinatarios_ids = []
+        # Obtener datos del FormData
+        destinatarios_json = request.POST.get('destinatarios', '[]')
+        asunto = request.POST.get('asunto', '').strip()
+        mensaje_html = request.POST.get('mensaje', '').strip()
         
-        asunto = request.POST.get('asunto', '')
-        mensaje_html = request.POST.get('mensaje', '')
-        tipo_correo = request.POST.get('tipo_correo', 'simple')
-        urgente = request.POST.get('urgente', 'false') == 'true'
-        test_mode = request.POST.get('test_mode', 'false') == 'true'
+        print(f"🔍 DEBUG - Destinatarios JSON: {destinatarios_json}")
+        print(f"🔍 DEBUG - Asunto: {asunto}")
+        print(f"🔍 DEBUG - Mensaje length: {len(mensaje_html)}")
 
-        if not asunto or not mensaje_html:
-            return JsonResponse({'success': False, 'error': 'Asunto y mensaje son requeridos'})
+        # Validaciones básicas
+        if not asunto:
+            return JsonResponse({'success': False, 'error': 'El asunto es requerido'})
         
-        # CORRECCIÓN: Obtener SOLO los correos de los usuarios seleccionados
-        correos_destinatarios = []
+        if not mensaje_html or mensaje_html in ['<br>', '<div><br></div>']:
+            return JsonResponse({'success': False, 'error': 'El mensaje es requerido'})
         
-        if test_mode:
-            # En modo prueba, enviar solo al admin
-            correos_destinatarios = [settings.EMAIL_HOST_USER]
-        else:
-            # Obtener los correos de los usuarios específicamente seleccionados
-            if destinatarios_ids and destinatarios_ids != ['admin']:
-                correos_destinatarios = obtener_destinatarios_por_ids(destinatarios_ids)
-            
-            # Si no hay destinatarios seleccionados, retornar error
-            if not correos_destinatarios:
-                return JsonResponse({
-                    'success': False, 
-                    'error': 'No se encontraron destinatarios válidos seleccionados'
-                })
-        
+        # Parsear destinatarios
         try:
-            # CORRECCIÓN: Enviar correo según el tipo con manejo de archivos
-            if tipo_correo == 'promocional':
-                resultado = enviar_correo_promocional_masivo(
-                    destinatarios=correos_destinatarios,
-                    asunto=asunto,
-                    mensaje_html=mensaje_html,
-                    archivos_adjuntos=request.FILES.getlist('archivos'),
-                    es_test=test_mode
-                )
-            else:
-                resultado = enviar_correo_simple_masivo(
-                    destinatarios=correos_destinatarios,
-                    asunto=asunto,
-                    mensaje_html=mensaje_html,
-                    archivos_adjuntos=request.FILES.getlist('archivos'),
-                    urgente=urgente,
-                    es_test=test_mode
-                )
-            
-            # Agregar información adicional al resultado
-            if resultado['success']:
-                resultado['enviados'] = len(correos_destinatarios)
-                resultado['destinatarios'] = correos_destinatarios
-            
+            destinatarios_ids = json.loads(destinatarios_json)
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Formato de destinatarios inválido'})
+        
+        if not destinatarios_ids:
+            return JsonResponse({'success': False, 'error': 'Debe seleccionar al menos un destinatario'})
+
+        # Obtener correos
+        correos_destinatarios = obtener_destinatarios_por_ids(destinatarios_ids)
+        print(f"🔍 DEBUG - Correos obtenidos: {correos_destinatarios}")
+        
+        if not correos_destinatarios:
+            return JsonResponse({'success': False, 'error': 'No se encontraron destinatarios válidos'})
+
+        # Obtener archivos
+        archivos_adjuntos = request.FILES.getlist('archivos')
+        print(f"🔍 DEBUG - Archivos adjuntos: {len(archivos_adjuntos)}")
+
+        # Enviar correo
+        resultado = enviar_correo_simple_masivo(
+            destinatarios=correos_destinatarios,
+            asunto=asunto,
+            mensaje_html=mensaje_html,
+            archivos_adjuntos=archivos_adjuntos,
+            es_test=False  # Cambiar a True para pruebas
+        )
+        
+        if resultado['success']:
+            resultado['enviados'] = len(correos_destinatarios)
+            print(f"✅ DEBUG - Correo enviado exitosamente")
             return JsonResponse(resultado)
-            
-        except Exception as email_error:
-            return JsonResponse({'success': False, 'error': f'Error al enviar correo: {str(email_error)}'})
+        else:
+            return JsonResponse(resultado)
         
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
-
-# NUEVAS FUNCIONES CORREGIDAS PARA MANEJAR ARCHIVOS ADJUNTOS
-def enviar_correo_promocional_masivo(destinatarios, asunto, mensaje_html, archivos_adjuntos=None, es_test=True):
-    """
-    Función CORREGIDA para enviar correos promocionales con archivos adjuntos
-    """
-    try:
-        if es_test:
-            # En modo test, enviar solo al admin
-            destinatarios = [settings.EMAIL_HOST_USER]
-        
-        # Crear versión de texto plano
-        text_content = f"""
-        {asunto}
-        
-        {mensaje_html}
-        
-        Saludos,
-        El equipo de Vecy
-        """
-        
-        # Enviar correo
-        email = EmailMultiAlternatives(
-            subject=asunto,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=destinatarios,
-        )
-        email.attach_alternative(mensaje_html, "text/html")
-        
-        # CORRECCIÓN: Adjuntar archivos de manera segura
-        if archivos_adjuntos:
-            for archivo in archivos_adjuntos:
-                try:
-                    # Leer el archivo en modo binario
-                    archivo.seek(0)  # Asegurarse de estar al inicio del archivo
-                    contenido = archivo.read()
-                    
-                    # Adjuntar el archivo
-                    email.attach(
-                        filename=archivo.name,
-                        content=contenido,
-                        mimetype=archivo.content_type or 'application/octet-stream'
-                    )
-                except Exception as attach_error:
-                    print(f"Error adjuntando archivo {archivo.name}: {str(attach_error)}")
-                    continue
-        
-        email.send(fail_silently=False)
-        
-        return {
-            'success': True,
-            'enviados_a': destinatarios,
-            'total': len(destinatarios),
-            'archivos_adjuntos': len(archivos_adjuntos) if archivos_adjuntos else 0
-        }
-        
-    except Exception as e:
-        print(f"ERROR enviando correo promocional: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
-
-def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_adjuntos=None, urgente=False, es_test=True):
-    """
-    Función CORREGIDA para enviar correos simples con archivos adjuntos
-    """
-    try:
-        if es_test:
-            # En modo test, enviar solo al admin
-            destinatarios = [settings.EMAIL_HOST_USER]
-        
-        # Agregar prefijo de urgente si es necesario
-        if urgente:
-            asunto = f"🚨 URGENTE: {asunto}"
-        
-        # Crear versión de texto plano
-        text_content = f"""
-        {asunto}
-        
-        {mensaje_html}
-        
-        Saludos,
-        El equipo de Vecy
-        """
-        
-        # Enviar correo
-        email = EmailMultiAlternatives(
-            subject=asunto,
-            body=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=destinatarios,
-        )
-        email.attach_alternative(mensaje_html, "text/html")
-        
-        # CORRECCIÓN: Adjuntar archivos de manera segura
-        if archivos_adjuntos:
-            for archivo in archivos_adjuntos:
-                try:
-                    # Leer el archivo en modo binario
-                    archivo.seek(0)  # Asegurarse de estar al inicio del archivo
-                    contenido = archivo.read()
-                    
-                    # Adjuntar el archivo
-                    email.attach(
-                        filename=archivo.name,
-                        content=contenido,
-                        mimetype=archivo.content_type or 'application/octet-stream'
-                    )
-                except Exception as attach_error:
-                    print(f"Error adjuntando archivo {archivo.name}: {str(attach_error)}")
-                    continue
-        
-        email.send(fail_silently=False)
-        
-        return {
-            'success': True,
-            'enviados_a': destinatarios,
-            'total': len(destinatarios),
-            'urgente': urgente,
-            'archivos_adjuntos': len(archivos_adjuntos) if archivos_adjuntos else 0
-        }
-        
-    except Exception as e:
-        print(f"ERROR enviando correo simple: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        }
+        print(f"❌ ERROR en enviar_correo_masivo: {str(e)}")
+        return JsonResponse({
+            'success': False, 
+            'error': f'Error interno: {str(e)}'
+        }, status=500)
 
 # API para obtener usuarios para correos
 @login_required(login_url='/auth/login/')
@@ -1544,7 +1288,7 @@ def api_usuarios_correos(request):
                 'nombre': nombre_completo,
                 'email': user.email,
                 'documento': perfil_usuario.doc_user,
-                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc if perfil_usuario.fktipodoc_user else 'No especificado',
                 'estado': perfil_usuario.estado_user,
                 'rol': rol_principal,
                 'fecha_registro': user.date_joined.strftime("%d/%m/%Y")
@@ -1559,9 +1303,8 @@ def api_usuarios_correos(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
- 
+
 # VISTA PARA RESEÑAS REPORTADAS - COMPLETAMENTE CORREGIDA
-# VISTA PARA RESEÑAS REPORTADAS - CON SQL PURO
 @login_required(login_url='/auth/login/')
 def gestion_resenas_reportadas(request):
     """Vista para gestión de reseñas reportadas usando SQL puro"""
