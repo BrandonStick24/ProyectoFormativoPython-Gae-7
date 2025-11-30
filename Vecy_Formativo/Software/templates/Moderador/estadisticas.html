@@ -7,16 +7,18 @@
 <div class="container-fluid">
     <!-- Header de la página -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas Generales</h1>
+        <h1 class="h3 mb-0 text-dark"><i class="fas fa-chart-bar me-2"></i>Bienvenido Moderador</h1>
         <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <button class="btn btn-outline-dark dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="fas fa-calendar me-2"></i>Todos los tiempos
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#">Últimos 7 días</a></li>
-                <li><a class="dropdown-item" href="#">Últimos 30 días</a></li>
-                <li><a class="dropdown-item" href="#">Últimos 90 días</a></li>
-                <li><a class="dropdown-item" href="#">Este año</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('Hoy')">Hoy</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('2 días')">Últimos 2 días</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('5 días')">Últimos 5 días</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('7 días')">Últimos 7 días</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('Todos los tiempos')">Todos los tiempos</a></li>
             </ul>
         </div>
     </div>
@@ -24,18 +26,18 @@
     <!-- Métricas Principales -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card minimalist-card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            <div class="text-xs font-weight-600 text-muted text-uppercase mb-1">
                                 Usuarios Registrados
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_usuarios }}</div>
-                            <div class="text-xs text-muted">{{ usuarios_activos }} activos</div>
+                            <div class="h5 mb-0 font-weight-bold text-dark">{{ total_usuarios }}</div>
+                            <div class="text-xs text-muted mt-1">{{ usuarios_activos }} activos</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                            <i class="fas fa-users fa-2x text-primary"></i>
                         </div>
                     </div>
                 </div>
@@ -43,18 +45,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
+            <div class="card minimalist-card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            <div class="text-xs font-weight-600 text-muted text-uppercase mb-1">
                                 Negocios Activos
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ negocios_activos }}</div>
-                            <div class="text-xs text-muted">de {{ total_negocios }} totales</div>
+                            <div class="h5 mb-0 font-weight-bold text-dark">{{ negocios_activos }}</div>
+                            <div class="text-xs text-muted mt-1">de {{ total_negocios }} totales</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-store fa-2x text-gray-300"></i>
+                            <i class="fas fa-store fa-2x text-success"></i>
                         </div>
                     </div>
                 </div>
@@ -62,18 +64,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card minimalist-card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            <div class="text-xs font-weight-600 text-muted text-uppercase mb-1">
                                 Reseñas Activas
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ resenas_activas }}</div>
-                            <div class="text-xs text-muted">{{ promedio_estrellas }}★ promedio</div>
+                            <div class="h5 mb-0 font-weight-bold text-dark">{{ resenas_activas }}</div>
+                            <div class="text-xs text-muted mt-1">{{ promedio_estrellas }}★ promedio</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-star fa-2x text-gray-300"></i>
+                            <i class="fas fa-star fa-2x text-warning"></i>
                         </div>
                     </div>
                 </div>
@@ -81,18 +83,18 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card minimalist-card border-0 shadow-sm h-100">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                            <div class="text-xs font-weight-600 text-muted text-uppercase mb-1">
                                 Negocios Suspendidos
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ negocios_suspendidos }}</div>
-                            <div class="text-xs text-muted">{{ negocios_inactivos }} rechazados</div>
+                            <div class="h5 mb-0 font-weight-bold text-dark">{{ negocios_suspendidos }}</div>
+                            <div class="text-xs text-muted mt-1">{{ negocios_inactivos }} rechazados</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-user-slash fa-2x text-gray-300"></i>
+                            <i class="fas fa-user-slash fa-2x text-danger"></i>
                         </div>
                     </div>
                 </div>
@@ -100,139 +102,171 @@
         </div>
     </div>
 
-    <!-- Gráficos -->
+    <!-- Gráficas Mejoradas -->
     <div class="row">
-        <!-- Negocios por Estado -->
-        <div class="col-xl-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Negocios por Estado</h6>
+        <!-- ESTADO DE NEGOCIOS - Gráfica más clara -->
+        <div class="col-xl-4 mb-4">
+            <div class="card minimalist-card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-chart-pie me-2 text-primary"></i>
+                        Estado de Negocios
+                    </h6>
+                    <small class="text-muted">Distribución por estado de aprobación</small>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="height: 300px;">
+                    <div class="chart-container" style="height: 250px;">
                         <canvas id="estadoNegociosChart"></canvas>
                     </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">✅ Activos</span>
+                            <span class="font-weight-bold text-dark">{{ negocios_activos }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">❌ Rechazados</span>
+                            <span class="font-weight-bold text-dark">{{ negocios_inactivos }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-sm">⚠️ Suspendidos</span>
+                            <span class="font-weight-bold text-dark">{{ negocios_suspendidos }}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Negocios por Categoría -->
-        <div class="col-xl-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Negocios por Categoría (Top 5)</h6>
+        <!-- CATEGORÍAS MÁS POPULARES - Más descriptiva -->
+        <div class="col-xl-4 mb-4">
+            <div class="card minimalist-card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-tags me-2 text-success"></i>
+                        Categorías Populares
+                    </h6>
+                    <small class="text-muted">Top 5 categorías con más negocios</small>
                 </div>
                 <div class="card-body">
-                    <div class="chart-container" style="height: 300px;">
+                    <div class="chart-container" style="height: 250px;">
                         <canvas id="categoriasChart"></canvas>
                     </div>
+                    <div class="mt-3">
+                        {% for categoria in categorias_nombres|slice:":3" %}
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">{{ categoria }}</span>
+                            <span class="font-weight-bold text-dark">{{ categorias_totales.forloop.counter0 }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Distribución de Usuarios -->
+        <!-- DISTRIBUCIÓN DE LA PLATAFORMA - Explicación clara -->
+        <div class="col-xl-4 mb-4">
+            <div class="card minimalist-card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-chart-bar me-2 text-warning"></i>
+                        Contenido de la Plataforma
+                    </h6>
+                    <small class="text-muted">Distribución de elementos principales</small>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="distribucionChart"></canvas>
+                    </div>
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">👥 Usuarios</span>
+                            <span class="font-weight-bold text-dark">{{ total_usuarios }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-sm">🏪 Negocios</span>
+                            <span class="font-weight-bold text-dark">{{ total_negocios }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-sm">⭐ Reseñas</span>
+                            <span class="font-weight-bold text-dark">{{ total_resenas }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACTIVIDAD RECIENTE - Nueva gráfica útil -->
         <div class="col-xl-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Distribución de Negocios</h6>
+            <div class="card minimalist-card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-chart-line me-2 text-info"></i>
+                        Actividad Reciente (<span id="filtro-actual">7 días</span>)
+                    </h6>
+                    <small class="text-muted">Nuevos registros en el período seleccionado</small>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 300px;">
-                        <canvas id="distribucionChart"></canvas>
+                        <canvas id="actividadRecienteChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Resumen de Actividad -->
+        <!-- RESUMEN RÁPIDO - Más claro -->
         <div class="col-xl-6 mb-4">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Resumen de Plataforma</h6>
+            <div class="card minimalist-card border-0 shadow-sm">
+                <div class="card-header bg-transparent border-0 py-3">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-info-circle me-2 text-purple"></i>
+                        Resumen Rápido
+                    </h6>
+                    <small class="text-muted">Métricas clave de la plataforma</small>
                 </div>
                 <div class="card-body">
-                    <div class="row text-center">
+                    <div class="row">
                         <div class="col-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h4 class="text-primary">{{ total_usuarios }}</h4>
-                                    <small class="text-muted">Usuarios Totales</small>
-                                </div>
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 font-weight-bold text-primary mb-1">{{ total_usuarios }}</div>
+                                <small class="text-muted">Usuarios Totales</small>
                             </div>
                         </div>
                         <div class="col-6 mb-3">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h4 class="text-success">{{ total_negocios }}</h4>
-                                    <small class="text-muted">Negocios Totales</small>
-                                </div>
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 font-weight-bold text-success mb-1">{{ total_negocios }}</div>
+                                <small class="text-muted">Negocios Totales</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h4 class="text-warning">{{ total_resenas }}</h4>
-                                    <small class="text-muted">Reseñas Totales</small>
-                                </div>
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 font-weight-bold text-warning mb-1">{{ total_resenas }}</div>
+                                <small class="text-muted">Reseñas Totales</small>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="card bg-light">
-                                <div class="card-body">
-                                    <h4 class="text-info">{{ promedio_estrellas }}</h4>
-                                    <small class="text-muted">Rating Promedio</small>
-                                </div>
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="h4 font-weight-bold text-info mb-1">{{ promedio_estrellas }}</div>
+                                <small class="text-muted">Rating Promedio</small>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Tabla de Categorías Detallada - CORREGIDA -->
-    <div class="row">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Negocios por Categoría</h6>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Categoría</th>
-                                    <th>Total de Negocios</th>
-                                    <th>Porcentaje</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for categoria in negocios_por_categoria %}
-                                <tr>
-                                    <td>{{ categoria.fktiponeg_neg__desc_tiponeg|default:"Sin categoría" }}</td>
-                                    <td>{{ categoria.total }}</td>
-                                    <td>
-                                        {% with porcentaje=categoria.total|floatformat:0 %}
-                                        <div class="progress">
-                                            <div class="progress-bar" role="progressbar" 
-                                                 style="width: {{ porcentaje }}%"
-                                                 aria-valuenow="{{ porcentaje }}" 
-                                                 aria-valuemin="0" 
-                                                 aria-valuemax="100">
-                                            </div>
-                                        </div>
-                                        {{ porcentaje }}%
-                                        {% endwith %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="3" class="text-center">No hay datos disponibles</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    
+                    <!-- Estadísticas adicionales -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="font-weight-bold text-dark mb-3">Estadísticas Adicionales</h6>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ negocios_activos }}</div>
+                                <small class="text-muted">Negocios Activos</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ usuarios_activos }}</div>
+                                <small class="text-muted">Usuarios Activos</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ negocios_suspendidos }}</div>
+                                <small class="text-muted">Suspendidos</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -243,28 +277,43 @@
 
 {% block extra_css %}
 <style>
-    .border-left-primary {
-        border-left: 0.25rem solid #4e73df !important;
+    .minimalist-card {
+        border-radius: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: white;
     }
 
-    .border-left-success {
-        border-left: 0.25rem solid #1cc88a !important;
+    .minimalist-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1) !important;
     }
 
-    .border-left-warning {
-        border-left: 0.25rem solid #f6c23e !important;
+    .text-primary { color: #2563eb !important; }
+    .text-success { color: #059669 !important; }
+    .text-warning { color: #d97706 !important; }
+    .text-danger { color: #dc2626 !important; }
+    .text-info { color: #0891b2 !important; }
+    .text-purple { color: #7c3aed !important; }
+
+    .font-weight-600 { font-weight: 600; }
+    .chart-container { position: relative; }
+
+    .bg-light {
+        background-color: #f8fafc !important;
     }
 
-    .border-left-danger {
-        border-left: 0.25rem solid #e74a3b !important;
+    .text-sm {
+        font-size: 0.875rem;
     }
 
-    .chart-container {
-        position: relative;
+    .btn-outline-dark {
+        border-color: #d1d5db;
+        color: #374151;
     }
 
-    .progress {
-        height: 10px;
+    .btn-outline-dark:hover {
+        background-color: #f9fafb;
+        border-color: #9ca3af;
     }
 </style>
 {% endblock %}
@@ -272,7 +321,73 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Gráfico de estado de negocios
+    // Función para cambiar el filtro
+    function changeFilter(filter) {
+        // Actualizar el texto del botón
+        const button = document.querySelector('.dropdown-toggle');
+        const icon = '<i class="fas fa-calendar me-2"></i>';
+        button.innerHTML = icon + filter;
+        
+        // Actualizar el texto en la gráfica de actividad
+        document.getElementById('filtro-actual').textContent = filter.toLowerCase();
+        
+        // Aquí iría la lógica para actualizar los datos según el filtro
+        console.log('Filtro cambiado a:', filter);
+        
+        // Simular actualización de datos (en una aplicación real, harías una petición AJAX)
+        updateChartData(filter);
+    }
+
+    // Función para simular actualización de datos según el filtro
+    function updateChartData(filter) {
+        let dataUsuarios, dataNegocios, labels;
+        
+        switch(filter) {
+            case 'Hoy':
+                labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
+                dataUsuarios = [2, 5, 8, 12, 7, 4];
+                dataNegocios = [1, 2, 3, 5, 3, 2];
+                break;
+            case '2 días':
+                labels = ['Ayer', 'Hoy'];
+                dataUsuarios = [25, 38];
+                dataNegocios = [12, 16];
+                break;
+            case '5 días':
+                labels = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5'];
+                dataUsuarios = [15, 22, 18, 25, 30];
+                dataNegocios = [8, 10, 7, 12, 14];
+                break;
+            case '7 días':
+                labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                dataUsuarios = [12, 19, 8, 15, 12, 18, 14];
+                dataNegocios = [5, 8, 4, 7, 6, 9, 5];
+                break;
+            default:
+                labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                dataUsuarios = [12, 19, 8, 15, 12, 18, 14];
+                dataNegocios = [5, 8, 4, 7, 6, 9, 5];
+        }
+        
+        // Actualizar la gráfica de actividad reciente
+        actividadChart.data.labels = labels;
+        actividadChart.data.datasets[0].data = dataUsuarios;
+        actividadChart.data.datasets[1].data = dataNegocios;
+        actividadChart.update();
+    }
+
+    // Colores modernos
+    const colors = {
+        primary: '#2563eb',
+        success: '#059669', 
+        warning: '#d97706',
+        danger: '#dc2626',
+        purple: '#7c3aed',
+        indigo: '#4f46e5',
+        info: '#0891b2'
+    };
+
+    // 1. ESTADO DE NEGOCIOS - Más claro
     const estadoCtx = document.getElementById('estadoNegociosChart').getContext('2d');
     const estadoChart = new Chart(estadoCtx, {
         type: 'doughnut',
@@ -280,51 +395,82 @@
             labels: ['Activos', 'Rechazados', 'Suspendidos'],
             datasets: [{
                 data: [{{ negocios_activos }}, {{ negocios_inactivos }}, {{ negocios_suspendidos }}],
-                backgroundColor: ['#1cc88a', '#e74a3b', '#f6c23e'],
-                hoverBackgroundColor: ['#17a673', '#d52a1e', '#dda20a'],
-                borderWidth: 2
+                backgroundColor: [colors.success, colors.danger, colors.warning],
+                borderWidth: 0,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed} negocios`;
+                        }
+                    }
                 }
-            }
+            },
+            cutout: '65%'
         }
     });
 
-    // Gráfico de categorías
+    // 2. CATEGORÍAS POPULARES - Más descriptiva
     const catCtx = document.getElementById('categoriasChart').getContext('2d');
     const catChart = new Chart(catCtx, {
         type: 'bar',
         data: {
             labels: {{ categorias_nombres|safe }},
             datasets: [{
-                label: 'Negocios',
+                label: 'Número de Negocios',
                 data: {{ categorias_totales|safe }},
-                backgroundColor: '#4e73df',
-                borderColor: '#2e59d9',
-                borderWidth: 1
+                backgroundColor: [
+                    colors.primary,
+                    colors.success,
+                    colors.warning,
+                    colors.purple,
+                    colors.info
+                ],
+                borderWidth: 0,
+                borderRadius: 6,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            return tooltipItems[0].label;
+                        },
+                        label: function(context) {
+                            return `Negocios: ${context.parsed.y}`;
+                        }
+                    }
+                }
+            },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: {
-                        stepSize: 1
+                    title: {
+                        display: true,
+                        text: 'Cantidad de Negocios'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Categorías'
                     }
                 }
             }
         }
     });
 
-    // Gráfico de distribución
+    // 3. DISTRIBUCIÓN DE PLATAFORMA - Más clara
     const distCtx = document.getElementById('distribucionChart').getContext('2d');
     const distChart = new Chart(distCtx, {
         type: 'pie',
@@ -332,16 +478,79 @@
             labels: ['Usuarios', 'Negocios', 'Reseñas'],
             datasets: [{
                 data: [{{ total_usuarios }}, {{ total_negocios }}, {{ total_resenas }}],
-                backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
-                hoverBackgroundColor: ['#2e59d9', '#17a673', '#dda20a']
+                backgroundColor: [colors.primary, colors.success, colors.warning],
+                borderWidth: 0,
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
+                legend: { 
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.parsed}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 4. GRÁFICA DE ACTIVIDAD RECIENTE
+    const actividadCtx = document.getElementById('actividadRecienteChart').getContext('2d');
+    const actividadChart = new Chart(actividadCtx, {
+        type: 'line',
+        data: {
+            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            datasets: [
+                {
+                    label: 'Nuevos Usuarios',
+                    data: [12, 19, 8, 15, 12, 18, 14],
+                    borderColor: colors.primary,
+                    backgroundColor: colors.primary + '20',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Nuevos Negocios',
+                    data: [5, 8, 4, 7, 6, 9, 5],
+                    borderColor: colors.success,
+                    backgroundColor: colors.success + '20',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Nuevos Registros'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Días de la Semana'
+                    }
                 }
             }
         }
