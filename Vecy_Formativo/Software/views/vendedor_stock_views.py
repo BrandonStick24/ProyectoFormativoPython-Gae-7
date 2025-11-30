@@ -251,7 +251,6 @@ def entrada_stock_producto(request, producto_id):
     # IMPORTANTE: Esta función redirige a Stock_V porque se usa desde el dashboard de stock
     return redirect('Stock_V')
 
-# En Software/views/vendedor_stock_views.py - función reporte_movimientos_stock COMPLETA
 
 @login_required(login_url='login')
 def reporte_movimientos_stock(request):
@@ -273,7 +272,7 @@ def reporte_movimientos_stock(request):
         
         print(f"🔄 DEBUG: Filtros - Desde: {fecha_desde}, Hasta: {fecha_hasta}, Tipo: {tipo_movimiento}")
         
-        # ✅ CONSULTA DE MOVIMIENTOS CON MEJOR INFORMACIÓN DE VARIANTES
+        # ✅ CONSULTA DE MOVIMIENTOS CORREGIDA - ORDEN DE COLUMNAS ARREGLADO
         movimientos = []
         query = """
             SELECT 
@@ -286,10 +285,9 @@ def reporte_movimientos_stock(request):
                 ms.stock_nuevo,
                 COALESCE(u.first_name, 'Sistema') as usuario_nombre,
                 COALESCE(ped.pkid_pedido, 'N/A') as pedido_id,
-                COALESCE(ms.variante_id, 'N/A') as variante_id,
-                COALESCE(ms.descripcion_variante, '') as descripcion_variante,
+                ms.variante_id,
                 COALESCE(vp.nombre_variante, 'Producto principal') as nombre_variante,
-                ms.fecha_movimiento as fecha_completa
+                COALESCE(ms.descripcion_variante, '') as descripcion_variante
             FROM movimientos_stock ms
             LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
             LEFT JOIN variantes_producto vp ON ms.variante_id = vp.id_variante
@@ -321,7 +319,9 @@ def reporte_movimientos_stock(request):
             print(f"🔄 DEBUG: Movimientos encontrados: {len(resultados)}")
             
             for row in resultados:
-                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, descripcion_variante, nombre_variante, fecha_completa = row
+                # ✅ CORRECCIÓN: Solo 12 valores, no 13
+                # El orden debe coincidir exactamente con el SELECT
+                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, nombre_variante, descripcion_variante = row
                 
                 # ✅ CONVERTIR VALORES NUMÉRICOS DE FORMA SEGURA
                 try:
@@ -336,7 +336,7 @@ def reporte_movimientos_stock(request):
                 # ✅ DETERMINAR SI ES VARIANTE O PRODUCTO PRINCIPAL
                 variante_info = 'Producto principal'
                 es_variante = False
-                if variante_id != 'N/A' and nombre_variante:
+                if variante_id and variante_id != 'N/A' and nombre_variante and nombre_variante != 'Producto principal':
                     variante_info = nombre_variante
                     es_variante = True
                 
@@ -381,7 +381,7 @@ def reporte_movimientos_stock(request):
                     'pedido_id': pedido_id,
                     'variante_id': variante_id,
                     'descripcion_variante': descripcion_variante,
-                    'fecha_completa': fecha_completa
+                    # 'fecha_completa' se eliminó porque no existe en la consulta
                 })
         
         # ✅ ESTADÍSTICAS PARA EL REPORTE - COMPLETAMENTE CORREGIDAS
@@ -412,7 +412,7 @@ def reporte_movimientos_stock(request):
                         SUM(CASE WHEN variante_id IS NULL THEN 1 ELSE 0 END) as movimientos_productos
                     FROM movimientos_stock 
                     WHERE negocio_id = %s
-                """, [str(negocio.pkid_neg)])  # ✅ CONVERTIR A STRING EXPLÍCITAMENTE
+                """, [str(negocio.pkid_neg)])
                 
                 stats = cursor.fetchone()
                 print(f"🔄 DEBUG: Stats raw: {stats}")
@@ -430,7 +430,6 @@ def reporte_movimientos_stock(request):
                     }
         except Exception as e:
             print(f"❌ ERROR en consulta de estadísticas: {e}")
-            # Mantenemos los valores por defecto en caso de error
         
         print(f"🔄 DEBUG: Estadísticas procesadas: {estadisticas}")
         

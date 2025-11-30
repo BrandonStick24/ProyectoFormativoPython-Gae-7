@@ -1495,7 +1495,7 @@
 
             console.log("🔍 DEBUG - Enviando petición...");
 
-            const response = await fetch('/moderador/enviar-correo-masivo/', {
+            const response = await fetch('/auth/moderador/enviar-correo-masivo/', {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCsrfToken()
