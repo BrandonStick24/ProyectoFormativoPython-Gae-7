@@ -111,31 +111,31 @@
         </div>
     </section>
 
-    <!-- QUICK ACCESS BAR MEJORADO -->
+    <!-- QUICK ACCESS BAR MEJORADO CON IMÁGENES REALES -->
     <section class="vecy-quick-access">
         <div class="container">
             <div class="vecy-quick-grid">
                 <a href="#vecy-budget" class="vecy-quick-item">
                     <div class="vecy-quick-icon budget">
-                        <i class="fas fa-coins"></i>
+                        <img src="https://images.unsplash.com/photo-1607082350899-7e105aa886ae?w=100&h=100&fit=crop" alt="Productos Baratos">
                     </div>
                     <span class="vecy-quick-text">Productos Baratos</span>
                 </a>
                 <a href="#vecy-featured" class="vecy-quick-item">
                     <div class="vecy-quick-icon featured">
-                        <i class="fas fa-star"></i>
+                        <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop" alt="Destacados">
                     </div>
                     <span class="vecy-quick-text">Destacados</span>
                 </a>
                 <a href="#vecy-offers" class="vecy-quick-item">
                     <div class="vecy-quick-icon offers">
-                        <i class="fas fa-tag"></i>
+                        <img src="https://images.unsplash.com/photo-1607082350300-7a0a465c8cad?w=100&h=100&fit=crop" alt="Ofertas">
                     </div>
                     <span class="vecy-quick-text">Ofertas</span>
                 </a>
                 <a href="#vecy-businesses" class="vecy-quick-item">
                     <div class="vecy-quick-icon businesses">
-                        <i class="fas fa-store"></i>
+                        <img src="https://images.unsplash.com/photo-1563017256-6bbcbb073436?w=100&h=100&fit=crop" alt="Negocios">
                     </div>
                     <span class="vecy-quick-text">Negocios</span>
                 </a>
@@ -172,9 +172,8 @@
                         </div>
 
                         <div class="vecy-offer-media">
-                            <!-- IMAGEN ESPECÍFICA DE LA VARIANTE EN OFERTA -->
-                            {% if producto_data.variante.imagen %}
-                            <img src="{{ producto_data.variante.imagen }}" alt="{{ producto_data.variante.nombre }}" class="vecy-offer-image">
+                            {% if producto_data.imagen_producto %}
+                            <img src="{{ producto_data.imagen_producto }}" alt="{{ producto_data.variante.nombre }}" class="vecy-offer-image">
                             {% elif producto_data.producto.img_prod %}
                             <img src="{{ producto_data.producto.img_prod.url }}" alt="{{ producto_data.variante.nombre }}" class="vecy-offer-image">
                             {% else %}
@@ -185,7 +184,6 @@
                         </div>
 
                         <div class="vecy-offer-content">
-                            <!-- SOLO NOMBRE DE LA VARIANTE EN OFERTA -->
                             <h3 class="vecy-offer-title">{{ producto_data.variante.nombre }}</h3>
 
                             <div class="vecy-offer-store">
@@ -208,7 +206,6 @@
                                 Ahorras ${{ producto_data.descuento_monto|floatformat:0 }}
                             </div>
 
-                            <!-- STOCK DE LA VARIANTE ESPECÍFICA -->
                             <div class="vecy-offer-stock">
                                 <div class="vecy-stock-bar">
                                     <div class="vecy-stock-progress"
@@ -233,7 +230,9 @@
                         </div>
 
                         <div class="vecy-offer-media">
-                            {% if producto_data.producto.img_prod %}
+                            {% if producto_data.imagen_producto %}
+                            <img src="{{ producto_data.imagen_producto }}" alt="{{ producto_data.producto.nom_prod }}" class="vecy-offer-image">
+                            {% elif producto_data.producto.img_prod %}
                             <img src="{{ producto_data.producto.img_prod.url }}" alt="{{ producto_data.producto.nom_prod }}" class="vecy-offer-image">
                             {% else %}
                             <div class="vecy-offer-placeholder">
@@ -294,7 +293,7 @@
         </div>
     </section>
 
-    <!-- PRODUCTOS BARATOS CON VARIANTES - CARTA HORIZONTAL CORREGIDA -->
+    <!-- PRODUCTOS BARATOS CON VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
     <section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
         <div class="container">
             <div class="vecy-section-header">
@@ -318,7 +317,7 @@
                 {% with producto=producto_data.producto %}
                 {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
 
-                <!-- COMPONENTE CON VARIANTES REALES - CARTA HORIZONTAL CORREGIDA -->
+                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN CORREGIDA -->
                 {% if producto_data.tiene_variantes and producto_data.variantes %}
                 <div class="product-card-with-variants" data-aos="fade-up" 
                      data-aos-delay="{{ forloop.counter0|add:1 }}00"
@@ -408,9 +407,9 @@
                         </div>
                     </div>
 
-                    <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
+                    <!-- DATOS OCULTOS DE VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
                     <div class="variantes-reales-data" style="display: none;">
-                        <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+                        <!-- PRODUCTO BASE -->
                         <div data-variant 
                              data-variant-id="base"
                              data-variant-name="{{ producto.nom_prod }} - Estándar"
@@ -425,7 +424,7 @@
                              data-is-base="true">
                         </div>
                         
-                        <!-- VARIANTES ADICIONALES - USANDO PRECIOS PRECALCULADOS -->
+                        <!-- VARIANTES ADICIONALES - DATOS ESPECÍFICOS CORREGIDOS -->
                         {% for variante in producto_data.variantes %}
                         <div data-variant 
                              data-variant-id="{{ variante.id_variante }}"
@@ -435,8 +434,8 @@
                              data-variant-stock="{{ variante.stock_variante }}"
                              data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
                              data-variant-precio-final="{{ variante.precio_final_calculado|floatformat:0 }}"
-                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
-                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
                              data-variant-ahorro="{{ variante.ahorro_calculado|default:0 }}"
                              data-is-base="false">
                         </div>
@@ -523,7 +522,7 @@
         </div>
     </section>
 
-    <!-- PRODUCTOS DESTACADOS - CON CARTA HORIZONTAL Y ETIQUETA ESPECIAL -->
+    <!-- PRODUCTOS DESTACADOS - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
     <section id="vecy-featured" class="vecy-section vecy-gradient-bg-2">
         <div class="container">
             <div class="vecy-section-header">
@@ -547,7 +546,7 @@
                 {% with producto=producto_data.producto %}
                 {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
 
-                <!-- COMPONENTE CON VARIANTES REALES - CARTA HORIZONTAL PARA DESTACADOS -->
+                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN CORREGIDA -->
                 {% if producto_data.tiene_variantes and producto_data.variantes %}
                 <div class="product-card-with-variants featured-horizontal-card" data-aos="fade-up" 
                      data-aos-delay="{{ forloop.counter0|add:1 }}00"
@@ -646,9 +645,9 @@
                         </div>
                     </div>
 
-                    <!-- DATOS OCULTOS DE VARIANTES - ESTRUCTURA CORREGIDA -->
+                    <!-- DATOS OCULTOS DE VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
                     <div class="variantes-reales-data" style="display: none;">
-                        <!-- PRODUCTO BASE (SIEMPRE DISPONIBLE) -->
+                        <!-- PRODUCTO BASE -->
                         <div data-variant 
                              data-variant-id="base"
                              data-variant-name="{{ producto.nom_prod }} - Estándar"
@@ -663,7 +662,7 @@
                              data-is-base="true">
                         </div>
                         
-                        <!-- VARIANTES ADICIONALES - USANDO PRECIOS PRECALCULADOS -->
+                        <!-- VARIANTES ADICIONALES - DATOS ESPECÍFICOS CORREGIDOS -->
                         {% for variante in producto_data.variantes %}
                         <div data-variant 
                              data-variant-id="{{ variante.id_variante }}"
@@ -673,8 +672,8 @@
                              data-variant-stock="{{ variante.stock_variante }}"
                              data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
                              data-variant-precio-final="{{ variante.precio_final_calculado|floatformat:0 }}"
-                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
-                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
                              data-variant-ahorro="{{ variante.ahorro_calculado|default:0 }}"
                              data-is-base="false">
                         </div>
@@ -976,6 +975,7 @@
     </section>
     {% endif %}
 </div>
+
 {% include 'carrito_sistema.html' %}
 
 {% endblock %}
@@ -1020,7 +1020,231 @@
         console.log("✅ Scroll suave configurado");
     }
 
-    // Funciones específicas para manejo de variantes
+    // ==================== MANEJO DE VARIANTES CORREGIDO ====================
+
+    function initVariantsHandling() {
+        console.log("🔄 Inicializando manejo de variantes...");
+        
+        document.querySelectorAll('.product-card-with-variants').forEach(card => {
+            const productId = card.getAttribute('data-product-id');
+            const variantsContainer = card.querySelector('.variantes-reales-data');
+            const variants = variantsContainer.querySelectorAll('[data-variant]');
+            
+            if (variants.length > 0) {
+                generateVariantThumbnails(card, variants);
+                selectFirstAvailableVariant(card, variants);
+            }
+        });
+        
+        console.log("✅ Manejo de variantes inicializado");
+    }
+
+    function generateVariantThumbnails(card, variants) {
+        const productId = card.getAttribute('data-product-id');
+        const variantsGrid = card.querySelector(`#variantsGrid-${productId}`);
+        
+        if (!variantsGrid) return;
+        
+        variantsGrid.innerHTML = '';
+        
+        variants.forEach(variant => {
+            const variantId = variant.getAttribute('data-variant-id');
+            const variantName = variant.getAttribute('data-variant-name');
+            const variantStock = parseInt(variant.getAttribute('data-variant-stock'));
+            const variantImage = variant.getAttribute('data-variant-image');
+            const tieneDescuento = variant.getAttribute('data-variant-tiene-descuento') === 'true';
+            const descuentoPorcentaje = variant.getAttribute('data-variant-descuento-porcentaje');
+            
+            if (variantStock > 0) {
+                const variantThumb = document.createElement('div');
+                variantThumb.className = 'variant-thumb';
+                variantThumb.setAttribute('data-variant-id', variantId);
+                variantThumb.setAttribute('data-product-id', productId);
+                
+                let thumbContent = `
+                    <div class="variant-thumb-content">
+                        <div class="variant-image">
+                            <img src="${variantImage}" alt="${variantName}">
+                        </div>
+                        <div class="variant-info">
+                            <span class="variant-name">${variantName}</span>
+                `;
+                
+                if (tieneDescuento && descuentoPorcentaje > 0) {
+                    thumbContent += `<span class="variant-discount">-${descuentoPorcentaje}%</span>`;
+                }
+                
+                thumbContent += `
+                        </div>
+                    </div>
+                `;
+                
+                variantThumb.innerHTML = thumbContent;
+                
+                variantThumb.addEventListener('click', function() {
+                    selectVariant(this, variants);
+                });
+                
+                variantsGrid.appendChild(variantThumb);
+            }
+        });
+    }
+
+    function selectFirstAvailableVariant(card, variants) {
+        // Buscar primera variante con stock
+        for (let variant of variants) {
+            const variantStock = parseInt(variant.getAttribute('data-variant-stock'));
+            if (variantStock > 0) {
+                const variantId = variant.getAttribute('data-variant-id');
+                const variantThumb = card.querySelector(`[data-variant-id="${variantId}"]`);
+                if (variantThumb) {
+                    selectVariant(variantThumb, variants);
+                    break;
+                }
+            }
+        }
+    }
+
+    function selectVariant(selectedThumb, variants) {
+        const productId = selectedThumb.getAttribute('data-product-id');
+        const variantId = selectedThumb.getAttribute('data-variant-id');
+        
+        // Remover selección anterior
+        selectedThumb.closest('.variants-grid').querySelectorAll('.variant-thumb').forEach(thumb => {
+            thumb.classList.remove('selected');
+        });
+        
+        // Agregar selección actual
+        selectedThumb.classList.add('selected');
+        
+        // Encontrar datos de la variante seleccionada
+        const selectedVariant = Array.from(variants).find(v => 
+            v.getAttribute('data-variant-id') === variantId
+        );
+        
+        if (selectedVariant) {
+            updateProductDisplay(productId, selectedVariant);
+        }
+    }
+
+    function updateProductDisplay(productId, variant) {
+    const variantName = variant.getAttribute('data-variant-name');
+    const variantImage = variant.getAttribute('data-variant-image');
+    const variantPrice = variant.getAttribute('data-variant-price');
+    const variantFinalPrice = variant.getAttribute('data-variant-precio-final');
+    const variantStock = variant.getAttribute('data-variant-stock');
+    const tieneDescuento = variant.getAttribute('data-variant-tiene-descuento') === 'true';
+    const descuentoPorcentaje = variant.getAttribute('data-variant-descuento-porcentaje');
+    const ahorro = variant.getAttribute('data-variant-ahorro');
+    
+    // Actualizar imagen principal
+    const mainImage = document.getElementById(`mainProductImage-${productId}`);
+    if (mainImage) mainImage.src = variantImage;
+    
+    const mainImageFeatured = document.getElementById(`mainProductImage-featured-${productId}`);
+    if (mainImageFeatured) mainImageFeatured.src = variantImage;
+    
+    // ACTUALIZAR TÍTULO DEL PRODUCTO - CORRECCIÓN CLAVE
+    const productTitle = document.getElementById(`productTitle-${productId}`);
+    if (productTitle) productTitle.textContent = variantName;
+    
+    const productTitleFeatured = document.getElementById(`productTitle-featured-${productId}`);
+    if (productTitleFeatured) productTitleFeatured.textContent = variantName;
+    
+    // Actualizar precio
+    const priceElement = document.getElementById(`price-${productId}`);
+    if (priceElement) {
+        priceElement.textContent = `$${parseFloat(variantFinalPrice).toFixed(0)}`;
+        
+        // Actualizar precio original si hay descuento
+        const originalPriceElement = priceElement.nextElementSibling;
+        if (originalPriceElement && originalPriceElement.classList.contains('vecy-original-price')) {
+            if (tieneDescuento) {
+                originalPriceElement.textContent = `$${parseFloat(variantPrice).toFixed(0)}`;
+                originalPriceElement.style.display = 'inline';
+            } else {
+                originalPriceElement.style.display = 'none';
+            }
+        }
+    }
+    
+    const priceFeaturedElement = document.getElementById(`price-featured-${productId}`);
+    if (priceFeaturedElement) {
+        priceFeaturedElement.textContent = `$${parseFloat(variantFinalPrice).toFixed(0)}`;
+        
+        // Actualizar precio original si hay descuento
+        const originalPriceFeatured = priceFeaturedElement.nextElementSibling;
+        if (originalPriceFeatured && originalPriceFeatured.classList.contains('vecy-original-price')) {
+            if (tieneDescuento) {
+                originalPriceFeatured.textContent = `$${parseFloat(variantPrice).toFixed(0)}`;
+                originalPriceFeatured.style.display = 'inline';
+            } else {
+                originalPriceFeatured.style.display = 'none';
+            }
+        }
+    }
+    
+    // Actualizar información de stock
+    const stockInfo = document.getElementById(`stockInfo-${productId}`);
+    if (stockInfo) stockInfo.textContent = `${variantStock} disponibles`;
+    
+    const stockInfoFeatured = document.getElementById(`stockInfo-featured-${productId}`);
+    if (stockInfoFeatured) stockInfoFeatured.textContent = `${variantStock} disponibles`;
+    
+    // Actualizar badge de ahorro si existe
+    const savingsBadge = document.querySelector(`#price-${productId}`).closest('.vecy-price-section').querySelector('.vecy-savings-badge');
+    if (savingsBadge) {
+        if (tieneDescuento && descuentoPorcentaje > 0) {
+            savingsBadge.innerHTML = `-${parseFloat(descuentoPorcentaje).toFixed(0)}% • Ahorras $${parseFloat(ahorro).toFixed(0)}`;
+            savingsBadge.style.display = 'block';
+        } else {
+            savingsBadge.style.display = 'none';
+        }
+    }
+    
+    const savingsBadgeFeatured = document.querySelector(`#price-featured-${productId}`).closest('.vecy-price-section').querySelector('.vecy-savings-badge');
+    if (savingsBadgeFeatured) {
+        if (tieneDescuento && descuentoPorcentaje > 0) {
+            savingsBadgeFeatured.innerHTML = `-${parseFloat(descuentoPorcentaje).toFixed(0)}% • Ahorras $${parseFloat(ahorro).toFixed(0)}`;
+            savingsBadgeFeatured.style.display = 'block';
+        } else {
+            savingsBadgeFeatured.style.display = 'none';
+        }
+    }
+    
+    // Actualizar botón de carrito
+    const addToCartBtn = document.getElementById(`addToCartBtn-${productId}`);
+    if (addToCartBtn) {
+        addToCartBtn.setAttribute('data-selected-variant', variantId);
+    }
+    
+    const addToCartBtnFeatured = document.getElementById(`addToCartBtn-featured-${productId}`);
+    if (addToCartBtnFeatured) {
+        addToCartBtnFeatured.setAttribute('data-selected-variant', variantId);
+    }
+    
+    console.log(`✅ Variante actualizada: ${variantName} - Precio: $${variantFinalPrice}`);
+}
+
+    // ==================== FUNCIONES DE CARRITO CORREGIDAS ====================
+
+    function addToCartWithVariant(productId) {
+        const card = document.querySelector(`[data-product-id="${productId}"]`);
+        if (!card) {
+            addToCart(productId);
+            return;
+        }
+        
+        const selectedThumb = card.querySelector('.variant-thumb.selected');
+        if (!selectedThumb) {
+            vecyShowNotification('Por favor selecciona una opción', 'warning');
+            return;
+        }
+        
+        const variantId = selectedThumb.getAttribute('data-variant-id');
+        addToCartWithSpecificVariant(productId, variantId);
+    }
+
     function addToCartWithSpecificVariant(productId, variantId) {
         console.log(`Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
         
@@ -1053,11 +1277,51 @@
         });
     }
 
+    function addToCart(productId) {
+        console.log(`Agregando producto base al carrito: ${productId}`);
+        
+        fetch('{% url "agregar_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                producto_id: productId,
+                cantidad: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                vecyShowNotification(data.message, 'success');
+                if (data.carrito_count !== undefined) {
+                    updateCartCount(data.carrito_count);
+                }
+            } else {
+                vecyShowNotification(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            vecyShowNotification('Error al agregar al carrito', 'error');
+        });
+    }
+
+    function addToFavorites(productId) {
+        vecyShowNotification('Producto agregado a favoritos', 'success');
+    }
+
     function quickView(productId) {
         vecyShowNotification('Función de vista rápida para producto: ' + productId, 'info');
     }
 
-    // Función de utilidad para mostrar notificaciones
+    function showVariantsModal(productId) {
+        vecyShowNotification('Mostrando modal de variantes para: ' + productId, 'info');
+    }
+
+    // ==================== FUNCIONES DE UTILIDAD ====================
+
     function vecyShowNotification(message, type = 'info') {
         const Toast = Swal.mixin({
             toast: true,
@@ -1077,7 +1341,6 @@
         });
     }
 
-    // Función para actualizar contador del carrito
     function updateCartCount(count) {
         const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count');
         cartCountElements.forEach(element => {
@@ -1086,14 +1349,16 @@
         });
     }
 
-    // Inicialización completa
+    // ==================== INICIALIZACIÓN COMPLETA ====================
+
     function initVecyCliente() {
         console.log("🚀 INICIANDO VECY CLIENTE");
         
         initAOS();
         initSmoothScroll();
+        initVariantsHandling();
         
-        console.log("✅ VECY CLIENTE INICIALIZADO");
+        console.log("✅ VECY CLIENTE INICIALIZADO COMPLETAMENTE");
     }
 
     // Ejecutar inicialización

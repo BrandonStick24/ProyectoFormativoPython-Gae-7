@@ -42,4 +42,7 @@ urlpatterns = [
     path('categoria/<int:categoria_id>/', views_cliente.productos_por_categoria, name='productos_por_categoria'),
     # Productos filtrados (logueado)
     path('productos-filtrados/', views_cliente.productos_filtrados_logeado, name='productos_filtrados_logeado'),
+    
+    path('chat-asistente/', views_cliente.chat_asistente, name='chat_asistente'),
+    path('api/sugerencia/', views_cliente.api_sugerencia, name='api_sugerencia'),
 ]

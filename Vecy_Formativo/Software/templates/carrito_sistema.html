@@ -1,7 +1,7 @@
-<!-- templates/partials/carrito_sistema.html -->
+MIRALO: <!-- templates/partials/carrito_sistema.html -->
 {% load static %}
 
-<!-- ==================== ESTILOS ==================== -->
+<!-- ==================== ESTILOS INTEGRADOS ==================== -->
 <style>
     /* ESTILOS ESPECÍFICOS PARA VARIANTES EN CARRITO */
     .variant-info-cart {
@@ -231,12 +231,12 @@
         cursor: not-allowed !important;
     }
 
-    /* FLOATING ACTION BUTTONS */
+    /* FLOATING ACTION BUTTONS - MEJORADO */
     .vecy-floating-actions {
         position: fixed;
         bottom: 30px;
         right: 30px;
-        z-index: 1000;
+        z-index: 1050;
     }
     
     .vecy-fab-main {
@@ -253,11 +253,19 @@
         box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
         transition: all 0.3s ease;
         position: relative;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3); }
+        50% { box-shadow: 0 4px 25px rgba(0, 123, 255, 0.5); }
+        100% { box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3); }
     }
     
     .vecy-fab-main:hover {
         transform: scale(1.1);
         box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
+        animation: none;
     }
     
     .vecy-fab-menu {
@@ -547,9 +555,455 @@
         padding-top: 8px;
         margin-top: 8px;
     }
+
+    /* ESTILOS DEL CHAT FLOTANTE - MEJORADOS */
+    .chat-flotante {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 1050;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* BOTÓN FLOTANTE */
+    .chat-btn {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        animation: chatPulse 2s infinite;
+    }
+
+    @keyframes chatPulse {
+        0% { 
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+            transform: scale(1.05);
+        }
+        100% { 
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transform: scale(1);
+        }
+    }
+    
+    .chat-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 25px rgba(0,0,0,0.3);
+        animation: none;
+    }
+    
+    .chat-icon {
+        font-size: 24px;
+        color: white;
+    }
+    
+    .chat-notificacion {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ff4757;
+        color: white;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        display: none;
+        animation: notificationPulse 1.5s infinite;
+    }
+
+    @keyframes notificationPulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+    
+    /* CONTENEDOR DEL CHAT */
+    .chat-container {
+        position: absolute;
+        bottom: 70px;
+        left: 0;
+        width: 350px;
+        height: 500px;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid #e9ecef;
+        transform-origin: bottom left;
+    }
+    
+    .chat-container.abierto {
+        display: flex;
+        animation: chatSlideUp 0.3s ease;
+    }
+    
+    @keyframes chatSlideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+    
+    /* HEADER DEL CHAT */
+    .chat-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .chat-header-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .chat-avatar {
+        font-size: 24px;
+        animation: avatarBounce 2s infinite;
+    }
+
+    @keyframes avatarBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    
+    .chat-header h4 {
+        margin: 0;
+        font-size: 16px;
+    }
+    
+    .chat-header small {
+        opacity: 0.8;
+        font-size: 12px;
+    }
+    
+    .chat-cerrar {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s;
+    }
+    
+    .chat-cerrar:hover {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    /* MENSAJES */
+    .chat-messages {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
+        background: #f8f9fa;
+    }
+    
+    .message {
+        margin: 10px 0;
+        max-width: 80%;
+        padding: 12px 15px;
+        border-radius: 18px;
+        line-height: 1.4;
+        animation: messageFadeIn 0.3s ease;
+    }
+    
+    @keyframes messageFadeIn {
+        from { 
+            opacity: 0; 
+            transform: translateY(10px) scale(0.95);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0) scale(1);
+        }
+    }
+    
+    .bot-message {
+        background: white;
+        border: 1px solid #e9ecef;
+        border-bottom-left-radius: 5px;
+        margin-right: auto;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .user-message {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 5px;
+        margin-left: auto;
+        animation: userMessageSlide 0.3s ease;
+    }
+
+    @keyframes userMessageSlide {
+        from { 
+            opacity: 0; 
+            transform: translateX(20px) scale(0.95);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateX(0) scale(1);
+        }
+    }
+    
+    /* SUGERENCIAS INTERACTIVAS */
+    .sugerencia-navegacion {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        border-radius: 12px;
+        padding: 12px;
+        margin: 10px 0;
+        text-align: center;
+        animation: suggestionFadeIn 0.5s ease;
+    }
+
+    @keyframes suggestionFadeIn {
+        from { 
+            opacity: 0; 
+            transform: translateY(10px);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0);
+        }
+    }
+    
+    .btn-navegar {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 8px;
+        transition: transform 0.2s;
+    }
+    
+    .btn-navegar:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    /* INPUT */
+    .chat-input-container {
+        padding: 15px;
+        background: white;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .input-group {
+        display: flex;
+        gap: 8px;
+    }
+    
+    #chatInput {
+        flex: 1;
+        padding: 12px;
+        border: 2px solid #e9ecef;
+        border-radius: 25px;
+        outline: none;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+    
+    #chatInput:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+    }
+    
+    #chatEnviar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 16px;
+        border-radius: 25px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    #chatEnviar:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    /* TYPING INDICATOR */
+    .typing-indicator {
+        padding: 10px 15px;
+        color: #6c757d;
+        font-style: italic;
+        font-size: 12px;
+        display: none;
+        animation: typingPulse 1.5s infinite;
+    }
+
+    @keyframes typingPulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+    }
+    
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        .vecy-floating-actions {
+            bottom: 20px;
+            right: 20px;
+        }
+        
+        .chat-flotante {
+            bottom: 20px;
+            left: 20px;
+        }
+        
+        .chat-container {
+            width: 300px;
+            height: 400px;
+        }
+        
+        .vecy-cart-offcanvas, .vecy-pedidos-offcanvas {
+            width: 90vw;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .chat-container {
+            width: 280px;
+            height: 380px;
+        }
+        
+        .vecy-floating-actions {
+            bottom: 15px;
+            right: 15px;
+        }
+        
+        .chat-flotante {
+            bottom: 15px;
+            left: 15px;
+        }
+    }
+
+    /* Estilos para elementos deshabilitados */
+    .metodo-pago-card.disabled {
+        opacity: 0.5;
+        cursor: not-allowed !important;
+        background-color: #f8f9fa;
+    }
+
+    .metodo-pago-card.disabled:hover {
+        border-color: #e9ecef !important;
+        background-color: #f8f9fa !important;
+        transform: none !important;
+    }
+
+    .metodo-pago-card.disabled .metodo-pago-header,
+    .metodo-pago-card.disabled .metodo-pago-body {
+        pointer-events: none;
+    }
+
+    /* Estilos para formularios activos */
+    .formulario-pago {
+        display: none;
+    }
+
+    .formulario-pago.active {
+        display: block;
+        animation: formSlideDown 0.3s ease;
+    }
+
+    @keyframes formSlideDown {
+        from { 
+            opacity: 0; 
+            transform: translateY(-10px);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0);
+        }
+    }
+
+    /* Estilos para el resumen de anticipo */
+    .linea-pago {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0;
+    }
+
+    .linea-pago.total {
+        border-top: 1px solid #dee2e6;
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+        font-weight: bold;
+    }
 </style>
 
 <!-- ==================== HTML COMPONENTS ==================== -->
+
+<!-- CHAT FLOTANTE VECY -->
+<div id="chatFlotante" class="chat-flotante">
+    <!-- Botón flotante -->
+    <div id="chatBtn" class="chat-btn">
+        <span class="chat-icon">💬</span>
+        <span class="chat-notificacion" id="chatNotificacion"></span>
+    </div>
+    
+    <!-- Contenedor del chat -->
+    <div id="chatContainer" class="chat-container">
+        <!-- Header del chat -->
+        <div class="chat-header">
+            <div class="chat-header-info">
+                <span class="chat-avatar">🤖</span>
+                <div>
+                    <h4>Asistente Vecy</h4>
+                    <small>En línea</small>
+                </div>
+            </div>
+            <button id="chatCerrar" class="chat-cerrar">×</button>
+        </div>
+        
+        <!-- Mensajes -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                ¡Hola! 👋 Soy tu asistente Vecy. ¿En qué puedo ayudarte?
+            </div>
+        </div>
+        
+        <!-- Input -->
+        <div class="chat-input-container">
+            <div class="input-group">
+                <input type="text" id="chatInput" placeholder="Escribe tu mensaje..." autocomplete="off">
+                <button id="chatEnviar">➤</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- FLOATING ACTION BUTTONS -->
 <div class="vecy-floating-actions">
@@ -2276,48 +2730,241 @@ function procederPago() {
         window.vecyCarritoSystem.procederPago();
     }
 }
+
+// ==================== CHAT FLOTANTE VECY - CÓDIGO CORREGIDO ====================
+// VARIABLES GLOBALES
+let chatAbierto = false;
+let historialChat = [];
+
+// ELEMENTOS DEL DOM
+const chatFlotante = document.getElementById('chatFlotante');
+const chatBtn = document.getElementById('chatBtn');
+const chatContainer = document.getElementById('chatContainer');
+const chatCerrar = document.getElementById('chatCerrar');
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+const chatEnviar = document.getElementById('chatEnviar');
+const chatNotificacion = document.getElementById('chatNotificacion');
+
+// FUNCIONES DEL CHAT
+function toggleChat() {
+    chatAbierto = !chatAbierto;
+    
+    if (chatAbierto) {
+        chatContainer.classList.add('abierto');
+        chatInput.focus();
+        ocultarNotificacion();
+    } else {
+        chatContainer.classList.remove('abierto');
+    }
+}
+
+function mostrarNotificacion(mensaje = "1") {
+    chatNotificacion.textContent = mensaje;
+    chatNotificacion.style.display = 'flex';
+}
+
+function ocultarNotificacion() {
+    chatNotificacion.style.display = 'none';
+}
+
+function mostrarMensajeUsuario(texto) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message user-message';
+    msgDiv.textContent = texto;
+    chatMessages.appendChild(msgDiv);
+    scrollToBottom();
+}
+
+function mostrarMensajeBot(respuesta, datosInteractivos = null) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message bot-message';
+    
+    let html = respuesta.replace(/\n/g, '<br>');
+    
+    // Agregar sugerencias de navegación si existen
+    if (datosInteractivos && datosInteractivos.sugerencia_navegacion && 
+        datosInteractivos.sugerencia_navegacion.pagina_recomendada) {
+        
+        const sug = datosInteractivos.sugerencia_navegacion;
+        html += `
+            <div class="sugerencia-navegacion">
+                <strong>📍 ${sug.razon || 'Sugerencia'}</strong>
+                <br>
+                <button class="btn-navegar" onclick="irAPagina('${sug.url_destino}')">
+                    Ir a ${sug.pagina_recomendada} →
+                </button>
+            </div>
+        `;
+    }
+    
+    msgDiv.innerHTML = html;
+    chatMessages.appendChild(msgDiv);
+    scrollToBottom();
+}
+
+function mostrarTyping() {
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'typing-indicator';
+    typingDiv.id = 'typingIndicator';
+    typingDiv.textContent = 'El asistente está escribiendo...';
+    chatMessages.appendChild(typingDiv);
+    scrollToBottom();
+    return typingDiv;
+}
+
+function ocultarTyping(typingElement) {
+    if (typingElement && typingElement.parentNode) {
+        typingElement.parentNode.removeChild(typingElement);
+    }
+}
+
+function scrollToBottom() {
+    setTimeout(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 100);
+}
+
+function irAPagina(url) {
+    window.location.href = url;
+}
+
+// OBTENER CSRF TOKEN - VERSIÓN MEJORADA
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        ?.split('=')[1];
+    
+    if (!cookieValue) {
+        console.warn('❌ No se encontró el token CSRF');
+        // Intentar obtenerlo del meta tag
+        const metaToken = document.querySelector('meta[name="csrf-token"]');
+        return metaToken ? metaToken.getAttribute('content') : '';
+    }
+    
+    return cookieValue;
+}
+
+// ENVIAR MENSAJE - VERSIÓN CORREGIDA
+async function enviarMensaje() {
+    const mensaje = chatInput.value.trim();
+    
+    if (!mensaje) return;
+    
+    // Deshabilitar input temporalmente
+    chatInput.disabled = true;
+    chatEnviar.disabled = true;
+    
+    // Mostrar mensaje del usuario
+    mostrarMensajeUsuario(mensaje);
+    chatInput.value = '';
+    
+    // Mostrar "escribiendo..."
+    const typingElement = mostrarTyping();
+    
+    try {
+        console.log('📤 Enviando mensaje al asistente:', mensaje);
+        
+        const csrfToken = getCSRFToken();
+        console.log('🔐 CSRF Token:', csrfToken ? 'Encontrado' : 'No encontrado');
+        
+        const response = await fetch('/api/sugerencia/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ 
+                mensaje: mensaje,
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        console.log('📥 Respuesta recibida, status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('✅ Datos recibidos:', data);
+        
+        ocultarTyping(typingElement);
+        
+        if (data.success) {
+            mostrarMensajeBot(
+                data.respuesta.respuesta_chat, 
+                data.respuesta
+            );
+        } else {
+            mostrarMensajeBot(`❌ Error: ${data.error || 'Respuesta no exitosa'}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error en el chat:', error);
+        ocultarTyping(typingElement);
+        
+        // Mostrar mensaje de error más específico
+        let mensajeError = '❌ Error de conexión. Intenta de nuevo.';
+        
+        if (error.message.includes('Failed to fetch')) {
+            mensajeError = '❌ No se pudo conectar con el servidor. Verifica tu conexión.';
+        } else if (error.message.includes('HTTP')) {
+            mensajeError = '❌ Error del servidor. Intenta más tarde.';
+        }
+        
+        mostrarMensajeBot(mensajeError);
+    } finally {
+        // Rehabilitar input
+        chatInput.disabled = false;
+        chatEnviar.disabled = false;
+        chatInput.focus();
+    }
+}
+
+// EVENT LISTENERS MEJORADOS
+chatBtn.addEventListener('click', toggleChat);
+chatCerrar.addEventListener('click', toggleChat);
+
+chatEnviar.addEventListener('click', enviarMensaje);
+
+chatInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        enviarMensaje();
+    }
+});
+
+// Cerrar chat al hacer clic fuera (opcional)
+document.addEventListener('click', function(e) {
+    if (chatAbierto && !chatFlotante.contains(e.target)) {
+        toggleChat();
+    }
+});
+
+// Inicializar con más logs
+console.log('💬 Chat flotante Vecy cargado - Con Gemini integrado');
+console.log('🔗 Endpoint configurado: /api/sugerencia/');
+
+// Función para probar la conexión
+async function probarConexionChat() {
+    try {
+        const response = await fetch('/api/sugerencia/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken(),
+            },
+            body: JSON.stringify({ mensaje: 'test' })
+        });
+        console.log('🧪 Test conexión chat:', response.status);
+        return response.ok;
+    } catch (error) {
+        console.error('🧪 Test conexión falló:', error);
+        return false;
+    }
+}
+
+// Ejecutar test al cargar
+setTimeout(probarConexionChat, 1000);
 </script>
-
-<style>
-/* Estilos para elementos deshabilitados */
-.metodo-pago-card.disabled {
-    opacity: 0.5;
-    cursor: not-allowed !important;
-    background-color: #f8f9fa;
-}
-
-.metodo-pago-card.disabled:hover {
-    border-color: #e9ecef !important;
-    background-color: #f8f9fa !important;
-    transform: none !important;
-}
-
-.metodo-pago-card.disabled .metodo-pago-header,
-.metodo-pago-card.disabled .metodo-pago-body {
-    pointer-events: none;
-}
-
-/* Estilos para formularios activos */
-.formulario-pago {
-    display: none;
-}
-
-.formulario-pago.active {
-    display: block;
-}
-
-/* Estilos para el resumen de anticipo */
-.linea-pago {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-    padding: 0.25rem 0;
-}
-
-.linea-pago.total {
-    border-top: 1px solid #dee2e6;
-    padding-top: 0.5rem;
-    margin-top: 0.5rem;
-    font-weight: bold;
-}
-</style>

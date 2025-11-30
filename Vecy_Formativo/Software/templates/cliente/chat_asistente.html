@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asistente Personal - Tu Plataforma</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+        
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        
+        .message {
+            margin: 15px 0;
+            max-width: 80%;
+            padding: 15px;
+            border-radius: 18px;
+            line-height: 1.4;
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .bot-message {
+            background: white;
+            border: 1px solid #e9ecef;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        .sugerencia-navegacion {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .btn-navegar {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        
+        .btn-navegar:hover {
+            transform: translateY(-2px);
+        }
+        
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #userInput {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        
+        #userInput:focus {
+            border-color: #667eea;
+        }
+        
+        #btnEnviar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: transform 0.2s;
+        }
+        
+        #btnEnviar:hover {
+            transform: translateY(-2px);
+        }
+        
+        .typing-indicator {
+            display: none;
+            padding: 15px;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .confianza-baja { border-left: 4px solid #dc3545; }
+        .confianza-media { border-left: 4px solid #ffc107; }
+        .confianza-alta { border-left: 4px solid #28a745; }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 Tu Asistente Personal</h1>
+            <p>Hablo contigo de forma natural y te ayudo a navegar</p>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bot-message">
+                ¡Hola! 👋 Soy tu asistente personal. <br><br>
+                Puedo ayudarte con:<br>
+                • Tu carrito y compras 🛒<br>
+                • Pedidos e historial 📦<br> 
+                • Tu dashboard personal 🚀<br>
+                • Y mucho más...<br><br>
+                ¿En qué puedo ayudarte hoy?
+            </div>
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator">
+            El asistente está escribiendo...
+        </div>
+        
+        <div class="chat-input-container">
+            <div class="input-group">
+                <input type="text" id="userInput" 
+                       placeholder="Escribe tu mensaje aquí... (pregúntame lo que quieras)" 
+                       autocomplete="off">
+                <button id="btnEnviar" onclick="enviarMensaje()">Enviar</button>
+            </div>
+        </div>
+        <!-- SECCIÓN INTERACTIVA - PRODUCTOS Y DATOS -->
+<div id="seccionInteractiva" style="display: none; margin-top: 20px;">
+    <div class="interactive-container">
+        <!-- PRODUCTOS SUGERIDOS -->
+        <div id="productosContainer" class="productos-grid" style="display: none;">
+            <h4>🛍️ Productos sugeridos</h4>
+            <div id="listaProductos" class="row"></div>
+        </div>
+        
+        <!-- CATEGORÍAS -->
+        <div id="categoriasContainer" class="categorias-list" style="display: none;">
+            <h4>📂 Categorías</h4>
+            <div id="listaCategorias"></div>
+        </div>
+        
+        <!-- ACCIONES RÁPIDAS -->
+        <div id="accionesContainer" class="acciones-rapidas" style="display: none;">
+            <h4>⚡ Acciones rápidas</h4>
+            <div id="listaAcciones"></div>
+        </div>
+    </div>
+</div>
+    </div>
+
+    <script>
+        let historialConversacion = [];
+        
+        // Elementos del DOM
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const btnEnviar = document.getElementById('btnEnviar');
+        const typingIndicator = document.getElementById('typingIndicator');
+        
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+        
+        function mostrarMensajeUsuario(texto) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message user-message';
+            msgDiv.textContent = texto;
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        }
+        
+        function mostrarMensajeBot(respuesta, sugerencia = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message bot-message';
+            
+            let html = respuesta.replace(/\n/g, '<br>');
+            
+            // Si hay sugerencia de navegación
+            if (sugerencia && sugerencia.pagina_recomendada) {
+                let confianzaClase = 'confianza-media';
+                if (sugerencia.confianza >= 8) confianzaClase = 'confianza-alta';
+                else if (sugerencia.confianza <= 5) confianzaClase = 'confianza-baja';
+                
+                html += `
+                    <div class="sugerencia-navegacion ${confianzaClase}">
+                        <strong>📍 Sugerencia de navegación</strong><br>
+                        <small>Confianza: ${sugerencia.confianza}/10</small><br>
+                        <button class="btn-navegar" onclick="irAPagina('${sugerencia.url_destino}')">
+                            Ir a ${sugerencia.pagina_recomendada} →
+                        </button>
+                    </div>
+                `;
+            }
+            
+            msgDiv.innerHTML = html;
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        }
+        
+        function mostrarError(mensaje) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message bot-message';
+            errorDiv.style.background = '#f8d7da';
+            errorDiv.style.borderColor = '#f5c6cb';
+            errorDiv.innerHTML = `❌ ${mensaje}`;
+            chatMessages.appendChild(errorDiv);
+            scrollToBottom();
+        }
+        
+        function mostrarEscribiendo() {
+            typingIndicator.style.display = 'block';
+            scrollToBottom();
+        }
+        
+        function ocultarEscribiendo() {
+            typingIndicator.style.display = 'none';
+        }
+        
+        function scrollToBottom() {
+            setTimeout(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }, 100);
+        }
+        
+        async function enviarMensaje() {
+            const mensaje = userInput.value.trim();
+            
+            if (!mensaje) return;
+            
+            // Deshabilitar input temporalmente
+            userInput.disabled = true;
+            btnEnviar.disabled = true;
+            
+            // Mostrar mensaje del usuario
+            mostrarMensajeUsuario(mensaje);
+            userInput.value = '';
+            
+            // Mostrar "escribiendo..."
+            mostrarEscribiendo();
+            
+            try {
+                const response = await fetch('/api/sugerencia/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken(),
+                    },
+                    body: JSON.stringify({ mensaje: mensaje })
+                });
+                
+                const data = await response.json();
+                ocultarEscribiendo();
+                
+                if (data.success) {
+                    const respuesta = data.respuesta;
+                    mostrarMensajeBot(
+                        respuesta.respuesta_chat, 
+                        respuesta.sugerencia_navegacion.pagina_recomendada ? 
+                        respuesta.sugerencia_navegacion : null
+                    );
+                } else {
+                    mostrarError(data.error);
+                }
+                
+            } catch (error) {
+                ocultarEscribiendo();
+                mostrarError('¡Ups! Hubo un problema de conexión. Intenta de nuevo.');
+                console.error('Error:', error);
+            } finally {
+                // Rehabilitar input
+                userInput.disabled = false;
+                btnEnviar.disabled = false;
+                userInput.focus();
+            }
+        }
+        
+        function irAPagina(url) {
+            window.location.href = url;
+        }
+        
+        // Event listeners
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                enviarMensaje();
+            }
+        });
+        
+        // Focus al input al cargar
+        window.addEventListener('load', function() {
+            userInput.focus();
+        });
+    </script>
+</body>
+</html>
