@@ -218,6 +218,36 @@
         .contenedor-logo:hover {
             transform: scale(1.05);
         }
+        /* Estilos para días de servicio */
+        .dias-servicio-container .btn-dia-servicio {
+            transition: all 0.3s ease;
+            border-width: 2px;
+        }
+
+        .dias-servicio-container .btn-dia-servicio:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .dias-seleccionados-container .badge {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+        }
+
+        .btn-close-custom {
+            font-size: 0.7rem;
+            padding: 0.2rem;
+            margin-left: 0.5rem;
+        }
+
+        /* Estado visual para días no laborales */
+        .estado-no-laboral {
+            background-color: #f8f9fa;
+            border-left: 4px solid #6c757d;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            color: #6c757d;
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
@@ -496,6 +526,70 @@
                                 <small class="text-muted">
                                     El negocio se abrirá y cerrará automáticamente según los horarios establecidos.
                                 </small>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calendar-alt me-2"></i>Días de Servicio
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="formDiasServicio">
+                                <div class="mb-3">
+                                    <label class="form-label">Selecciona los días que atiende tu negocio:</label>
+                                    <div class="dias-servicio-container">
+                                        <div class="row g-2">
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="lunes">
+                                                    <i class="fas fa-calendar-day me-1"></i>Lunes
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="martes">
+                                                    <i class="fas fa-calendar-day me-1"></i>Martes
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="miercoles">
+                                                    <i class="fas fa-calendar-day me-1"></i>Miércoles
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="jueves">
+                                                    <i class="fas fa-calendar-day me-1"></i>Jueves
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="viernes">
+                                                    <i class="fas fa-calendar-day me-1"></i>Viernes
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="sabado">
+                                                    <i class="fas fa-calendar-day me-1"></i>Sábado
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 col-sm-6">
+                                                <button type="button" class="btn btn-outline-primary w-100 btn-dia-servicio" data-dia="domingo">
+                                                    <i class="fas fa-calendar-day me-1"></i>Domingo
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">
+                                        Los clientes podrán ver los días en los que tu negocio está abierto
+                                    </small>
+                                </div>
+                                
+                                <div class="dias-seleccionados-container mt-3">
+                                    <h6 class="text-muted">Días seleccionados:</h6>
+                                    <div id="listaDiasSeleccionados" class="d-flex flex-wrap gap-2">
+                                        <!-- Los días seleccionados aparecerán aquí -->
+                                    </div>
+                                </div>
                             </form>
                         </div>
                     </div>

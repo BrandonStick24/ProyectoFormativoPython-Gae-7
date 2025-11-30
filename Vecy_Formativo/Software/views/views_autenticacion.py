@@ -352,7 +352,7 @@ def registro_usuario(request):
                     doc_user=doc_user,
                     fechanac_user=fecha_nac,
                     estado_user='activo',
-                    fecha_creacion=timezone.now()
+                    fecha_creacion=timezone.localtime(timezone.now())
                 )
                 
                 rol = Roles.objects.get(pk=rol_id)
@@ -370,7 +370,7 @@ def registro_usuario(request):
                         fktiponeg_neg_id=tipo_negocio_id,  # CAMBIO: Usar fktiponeg_neg
                         fkpropietario_neg=perfil,
                         estado_neg='activo',
-                        fechacreacion_neg=timezone.now(),
+                        fechacreacion_neg=timezone.localtime(timezone.now()),
                         img_neg=img_neg
                     )
                 
@@ -432,7 +432,7 @@ def recuperar_contrasena(request):
             
             codigo_verificacion = ''.join(random.choices(string.digits, k=6))
             
-            ahora = timezone.now()
+            ahora = timezone.localtime(timezone.now())
             request.session['codigo_recuperacion'] = codigo_verificacion
             request.session['usuario_recuperacion_id'] = user.id
             request.session['correo_recuperacion'] = correo
@@ -493,7 +493,7 @@ def verificar_codigo(request):
     
     codigo_timestamp = request.session.get('codigo_timestamp')
     if codigo_timestamp:
-        tiempo_expiracion = timezone.now() - timezone.datetime.fromisoformat(codigo_timestamp)
+        tiempo_expiracion = timezone.localtime(timezone.now()) - timezone.datetime.fromisoformat(codigo_timestamp)
         if tiempo_expiracion.total_seconds() > 900:
             messages.error(request, "El código de verificación ha expirado.")
             del request.session['codigo_recuperacion']

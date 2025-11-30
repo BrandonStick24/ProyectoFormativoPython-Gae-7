@@ -3046,3 +3046,187 @@ def obtener_estado_apertura(request):
     except Exception as e:
         print(f"❌ Error obteniendo estado apertura: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)})
+    
+# ==================== GESTIÓN DE DÍAS DE SERVICIO ====================
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_dias_servicio(request):
+    """Vista para actualizar los días de servicio del negocio"""
+    try:
+        # Obtener datos del JSON
+        data = json.loads(request.body)
+        dias_servicio = data.get('dias_servicio', [])
+        
+        # Validar que sean días válidos
+        dias_validos = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        for dia in dias_servicio:
+            if dia not in dias_validos:
+                return JsonResponse({'success': False, 'error': f'Día inválido: {dia}'})
+        
+        # Obtener datos del vendedor
+        datos = obtener_datos_vendedor(request)
+        if not datos or not datos.get('negocio_activo'):
+            return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+        
+        negocio = datos['negocio_activo']
+        
+        # Actualizar los días de servicio en la BD
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE negocios 
+                SET dias_servicio = %s 
+                WHERE pkid_neg = %s AND fkpropietario_neg = %s
+            """, [json.dumps(dias_servicio), negocio.pkid_neg, datos['perfil'].id])
+            
+            # Verificar que se actualizó
+            cursor.execute("""
+                SELECT dias_servicio FROM negocios 
+                WHERE pkid_neg = %s
+            """, [negocio.pkid_neg])
+            
+            resultado = cursor.fetchone()
+            if resultado:
+                dias_guardados = json.loads(resultado[0]) if resultado[0] else []
+                print(f"✅ Días de servicio actualizados: {negocio.nom_neg} -> {dias_guardados}")
+                return JsonResponse({
+                    'success': True, 
+                    'dias_actualizados': dias_guardados,
+                    'message': f'Días de servicio actualizados: {len(dias_guardados)} días'
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'No se pudieron actualizar los días de servicio'})
+                
+    except Exception as e:
+        print(f"❌ Error actualizando días de servicio: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required(login_url='login')
+def obtener_dias_servicio(request):
+    """Vista para obtener los días de servicio del negocio"""
+    try:
+        datos = obtener_datos_vendedor(request)
+        if not datos or not datos.get('negocio_activo'):
+            return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener los días de servicio desde la BD
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT dias_servicio FROM negocios 
+                WHERE pkid_neg = %s
+            """, [negocio.pkid_neg])
+            
+            resultado = cursor.fetchone()
+            if resultado:
+                dias_servicio = json.loads(resultado[0]) if resultado[0] else []
+                return JsonResponse({
+                    'success': True, 
+                    'dias_servicio': dias_servicio,
+                    'negocio': negocio.nom_neg
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'Negocio no encontrado'})
+                
+    except Exception as e:
+        print(f"❌ Error obteniendo días de servicio: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required(login_url='login')
+@require_http_methods(["POST"])
+@csrf_exempt
+def actualizar_horarios(request):
+    """Vista para actualizar los horarios automáticos del negocio"""
+    try:
+        # Obtener datos del JSON
+        data = json.loads(request.body)
+        horario_apertura = data.get('horario_apertura')
+        horario_cierre = data.get('horario_cierre')
+        programacion_automatica = data.get('programacion_automatica', False)
+        
+        print(f"🕐 DEBUG actualizar_horarios: {horario_apertura} - {horario_cierre} - {programacion_automatica}")
+        
+        # Validar horarios
+        if not horario_apertura or not horario_cierre:
+            return JsonResponse({'success': False, 'error': 'Horarios incompletos'})
+        
+        # Obtener datos del vendedor
+        datos = obtener_datos_vendedor(request)
+        if not datos or not datos.get('negocio_activo'):
+            return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+        
+        negocio = datos['negocio_activo']
+        
+        # Actualizar los horarios en la BD
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                UPDATE negocios 
+                SET horario_apertura_auto = %s, 
+                    horario_cierre_auto = %s,
+                    programacion_automatica = %s
+                WHERE pkid_neg = %s AND fkpropietario_neg = %s
+            """, [horario_apertura, horario_cierre, programacion_automatica, negocio.pkid_neg, datos['perfil'].id])
+            
+            # Verificar que se actualizó
+            cursor.execute("""
+                SELECT horario_apertura_auto, horario_cierre_auto, programacion_automatica 
+                FROM negocios 
+                WHERE pkid_neg = %s
+            """, [negocio.pkid_neg])
+            
+            resultado = cursor.fetchone()
+            if resultado:
+                print(f"✅ Horarios actualizados: {negocio.nom_neg} -> Apertura: {resultado[0]}, Cierre: {resultado[1]}, Auto: {resultado[2]}")
+                return JsonResponse({
+                    'success': True, 
+                    'horario_apertura': resultado[0],
+                    'horario_cierre': resultado[1],
+                    'programacion_automatica': resultado[2],
+                    'message': 'Horarios guardados correctamente'
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'No se pudieron actualizar los horarios'})
+                
+    except Exception as e:
+        print(f"❌ Error actualizando horarios: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@login_required(login_url='login')
+def obtener_horarios(request):
+    """Vista para obtener los horarios automáticos del negocio"""
+    try:
+        datos = obtener_datos_vendedor(request)
+        if not datos or not datos.get('negocio_activo'):
+            return JsonResponse({'success': False, 'error': 'No tienes un negocio activo.'})
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener los horarios desde la BD
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT horario_apertura_auto, horario_cierre_auto, programacion_automatica 
+                FROM negocios 
+                WHERE pkid_neg = %s
+            """, [negocio.pkid_neg])
+            
+            resultado = cursor.fetchone()
+            if resultado:
+                horario_apertura = resultado[0].strftime('%H:%M') if resultado[0] else '08:00'
+                horario_cierre = resultado[1].strftime('%H:%M') if resultado[1] else '18:00'
+                programacion_automatica = bool(resultado[2]) if resultado[2] is not None else False
+                
+                return JsonResponse({
+                    'success': True, 
+                    'horario_apertura': horario_apertura,
+                    'horario_cierre': horario_cierre,
+                    'programacion_automatica': programacion_automatica,
+                    'negocio': negocio.nom_neg
+                })
+            else:
+                return JsonResponse({'success': False, 'error': 'Negocio no encontrado'})
+                
+    except Exception as e:
+        print(f"❌ Error obteniendo horarios: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)})

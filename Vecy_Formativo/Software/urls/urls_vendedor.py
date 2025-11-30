@@ -1,4 +1,5 @@
 # Software/urls/urls_vendedor.py
+from django import views
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
@@ -77,6 +78,11 @@ urlpatterns = [
     # apertura
     path('vendedor/actualizar-estado-apertura/', vendedor_views.actualizar_estado_apertura, name='actualizar_estado_apertura'),
     path('vendedor/obtener-estado-apertura/', vendedor_views.obtener_estado_apertura, name='obtener_estado_apertura'),
+
+    path('vendedor/actualizar-dias-servicio/', vendedor_views.actualizar_dias_servicio, name='actualizar_dias_servicio'),
+    path('vendedor/obtener-dias-servicio/', vendedor_views.obtener_dias_servicio, name='obtener_dias_servicio'),
+    path('vendedor/actualizar-horarios/', vendedor_views.actualizar_horarios, name='actualizar_horarios'),
+    path('vendedor/obtener-horarios/', vendedor_views.obtener_horarios, name='obtener_horarios'),
        
 ]
 
