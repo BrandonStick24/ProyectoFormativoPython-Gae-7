@@ -26,6 +26,7 @@ urlpatterns = [
     
     # ==================== APIs MODERADOR - CORREOS ====================
     path('moderador/enviar-correo-masivo/', views_moderador.enviar_correo_masivo, name='enviar_correo_masivo'),
+    path('moderador/api/usuarios-correos/', views_moderador.api_usuarios_correos, name='api_usuarios_correos'),
 ]
 
 if settings.DEBUG:

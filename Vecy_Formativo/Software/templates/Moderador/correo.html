@@ -4,7 +4,8 @@
 {% block title %}Enviar Correos{% endblock %}
 
 {% block content %}
-{% csrf_token %}
+<!-- CSRF Token en formulario oculto -->
+<form id="emailForm" style="display: none;">{% csrf_token %}</form>
 
 <div class="email-composer-wrapper">
     <div class="email-composer">
@@ -74,26 +75,26 @@
 
                 <div class="recipients-container" id="recipientsList">
                     {% if usuarios %}
-                        {% for usuario in usuarios %}
-                        <div class="recipient-item" data-user-id="{{ usuario.id }}" data-role="{{ usuario.rol }}">
-                            <input type="checkbox" class="recipient-checkbox" id="recipient-{{ usuario.id }}" 
-                                data-user-id="{{ usuario.id }}">
-                            <div class="recipient-avatar">{{ usuario.nombre|slice:":2"|upper }}</div>
-                            <div class="recipient-info">
-                                <div class="recipient-name">{{ usuario.nombre }}</div>
-                                <div class="recipient-details">
-                                    <span class="recipient-email">{{ usuario.email }}</span>
-                                    <span class="recipient-doc">• {{ usuario.documento }}</span>
-                                </div>
+                    {% for usuario in usuarios %}
+                    <div class="recipient-item" data-user-id="{{ usuario.id }}" data-role="{{ usuario.rol }}">
+                        <input type="checkbox" class="recipient-checkbox" id="recipient-{{ usuario.id }}"
+                            data-user-id="{{ usuario.id }}">
+                        <div class="recipient-avatar">{{ usuario.nombre|slice:":2"|upper }}</div>
+                        <div class="recipient-info">
+                            <div class="recipient-name">{{ usuario.nombre }}</div>
+                            <div class="recipient-details">
+                                <span class="recipient-email">{{ usuario.email }}</span>
+                                <span class="recipient-doc">• {{ usuario.documento }}</span>
                             </div>
-                            <div class="recipient-badge {{ usuario.rol|lower }}">{{ usuario.rol }}</div>
                         </div>
-                        {% endfor %}
+                        <div class="recipient-badge {{ usuario.rol|lower }}">{{ usuario.rol }}</div>
+                    </div>
+                    {% endfor %}
                     {% else %}
-                        <div class="no-results">
-                            <i class="fas fa-users"></i>
-                            <div>No se encontraron usuarios</div>
-                        </div>
+                    <div class="no-results">
+                        <i class="fas fa-users"></i>
+                        <div>No se encontraron usuarios</div>
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -158,7 +159,7 @@
                             <span>Archivos Adjuntos</span>
                         </label>
                         <div class="file-upload-section">
-                            <input type="file" class="file-input" id="fileInput" multiple 
+                            <input type="file" class="file-input" id="fileInput" multiple
                                 accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.txt,.xls,.xlsx">
                             <label for="fileInput" class="file-upload-label">
                                 <i class="fas fa-cloud-upload-alt"></i>
@@ -763,7 +764,6 @@
         gap: 10px;
         color: var(--dark);
         transition: all 0.3s;
-        pointer-events: none; /* IMPORTANTE: Evita conflictos de eventos */
     }
 
     .file-upload-label:hover {
@@ -1043,7 +1043,7 @@
     function updateCharacterCount() {
         const messageDiv = document.getElementById('emailMessage');
         let text = '';
-        
+
         // Manejar tanto innerHTML como textContent para contenteditable
         if (messageDiv.innerHTML === '<br>' || messageDiv.innerHTML.trim() === '') {
             text = '';
@@ -1053,12 +1053,12 @@
             tempDiv.innerHTML = messageDiv.innerHTML;
             text = tempDiv.textContent || tempDiv.innerText || '';
         }
-        
+
         characterCount.textContent = `${text.length} caracteres`;
     }
 
     // Inicializar la aplicación
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         setupEventListeners();
         setupFiltering();
         setupFileUpload();
@@ -1068,7 +1068,7 @@
     // Configurar event listeners
     function setupEventListeners() {
         // Búsqueda
-        document.getElementById('searchUsers').addEventListener('input', function() {
+        document.getElementById('searchUsers').addEventListener('input', function () {
             currentSearch = this.value.toLowerCase();
             const clearButton = document.getElementById('clearSearch');
 
@@ -1082,7 +1082,7 @@
         });
 
         // Limpiar búsqueda
-        document.getElementById('clearSearch').addEventListener('click', function() {
+        document.getElementById('clearSearch').addEventListener('click', function () {
             document.getElementById('searchUsers').value = '';
             currentSearch = '';
             this.style.display = 'none';
@@ -1091,7 +1091,7 @@
 
         // Filtros por rol
         document.querySelectorAll('.role-filter-btn').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 document.querySelectorAll('.role-filter-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
@@ -1129,14 +1129,14 @@
 
         // Validación de formulario
         document.getElementById('emailSubject').addEventListener('input', updateSendButton);
-        document.getElementById('emailMessage').addEventListener('input', function() {
+        document.getElementById('emailMessage').addEventListener('input', function () {
             updateSendButton();
             updateCharacterCount(); // CORREGIDO: Llamar a la función definida
         });
 
         // Barra de herramientas de formato
         document.querySelectorAll('.format-btn').forEach(button => {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 const command = this.getAttribute('data-command');
                 document.execCommand(command, false, null);
                 document.getElementById('emailMessage').focus();
@@ -1153,16 +1153,7 @@
 
     // Configurar carga de archivos - VERSIÓN CORREGIDA
     function setupFileUpload() {
-        // Click en el área de carga - VERSIÓN CORREGIDA
-        fileUploadSection.addEventListener('click', (e) => {
-            // Solo activar el input de archivo si se hace clic directamente en el área de carga
-            // y no en elementos hijos (especialmente el label)
-            if (e.target === fileUploadSection) {
-                fileInput.click();
-            }
-        });
-
-        // Cambio en la selección de archivos
+        // Solo el input file maneja los clics
         fileInput.addEventListener('change', handleFileSelect);
 
         // Drag and drop
@@ -1183,13 +1174,8 @@
             handleFiles(files);
         });
 
-        // CORRECCIÓN: Permitir que el label funcione correctamente
-        const fileUploadLabel = document.querySelector('.file-upload-label');
-        fileUploadLabel.addEventListener('click', (e) => {
-            // Prevenir que el evento se propague al contenedor padre
-            e.stopPropagation();
-            fileInput.click();
-        });
+        // El label ya está asociado al input via "for" attribute
+        // No necesitamos manejar su click manualmente
     }
 
     // Manejar selección de archivos
@@ -1202,7 +1188,7 @@
     function handleFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            
+
             // Validar tamaño máximo (10MB)
             if (file.size > 10 * 1024 * 1024) {
                 showAlert(`El archivo "${file.name}" es demasiado grande. Máximo 10MB.`, 'error');
@@ -1243,10 +1229,10 @@
     function addFileToList(file) {
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
-        
+
         const fileSize = formatFileSize(file.size);
         const fileIcon = getFileIcon(file.type);
-        
+
         fileItem.innerHTML = `
             <div class="file-info">
                 <div class="file-icon">
@@ -1308,7 +1294,7 @@
     function setupUserSelection() {
         document.querySelectorAll('.recipient-item').forEach(item => {
             const checkbox = item.querySelector('.recipient-checkbox');
-            
+
             item.addEventListener('click', (e) => {
                 if (e.target !== checkbox) {
                     checkbox.checked = !checkbox.checked;
@@ -1325,13 +1311,13 @@
     // Actualizar selección de usuario
     function updateUserSelection(checkbox) {
         const userId = checkbox.getAttribute('data-user-id');
-        
+
         if (checkbox.checked) {
             selectedUsers.add(userId);
         } else {
             selectedUsers.delete(userId);
         }
-        
+
         updateSelectionCount();
         updateSendButton();
         updateRecipientItems();
@@ -1350,7 +1336,7 @@
         const hasSelection = selectedUsers.size > 0;
         const hasSubject = document.getElementById('emailSubject').value.trim().length > 0;
         const hasMessage = document.getElementById('emailMessage').textContent.trim().length > 0;
-        
+
         sendButton.disabled = !(hasSelection && hasSubject && hasMessage);
     }
 
@@ -1359,7 +1345,7 @@
         document.querySelectorAll('.recipient-item').forEach(item => {
             const checkbox = item.querySelector('.recipient-checkbox');
             const userId = checkbox.getAttribute('data-user-id');
-            
+
             if (selectedUsers.has(userId)) {
                 item.classList.add('selected');
             } else {
@@ -1437,7 +1423,7 @@
         }
 
         // Mostrar confirmación
-        const filesInfo = selectedFiles.length > 0 ? 
+        const filesInfo = selectedFiles.length > 0 ?
             `<div class="mt-3">
                 <strong>Archivos adjuntos:</strong> ${selectedFiles.length} archivo(s)
             </div>` : '';
@@ -1451,7 +1437,7 @@
         `;
 
         document.getElementById('confirmationModalBody').innerHTML = modalBody;
-        
+
         const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
         modal.show();
 
@@ -1466,17 +1452,36 @@
     async function sendEmailRequest() {
         const sendButton = document.getElementById('sendButton');
         const originalText = sendButton.innerHTML;
-        
+
         sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Enviando...</span>';
         sendButton.disabled = true;
 
         try {
             const subject = document.getElementById('emailSubject').value.trim();
             const message = document.getElementById('emailMessage').innerHTML;
+            const destinatarios = Array.from(selectedUsers);
+
+            console.log("🔍 DEBUG - Datos a enviar:");
+            console.log("Asunto:", subject);
+            console.log("Destinatarios:", destinatarios);
+            console.log("Mensaje length:", message.length);
+            console.log("Archivos:", selectedFiles.length);
+            console.log("CSRF Token:", getCsrfToken());
+
+            // Validaciones adicionales
+            if (!subject) {
+                throw new Error('El asunto es requerido');
+            }
+            if (!message || message === '<br>' || message.trim() === '') {
+                throw new Error('El mensaje es requerido');
+            }
+            if (destinatarios.length === 0) {
+                throw new Error('Debe seleccionar al menos un destinatario');
+            }
 
             // Crear FormData para enviar archivos
             const formData = new FormData();
-            formData.append('destinatarios', JSON.stringify(Array.from(selectedUsers)));
+            formData.append('destinatarios', JSON.stringify(destinatarios));
             formData.append('asunto', subject);
             formData.append('mensaje', message);
             formData.append('tipo_correo', 'simple');
@@ -1488,6 +1493,8 @@
                 formData.append('archivos', file);
             });
 
+            console.log("🔍 DEBUG - Enviando petición...");
+
             const response = await fetch('/moderador/enviar-correo-masivo/', {
                 method: 'POST',
                 headers: {
@@ -1496,21 +1503,35 @@
                 body: formData
             });
 
-            const result = await response.json();
+            console.log("🔍 DEBUG - Respuesta recibida, status:", response.status);
 
-            if (result.success) {
-                const successMessage = `¡Correo enviado exitosamente a ${result.enviados || selectedUsers.size} destinatario(s)!`;
-                
-                // Limpiar todo después del envío exitoso
-                resetForm();
-                
-                showAlert(successMessage, 'success');
-                
-            } else {
-                showAlert(`Error al enviar correo: ${result.error}`, 'error');
+            // DEBUG: Ver la respuesta completa
+            const responseText = await response.text();
+            console.log("🔍 DEBUG - Respuesta completa:", responseText);
+
+            try {
+                const result = JSON.parse(responseText);
+                console.log("🔍 DEBUG - JSON parseado:", result);
+
+                if (result.success) {
+                    const successMessage = `¡Correo enviado exitosamente a ${result.enviados || selectedUsers.size} destinatario(s)!`;
+
+                    // Limpiar todo después del envío exitoso
+                    resetForm();
+
+                    showAlert(successMessage, 'success');
+
+                } else {
+                    showAlert(`Error al enviar correo: ${result.error}`, 'error');
+                }
+
+            } catch (jsonError) {
+                console.error("❌ ERROR - No es JSON válido:", responseText);
+                throw new Error(`El servidor respondió con: ${responseText.substring(0, 100)}...`);
             }
-            
+
         } catch (error) {
+            console.error("❌ ERROR - En sendEmailRequest:", error);
             showAlert(`Error de conexión: ${error.message}`, 'error');
         } finally {
             sendButton.innerHTML = originalText;
@@ -1526,58 +1547,43 @@
         updateSelectionCount();
         updateSendButton();
         updateRecipientItems();
-        
+
         // Limpiar formulario
         document.getElementById('emailSubject').value = '';
-        
+
         // Limpiar mensaje
         const messageDiv = document.getElementById('emailMessage');
         messageDiv.innerHTML = '';
         messageDiv.textContent = '';
-        
+
         // Limpiar archivos
         selectedFiles = [];
         fileList.innerHTML = '';
-        
+
         updateCharacterCount(); // Actualizar contador
     }
 
-    // Función para obtener el token CSRF
+    // Función para obtener el token CSRF - VERSIÓN CORREGIDA
     function getCsrfToken() {
-        let csrfToken = '';
-        
-        // 1. Buscar en el input hidden generado por Django
-        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        // Método 1: Buscar en el form que creamos
+        const csrfInput = document.querySelector('#emailForm [name=csrfmiddlewaretoken]');
         if (csrfInput) {
-            csrfToken = csrfInput.value;
+            return csrfInput.value;
         }
         
-        // 2. Si no se encuentra, buscar en las cookies
-        if (!csrfToken) {
-            const cookieValue = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('csrftoken='))
-                ?.split('=')[1];
-            
-            if (cookieValue) {
-                csrfToken = cookieValue;
-            }
+        // Método 2: Buscar en cookies
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrftoken='))
+            ?.split('=')[1];
+        
+        if (cookieValue) {
+            return cookieValue;
         }
         
-        // 3. Si aún no se encuentra, buscar en el meta tag
-        if (!csrfToken) {
-            const metaToken = document.querySelector('meta[name="csrf-token"]');
-            if (metaToken) {
-                csrfToken = metaToken.getAttribute('content');
-            }
-        }
-
-        if (!csrfToken) {
-            console.error('No se pudo encontrar el token CSRF');
-            showAlert('Error de seguridad: No se pudo verificar la solicitud.', 'error');
-        }
-        
-        return csrfToken;
+        console.error('No se pudo encontrar el token CSRF');
+        showAlert('Error de seguridad: No se pudo verificar la solicitud.', 'error');
+        return '';
     }
 
     // Función para mostrar alertas
