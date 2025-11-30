@@ -64,6 +64,56 @@ def actualizar_estado_ofertas_automatico(negocio_id):
         with connection.cursor() as cursor:
             ahora = timezone.now()
             hoy = date.today()
+
+            # 1. ✅ IDENTIFICAR OFERTAS QUE EXPIRARON Y REINTEGRAR STOCK
+            cursor.execute("""
+                SELECT pkid_promo, fkproducto_id, variante_id, stock_actual_oferta, tipo_oferta
+                FROM promociones 
+                WHERE fknegocio_id = %s 
+                AND estado_promo = 'activa'
+                AND tipo_oferta = 'stock'
+                AND stock_actual_oferta > 0
+                AND fecha_fin < %s
+            """, [negocio_id, ahora])
+            
+            ofertas_expiradas = cursor.fetchall()
+            
+            for oferta in ofertas_expiradas:
+                oferta_id, producto_id, variante_id, stock_restante, tipo_oferta = oferta
+                
+                # REINTEGRAR STOCK SOBRANTE
+                if stock_restante > 0:
+                    if variante_id:
+                        cursor.execute("""
+                            UPDATE variantes_producto 
+                            SET stock_variante = stock_variante + %s
+                            WHERE id_variante = %s
+                        """, [stock_restante, variante_id])
+                    else:
+                        cursor.execute("""
+                            UPDATE productos 
+                            SET stock_prod = stock_prod + %s
+                            WHERE pkid_prod = %s
+                        """, [stock_restante, producto_id])
+                    
+                    # Registrar movimiento de reintegración
+                    registrar_movimiento_oferta(
+                        producto_id, negocio_id, None, stock_restante,
+                        'devolucion_automatica_oferta',
+                        f"Devolución automática oferta expirada ID: {oferta_id}",
+                        variante_id
+                    )
+            
+            # 2. ACTUALIZAR ESTADO DE OFERTAS EXPIRADAS
+            cursor.execute("""
+                UPDATE promociones 
+                SET estado_promo = 'finalizada',
+                    activa_por_stock = 0,
+                    stock_actual_oferta = 0  # ✅ LIMPIAR STOCK RESTANTE
+                WHERE fknegocio_id = %s 
+                AND estado_promo = 'activa'
+                AND fecha_fin < %s
+            """, [negocio_id, ahora])
             
             # 1. Actualizar ofertas por tiempo que han expirado (considerando hora)
             cursor.execute("""
@@ -114,15 +164,35 @@ def actualizar_estado_ofertas_automatico(negocio_id):
         logger.error(f"Error actualizando estado de ofertas: {str(e)}")
 
 def registrar_movimiento_oferta(producto_id, negocio_id, usuario_id, cantidad, motivo, descripcion, variante_id=None):
-    """Registrar movimiento de stock para ofertas"""
+    """Registrar movimiento de stock para ofertas - MEJORADO CON VARIANTES"""
     try:
         with connection.cursor() as cursor:
-            # Obtener stock actual del producto
-            cursor.execute("SELECT stock_prod FROM productos WHERE pkid_prod = %s", [producto_id])
+            # ✅ OBTENER STOCK ACTUAL CONSIDERANDO VARIANTES
+            if variante_id:
+                cursor.execute("""
+                    SELECT v.stock_variante, p.nom_prod, v.nombre_variante
+                    FROM variantes_producto v
+                    JOIN productos p ON v.producto_id = p.pkid_prod
+                    WHERE v.id_variante = %s
+                """, [variante_id])
+            else:
+                cursor.execute("""
+                    SELECT stock_prod, nom_prod FROM productos 
+                    WHERE pkid_prod = %s
+                """, [producto_id])
+            
             resultado = cursor.fetchone()
             stock_actual = resultado[0] if resultado else 0
             
-            # Registrar movimiento - USAR timezone.now() en lugar de datetime.now()
+            # ✅ CALCULAR STOCK NUEVO
+            if 'creacion' in motivo:
+                stock_nuevo = stock_actual - cantidad  # Descontar
+            elif 'eliminacion' in motivo or 'finalizacion' in motivo:
+                stock_nuevo = stock_actual + cantidad  # Reintegrar
+            else:
+                stock_nuevo = stock_actual
+            
+            # ✅ REGISTRAR MOVIMIENTO CON VARIANTE_ID
             cursor.execute("""
                 INSERT INTO movimientos_stock 
                 (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
@@ -135,11 +205,11 @@ def registrar_movimiento_oferta(producto_id, negocio_id, usuario_id, cantidad, m
                 motivo, 
                 cantidad, 
                 stock_actual, 
-                stock_actual,  # El stock general no cambia, solo se reserva
+                stock_nuevo,  # ✅ STOCK REAL CALCULADO
                 usuario_id, 
-                timezone.now(),  # CAMBIADO: datetime.now() -> timezone.now()
+                timezone.now(),
                 descripcion,
-                variante_id
+                variante_id  # ✅ SIEMPRE INCLUIR VARIANTE_ID (puede ser NULL)
             ])
     except Exception as e:
         logger.error(f"Error registrando movimiento de oferta: {str(e)}")
@@ -483,14 +553,31 @@ def crear_oferta(request):
                 
                 stock_total_ofertas_activas = cursor.fetchone()[0]
             
-            if tipo_oferta == 'stock' and (stock_total_ofertas_activas + stock_oferta) > stock_disponible:
-                messages.error(request, 
-                    f'Stock insuficiente para {producto_nombre}. '
-                    f'Disponible: {stock_disponible}, '
-                    f'Ofertas activas: {stock_total_ofertas_activas}, '
-                    f'Nueva oferta: {stock_oferta}'
-                )
-                return redirect('Ofertas_V')
+            if tipo_oferta == 'stock':
+                with connection.cursor() as cursor:
+                    if variante_id:
+                        # Descontar de la variante
+                        cursor.execute("""
+                            UPDATE variantes_producto 
+                            SET stock_variante = stock_variante - %s
+                            WHERE id_variante = %s
+                        """, [stock_oferta, variante_id])
+                        
+                        # Obtener stock actualizado para registro
+                        cursor.execute("SELECT stock_variante FROM variantes_producto WHERE id_variante = %s", [variante_id])
+                        stock_nuevo_variante = cursor.fetchone()[0]
+                        
+                    else:
+                        # Descontar del producto principal
+                        cursor.execute("""
+                            UPDATE productos 
+                            SET stock_prod = stock_prod - %s
+                            WHERE pkid_prod = %s
+                        """, [stock_oferta, producto_id])
+                        
+                        # Obtener stock actualizado para registro
+                        cursor.execute("SELECT stock_prod FROM productos WHERE pkid_prod = %s", [producto_id])
+                        stock_nuevo_producto = cursor.fetchone()[0]
             
             # PROCESAR FECHAS Y HORAS - AMBOS TIPOS REQUIEREN FECHA FIN
             now = timezone.now()
@@ -642,16 +729,22 @@ def eliminar_oferta(request, oferta_id):
             cursor.execute("DELETE FROM promociones WHERE pkid_promo = %s", [oferta_id])
         
         # Registrar movimiento de liberación de stock solo para ofertas por stock
-        if tipo_oferta == 'stock':
-            registrar_movimiento_oferta(
-                producto_id, 
-                negocio.pkid_neg, 
-                datos['perfil'].id,
-                stock_oferta,
-                'eliminacion_oferta',
-                f"Oferta eliminada: {titulo} - Stock liberado: {stock_oferta}",
-                variante_id
-            )
+        if tipo_oferta == 'stock' and stock_oferta > 0:
+            with connection.cursor() as cursor:
+                if variante_id:
+                    # Reintegrar a la variante
+                    cursor.execute("""
+                        UPDATE variantes_producto 
+                        SET stock_variante = stock_variante + %s
+                        WHERE id_variante = %s
+                    """, [stock_oferta, variante_id])
+                else:
+                    # Reintegrar al producto principal
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET stock_prod = stock_prod + %s
+                        WHERE pkid_prod = %s
+                    """, [stock_oferta, producto_id])
         
         messages.success(request, f'✅ Oferta eliminada exitosamente.')
         

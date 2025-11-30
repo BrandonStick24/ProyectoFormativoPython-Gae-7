@@ -256,7 +256,7 @@ function cargarDatosStock(id, nombre, stock) {
     }
     
     // Configurar la acción del formulario - CORREGIDO
-    document.getElementById('formAjustarStock').action = `/auth/vendedor/stock/ajustar/${id}/`;
+    document.getElementById('formAjustarStock').action = `/auth/vendedor/productos/ajustar-stock/${id}/`;
     console.log(`Form action stock: ${document.getElementById('formAjustarStock').action}`);
     
     // Recalcular stock final

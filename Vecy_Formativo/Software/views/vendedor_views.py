@@ -177,7 +177,6 @@ def registrar_negocio_vendedor(request):
     return redirect('Negocios_V')
 
 # ==================== VISTAS VENDEDOR - DASHBOARD ====================
-# En Software/views/vendedor_views.py - actualizar la vista vendedor_dash
 
 @login_required(login_url='login')
 def vendedor_dash(request):
@@ -1881,7 +1880,7 @@ def ver_recibo_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def cambiar_estado_pedido(request, pedido_id):
-    """Vista para cambiar estado del pedido - SOLO DESCONTAR AL ENTREGAR"""
+    """Vista para cambiar estado del pedido - SOLO DESCONTAR AL ENTREGAR - CORREGIDA"""
     if request.method == 'POST':
         try:
             nuevo_estado = request.POST.get('nuevo_estado')
@@ -1918,25 +1917,50 @@ def cambiar_estado_pedido(request, pedido_id):
                     WHERE pkid_pedido = %s AND fknegocio_pedido = %s
                 """, [nuevo_estado, datetime.now(), pedido_id, negocio.pkid_neg])
                 
-                # 3. ✅ NUEVA LÓGICA: SOLO DESCONTAR STOCK CUANDO SE MARCA COMO "ENTREGADO"
+                # 3. ✅ CORRECCIÓN DEFINITIVA: SOLO DESCONTAR STOCK CUANDO SE MARCA COMO "ENTREGADO" 
+                # Y EL PEDIDO NO HA SIDO PROCESADO PREVIAMENTE
                 if nuevo_estado == 'entregado' and estado_actual != 'entregado':
                     print("🔄 DEBUG: Descontando stock por ENTREGA definitiva")
                     
-                    # Descontar stock definitivamente
-                    stock_descontado = descontar_stock_pedido_al_entregar(pedido_id)
+                    # ✅ VERIFICAR SI EL STOCK YA FUE DESCONTADO AL CREAR EL PEDIDO
+                    cursor.execute("""
+                        SELECT COUNT(*) FROM movimientos_stock 
+                        WHERE pedido_id = %s AND tipo_movimiento = 'salida'
+                    """, [pedido_id])
                     
-                    if stock_descontado:
-                        messages.success(request, f"✅ Pedido marcado como ENTREGADO. Stock descontado definitivamente.")
+                    movimientos_existentes = cursor.fetchone()[0]
+                    
+                    if movimientos_existentes == 0:
+                        # Solo descontar si no hay movimientos previos (pedido nuevo)
+                        print("🔄 DEBUG: No hay movimientos previos, descontando stock")
+                        stock_descontado = descontar_stock_pedido_al_entregar(pedido_id)
+                        
+                        if stock_descontado:
+                            messages.success(request, f"✅ Pedido marcado como ENTREGADO. Stock descontado definitivamente.")
+                        else:
+                            messages.warning(request, f"⚠️ Pedido marcado como ENTREGADO, pero hubo problemas al descontar el stock.")
                     else:
-                        messages.warning(request, f"⚠️ Pedido marcado como ENTREGADO, pero hubo problemas al descontar el stock.")
+                        # Ya hay movimientos de stock, solo actualizar estado
+                        print(f"🔄 DEBUG: Ya existen {movimientos_existentes} movimientos de stock, solo actualizando estado")
+                        messages.success(request, f"✅ Pedido marcado como ENTREGADO. Stock ya había sido descontado previamente.")
                 
-                # 4. ✅ CANCELACIÓN: No hacer nada con el stock (nunca se descontó)
+                # 4. ✅ CANCELACIÓN: Reabastecer stock solo si estaba en estado que ya había descontado
                 elif nuevo_estado == 'cancelado' and estado_actual != 'cancelado':
-                    print("🔄 DEBUG: Cancelando pedido - NO se reabastece stock porque nunca se descontó")
-                    messages.success(request, f"✅ Pedido cancelado. Motivo: {motivo_cancelacion}")
+                    # SOLO reabastecer si el pedido estaba en un estado que ya había descontado stock
+                    if estado_actual == 'entregado':
+                        print("🔄 DEBUG: Cancelando pedido ENTREGADO - reabasteciendo stock")
+                        stock_reabastecido = reabastecer_stock_por_cancelacion(pedido_id)
+                        if stock_reabastecido:
+                            messages.success(request, f"✅ Pedido cancelado y stock reabastecido. Motivo: {motivo_cancelacion}")
+                        else:
+                            messages.warning(request, f"⚠️ Pedido cancelado, pero hubo problemas al reabastecer el stock. Motivo: {motivo_cancelacion}")
+                    else:
+                        # Para pedidos que nunca se entregaron (no tenían stock descontado)
+                        print("🔄 DEBUG: Cancelando pedido NO ENTREGADO - sin afectar stock")
+                        messages.success(request, f"✅ Pedido cancelado. Motivo: {motivo_cancelacion}")
                 
                 else:
-                    # Para otros cambios de estado (confirmado, preparando, enviado)
+                    # Para otros cambios de estado (confirmado, preparando, enviado) - NO AFECTAR STOCK
                     messages.success(request, f"✅ Pedido actualizado a: {nuevo_estado}")
                     print(f"🔄 DEBUG: Cambio de estado normal - no se afecta el stock")
                 
@@ -2083,7 +2107,7 @@ def eliminar_pedido(request, pedido_id):
 
 @login_required(login_url='login')
 def corregir_stock_pedido(request, pedido_id):
-    """Función especial para corregir problemas de stock en pedidos específicos - CON VARIANTES"""
+    """Función especial para corregir problemas de stock en pedidos específicos - ACTUALIZADA"""
     if request.method == 'POST':
         try:
             datos = obtener_datos_vendedor(request)
@@ -2108,20 +2132,19 @@ def corregir_stock_pedido(request, pedido_id):
                 estado_actual = pedido[0]
                 
                 if estado_actual == 'cancelado':
-                    # Reabastecer stock manualmente para pedidos cancelados - CON VARIANTES
+                    # Reabastecer stock manualmente para pedidos cancelados - CON LA MISMA LÓGICA
                     cursor.execute("""
                         SELECT 
                             dp.fkproducto_detalle, 
                             dp.cantidad_detalle, 
                             p.stock_prod, 
                             p.nom_prod,
-                            ci.variante_id,
+                            dp.variante_id,  -- ✅ OBTENER VARIANTE_ID DIRECTAMENTE
                             vp.nombre_variante,
                             vp.stock_variante
                         FROM detalles_pedido dp
                         JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
-                        LEFT JOIN carrito_item ci ON dp.fkpedido_detalle = ci.fkcarrito
-                        LEFT JOIN variantes_producto vp ON ci.variante_id = vp.id_variante
+                        LEFT JOIN variantes_producto vp ON dp.variante_id = vp.id_variante
                         WHERE dp.fkpedido_detalle = %s 
                         AND p.fknegocioasociado_prod = %s
                     """, [pedido_id, negocio.pkid_neg])
@@ -2313,7 +2336,7 @@ def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
     
 # ==================== FIN DE CÓDIGO PARA GESTIÓN DE VENTAS VENDEDOR ====================
 
-# En la función descargar_plantilla_productos en vendedor_views.py
+
 
 @login_required(login_url='login')
 def descargar_plantilla_productos(request):
@@ -2422,7 +2445,7 @@ def descargar_plantilla_productos(request):
         messages.error(request, f'Error al generar plantilla: {str(e)}')
         return redirect('Crud_V')
 
-# En Software/views/vendedor_views.py - función importar_productos_excel
+
 
 @login_required(login_url='login')
 def importar_productos_excel(request):
@@ -2671,13 +2694,11 @@ def importar_productos_excel(request):
     
     return redirect('Crud_V')
 
-
-# En Software/views/vendedor_views.py - función descontar_stock_pedido_al_entregar
-
 def descontar_stock_pedido_al_entregar(pedido_id):
     """
     DESCONTAR stock solo cuando el vendedor marca el pedido como ENTREGADO
-    ACTUALIZADA PARA REGISTRAR MOVIMIENTOS DE VARIANTES
+    CORRECCIÓN DEFINITIVA: SOLO descontar de variantes cuando hay variante_id
+    NUNCA descontar doblemente del producto base
     """
     try:
         print(f"🔄 DEBUG descontar_stock_al_entregar: Descontando stock para pedido ENTREGADO {pedido_id}")
@@ -2702,38 +2723,43 @@ def descontar_stock_pedido_al_entregar(pedido_id):
             
             pedido_id, negocio_id, propietario_id = pedido_info
             
-            # ✅ CORRECCIÓN MEJORADA: Obtener items con información de variantes
+            # ✅ CORRECCIÓN CRÍTICA: Obtener SOLO los items únicos del pedido desde detalles_pedido
             cursor.execute("""
-                SELECT 
+                SELECT DISTINCT
                     dp.fkproducto_detalle,
                     dp.cantidad_detalle,
                     dp.precio_unitario,
                     p.nom_prod,
                     p.stock_prod,
-                    ci.variante_id,
+                    dp.variante_id,
                     vp.nombre_variante,
                     vp.stock_variante
                 FROM detalles_pedido dp
                 JOIN productos p ON dp.fkproducto_detalle = p.pkid_prod
-                LEFT JOIN carrito_item ci ON dp.fkpedido_detalle = ci.fkcarrito AND dp.fkproducto_detalle = ci.fkproducto
-                LEFT JOIN variantes_producto vp ON ci.variante_id = vp.id_variante
+                LEFT JOIN variantes_producto vp ON dp.variante_id = vp.id_variante
                 WHERE dp.fkpedido_detalle = %s
             """, [pedido_id])
             
             items_pedido = cursor.fetchall()
-            print(f"🔄 DEBUG: Items encontrados en detalles_pedido: {len(items_pedido)}")
+            print(f"🔄 DEBUG: Items únicos encontrados en detalles_pedido: {len(items_pedido)}")
             
             movimientos_registrados = 0
             
-            # Procesar productos del pedido
+            # ✅ LÓGICA SIMPLIFICADA Y CORREGIDA:
+            # SOLO descontar de donde corresponde según variante_id
             for (producto_id, cantidad, precio, nombre_producto, stock_actual, 
                  variante_id, nombre_variante, stock_variante) in items_pedido:
                 
                 print(f"🔄 DEBUG: Procesando - Producto: {producto_id}, Variante: {variante_id}, Cantidad: {cantidad}")
                 
-                if variante_id and nombre_variante:
-                    # ✅ ES UNA VARIANTE - Descontar de la variante
-                    print(f"🔄 DEBUG: Procesando VARIANTE {nombre_variante}")
+                # ✅ REGLA DEFINITIVA: 
+                # - Si hay variante_id -> Descontar SOLO de la variante
+                # - Si NO hay variante_id -> Descontar SOLO del producto base
+                # - NUNCA descontar de ambos
+                
+                if variante_id and nombre_variante and stock_variante is not None:
+                    # ✅ ES UNA VARIANTE - Descontar EXCLUSIVAMENTE de la variante
+                    print(f"🔄 DEBUG: Procesando EXCLUSIVAMENTE VARIANTE {nombre_variante}")
                     
                     nuevo_stock_variante = stock_variante - cantidad
                     
@@ -2767,9 +2793,9 @@ def descontar_stock_pedido_al_entregar(pedido_id):
                     except Exception as e:
                         print(f"⚠️ Error registrando movimiento de variante: {e}")
                 
-                else:
-                    # ✅ ES PRODUCTO BASE - Descontar del producto base
-                    print(f"🔄 DEBUG: Procesando PRODUCTO BASE {nombre_producto}")
+                elif not variante_id:
+                    # ✅ ES PRODUCTO BASE SIN VARIANTE - Descontar EXCLUSIVAMENTE del producto base
+                    print(f"🔄 DEBUG: Procesando EXCLUSIVAMENTE PRODUCTO BASE {nombre_producto}")
                     
                     nuevo_stock = stock_actual - cantidad
                     print(f"🔄 DEBUG: Producto base {nombre_producto} - Stock: {stock_actual} -> {nuevo_stock}")
@@ -2805,6 +2831,24 @@ def descontar_stock_pedido_al_entregar(pedido_id):
                         print(f"✅ Movimiento registrado para producto base {nombre_producto}")
                     except Exception as e:
                         print(f"⚠️ Error registrando movimiento: {e}")
+                
+                else:
+                    # ❌ CASO INESPERADO: Tiene variante_id pero no se encontró la variante
+                    print(f"⚠️ ADVERTENCIA: Item con variante_id {variante_id} pero variante no encontrada, procesando como producto base")
+                    
+                    nuevo_stock = stock_actual - cantidad
+                    if nuevo_stock < 0:
+                        nuevo_stock = 0
+                    
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET stock_prod = %s,
+                            estado_prod = CASE 
+                                WHEN %s <= 0 THEN 'agotado'
+                                ELSE 'disponible'
+                            END
+                        WHERE pkid_prod = %s
+                    """, [nuevo_stock, nuevo_stock, producto_id])
         
         print(f"✅ Stock descontado definitivamente para pedido ENTREGADO. Movimientos registrados: {movimientos_registrados}")
         return True
@@ -2813,6 +2857,39 @@ def descontar_stock_pedido_al_entregar(pedido_id):
         print(f"❌ ERROR en descontar_stock_al_entregar: {str(e)}")
         import traceback
         print(f"TRACEBACK: {traceback.format_exc()}")
+        return False
+    
+def diagnosticar_doble_descuento(pedido_id):
+    """Diagnóstico para detectar posibles dobles descuentos"""
+    try:
+        with connection.cursor() as cursor:
+            # Verificar movimientos de stock duplicados
+            cursor.execute("""
+                SELECT 
+                    producto_id,
+                    variante_id,
+                    COUNT(*) as movimientos,
+                    SUM(cantidad) as total_descontado
+                FROM movimientos_stock 
+                WHERE pedido_id = %s 
+                AND tipo_movimiento = 'salida'
+                GROUP BY producto_id, variante_id
+                HAVING COUNT(*) > 1
+            """, [pedido_id])
+            
+            duplicados = cursor.fetchall()
+            
+            if duplicados:
+                print(f"⚠️ POSIBLES DOBLES DESCUENTOS detectados en pedido #{pedido_id}")
+                for dup in duplicados:
+                    print(f"   - Producto: {dup[0]}, Variante: {dup[1]}, Movimientos: {dup[2]}, Total: {dup[3]}")
+                return False
+            else:
+                print(f"✅ No se detectaron dobles descuentos en pedido #{pedido_id}")
+                return True
+                
+    except Exception as e:
+        print(f"❌ Error en diagnóstico: {e}")
         return False
 
 def reabastecer_stock_por_cancelacion(pedido_id):

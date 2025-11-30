@@ -128,7 +128,6 @@ def gestionar_variantes(request, producto_id):
         messages.error(request, f"Error al cargar variantes: {str(e)}")
         return redirect('Crud_V')
     
-# En Software/views/vendedor_variantes_views.py - función crear_variante
 
 @login_required(login_url='login')
 def crear_variante(request, producto_id):
@@ -223,7 +222,7 @@ def crear_variante(request, producto_id):
                         cursor.execute("""
                             INSERT INTO movimientos_stock 
                             (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                             stock_anterior, stock_nuevo, usuario_id, fecha_movimiento, variante_id, descripcion_variante)
+                            stock_anterior, stock_nuevo, usuario_id, fecha_movimiento, variante_id, descripcion_variante)
                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         """, [
                             producto_id,
@@ -231,14 +230,13 @@ def crear_variante(request, producto_id):
                             'entrada',
                             'creacion_variante',
                             stock_inicial,
-                            0,  # Stock anterior era 0
+                            0,
                             stock_inicial,
                             perfil_id,
                             datetime.now(),
-                            variante_id,
+                            variante_id,  # ✅ USAR EL ID DE LA VARIANTE RECIÉN CREADA
                             nombre_variante
                         ])
-                    print("DEBUG: Movimiento de stock registrado para variante")
                 except Exception as e:
                     print(f"ERROR registrando movimiento: {e}")
             

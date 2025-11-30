@@ -93,6 +93,64 @@
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     color: white;
 }
+
+/* Nuevos estilos para la información de stock detallada */
+.stock-detallado {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.stock-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.stock-total {
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.stock-oferta {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e;
+    border: 1px solid #fbbf24;
+}
+
+.stock-normal {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+.stock-bajo {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.stock-critico {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #ef4444;
+}
+
+.badge-oferta {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
 </style>
 {% endblock %}
 
@@ -180,6 +238,7 @@
 <div class="contenedor-productos">
     {% for producto_data in productos_con_variantes %}
     {% with producto=producto_data.producto variantes=producto_data.variantes %}
+    {% with oferta_producto=producto_data.oferta stock_oferta_producto=producto_data.stock_oferta %}
     <div class="producto-card">
         <div class="producto-header">
             <div class="producto-info">
@@ -198,12 +257,25 @@
                     <div class="producto-meta">
                         <span class="precio">${{ producto.precio_prod }}</span>
                         <span class="categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
-                        <span class="stock {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                            <i class="fas fa-boxes"></i> Stock: {{ producto.stock_prod }}
-                        </span>
-                        {% if producto.pkid_prod in productos_en_oferta %}
+                        
+                        <!-- Información de Stock Detallada para Producto Base -->
+                        <div class="stock-detallado">
+                            <span class="stock-item stock-total">
+                                <i class="fas fa-boxes"></i> Total: {{ producto.stock_prod }}
+                            </span>
+                            {% if oferta_producto %}
+                            <span class="stock-item stock-oferta">
+                                <i class="fas fa-tag"></i> Oferta: {{ stock_oferta_producto }}
+                            </span>
+                            {% endif %}
+                            <span class="stock-item {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-cube"></i> Base: {{ producto.stock_prod|add:"-"|add:stock_oferta_producto|default:producto.stock_prod }}
+                            </span>
+                        </div>
+                        
+                        {% if oferta_producto %}
                         <span class="badge-oferta">
-                            <i class="fas fa-tag"></i> Oferta Activa
+                            <i class="fas fa-percentage"></i> {{ oferta_producto.porcentaje_descuento }}% OFF
                         </span>
                         {% endif %}
                     </div>
@@ -266,14 +338,33 @@
                         <div class="variante-info">
                             <span>Precio adicional: ${{ variante.precio_adicional }}</span>
                         </div>
-                        <div class="variante-info">
-                            <span class="variante-stock {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                <i class="fas fa-box"></i> Stock: {{ variante.stock }}
+                        
+                        <!-- Información de Stock Detallada para Variante -->
+                        <div class="stock-detallado">
+                            <span class="stock-item stock-total">
+                                <i class="fas fa-box"></i> Total: {{ variante.stock }}
+                            </span>
+                            {% if variante.en_oferta %}
+                            <span class="stock-item stock-oferta">
+                                <i class="fas fa-tag"></i> Oferta: {{ variante.stock_oferta }}
+                            </span>
+                            {% endif %}
+                            <span class="stock-item {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-cube"></i> Normal: {{ variante.stock_normal }}
                             </span>
                         </div>
+                        
                         {% if variante.sku %}
                         <div class="variante-info">
                             <span class="text-muted">SKU: {{ variante.sku }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if variante.en_oferta %}
+                        <div class="variante-info">
+                            <span class="badge-oferta">
+                                <i class="fas fa-percentage"></i> {{ variante.porcentaje_oferta }}% OFF
+                            </span>
                         </div>
                         {% endif %}
                     </div>
@@ -291,6 +382,7 @@
             {% endif %}
         </div>
     </div>
+    {% endwith %}
     {% endwith %}
     {% empty %}
     <div class="text-center py-5">
