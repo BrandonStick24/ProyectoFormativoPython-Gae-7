@@ -414,7 +414,7 @@
       width: 400px;
       height: 100vh;
       background: white;
-      box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+      box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
       transition: var(--transition);
       z-index: 1060;
       overflow-y: auto;
@@ -449,12 +449,35 @@
       font-weight: 600;
     }
 
-    .estado-pendiente { background: #fff3cd; color: #856404; }
-    .estado-confirmado { background: #d1ecf1; color: #0c5460; }
-    .estado-preparando { background: #d1ecf1; color: #0c5460; }
-    .estado-enviado { background: #d1edff; color: #004085; }
-    .estado-entregado { background: #d4edda; color: #155724; }
-    .estado-cancelado { background: #f8d7da; color: #721c24; }
+    .estado-pendiente {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .estado-confirmado {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .estado-preparando {
+      background: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .estado-enviado {
+      background: #d1edff;
+      color: #004085;
+    }
+
+    .estado-entregado {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .estado-cancelado {
+      background: #f8d7da;
+      color: #721c24;
+    }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -504,13 +527,254 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0, 0, 0, 0.5);
       z-index: 1059;
       display: none;
     }
 
     .sidebar-overlay.show {
       display: block;
+    }
+
+    /* Modal Perfil Compacto - ESTILOS SIMPLIFICADOS */
+    #editarPerfilModal .modal-content {
+      border-radius: 12px;
+    }
+
+    #editarPerfilModal .modal-body {
+      padding: 1.5rem !important;
+      /* Padding forzado */
+    }
+
+    #editarPerfilModal .profile-picture-container {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 1rem;
+    }
+
+    #editarPerfilModal .profile-picture {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    #editarPerfilModal .profile-picture-placeholder {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 3px solid white;
+      color: white;
+      font-size: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    #editarPerfilModal .profile-picture-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(52, 152, 219, 0.8), rgba(41, 128, 185, 0.9));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      border: 3px solid white;
+    }
+
+    #editarPerfilModal .profile-picture-container:hover .profile-picture-overlay {
+      opacity: 1;
+    }
+
+    /* PADDING EN LAS SECCIONES DEL FORMULARIO */
+    #editarPerfilModal .form-section {
+      padding: 1rem 0;
+      border-bottom: 1px solid #f0f0f0;
+      margin-bottom: 0.5rem;
+    }
+
+    #editarPerfilModal .form-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    #editarPerfilModal .form-section-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+
+    #editarPerfilModal .form-section-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      margin-right: 10px;
+      font-size: 0.9rem;
+    }
+
+    #editarPerfilModal .form-section-title {
+      font-weight: 600;
+      color: var(--dark);
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    #editarPerfilModal .form-label {
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+    }
+
+    #editarPerfilModal .form-control {
+      border: 2px solid #e8f0fe;
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      background: #fafbfc;
+      margin-bottom: 0.5rem;
+    }
+
+    #editarPerfilModal .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 0.2rem rgba(53, 152, 219, 0.15);
+      background: white;
+    }
+
+    #editarPerfilModal .account-info-card {
+      background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+      border: 1px solid #e3e9ff;
+      border-radius: 8px;
+      padding: 0.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    #editarPerfilModal .account-info-label {
+      font-weight: 600;
+      color: var(--secondary);
+      font-size: 0.8rem;
+      margin-bottom: 0.2rem;
+    }
+
+    #editarPerfilModal .account-info-value {
+      font-weight: 700;
+      color: var(--dark);
+      font-size: 0.9rem;
+    }
+
+    #editarPerfilModal .btn-change-photo {
+      background: white;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.85rem;
+    }
+
+    #editarPerfilModal .btn-save {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      border: none;
+      border-radius: 25px;
+      padding: 10px 25px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      width: 100%;
+      font-size: 0.95rem;
+    }
+
+    /* Modal más pequeño */
+    #editarPerfilModal .modal-dialog {
+      max-width: 500px;
+    }
+
+    @media (max-width: 576px) {
+      #editarPerfilModal .modal-dialog {
+        margin: 0.5rem;
+      }
+
+      #editarPerfilModal .modal-body {
+        padding: 1.25rem !important;
+      }
+    }
+    /* Estilos mejorados para notificaciones */
+    .notification-item {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #f8f9fa;
+    }
+
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+
+    .notification-item:hover {
+        background: rgba(52, 152, 219, 0.05);
+    }
+
+    .notification-item.unread {
+        background: rgba(52, 152, 219, 0.08);
+        border-left: 3px solid var(--primary);
+    }
+
+    .notification-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 12px;
+        flex-shrink: 0;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+        color: var(--dark);
+    }
+
+    .notification-message {
+        font-size: 0.85rem;
+        line-height: 1.3;
+    }
+
+    .notification-time {
+        font-size: 0.75rem;
+    }
+
+    .notification-dot {
+        width: 8px;
+        height: 8px;
+        background: #e74c3c;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 8px;
+    }
+
+    .notification-list {
+        max-height: 400px;
+        overflow-y: auto;
     }
   </style>
 </head>
@@ -549,39 +813,18 @@
 
             <!-- Notifications -->
             <div class="dropdown">
-              <a href="#" class="nav-icon position-relative" title="Notificaciones" data-bs-toggle="dropdown">
+              <a href="#" class="nav-icon position-relative" title="Notificaciones" data-bs-toggle="dropdown"
+                id="notifications-dropdown-btn">
                 <i class="fas fa-bell"></i>
-                <span class="badge" id="notification-count">3</span>
+                <span class="badge" id="notification-count">0</span>
               </a>
-              <div class="dropdown-menu dropdown-menu-end notification-dropdown">
-                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                  <h6 class="mb-0">Notificaciones</h6>
-                  <a href="#" class="small text-primary">Marcar todas</a>
-                </div>
-                <div class="notification-item unread">
-                  <div class="d-flex align-items-center">
-                    <div class="notification-icon">
-                      <i class="fas fa-store"></i>
-                    </div>
-                    <div class="notification-content">
-                      <div class="notification-title">Nuevo producto disponible</div>
-                      <div class="notification-time">Hace 5 min</div>
-                    </div>
+              <div class="dropdown-menu dropdown-menu-end notification-dropdown" id="notifications-dropdown-menu">
+                <!-- Este contenido se cargará dinámicamente -->
+                <div class="text-center py-4">
+                  <div class="spinner-border text-primary mb-2" role="status">
+                    <span class="visually-hidden">Cargando...</span>
                   </div>
-                </div>
-                <div class="notification-item">
-                  <div class="d-flex align-items-center">
-                    <div class="notification-icon" style="background: #2ecc71;">
-                      <i class="fas fa-tag"></i>
-                    </div>
-                    <div class="notification-content">
-                      <div class="notification-title">Oferta especial</div>
-                      <div class="notification-time">Hace 1 hora</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="text-center py-2">
-                  <a href="#" class="text-primary small">Ver todas</a>
+                  <p class="text-muted mb-0">Cargando notificaciones...</p>
                 </div>
               </div>
             </div>
@@ -594,7 +837,8 @@
 
             <!-- Shopping Cart -->
             <div class="dropdown">
-              <a href="#" class="nav-icon position-relative" title="Carrito" data-bs-toggle="dropdown" id="cart-dropdown-btn">
+              <a href="#" class="nav-icon position-relative" title="Carrito" data-bs-toggle="dropdown"
+                id="cart-dropdown-btn">
                 <i class="fas fa-shopping-cart"></i>
                 <span class="badge" id="cart-count">{{ carrito_count|default:0 }}</span>
               </a>
@@ -638,8 +882,12 @@
                 {{ request.session.usuario_nombre }}
               </button>
               <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Mi Perfil</a></li>
-                <li><a class="dropdown-item" href="#" id="sidebar-pedidos-btn"><i class="fas fa-shopping-bag me-2"></i>Mis Pedidos</a></li>
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#editarPerfilModal"
+                    onclick="cargarFormularioPerfil()">
+                    <i class="fas fa-user me-2"></i>Mi Perfil
+                  </a></li>
+                <li><a class="dropdown-item" href="#" id="sidebar-pedidos-btn"><i
+                      class="fas fa-shopping-bag me-2"></i>Mis Pedidos</a></li>
                 <li><a class="dropdown-item" href="#"><i class="fas fa-heart me-2"></i>Favoritos</a></li>
                 <li><a class="dropdown-item" href="#"><i class="fas fa-star me-2"></i>Mis Reseñas</a></li>
                 <li>
@@ -686,7 +934,8 @@
       <i class="fas fa-shopping-bag"></i>
       <span>Pedidos</span>
     </a>
-    <a href="#" class="nav-icon">
+    <a href="#" class="nav-icon" data-bs-toggle="modal" data-bs-target="#editarPerfilModal"
+      onclick="cargarFormularioPerfil()">
       <i class="fas fa-user"></i>
       <span>Perfil</span>
     </a>
@@ -757,8 +1006,8 @@
                 Sesión</a></li>
             <li class="mb-2"><a href="{% url 'registro_usuario' %}"
                 class="text-light text-decoration-none">Registrarse</a></li>
-            <li class="mb-2"><a href="{% url 'cambiar_contrasena' %}"
-                class="text-light text-decoration-none">Recuperar Contraseña</a></li>
+            <li class="mb-2"><a href="{% url 'cambiar_contrasena' %}" class="text-light text-decoration-none">Recuperar
+                Contraseña</a></li>
           </ul>
         </div>
         <div class="col-lg-3 mb-4">
@@ -784,12 +1033,279 @@
     </div>
   </footer>
 
+  <!-- Modal para Editar Perfil - VERSIÓN COMPACTA -->
+  <div class="modal fade modal-perfil-compact" id="editarPerfilModal" tabindex="-1"
+    aria-labelledby="editarPerfilModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <!-- Header compacto -->
+        <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+          <div class="w-100 text-center">
+            <h5 class="modal-title fw-bold mb-0" id="editarPerfilModalLabel">
+              <i class="fas fa-user-edit me-2"></i>Editar Perfil
+            </h5>
+          </div>
+          <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2"
+            data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <!-- Body compacto -->
+        <div class="modal-body p-4"> <!-- AQUÍ PUSE p-4 para padding -->
+          <div id="perfil-form-container">
+            <!-- Spinner compacto -->
+            <div class="text-center py-4">
+              <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;" role="status">
+                <span class="visually-hidden">Cargando...</span>
+              </div>
+              <p class="text-muted small mb-0">Cargando formulario...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- JavaScript para funcionalidades del carrito y pedidos -->
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    // =============================================
+    // SISTEMA DE NOTIFICACIONES MEJORADO
+    // =============================================
+    class NotificationSystem {
+        constructor() {
+            this.isLoading = false;
+            this.init();
+        }
+
+        init() {
+            this.loadNotifications();
+            this.setupEventListeners();
+            this.setupPolling();
+        }
+
+        setupEventListeners() {
+            // Cargar notificaciones cuando se abre el dropdown
+            const notificationsBtn = document.getElementById('notifications-dropdown-btn');
+            if (notificationsBtn) {
+                notificationsBtn.addEventListener('click', () => {
+                    this.loadNotifications(true);
+                });
+            }
+        }
+
+        // Cargar notificaciones
+        async loadNotifications(showDropdown = false) {
+            if (this.isLoading) return;
+            
+            this.isLoading = true;
+            try {
+                const response = await fetch('{% url "get_notifications" %}');
+                const data = await response.json();
+                
+                if (data.success) {
+                    this.updateNotificationUI(data.notifications, data.unread_count);
+                    if (showDropdown) {
+                        this.showNotificationsDropdown(data.notifications);
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        }
+
+        // Actualizar contador
+        updateNotificationUI(notifications, unreadCount) {
+            const notificationCountElement = document.getElementById('notification-count');
+            if (notificationCountElement) {
+                notificationCountElement.textContent = unreadCount;
+                // Mostrar/ocultar badge según si hay notificaciones
+                if (unreadCount > 0) {
+                    notificationCountElement.style.display = 'flex';
+                } else {
+                    notificationCountElement.style.display = 'none';
+                }
+            }
+        }
+
+        // Mostrar notificaciones en el dropdown
+        showNotificationsDropdown(notifications) {
+            const dropdownMenu = document.getElementById('notifications-dropdown-menu');
+            if (!dropdownMenu) return;
+
+            if (notifications.length === 0) {
+                dropdownMenu.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                        <h6 class="mb-0">Notificaciones</h6>
+                    </div>
+                    <div class="text-center py-4">
+                        <i class="fas fa-bell-slash text-muted fa-2x mb-2"></i>
+                        <p class="text-muted mb-0">No hay notificaciones</p>
+                    </div>
+                    <div class="text-center py-2 border-top">
+                        <a href="{% url 'ver_notificaciones' %}" class="text-primary small">Ver historial</a>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                    <h6 class="mb-0">Notificaciones</h6>
+                    <div>
+                        <a href="#" class="small text-primary" id="mark-all-read">Marcar todas</a>
+                        <a href="{% url 'ver_notificaciones' %}" class="small text-primary ms-2">Ver todas</a>
+                    </div>
+                </div>
+                <div class="notification-list" style="max-height: 400px; overflow-y: auto;">
+            `;
+
+            notifications.forEach(notification => {
+                const unreadClass = notification.leida ? '' : 'unread';
+                const icon = this.getNotificationIcon(notification.tipo);
+                
+                html += `
+                    <div class="notification-item ${unreadClass}" data-id="${notification.id}">
+                        <div class="d-flex align-items-start p-3">
+                            <div class="notification-icon" style="background: ${icon.color};">
+                                <i class="${icon.class}"></i>
+                            </div>
+                            <div class="notification-content flex-grow-1">
+                                <div class="notification-title">${notification.titulo}</div>
+                                <div class="notification-message small text-muted">${notification.mensaje}</div>
+                                <div class="notification-time small text-muted mt-1">${notification.tiempo}</div>
+                            </div>
+                            ${!notification.leida ? '<span class="notification-dot ms-2 mt-1"></span>' : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                <div class="text-center py-2 border-top">
+                    <a href="{% url 'ver_notificaciones' %}" class="text-primary small">Ver historial completo</a>
+                </div>
+            `;
+
+            dropdownMenu.innerHTML = html;
+            this.setupNotificationEvents();
+        }
+
+        // Iconos por tipo de notificación
+        getNotificationIcon(tipo) {
+            const icons = {
+                'pedido': { class: 'fas fa-shopping-bag', color: '#3498db' },
+                'oferta': { class: 'fas fa-bolt', color: '#e74c3c' },
+                'negocio': { class: 'fas fa-store', color: '#2ecc71' },
+                'sistema': { class: 'fas fa-info-circle', color: '#f39c12' },
+                'alerta': { class: 'fas fa-exclamation-triangle', color: '#e67e22' },
+                'promocion': { class: 'fas fa-tag', color: '#9b59b6' }
+            };
+            return icons[tipo] || icons.sistema;
+        }
+
+        // Configurar eventos de notificaciones
+        setupNotificationEvents() {
+            // Marcar como leída al hacer click
+            document.querySelectorAll('.notification-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    const notificationId = item.dataset.id;
+                    this.markAsRead(notificationId);
+                    item.classList.remove('unread');
+                    item.querySelector('.notification-dot')?.remove();
+                    
+                    // Actualizar contador
+                    const currentCount = parseInt(document.getElementById('notification-count').textContent);
+                    if (currentCount > 0) {
+                        document.getElementById('notification-count').textContent = currentCount - 1;
+                    }
+                });
+            });
+
+            // Marcar todas como leídas
+            document.getElementById('mark-all-read')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.markAllAsRead();
+            });
+        }
+
+        // Marcar notificación como leída
+        async markAsRead(notificationId) {
+            try {
+                await fetch('{% url "mark_notification_read" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ notification_id: notificationId })
+                });
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+
+        // Marcar todas como leídas
+        async markAllAsRead() {
+            try {
+                await fetch('{% url "mark_all_notifications_read" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                });
+                
+                // Actualizar UI
+                document.getElementById('notification-count').textContent = '0';
+                document.getElementById('notification-count').style.display = 'none';
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.classList.remove('unread');
+                    item.querySelector('.notification-dot')?.remove();
+                });
+            } catch (error) {
+                console.error('Error marking all notifications as read:', error);
+            }
+        }
+
+        // Polling para nuevas notificaciones
+        setupPolling() {
+            setInterval(() => {
+                this.loadNotifications();
+            }, 30000); // Cada 30 segundos
+        }
+    }
+
+    // =============================================
+    // FUNCIONES GLOBALES
+    // =============================================
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // =============================================
+    // CÓDIGO EXISTENTE DE CARRITO Y PEDIDOS
+    // =============================================
+
+    document.addEventListener('DOMContentLoaded', function () {
+      // Inicializar sistema de notificaciones
+      window.notificationSystem = new NotificationSystem();
+
       // Elementos del DOM
       const cartDropdownBtn = document.getElementById('cart-dropdown-btn');
       const cartDropdownMenu = document.getElementById('cart-dropdown-menu');
@@ -797,7 +1313,7 @@
       const cartTotal = document.getElementById('cart-total');
       const cartItemsCount = document.getElementById('cart-items-count');
       const cartCount = document.getElementById('cart-count');
-      
+
       const pedidosSidebar = document.getElementById('pedidos-sidebar');
       const sidebarOverlay = document.getElementById('sidebar-overlay');
       const pedidosBtn = document.getElementById('pedidos-btn');
@@ -851,12 +1367,12 @@
       function updateCartUI(data) {
         const items = data.items;
         const totales = data.totales;
-        
+
         // Actualizar contadores
         cartCount.textContent = data.carrito_count;
         cartItemsCount.textContent = `${data.carrito_count} item${data.carrito_count !== 1 ? 's' : ''}`;
         cartTotal.textContent = `$${totales.total.toLocaleString('es-CO')}`;
-        
+
         // Actualizar items del carrito
         if (items.length === 0) {
           cartItemsContainer.innerHTML = `
@@ -979,19 +1495,25 @@
         }
       }
 
-      // Función global para actualizar cantidad
-      window.updateCartQuantity = function(itemId, cambio) {
-        fetch('{% url "actualizar_cantidad_carrito" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-          },
-          body: JSON.stringify({
-            item_id: itemId,
-            cambio: cambio
-          })
+      // Cargar carrito al iniciar la página si el usuario está autenticado
+      {% if request.user.is_authenticated %}
+      loadCartData();
+      {% endif %}
+    });
+
+    // Función global para actualizar cantidad
+    window.updateCartQuantity = function (itemId, cambio) {
+      fetch('{% url "actualizar_cantidad_carrito" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          item_id: itemId,
+          cambio: cambio
         })
+      })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
@@ -1004,24 +1526,24 @@
           console.error('Error updating cart quantity:', error);
           alert('Error al actualizar la cantidad');
         });
-      };
+    };
 
-      // Función global para eliminar item
-      window.removeCartItem = function(itemId) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este producto del carrito?')) {
-          return;
-        }
+    // Función global para eliminar item
+    window.removeCartItem = function (itemId) {
+      if (!confirm('¿Estás seguro de que quieres eliminar este producto del carrito?')) {
+        return;
+      }
 
-        fetch('{% url "eliminar_item_carrito" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-          },
-          body: JSON.stringify({
-            item_id: itemId
-          })
+      fetch('{% url "eliminar_item_carrito" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          item_id: itemId
         })
+      })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
@@ -1034,24 +1556,24 @@
           console.error('Error removing cart item:', error);
           alert('Error al eliminar el producto');
         });
-      };
+    };
 
-      // Función global para cancelar pedido
-      window.cancelarPedido = function(pedidoId) {
-        if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
-          return;
-        }
+    // Función global para cancelar pedido
+    window.cancelarPedido = function (pedidoId) {
+      if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
+        return;
+      }
 
-        fetch('{% url "cancelar_pedido" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-          },
-          body: JSON.stringify({
-            pedido_id: pedidoId
-          })
+      fetch('{% url "cancelar_pedido" %}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          pedido_id: pedidoId
         })
+      })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
@@ -1065,31 +1587,224 @@
           console.error('Error canceling order:', error);
           alert('Error al cancelar el pedido');
         });
-      };
+    };
 
-      // Función para obtener cookie CSRF
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
-            }
-          }
+    // =============================================
+    // FUNCIONES DE PERFIL (MANTENER EXISTENTES)
+    // =============================================
+
+    // Función para cargar el formulario en el modal
+    function cargarFormularioPerfil() {
+        const container = document.getElementById('perfil-form-container');
+        
+        // Mostrar spinner
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando formulario...</p>
+            </div>
+        `;
+        
+        // Cargar formulario via AJAX
+        fetch('{% url "get_perfil_form" %}')
+            .then(response => response.text())
+            .then(html => {
+                container.innerHTML = html;
+                inicializarEventosPerfil();
+            })
+            .catch(error => {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar el formulario
+                    </div>
+                `;
+            });
+    }
+
+    // Función para inicializar eventos del formulario
+    function inicializarEventosPerfil() {
+        const form = document.getElementById('perfilForm');
+        const fileInput = document.getElementById('id_img_user');
+        
+        if (form) {
+            form.addEventListener('submit', guardarPerfil);
         }
-        return cookieValue;
-      }
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                previewImage(this);
+            });
+        }
+    }
 
-      // Cargar carrito al iniciar la página si el usuario está autenticado
-      {% if request.user.is_authenticated %}
-      loadCartData();
-      {% endif %}
+    // Función para previsualizar imagen
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                let preview = document.getElementById('profile-picture-preview');
+                let placeholder = document.getElementById('profile-picture-placeholder');
+                
+                if (preview) {
+                    preview.src = e.target.result;
+                } else if (placeholder) {
+                    const newImg = document.createElement('img');
+                    newImg.src = e.target.result;
+                    newImg.className = 'profile-picture';
+                    newImg.id = 'profile-picture-preview';
+                    newImg.alt = 'Foto de perfil';
+                    placeholder.parentNode.replaceChild(newImg, placeholder);
+                }
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function guardarPerfil(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const btnGuardar = document.getElementById('btn-guardar');
+        const messagesDiv = document.getElementById('form-messages');
+        
+        // Cambiar estado del botón
+        const originalText = btnGuardar.innerHTML;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+        btnGuardar.disabled = true;
+        
+        // Limpiar mensajes anteriores
+        if (messagesDiv) {
+            messagesDiv.className = 'alert d-none';
+            messagesDiv.innerHTML = '';
+        }
+        
+        // Limpiar errores anteriores
+        document.querySelectorAll('[id^="error-"]').forEach(el => {
+            el.textContent = '';
+        });
+        
+        // Enviar datos
+        fetch('{% url "actualizar_perfil" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if (messagesDiv) {
+                    messagesDiv.className = 'alert alert-success';
+                    messagesDiv.innerHTML = `<i class="fas fa-check me-2"></i>${data.message}`;
+                }
+                
+                actualizarInterfazUsuario(data);
+                
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editarPerfilModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    location.reload();
+                }, 2000);
+                
+            } else {
+                if (messagesDiv) {
+                    messagesDiv.className = 'alert alert-danger';
+                    messagesDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message}`;
+                }
+                
+                if (data.errors) {
+                    for (const [field, error] of Object.entries(data.errors)) {
+                        const errorElement = document.getElementById(`error-${field}`);
+                        if (errorElement) {
+                            errorElement.textContent = error;
+                        }
+                    }
+                }
+                
+                btnGuardar.innerHTML = originalText;
+                btnGuardar.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (messagesDiv) {
+                messagesDiv.className = 'alert alert-danger';
+                messagesDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error de conexión';
+            }
+            btnGuardar.innerHTML = originalText;
+            btnGuardar.disabled = false;
+        });
+    }
+
+    function actualizarInterfazUsuario(data) {
+        const userDropdown = document.querySelector('.user-dropdown .dropdown-toggle');
+        if (userDropdown && data.usuario_nombre) {
+            const userNameElement = userDropdown.querySelector('.user-avatar')?.nextSibling || 
+                                  userDropdown.querySelector('i').nextSibling;
+            if (userNameElement) {
+                userNameElement.textContent = ' ' + data.usuario_nombre;
+            }
+        }
+        
+        if (data.usuario_imagen) {
+            const userAvatar = document.querySelector('.user-dropdown .user-avatar');
+            if (userAvatar) {
+                userAvatar.src = data.usuario_imagen;
+            } else {
+                const dropdownToggle = document.querySelector('.user-dropdown .dropdown-toggle');
+                const icon = dropdownToggle.querySelector('i');
+                if (icon) {
+                    const newAvatar = document.createElement('img');
+                    newAvatar.src = data.usuario_imagen;
+                    newAvatar.alt = data.usuario_nombre;
+                    newAvatar.className = 'user-avatar';
+                    newAvatar.style.width = '32px';
+                    newAvatar.style.height = '32px';
+                    newAvatar.style.borderRadius = '50%';
+                    newAvatar.style.objectFit = 'cover';
+                    newAvatar.style.border = '2px solid white';
+                    newAvatar.style.marginRight = '8px';
+                    dropdownToggle.insertBefore(newAvatar, icon);
+                    icon.style.display = 'none';
+                }
+            }
+            
+            const profilePreview = document.getElementById('profile-picture-preview');
+            if (profilePreview) {
+                profilePreview.src = data.usuario_imagen;
+            }
+        }
+    }
+
+    // Inicializar cuando el modal se muestra
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('editarPerfilModal');
+        if (modal) {
+            modal.addEventListener('show.bs.modal', function() {
+                cargarFormularioPerfil();
+            });
+            
+            modal.addEventListener('hidden.bs.modal', function() {
+                document.getElementById('perfil-form-container').innerHTML = `
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Cargando formulario...</p>
+                    </div>
+                `;
+            });
+        }
     });
   </script>
-
   {% block scripts %}{% endblock %}
 </body>
 

@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mis Notificaciones - VECY{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Mis Notificaciones</h1>
+                <div>
+                    <span class="badge bg-primary">{{ unread_count }} sin leer</span>
+                    {% if unread_count > 0 %}
+                    <button class="btn btn-outline-primary btn-sm ms-2" id="mark-all-read-global">
+                        <i class="fas fa-check-double me-1"></i>Marcar todas como leídas
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if page_obj.object_list %}
+            <div class="card shadow-sm">
+                <div class="card-body p-0">
+                    {% for notificacion in page_obj.object_list %}
+                    <div class="notification-item {% if not notificacion.leida %}unread{% endif %} p-3 border-bottom"
+                         data-id="{{ notificacion.id }}">
+                        <div class="d-flex align-items-start">
+                            <div class="notification-icon me-3">
+                                {% if notificacion.tipo == 'pedido' %}
+                                <i class="fas fa-shopping-bag text-primary"></i>
+                                {% elif notificacion.tipo == 'oferta' %}
+                                <i class="fas fa-bolt text-warning"></i>
+                                {% elif notificacion.tipo == 'negocio' %}
+                                <i class="fas fa-store text-success"></i>
+                                {% else %}
+                                <i class="fas fa-info-circle text-info"></i>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <h6 class="mb-1">{{ notificacion.titulo }}</h6>
+                                    <small class="text-muted">{{ notificacion.tiempo_transcurrido }}</small>
+                                </div>
+                                <p class="mb-1">{{ notificacion.mensaje }}</p>
+                                {% if notificacion.url %}
+                                <a href="{{ notificacion.url }}" class="btn btn-sm btn-outline-primary mt-1">
+                                    Ver más
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% if not notificacion.leida %}
+                            <span class="notification-dot ms-2"></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Paginación -->
+            {% if page_obj.has_other_pages %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Siguiente</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash text-muted fa-3x mb-3"></i>
+                <h4 class="text-muted">No hay notificaciones</h4>
+                <p class="text-muted">Aquí aparecerán tus notificaciones importantes</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Marcar como leída al hacer click
+    document.querySelectorAll('.notification-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const notificationId = this.dataset.id;
+            
+            fetch('{% url "mark_notification_read" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ notification_id: notificationId })
+            }).then(response => response.json())
+              .then(data => {
+                  if (data.success) {
+                      this.classList.remove('unread');
+                      this.querySelector('.notification-dot')?.remove();
+                      
+                      // Actualizar contador global
+                      const badge = document.querySelector('.badge.bg-primary');
+                      if (badge) {
+                          const currentCount = parseInt(badge.textContent);
+                          if (currentCount > 0) {
+                              badge.textContent = `${currentCount - 1} sin leer`;
+                          }
+                      }
+                  }
+              });
+        });
+    });
+
+    // Marcar todas como leídas
+    document.getElementById('mark-all-read-global')?.addEventListener('click', function() {
+        fetch('{% url "mark_all_notifications_read" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  document.querySelectorAll('.notification-item.unread').forEach(item => {
+                      item.classList.remove('unread');
+                      item.querySelector('.notification-dot')?.remove();
+                  });
+                  
+                  document.querySelector('.badge.bg-primary').textContent = '0 sin leer';
+                  this.style.display = 'none';
+              }
+          });
+    });
+});
+</script>
+
+<style>
+.notification-item {
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa;
+}
+
+.notification-item.unread {
+    background-color: rgba(13, 110, 253, 0.05);
+    border-left: 3px solid #0d6efd;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.notification-dot {
+    width: 10px;
+    height: 10px;
+    background: #0d6efd;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+</style>
+{% endblock %}

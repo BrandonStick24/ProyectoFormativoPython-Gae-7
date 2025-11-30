@@ -1,0 +1,127 @@
+{% load static %}
+
+<div class="modal-perfil-compact">
+    <!-- Foto de Perfil Compacta -->
+    <div class="row justify-content-center mb-3">
+        <div class="col-12 text-center">
+            <div class="profile-picture-container">
+                {% if request.session.usuario_imagen %}
+                <img src="{{ request.session.usuario_imagen }}" alt="Foto de perfil" class="profile-picture"
+                    id="profile-picture-preview">
+                {% else %}
+                <div class="profile-picture-placeholder" id="profile-picture-placeholder">
+                    <i class="fas fa-user"></i>
+                </div>
+                {% endif %}
+                <div class="profile-picture-overlay" onclick="document.getElementById('id_img_user').click()">
+                    <i class="fas fa-camera"></i>
+                </div>
+            </div>
+
+            {{ form.img_user }}
+
+            <div class="file-input-custom mt-2">
+                <button type="button" class="btn btn-change-photo"
+                    onclick="document.getElementById('id_img_user').click()">
+                    <i class="fas fa-camera me-1"></i>Cambiar Foto
+                </button>
+            </div>
+            <small class="text-muted d-block mt-1">
+                <i class="fas fa-info-circle me-1"></i>JPG, PNG, GIF - Máx. 5MB
+            </small>
+            <div class="text-danger small mt-1" id="error-img_user"></div>
+        </div>
+    </div>
+
+    <form id="perfilForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Información Personal Compacta -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon">
+                    <i class="fas fa-user"></i>
+                </div>
+                <h6 class="form-section-title">Información Personal</h6>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-12">
+                    <label class="form-label">
+                        <i class="fas fa-signature me-1"></i>Nombre Completo *
+                    </label>
+                    {{ form.first_name }}
+                    <div class="text-danger small mt-1" id="error-first_name"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <i class="fas fa-envelope me-1"></i>Email *
+                    </label>
+                    {{ form.email }}
+                    <div class="text-danger small mt-1" id="error-email"></div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">
+                        <i class="fas fa-birthday-cake me-1"></i>Fecha Nacimiento
+                    </label>
+                    <input type="date" name="fechanac_user" id="id_fechanac_user" class="form-control"
+                        value="{% if request.user.usuarioperfil.fechanac_user %}{{ request.user.usuarioperfil.fechanac_user|date:'Y-m-d' }}{% endif %}">
+                    <div class="text-danger small mt-1" id="error-fechanac_user"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información de Cuenta Compacta -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <div class="form-section-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <h6 class="form-section-title">Información de Cuenta</h6>
+            </div>
+
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <div class="account-info-card">
+                        <div class="account-info-label">
+                            <i class="fas fa-user-tag me-1"></i>Usuario
+                        </div>
+                        <div class="account-info-value">{{ request.user.username }}</div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="account-info-card">
+                        <div class="account-info-label">
+                            <i class="fas fa-id-card me-1"></i>Documento
+                        </div>
+                        <div class="account-info-value">{{ request.user.usuarioperfil.doc_user }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="account-info-card">
+                <div class="account-info-label">
+                    <i class="fas fa-calendar-plus me-1"></i>Fecha de Registro
+                </div>
+                <div class="account-info-value">{{ request.user.date_joined|date:"d/m/Y H:i" }}</div>
+            </div>
+        </div>
+
+        <!-- Mensajes Compactos -->
+        <div id="form-messages" class="alert d-none mb-3"></div>
+
+        <!-- Botones Compactos -->
+        <div class="form-section text-center pt-2">
+            <button type="submit" class="btn btn-save mb-2" id="btn-guardar">
+                <i class="fas fa-save me-2"></i>Guardar Cambios
+            </button>
+            <br>
+            <small class="text-muted">
+                <i class="fas fa-exclamation-circle me-1"></i>Campos marcados con * son obligatorios
+            </small>
+        </div>
+    </form>
+</div>

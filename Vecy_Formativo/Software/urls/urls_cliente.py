@@ -43,6 +43,20 @@ urlpatterns = [
     # Productos filtrados (logueado)
     path('productos-filtrados/', views_cliente.productos_filtrados_logeado, name='productos_filtrados_logeado'),
     
+    path('favoritos/agregar/', views_cliente.agregar_favorito, name='agregar_favorito'),
+    path('favoritos/eliminar/', views_cliente.eliminar_favorito, name='eliminar_favorito'),
+    path('favoritos/', views_cliente.ver_favoritos, name='ver_favoritos'),
+    path('favoritos/verificar/', views_cliente.verificar_favorito, name='verificar_favorito'),
+    path('favoritos/contar/', views_cliente.contar_favoritos, name='contar_favoritos'),
+    path('api/favoritos/', views_cliente.favoritos_data, name='favoritos_data'),
+    path('perfil/form/', views_cliente.get_perfil_form, name='get_perfil_form'),
+    path('perfil/actualizar/', views_cliente.actualizar_perfil, name='actualizar_perfil'),
+    
+    path('notificaciones/', views_cliente.get_notifications, name='get_notifications'),
+    path('notificaciones/marcar-leida/', views_cliente.mark_notification_read, name='mark_notification_read'),
+    path('notificaciones/marcar-todas-leidas/', views_cliente.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('notificaciones/ver-todas/', views_cliente.ver_notificaciones, name='ver_notificaciones'),
+    
     path('chat-asistente/', views_cliente.chat_asistente, name='chat_asistente'),
     path('api/sugerencia/', views_cliente.api_sugerencia, name='api_sugerencia'),
 ]

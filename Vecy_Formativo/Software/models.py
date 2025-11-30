@@ -7,7 +7,8 @@
 # Feel free to rename the models, but don't rename db_table values or field names.
 from django.db import models
 from django.contrib.auth.models import User
-
+from django.utils import timezone
+from datetime import timedelta
 
 class AuthGroup(models.Model):
     name = models.CharField(unique=True, max_length=150)
@@ -259,6 +260,55 @@ class Negocios(models.Model):
     class Meta:
         managed = True
         db_table = 'negocios'
+
+class Notificacion(models.Model):
+    TIPOS_NOTIFICACION = (
+        ('pedido', 'Pedido'),
+        ('oferta', 'Oferta Flash'),
+        ('negocio', 'Negocio'),
+        ('sistema', 'Sistema'),
+        ('alerta', 'Alerta'),
+        ('promocion', 'Promoción'),
+    )
+    
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notificaciones')
+    tipo = models.CharField(max_length=20, choices=TIPOS_NOTIFICACION)
+    titulo = models.CharField(max_length=100)
+    mensaje = models.TextField()
+    leida = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    url = models.URLField(blank=True, null=True)  # URL a donde redirige la notificación
+    datos_extra = models.JSONField(blank=True, null=True)  # Para datos adicionales
+    
+    class Meta:
+        db_table = 'notificaciones'
+        ordering = ['-fecha_creacion']
+        indexes = [
+            models.Index(fields=['usuario', 'leida']),
+            models.Index(fields=['fecha_creacion']),
+        ]
+    
+    def __str__(self):
+        return f"{self.usuario.username} - {self.titulo}"
+    
+    @property
+    def tiempo_transcurrido(self):
+        ahora = timezone.now()
+        diferencia = ahora - self.fecha_creacion
+        
+        if diferencia < timedelta(minutes=1):
+            return "Hace unos segundos"
+        elif diferencia < timedelta(hours=1):
+            minutos = int(diferencia.total_seconds() / 60)
+            return f"Hace {minutos} minuto{'s' if minutos > 1 else ''}"
+        elif diferencia < timedelta(days=1):
+            horas = int(diferencia.total_seconds() / 3600)
+            return f"Hace {horas} hora{'s' if horas > 1 else ''}"
+        elif diferencia < timedelta(days=30):
+            dias = diferencia.days
+            return f"Hace {dias} día{'s' if dias > 1 else ''}"
+        else:
+            return self.fecha_creacion.strftime("%d/%m/%Y")
 
 
 class PagosNegocios(models.Model):

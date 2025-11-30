@@ -11,10 +11,10 @@ class GeminiAssistant:
         self.api_key = os.getenv('GEMINI_API_KEY')
         
         if not self.api_key:
-            raise ValueError("❌ GEMINI_API_KEY no encontrada")
+            raise ValueError("GEMINI_API_KEY no encontrada")
         
         self.client = genai.Client(api_key=self.api_key)
-        print("🎯 ASISTENTE INTERACTIVO CON BD REAL INICIADO")
+        print("Asistente Gemini iniciado")
         
         self.conversacion_historial = []
     
@@ -29,46 +29,77 @@ class GeminiAssistant:
                             key, value = linea.split('=', 1)
                             os.environ[key.strip()] = value.strip()
         except Exception as e:
-            print(f"❌ Error .env: {e}")
+            print(f"Error .env: {e}")
     
     def _convertir_markdown_a_html(self, texto):
-        """Convertir markdown simple a HTML para mejor visualización"""
         if not texto:
             return texto
         
-        # Convertir **texto** a <strong>texto</strong>
         texto = texto.replace('**', '<strong>')
-        # Cerrar las etiquetas strong correctamente
         strong_count = texto.count('<strong>')
         for i in range(strong_count):
             texto = texto.replace('<strong>', '</strong>', 1)
             texto = texto.replace('</strong>', '<strong>', 1)
         
-        # Convertir *texto* a <em>texto</em> (cursiva)
         texto = texto.replace('*', '<em>')
-        # Cerrar las etiquetas em correctamente
         em_count = texto.count('<em>')
         for i in range(em_count):
             texto = texto.replace('<em>', '</em>', 1)
             texto = texto.replace('</em>', '<em>', 1)
         
-        # Convertir `texto` a <code>texto</code>
         texto = texto.replace('`', '<code>')
-        # Cerrar las etiquetas code correctamente
         code_count = texto.count('<code>')
         for i in range(code_count):
             texto = texto.replace('<code>', '</code>', 1)
             texto = texto.replace('</code>', '<code>', 1)
         
-        # Convertir saltos de línea
         texto = texto.replace('\n', '<br>')
         
         return texto
     
+    def _buscar_productos_inteligente(self, consulta, productos):
+        consulta_lower = consulta.lower()
+        productos_encontrados = []
+        
+        palabras_clave = {
+            'audifonos': ['audífonos', 'audifonos', 'headphones', 'auriculares', 'sonido', 'audio'],
+            'helados': ['helado', 'heladería', 'postre', 'crema'],
+            'electronica': ['electrónica', 'tecnología', 'tecnologia', 'gadgets'],
+            'ropa': ['vestuario', 'moda', 'camisa', 'pantalon'],
+            'comida': ['alimento', 'comestible', 'restaurante', 'cocina']
+        }
+        
+        for producto in productos:
+            nombre_lower = producto['nombre'].lower()
+            descripcion_lower = (producto['descripcion'] or '').lower()
+            categoria_lower = producto['categoria'].lower()
+            negocio_lower = producto['negocio'].lower()
+            
+            encontrado = False
+            
+            if consulta_lower in nombre_lower or consulta_lower in descripcion_lower:
+                encontrado = True
+            
+            for palabra_principal, sinonimos in palabras_clave.items():
+                if (consulta_lower in palabra_principal or 
+                    any(sinonimo in consulta_lower for sinonimo in sinonimos)):
+                    
+                    if (palabra_principal in nombre_lower or 
+                        any(sinonimo in nombre_lower for sinonimo in sinonimos) or
+                        palabra_principal in categoria_lower or
+                        any(sinonimo in categoria_lower for sinonimo in sinonimos)):
+                        encontrado = True
+            
+            if consulta_lower in negocio_lower:
+                encontrado = True
+            
+            if encontrado:
+                productos_encontrados.append(producto)
+        
+        return productos_encontrados
+    
     def _obtener_datos_reales_bd(self, user_id=None):
-        """Obtener datos REALES de tu base de datos"""
         try:
-            # Obtener modelos REALES de tu BD
             Productos = apps.get_model('Software', 'Productos')
             CategoriaProductos = apps.get_model('Software', 'CategoriaProductos')
             Negocios = apps.get_model('Software', 'Negocios')
@@ -76,6 +107,8 @@ class GeminiAssistant:
             CarritoItem = apps.get_model('Software', 'CarritoItem')
             Pedidos = apps.get_model('Software', 'Pedidos')
             Promociones = apps.get_model('Software', 'Promociones')
+            Favoritos = apps.get_model('Software', 'Favoritos')
+            VariantesProducto = apps.get_model('Software', 'VariantesProducto')
             
             datos_reales = {
                 "productos": [],
@@ -83,13 +116,14 @@ class GeminiAssistant:
                 "negocios": [],
                 "ofertas_activas": [],
                 "carrito_usuario": {},
-                "pedidos_recientes": []
+                "pedidos_recientes": [],
+                "favoritos_usuario": [],
+                "variantes_productos": {}
             }
             
-            # Obtener PRODUCTOS REALES con sus categorías y negocios
             productos = Productos.objects.select_related(
                 'fkcategoria_prod', 'fknegocioasociado_prod'
-            ).filter(estado_prod='activo')[:15]  # Últimos 15 productos activos
+            ).filter(estado_prod='disponible')
             
             for p in productos:
                 producto_data = {
@@ -103,20 +137,42 @@ class GeminiAssistant:
                     "descripcion": p.desc_prod or "",
                     "stock": p.stock_prod or 0,
                     "imagen": p.img_prod.url if p.img_prod else None,
-                    "estado": p.estado_prod
+                    "estado": p.estado_prod,
+                    "tiene_variantes": False
                 }
+                
+                variantes = VariantesProducto.objects.filter(
+                    producto_id=p.pkid_prod, 
+                    estado_variante='activa'
+                )
+                
+                if variantes.exists():
+                    producto_data["tiene_variantes"] = True
+                    variantes_data = []
+                    for v in variantes:
+                        variante_info = {
+                            "id": v.id_variante,
+                            "nombre": v.nombre_variante,
+                            "precio_adicional": float(v.precio_adicional),
+                            "precio_total": float(p.precio_prod) + float(v.precio_adicional),
+                            "stock": v.stock_variante,
+                            "sku": v.sku_variante,
+                            "imagen": v.imagen_variante.url if v.imagen_variante else None
+                        }
+                        variantes_data.append(variante_info)
+                    
+                    datos_reales["variantes_productos"][str(p.pkid_prod)] = variantes_data
+                
                 datos_reales["productos"].append(producto_data)
             
-            # Obtener CATEGORÍAS REALES
-            categorias = CategoriaProductos.objects.all()[:10]
+            categorias = CategoriaProductos.objects.all()
             for c in categorias:
                 datos_reales["categorias"].append({
                     "id": c.pkid_cp,
                     "nombre": c.desc_cp
                 })
             
-            # Obtener NEGOCIOS ACTIVOS
-            negocios = Negocios.objects.filter(estado_neg='activo')[:10]
+            negocios = Negocios.objects.filter(estado_neg='activo')
             for n in negocios:
                 datos_reales["negocios"].append({
                     "id": n.pkid_neg,
@@ -126,14 +182,13 @@ class GeminiAssistant:
                     "imagen": n.img_neg.url if n.img_neg else None
                 })
             
-            # Obtener OFERTAS ACTIVAS
             from django.utils import timezone
             hoy = timezone.now().date()
             ofertas = Promociones.objects.filter(
                 estado_promo='activa',
                 fecha_inicio__lte=hoy,
                 fecha_fin__gte=hoy
-            ).select_related('fkproducto')[:5]
+            ).select_related('fkproducto')
             
             for o in ofertas:
                 if o.fkproducto:
@@ -145,7 +200,6 @@ class GeminiAssistant:
                         "precio_final": float(o.fkproducto.precio_prod) * (1 - (float(o.porcentaje_descuento) / 100)) if o.porcentaje_descuento else float(o.fkproducto.precio_prod)
                     })
             
-            # Obtener CARRITO del usuario (si está logueado)
             if user_id:
                 try:
                     carrito = Carrito.objects.filter(fkusuario_carrito_id=user_id).first()
@@ -162,7 +216,9 @@ class GeminiAssistant:
                                 "producto": item.fkproducto.nom_prod,
                                 "cantidad": item.cantidad,
                                 "precio_unitario": float(item.precio_unitario),
-                                "subtotal": float(item.precio_unitario) * item.cantidad
+                                "subtotal": float(item.precio_unitario) * item.cantidad,
+                                "variante_seleccionada": item.variante_seleccionada,
+                                "variante_id": item.variante_id
                             })
                         
                         datos_reales["carrito_usuario"] = {
@@ -171,14 +227,13 @@ class GeminiAssistant:
                             "items": items_detalle
                         }
                 except Exception as e:
-                    print(f"⚠️ Error obteniendo carrito: {e}")
+                    print(f"Error obteniendo carrito: {e}")
             
-            # Obtener PEDIDOS RECIENTES del usuario
             if user_id:
                 try:
                     pedidos = Pedidos.objects.filter(
                         fkusuario_pedido_id=user_id
-                    ).order_by('-fecha_pedido')[:5]
+                    ).order_by('-fecha_pedido')
                     
                     for ped in pedidos:
                         datos_reales["pedidos_recientes"].append({
@@ -189,24 +244,41 @@ class GeminiAssistant:
                             "negocio": ped.fknegocio_pedido.nom_neg if ped.fknegocio_pedido else "Sin negocio"
                         })
                 except Exception as e:
-                    print(f"⚠️ Error obteniendo pedidos: {e}")
+                    print(f"Error obteniendo pedidos: {e}")
             
-            print(f"✅ Datos BD: {len(datos_reales['productos'])} productos, {len(datos_reales['categorias'])} categorías")
+            if user_id:
+                try:
+                    favoritos = Favoritos.objects.filter(
+                        fkusuario_id=user_id
+                    ).select_related('fkproducto')
+                    
+                    for fav in favoritos:
+                        datos_reales["favoritos_usuario"].append({
+                            "producto_id": fav.fkproducto.pkid_prod,
+                            "nombre": fav.fkproducto.nom_prod,
+                            "precio": float(fav.fkproducto.precio_prod),
+                            "fecha_agregado": fav.fecha_agregado.strftime("%d/%m/%Y")
+                        })
+                except Exception as e:
+                    print(f"Error obteniendo favoritos: {e}")
+            
+            print(f"Datos BD: {len(datos_reales['productos'])} productos, {len(datos_reales['favoritos_usuario'])} favoritos")
             return datos_reales
             
         except Exception as e:
-            print(f"❌ Error obteniendo datos BD: {e}")
-            return {"productos": [], "categorias": [], "negocios": [], "ofertas_activas": []}
+            print(f"Error obteniendo datos BD: {e}")
+            return {"productos": [], "categorias": [], "negocios": [], "ofertas_activas": [], "favoritos_usuario": [], "variantes_productos": {}}
     
     def obtener_respuesta_interactiva(self, consulta_usuario, user_id=None):
-        """Respuesta SUPER INTERACTIVA con negritas equilibradas"""
         try:
-            print(f"🚀 Procesando: {consulta_usuario}")
+            print(f"Procesando: {consulta_usuario}")
             
-            # OBTENER DATOS REALES DE LA BD
             datos_reales = self._obtener_datos_reales_bd(user_id)
             
-            # Agregar al historial
+            productos_encontrados = self._buscar_productos_inteligente(consulta_usuario, datos_reales["productos"])
+            
+            datos_reales["productos_encontrados"] = productos_encontrados
+            
             self.conversacion_historial.append(f"Usuario: {consulta_usuario}")
             if len(self.conversacion_historial) > 8:
                 self.conversacion_historial = self.conversacion_historial[-8:]
@@ -214,84 +286,70 @@ class GeminiAssistant:
             historial_contexto = "\n".join(self.conversacion_historial[-4:])
             
             prompt = f"""
-            Eres VECY_ASISTENTE, un asistente VIRTUAL SUPER INTERACTIVO para la plataforma de compras Vecy.
+            Eres VECY_ASISTENTE, un asistente VIRTUAL para la plataforma de compras Vecy.
             Tienes acceso a DATOS REALES EN TIEMPO REAL de la base de datos.
             
             DATOS REALES ACTUALES:
             {json.dumps(datos_reales, indent=2, ensure_ascii=False)}
             
             CONTEXTO:
-            - Usuario: {"✅ LOGEADO" if user_id else "🚫 No logueado"}
+            - Usuario: {"LOGEADO" if user_id else "No logueado"}
             - Conversación reciente: {historial_contexto}
+            - Productos encontrados para "{consulta_usuario}": {len(productos_encontrados)} productos
             
-            🎯 **INSTRUCCIONES DE FORMATEO - NEGRITAS EQUILIBRADAS:**
+            INSTRUCCIONES CRÍTICAS:
+            - SI hay productos en "productos_encontrados", MENCIONALOS específicamente en tu respuesta
+            - Usa los NOMBRES REALES de los productos encontrados
+            - Menciona los PRECIOS REALES de los productos encontrados
+            - Si hay productos del negocio "El Rincón", destácalos específicamente
+            - NO digas "no tenemos productos" si hay productos en "productos_encontrados"
+            
+            INSTRUCCIONES DE FORMATEO:
             - Usa **negritas SOLO para lo MÁS importante**: precios finales, totales, números clave
             - Usa *cursivas* para énfasis suave y tono amigable
-            - **MÁXIMO 2-3 negritas por mensaje** - no abuses
+            - MÁXIMO 2-3 negritas por mensaje - no abuses
             - Prioriza negritas en: precios, totales, números, acciones principales
             - Evita negritas en: saludos, preguntas, textos descriptivos normales
-            - Usa emojis estratégicamente para hacerlo más amigable 🎯
+            - Usa emojis estratégicamente para hacerlo más amigable
             - Sé natural y conversacional
             
             RESPUESTA EN JSON:
             {{
                 "respuesta_chat": "Texto conversacional con negritas MEDIDAS y estratégicas",
-                "tipo_respuesta": "productos|carrito|pedidos|ofertas|navegacion|conversacional",
+                "tipo_respuesta": "productos|carrito|pedidos|ofertas|favoritos|variantes|navegacion|conversacional",
                 "datos_interactivos": {{
                     "mostrar_productos": true/false,
-                    "productos_destacados": [lista de IDs],
+                    "productos_destacados": [lista de IDs de productos_encontrados],
                     "mostrar_categorias": true/false,
                     "categorias_sugeridas": [lista de IDs],
                     "mostrar_ofertas": true/false,
-                    "accion_recomendada": "buscar|filtrar|agregar_carrito|ver_pedidos|ver_ofertas",
+                    "mostrar_favoritos": true/false,
+                    "mostrar_variantes": true/false,
+                    "producto_con_variantes": id_producto,
+                    "accion_recomendada": "buscar|filtrar|agregar_carrito|ver_pedidos|ver_ofertas|ver_favoritos|elegir_variante",
                     "filtros_sugeridos": ["categoria:X", "precio_min:Y", "precio_max:Z", "negocio:W"]
                 }},
                 "sugerencia_navegacion": {{
-                    "pagina_recomendada": "productos_filtrados|carrito|mis_pedidos|dashboard",
-                    "url_destino": "/productos-filtrados/|/carrito/|/mis-pedidos-data/|/dashboard/",
+                    "pagina_recomendada": "productos_filtrados|carrito|mis_pedidos|dashboard|favoritos",
+                    "url_destino": "/productos-filtrados/|/carrito/|/mis-pedidos-data/|/dashboard/|/favoritos/",
                     "confianza": 1-10,
                     "razon": "Texto corto y natural para el botón - MÁXIMO 5 palabras"
                 }}
             }}
             
-            🚫 **INSTRUCCIÓN IMPORTANTE:** 
+            INSTRUCCIÓN IMPORTANTE: 
             - En "razon" escribe SOLO el texto que aparecerá en el botón
             - NO expliques tu razonamiento lógico
             - NO pongas "El usuario solicitó" o "siguiente paso lógico"
-            - Usa textos cortos como: "Explorar categorías", "Ver productos", "Ir al carrito"
+            - Usa textos cortos como: "Explorar categorías", "Ver productos", "Ir al carrito", "Ver favoritos"
             
-            📝 **EJEMPLOS DE RESPUESTAS CON NEGRITAS EQUILIBRADAS:**
+            EJEMPLOS DE RESPUESTAS CUANDO HAY PRODUCTOS ENCONTRADOS:
             
-            ✅ BIEN (negritas estratégicas):
-            - "Encontré 3 helados por debajo de **$10,000**. *¡Perfectos para tu presupuesto!* 🍦"
-            - "Tu carrito tiene 2 productos por un total de **$25,500**. ¿Quieres proceder al pago? 💳"
-            - "📦 Pedido *#456* está *en camino*. Llegará estimadamente mañana. 🚚"
-            - "¡Oferta especial! *Hoy solamente*: Helado de Vainilla por **$8,500** (antes $10,000) 🎉"
+            CON PRODUCTOS:
+            "¡Perfecto! Encontré {len(productos_encontrados)} productos relacionados con '{consulta_usuario}'. Te recomiendo ver *Audífonos Gamer Pro* de **El Rincón** por **$85,000** 🎧. ¿Te gustaría que te muestre más detalles?"
             
-            ❌ MAL (demasiadas negritas):
-            - "**Encontré** **3 helados** por debajo de **$10,000**. **¡Perfectos** para tu **presupuesto!** 🍦"
-            - "**Tu carrito** tiene **2 productos** por un **total** de **$25,500**. **¿Quieres** proceder al **pago?** 💳"
-            
-            🎯 **CUÁNDO USAR NEGRITAS:**
-            - PRECIOS: **$10,000** (solo el precio, no "por debajo de")
-            - TOTALES: **$25,500** (solo el total, no "por un total de")  
-            - NÚMEROS CLAVE: **3 helados**, **Pedido #456**
-            - ACCIONES: **proceder al pago** (solo si es muy importante)
-            
-            INSTRUCCIONES INTERACTIVAS:
-            
-            1. PRODUCTOS:
-            - "helados" → mostrar productos de categoría helados
-            - "productos baratos" → filtrar por precio < 10000
-            - Mencionar precios REALES con **negritas estratégicas**
-            
-            2. CARRITO:
-            - Si usuario tiene carrito → mencionar total con **negrita**
-            - "mi carrito" → mostrar resumen del carrito real
-            
-            3. OFERTAS:
-            - "ofertas" → mostrar promociones activas REALES
-            - Destacar precio final con **negrita**
+            SIN PRODUCTOS:
+            "No encontré productos exactos para '{consulta_usuario}', pero te sugiero explorar la categoría de electrónica en *El Rincón* donde suelen tener productos similares. ¿Quieres ver todos los productos disponibles?"
             """
             
             response = self.client.models.generate_content(
@@ -302,21 +360,18 @@ class GeminiAssistant:
             texto_limpio = response.text.replace('```json', '').replace('```', '').strip()
             resultado = json.loads(texto_limpio)
             
-            # ✅ CONVERTIR MARKDOWN A HTML
             resultado["respuesta_chat"] = self._convertir_markdown_a_html(resultado["respuesta_chat"])
             
-            # Agregar respuesta al historial
             self.conversacion_historial.append(f"Asistente: {resultado['respuesta_chat']}")
             
-            print(f"✅ Respuesta interactiva: {resultado['tipo_respuesta']}")
+            print(f"Respuesta interactiva: {resultado['tipo_respuesta']}, Productos encontrados: {len(productos_encontrados)}")
             return resultado
             
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"Error: {e}")
             return self._respuesta_emergencia(consulta_usuario)
     
     def _respuesta_emergencia(self, consulta):
-        """Respuesta de emergencia"""
         return {
             "respuesta_chat": "¡Hola! 👋 Estoy teniendo problemas técnicos momentáneos. Mientras tanto, puedes explorar nuestras secciones principales.",
             "tipo_respuesta": "conversacional",
@@ -332,5 +387,4 @@ class GeminiAssistant:
             }
         }
 
-# Instancia global
 asistente_gemini = GeminiAssistant()

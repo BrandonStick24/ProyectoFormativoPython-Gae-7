@@ -1,9 +1,9 @@
-MIRALO: <!-- templates/partials/carrito_sistema.html -->
+<!-- templates/partials/carrito_sistema.html -->
 {% load static %}
 
 <!-- ==================== ESTILOS INTEGRADOS ==================== -->
 <style>
-    /* ESTILOS ESPECÍFICOS PARA VARIANTES EN CARRITO */
+    /* ESTILOS ESPECÍFICOS PARA VARIANTES EN CARRITO Y FAVORITOS */
     .variant-info-cart {
         font-size: 0.85rem;
         color: #6c757d;
@@ -165,20 +165,6 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         display: none !important;
     }
     
-    .btn-eliminar-pedido {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        cursor: pointer;
-    }
-    
-    .btn-eliminar-pedido:hover {
-        background-color: #c82333;
-    }
-    
     .btn-mostrar-todos {
         background-color: #6c757d;
         color: white;
@@ -231,81 +217,77 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         cursor: not-allowed !important;
     }
 
-    /* FLOATING ACTION BUTTONS - MEJORADO */
+    /* FLOATING ACTION BUTTONS - MEJORADO Y ORGANIZADO */
     .vecy-floating-actions {
         position: fixed;
         bottom: 30px;
         right: 30px;
-        z-index: 1050;
+        z-index: 1040; /* MENOR QUE OFFCANVAS */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
     }
     
     .vecy-fab-main {
-        width: 60px;
-        height: 60px;
+        width: 65px;
+        height: 65px;
         background: linear-gradient(135deg, #007bff, #0056b3);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         cursor: pointer;
-        box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
+        box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
         transition: all 0.3s ease;
         position: relative;
-        animation: pulse 2s infinite;
+        border: 3px solid white;
+        animation: pulseBlue 2s infinite;
     }
     
-    @keyframes pulse {
-        0% { box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3); }
-        50% { box-shadow: 0 4px 25px rgba(0, 123, 255, 0.5); }
-        100% { box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3); }
+    @keyframes pulseBlue {
+        0% { 
+            box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
+            transform: scale(1);
+        }
+        50% { 
+            box-shadow: 0 8px 30px rgba(0, 123, 255, 0.6);
+            transform: scale(1.05);
+        }
+        100% { 
+            box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
+            transform: scale(1);
+        }
     }
     
     .vecy-fab-main:hover {
         transform: scale(1.1);
-        box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
+        box-shadow: 0 8px 35px rgba(0, 123, 255, 0.5);
         animation: none;
     }
     
-    .vecy-fab-menu {
-        position: absolute;
-        bottom: 70px;
-        right: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        opacity: 0;
-        visibility: hidden;
-        transform: translateY(20px);
-        transition: all 0.3s ease;
-    }
-    
-    .vecy-fab-menu.active {
-        opacity: 1;
-        visibility: visible;
-        transform: translateY(0);
-    }
-    
-    .vecy-fab-item {
-        width: 50px;
-        height: 50px;
+    .vecy-fab-secondary {
+        width: 55px;
+        height: 55px;
         background: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: #495057;
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         cursor: pointer;
-        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         transition: all 0.3s ease;
         position: relative;
-        border: none;
+        border: 2px solid #f8f9fa;
     }
     
-    .vecy-fab-item:hover {
-        transform: scale(1.1);
+    .vecy-fab-secondary:hover {
+        transform: scale(1.15);
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
         background: #f8f9fa;
     }
     
@@ -316,19 +298,49 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         background: #dc3545;
         color: white;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        font-size: 0.7rem;
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
+        border: 2px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
-    /* OFFCANVAS STYLES */
-    .vecy-cart-offcanvas, .vecy-pedidos-offcanvas {
-        width: 400px;
+    /* ESTILOS ESPECÍFICOS PARA CADA BOTÓN SECUNDARIO */
+    .vecy-fab-pedidos {
+        background: linear-gradient(135deg, #17a2b8, #138496);
+        color: white;
+    }
+    
+    .vecy-fab-favoritos {
+        background: linear-gradient(135deg, #e83e8c, #d91a72);
+        color: white;
+    }
+    
+    .vecy-fab-soporte {
+        background: linear-gradient(135deg, #28a745, #1e7e34);
+        color: white;
+    }
+    
+    .vecy-fab-top {
+        background: linear-gradient(135deg, #6c757d, #545b62);
+        color: white;
+    }
+
+    /* OFFCANVAS STYLES - Z-INDEX CORREGIDO */
+    .vecy-cart-offcanvas, 
+    .vecy-pedidos-offcanvas, 
+    .vecy-favoritos-offcanvas {
+        width: 420px;
         max-width: 90vw;
+        z-index: 1060 !important; /* MAYOR QUE LOS BOTONES */
+    }
+    
+    .offcanvas-backdrop {
+        z-index: 1059 !important; /* DEBE SER MENOR QUE OFFCANVAS */
     }
     
     .cart-item {
@@ -337,6 +349,11 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         padding: 15px;
         border-bottom: 1px solid #e9ecef;
         gap: 15px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .cart-item:hover {
+        background-color: #f8f9fa;
     }
     
     .cart-item-image-container {
@@ -357,6 +374,7 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     .cart-item-name {
         font-weight: 600;
         margin-bottom: 5px;
+        color: #333;
     }
     
     .cart-item-store {
@@ -372,15 +390,21 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     }
     
     .quantity-btn {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border: 1px solid #dee2e6;
         background: white;
-        border-radius: 4px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .quantity-btn:hover {
+        background: #f8f9fa;
+        border-color: #007bff;
     }
     
     .quantity-btn:disabled {
@@ -393,28 +417,42 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         border: none;
         color: #dc3545;
         cursor: pointer;
-        padding: 5px;
+        padding: 8px;
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .cart-remove-btn:hover {
+        background: #fff5f5;
     }
 
-    /* PEDIDOS STYLES */
+    /* PEDIDOS STYLES - SIN OPCIÓN DE CANCELAR */
     .pedido-card {
         border: 1px solid #e9ecef;
-        border-radius: 8px;
-        padding: 15px;
+        border-radius: 10px;
+        padding: 18px;
         margin-bottom: 15px;
         background: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    
+    .pedido-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
     }
     
     .pedido-header {
         display: flex;
-        justify-content: between;
+        justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
     
     .pedido-numero {
         font-weight: bold;
         color: #495057;
+        font-size: 1.1rem;
     }
     
     .pedido-fecha {
@@ -422,75 +460,200 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         color: #6c757d;
     }
     
-    .pedido-acciones {
+    .pedido-info-adicional {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+    
+    .info-contacto {
+        color: #6c757d;
+        margin-top: 5px;
+    }
+
+    /* FAVORITOS STYLES - MEJORADOS CON VARIANTES */
+    .favorito-card {
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: white;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    
+    .favorito-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .favorito-header {
         display: flex;
-        gap: 10px;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+    
+    .favorito-info {
+        flex: 1;
+    }
+    
+    .favorito-nombre {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 5px;
+    }
+    
+    .favorito-tienda {
+        font-size: 0.8rem;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+    
+    .favorito-precio {
+        font-weight: bold;
+        color: #007bff;
+        font-size: 1.1rem;
+    }
+    
+    .favorito-precio-original {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin-left: 8px;
+    }
+    
+    .favorito-variantes {
+        margin-top: 8px;
+        font-size: 0.8rem;
+    }
+    
+    .variante-item {
+        display: inline-block;
+        background: #f8f9fa;
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-right: 5px;
+        margin-bottom: 5px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .variante-seleccionada {
+        background: #e7f3ff;
+        border-color: #007bff;
+        font-weight: bold;
+    }
+    
+    .favorito-acciones {
+        display: flex;
+        gap: 8px;
         margin-top: 10px;
     }
     
-    .btn-ver-detalle {
+    .btn-agregar-favorito {
         background: #007bff;
         color: white;
         border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-size: 0.8rem;
         cursor: pointer;
+        transition: background-color 0.2s ease;
+        flex: 1;
     }
     
-    .btn-cancelar-pedido {
+    .btn-agregar-favorito:hover {
+        background: #0056b3;
+    }
+    
+    .btn-eliminar-favorito {
         background: #dc3545;
         color: white;
         border: none;
-        padding: 5px 10px;
-        border-radius: 4px;
+        padding: 6px 12px;
+        border-radius: 6px;
         font-size: 0.8rem;
         cursor: pointer;
+        transition: background-color 0.2s ease;
     }
     
-    .btn-cancelar-pedido:disabled {
-        background: #6c757d;
-        cursor: not-allowed;
+    .btn-eliminar-favorito:hover {
+        background: #c82333;
+    }
+
+    /* OFERTAS EN FAVORITOS */
+    .favorito-oferta {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-left: 8px;
+        font-weight: bold;
+    }
+    
+    .favorito-ahorro {
+        color: #28a745;
+        font-size: 0.8rem;
+        margin-top: 4px;
     }
 
     /* MODAL STYLES */
     .metodo-pago-card {
         border: 2px solid #e9ecef;
-        border-radius: 8px;
-        padding: 15px;
+        border-radius: 10px;
+        padding: 18px;
         cursor: pointer;
         transition: all 0.3s ease;
+        background: white;
     }
     
     .metodo-pago-card:hover, .metodo-pago-card.selected {
         border-color: #007bff;
         background-color: #f8f9fa;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     
     .metodo-pago-header {
         display: flex;
         align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
+        gap: 12px;
+        margin-bottom: 12px;
     }
     
     .logo-billetera {
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         object-fit: contain;
-        border-radius: 4px;
+        border-radius: 6px;
     }
     
     .formulario-pago {
         display: none;
-        padding: 15px;
+        padding: 18px;
         background: #f8f9fa;
         border-radius: 8px;
         margin-top: 15px;
+        border: 1px solid #e9ecef;
     }
     
     .formulario-pago.active {
         display: block;
+        animation: formSlideDown 0.3s ease;
+    }
+    
+    @keyframes formSlideDown {
+        from { 
+            opacity: 0; 
+            transform: translateY(-10px);
+        }
+        to { 
+            opacity: 1; 
+            transform: translateY(0);
+        }
     }
     
     .campo-formulario {
@@ -499,22 +662,30 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     
     .campo-formulario label {
         display: block;
-        margin-bottom: 5px;
+        margin-bottom: 6px;
         font-weight: 500;
+        color: #495057;
     }
     
     .campo-formulario input {
         width: 100%;
-        padding: 8px 12px;
+        padding: 10px 12px;
         border: 1px solid #ced4da;
-        border-radius: 4px;
+        border-radius: 6px;
+        transition: border-color 0.2s ease;
+    }
+    
+    .campo-formulario input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+        outline: none;
     }
     
     .dato-banco {
         display: flex;
         align-items: center;
-        justify-content: between;
-        padding: 8px 0;
+        justify-content: space-between;
+        padding: 10px 0;
         border-bottom: 1px solid #e9ecef;
     }
     
@@ -523,87 +694,98 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         border: none;
         color: #007bff;
         cursor: pointer;
+        padding: 5px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+    }
+    
+    .btn-copiar:hover {
+        background: #e7f3ff;
     }
 
     /* NUEVOS ESTILOS PARA CONTRAENTREGA CON ANTICIPO */
     .info-anticipo {
         background: #fff3cd;
         border: 1px solid #ffeaa7;
-        border-radius: 6px;
-        padding: 10px;
+        border-radius: 8px;
+        padding: 12px;
         margin-top: 10px;
         font-size: 0.85rem;
     }
     
     .resumen-pago-anticipo {
         background: #e7f3ff;
-        border-radius: 6px;
-        padding: 12px;
-        margin-top: 10px;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+        border: 1px solid #b3d9ff;
     }
     
     .linea-pago {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
         font-size: 0.9rem;
+        padding: 4px 0;
     }
     
     .linea-pago.total {
         font-weight: bold;
-        border-top: 1px solid #dee2e6;
-        padding-top: 8px;
-        margin-top: 8px;
+        border-top: 2px solid #b3d9ff;
+        padding-top: 10px;
+        margin-top: 10px;
+        font-size: 1rem;
     }
 
-    /* ESTILOS DEL CHAT FLOTANTE - MEJORADOS */
+    /* ESTILOS DEL CHAT FLOTANTE - MEJORADOS Y MOVIDOS A LA DERECHA */
     .chat-flotante {
         position: fixed;
-        bottom: 20px;
-        left: 20px;
-        z-index: 1050;
+        bottom: 30px;
+        left: 30px;
+        z-index: 1040; /* MENOR QUE OFFCANVAS */
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    /* BOTÓN FLOTANTE */
+    /* BOTÓN FLOTANTE DEL CHAT */
     .chat-btn {
-        width: 60px;
-        height: 60px;
+        width: 65px;
+        height: 65px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
         transition: all 0.3s ease;
         position: relative;
+        border: 3px solid white;
         animation: chatPulse 2s infinite;
     }
 
     @keyframes chatPulse {
         0% { 
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
             transform: scale(1);
         }
         50% { 
-            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
             transform: scale(1.05);
         }
         100% { 
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.4);
             transform: scale(1);
         }
     }
     
     .chat-btn:hover {
         transform: scale(1.1);
-        box-shadow: 0 6px 25px rgba(0,0,0,0.3);
+        box-shadow: 0 8px 35px rgba(102, 126, 234, 0.5);
         animation: none;
     }
     
     .chat-icon {
-        font-size: 24px;
+        font-size: 28px;
         color: white;
     }
     
@@ -614,14 +796,15 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         background: #ff4757;
         color: white;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
         font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         display: none;
         animation: notificationPulse 1.5s infinite;
+        border: 2px solid white;
     }
 
     @keyframes notificationPulse {
@@ -633,18 +816,19 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     /* CONTENEDOR DEL CHAT */
     .chat-container {
         position: absolute;
-        bottom: 70px;
+        bottom: 80px;
         left: 0;
-        width: 350px;
-        height: 500px;
+        width: 380px;
+        height: 520px;
         background: white;
-        border-radius: 15px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        border-radius: 20px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.25);
         display: none;
         flex-direction: column;
         overflow: hidden;
         border: 1px solid #e9ecef;
         transform-origin: bottom left;
+        z-index: 1061; /* MAYOR QUE OFFCANVAS */
     }
     
     .chat-container.abierto {
@@ -667,7 +851,7 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     .chat-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 15px;
+        padding: 18px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -676,11 +860,11 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     .chat-header-info {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
     }
     
     .chat-avatar {
-        font-size: 24px;
+        font-size: 28px;
         animation: avatarBounce 2s infinite;
     }
 
@@ -691,12 +875,13 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     
     .chat-header h4 {
         margin: 0;
-        font-size: 16px;
+        font-size: 17px;
+        font-weight: 600;
     }
     
     .chat-header small {
-        opacity: 0.8;
-        font-size: 12px;
+        opacity: 0.9;
+        font-size: 13px;
     }
     
     .chat-cerrar {
@@ -706,8 +891,8 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         font-size: 24px;
         cursor: pointer;
         padding: 0;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -722,18 +907,19 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     /* MENSAJES */
     .chat-messages {
         flex: 1;
-        padding: 15px;
+        padding: 18px;
         overflow-y: auto;
         background: #f8f9fa;
     }
     
     .message {
-        margin: 10px 0;
-        max-width: 80%;
-        padding: 12px 15px;
-        border-radius: 18px;
+        margin: 12px 0;
+        max-width: 85%;
+        padding: 14px 18px;
+        border-radius: 20px;
         line-height: 1.4;
         animation: messageFadeIn 0.3s ease;
+        font-size: 14px;
     }
     
     @keyframes messageFadeIn {
@@ -750,17 +936,18 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     .bot-message {
         background: white;
         border: 1px solid #e9ecef;
-        border-bottom-left-radius: 5px;
+        border-bottom-left-radius: 8px;
         margin-right: auto;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
     .user-message {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        border-bottom-right-radius: 5px;
+        border-bottom-right-radius: 8px;
         margin-left: auto;
         animation: userMessageSlide 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
 
     @keyframes userMessageSlide {
@@ -778,9 +965,9 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     .sugerencia-navegacion {
         background: #d4edda;
         border: 1px solid #c3e6cb;
-        border-radius: 12px;
-        padding: 12px;
-        margin: 10px 0;
+        border-radius: 15px;
+        padding: 14px;
+        margin: 12px 0;
         text-align: center;
         animation: suggestionFadeIn 0.5s ease;
     }
@@ -800,67 +987,72 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
         color: white;
         border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
+        padding: 10px 20px;
+        border-radius: 25px;
         cursor: pointer;
-        font-size: 12px;
-        margin-top: 8px;
+        font-size: 13px;
+        margin-top: 10px;
         transition: transform 0.2s;
+        font-weight: 500;
     }
     
     .btn-navegar:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
     /* INPUT */
     .chat-input-container {
-        padding: 15px;
+        padding: 18px;
         background: white;
         border-top: 1px solid #e9ecef;
     }
     
     .input-group {
         display: flex;
-        gap: 8px;
+        gap: 10px;
     }
     
     #chatInput {
         flex: 1;
-        padding: 12px;
+        padding: 14px;
         border: 2px solid #e9ecef;
         border-radius: 25px;
         outline: none;
         font-size: 14px;
         transition: all 0.3s;
+        background: #f8f9fa;
     }
     
     #chatInput:focus {
         border-color: #667eea;
-        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        background: white;
     }
     
     #chatEnviar {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        padding: 12px 16px;
+        padding: 14px 20px;
         border-radius: 25px;
         cursor: pointer;
         transition: all 0.3s;
+        font-weight: 500;
+        min-width: 50px;
     }
     
     #chatEnviar:hover {
         transform: scale(1.05);
-        box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
     
     /* TYPING INDICATOR */
     .typing-indicator {
-        padding: 10px 15px;
+        padding: 12px 18px;
         color: #6c757d;
         font-style: italic;
-        font-size: 12px;
+        font-size: 13px;
         display: none;
         animation: typingPulse 1.5s infinite;
     }
@@ -883,19 +1075,31 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         }
         
         .chat-container {
-            width: 300px;
-            height: 400px;
+            width: 320px;
+            height: 450px;
         }
         
-        .vecy-cart-offcanvas, .vecy-pedidos-offcanvas {
-            width: 90vw;
+        .vecy-cart-offcanvas, .vecy-pedidos-offcanvas, .vecy-favoritos-offcanvas {
+            width: 85vw;
+        }
+        
+        .vecy-fab-main {
+            width: 60px;
+            height: 60px;
+            font-size: 1.4rem;
+        }
+        
+        .vecy-fab-secondary {
+            width: 50px;
+            height: 50px;
+            font-size: 1.2rem;
         }
     }
 
     @media (max-width: 480px) {
         .chat-container {
             width: 280px;
-            height: 380px;
+            height: 400px;
         }
         
         .vecy-floating-actions {
@@ -906,6 +1110,18 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         .chat-flotante {
             bottom: 15px;
             left: 15px;
+        }
+        
+        .vecy-fab-main {
+            width: 55px;
+            height: 55px;
+            font-size: 1.3rem;
+        }
+        
+        .vecy-fab-secondary {
+            width: 45px;
+            height: 45px;
+            font-size: 1.1rem;
         }
     }
 
@@ -920,6 +1136,7 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         border-color: #e9ecef !important;
         background-color: #f8f9fa !important;
         transform: none !important;
+        box-shadow: none !important;
     }
 
     .metodo-pago-card.disabled .metodo-pago-header,
@@ -937,17 +1154,6 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         animation: formSlideDown 0.3s ease;
     }
 
-    @keyframes formSlideDown {
-        from { 
-            opacity: 0; 
-            transform: translateY(-10px);
-        }
-        to { 
-            opacity: 1; 
-            transform: translateY(0);
-        }
-    }
-
     /* Estilos para el resumen de anticipo */
     .linea-pago {
         display: flex;
@@ -962,11 +1168,21 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         margin-top: 0.5rem;
         font-weight: bold;
     }
+
+    /* Animaciones suaves para transiciones */
+    .vecy-fab-main, .vecy-fab-secondary, .chat-btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Mejoras visuales para badges */
+    .vecy-fab-badge, .chat-notificacion {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
 </style>
 
 <!-- ==================== HTML COMPONENTS ==================== -->
 
-<!-- CHAT FLOTANTE VECY -->
+<!-- CHAT FLOTANTE VECY - AHORA EN LA IZQUIERDA -->
 <div id="chatFlotante" class="chat-flotante">
     <!-- Botón flotante -->
     <div id="chatBtn" class="chat-btn">
@@ -982,7 +1198,7 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
                 <span class="chat-avatar">🤖</span>
                 <div>
                     <h4>Asistente Vecy</h4>
-                    <small>En línea</small>
+                    <small>En línea • Listo para ayudarte</small>
                 </div>
             </div>
             <button id="chatCerrar" class="chat-cerrar">×</button>
@@ -991,7 +1207,8 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
         <!-- Mensajes -->
         <div class="chat-messages" id="chatMessages">
             <div class="message bot-message">
-                ¡Hola! 👋 Soy tu asistente Vecy. ¿En qué puedo ayudarte?
+                ¡Hola! 👋 Soy tu asistente Vecy. <br>
+                ¿En qué puedo ayudarte hoy? Puedo ayudarte a encontrar productos, explicarte ofertas o resolver tus dudas.
             </div>
         </div>
         
@@ -1005,33 +1222,40 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     </div>
 </div>
 
-<!-- FLOATING ACTION BUTTONS -->
+<!-- FLOATING ACTION BUTTONS - ORGANIZADOS EN COLUMNA -->
 <div class="vecy-floating-actions">
-    <div class="vecy-fab-main" onclick="vecyCarritoSystem.toggleCart()">
+    <!-- Botón de ir arriba -->
+    <button class="vecy-fab-secondary vecy-fab-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Ir arriba">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+    
+    <!-- Botón de soporte -->
+    <button class="vecy-fab-secondary vecy-fab-soporte" onclick="vecyCarritoSystem.showSupport()" title="Soporte">
+        <i class="fas fa-headset"></i>
+    </button>
+    
+    <!-- Botón de favoritos -->
+    <button class="vecy-fab-secondary vecy-fab-favoritos" onclick="vecyCarritoSystem.toggleFavorites()" title="Favoritos">
+        <i class="fas fa-heart"></i>
+        {% if favoritos_count > 0 %}
+        <span class="vecy-fab-badge">{{ favoritos_count }}</span>
+        {% endif %}
+    </button>
+    
+    <!-- Botón de pedidos -->
+    <button class="vecy-fab-secondary vecy-fab-pedidos" onclick="vecyCarritoSystem.togglePedidos()" title="Mis Pedidos">
+        <i class="fas fa-clipboard-list"></i>
+        {% if pedidos_pendientes_count > 0 %}
+        <span class="vecy-fab-badge">{{ pedidos_pendientes_count }}</span>
+        {% endif %}
+    </button>
+    
+    <!-- Botón principal del carrito -->
+    <div class="vecy-fab-main" onclick="vecyCarritoSystem.toggleCart()" title="Mi Carrito">
         <i class="fas fa-shopping-cart"></i>
         {% if carrito_count > 0 %}
         <span class="vecy-fab-badge">{{ carrito_count }}</span>
         {% endif %}
-    </div>
-    <div class="vecy-fab-menu">
-        <button class="vecy-fab-item" onclick="vecyCarritoSystem.togglePedidos()" title="Mis Pedidos">
-            <i class="fas fa-clipboard-list"></i>
-            {% if pedidos_pendientes_count > 0 %}
-            <span class="vecy-fab-badge">{{ pedidos_pendientes_count }}</span>
-            {% endif %}
-        </button>
-        <button class="vecy-fab-item" onclick="vecyCarritoSystem.toggleFavorites()" title="Favoritos">
-            <i class="fas fa-heart"></i>
-            {% if favoritos_count > 0 %}
-            <span class="vecy-fab-badge">{{ favoritos_count }}</span>
-            {% endif %}
-        </button>
-        <button class="vecy-fab-item" onclick="vecyCarritoSystem.showSupport()" title="Soporte">
-            <i class="fas fa-headset"></i>
-        </button>
-        <button class="vecy-fab-item" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" title="Ir arriba">
-            <i class="fas fa-chevron-up"></i>
-        </button>
     </div>
 </div>
 
@@ -1118,15 +1342,32 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
     </div>
     <div class="offcanvas-body">
         <div id="pedidosContent">
-            <div class="text-center py-3">
-                <div class="spinner-border text-primary" role="status" id="pedidosLoading">
-                    <span class="visually-hidden">Cargando...</span>
-                </div>
-            </div>
+            <!-- Contenido cargado dinámicamente -->
         </div>
     </div>
 </div>
 
+<!-- OFFCANVAS FAVORITOS -->
+<div class="offcanvas offcanvas-end vecy-favoritos-offcanvas" tabindex="-1" id="vecyFavoritosOffcanvas"
+    aria-labelledby="vecyFavoritosOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="vecyFavoritosOffcanvasLabel">
+            <i class="fas fa-heart me-2 text-danger"></i>
+            Mis Favoritos
+            {% if favoritos_count > 0 %}
+            <span class="badge bg-danger ms-2">{{ favoritos_count }}</span>
+            {% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div id="favoritosContent">
+            <!-- Contenido cargado dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<!-- MODALES -->
 <!-- MODAL PARA SELECCIÓN DE VARIANTES -->
 <div class="modal fade" id="variantsModal" tabindex="-1" aria-labelledby="variantsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -1170,6 +1411,7 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
                     aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <!-- Contenido del modal de métodos de pago -->
                 <div class="resumen-pedido mb-4 p-3 bg-light rounded">
                     <h6 class="fw-bold mb-3">Resumen de tu pedido</h6>
                     <div id="resumenPedidoContent">
@@ -1406,9 +1648,9 @@ MIRALO: <!-- templates/partials/carrito_sistema.html -->
                     <h6 class="fw-bold mb-2">Información importante</h6>
                     <ul class="small text-muted mb-0">
                         <li>Tu información de pago está protegida con encriptación SSL</li>
-                        <li>Puedes cancelar tu pedido hasta 1 hora después de realizado</li>
                         <li>Recibirás confirmación de tu pedido por correo electrónico</li>
                         <li>Para <strong>Contra Entrega con Anticipo</strong>: El 20% se paga online y el 80% al recibir</li>
+                        <li>Para dudas sobre tu pedido contacta a soporte@vecy.com</li>
                     </ul>
                 </div>
             </div>
@@ -1522,7 +1764,12 @@ const VECY_URLS = {
     ELIMINAR_ITEM: "{% url 'eliminar_item_carrito' %}",
     PROCESAR_PEDIDO: "{% url 'procesar_pedido' %}",
     MIS_PEDIDOS_DATA: "{% url 'mis_pedidos_data' %}",
-    CANCELAR_PEDIDO: "{% url 'cancelar_pedido' %}"
+    AGREGAR_FAVORITO: "{% url 'agregar_favorito' %}",
+    ELIMINAR_FAVORITO: "{% url 'eliminar_favorito' %}",
+    VER_FAVORITOS: "{% url 'ver_favoritos' %}",
+    VERIFICAR_FAVORITO: "{% url 'verificar_favorito' %}",
+    CONTAR_FAVORITOS: "{% url 'contar_favoritos' %}",
+    FAVORITOS_DATA: "{% url 'favoritos_data' %}"
 };
 
 console.log("🔗 URLs Django configuradas:", VECY_URLS);
@@ -1533,11 +1780,13 @@ class VecyCarritoSystem {
         this.productVariantsData = {};
         this.selectedVariants = {};
         this.mostrarTodosPedidos = false;
+        this.mostrarTodosFavoritos = false;
         this.metodoPagoSeleccionado = null;
         this.datosPago = {};
         this.currentProductForModal = null;
         this.totalPedido = 0;
         this.porcentajeAnticipo = 20; // 20% de anticipo
+        this.currentOpenOffcanvas = null;
         
         this.init();
     }
@@ -1545,9 +1794,53 @@ class VecyCarritoSystem {
     init() {
         console.log("🚀 Iniciando VecyCarritoSystem...");
         this.initializeVariantsSystem();
-        this.setupEventListeners();
         this.updateCartCountFromServer();
+        this.updateFavoritosCountFromServer();
+        this.setupOffcanvasListeners();
         console.log("✅ Sistema de carrito inicializado");
+    }
+
+    // ==================== MANEJO DE OFFCANVAS ====================
+    setupOffcanvasListeners() {
+        // Cerrar offcanvas existente cuando se abre uno nuevo
+        const offcanvasElements = [
+            'vecyCartOffcanvas',
+            'vecyPedidosOffcanvas', 
+            'vecyFavoritosOffcanvas'
+        ];
+
+        offcanvasElements.forEach(offcanvasId => {
+            const offcanvasElement = document.getElementById(offcanvasId);
+            if (offcanvasElement) {
+                offcanvasElement.addEventListener('show.bs.offcanvas', () => {
+                    this.closeOtherOffcanvases(offcanvasId);
+                    this.currentOpenOffcanvas = offcanvasId;
+                });
+                
+                offcanvasElement.addEventListener('hidden.bs.offcanvas', () => {
+                    if (this.currentOpenOffcanvas === offcanvasId) {
+                        this.currentOpenOffcanvas = null;
+                    }
+                });
+            }
+        });
+    }
+
+    closeOtherOffcanvases(currentOffcanvasId) {
+        const offcanvases = {
+            'vecyCartOffcanvas': document.getElementById('vecyCartOffcanvas'),
+            'vecyPedidosOffcanvas': document.getElementById('vecyPedidosOffcanvas'),
+            'vecyFavoritosOffcanvas': document.getElementById('vecyFavoritosOffcanvas')
+        };
+
+        for (const [offcanvasId, offcanvasElement] of Object.entries(offcanvases)) {
+            if (offcanvasId !== currentOffcanvasId && offcanvasElement) {
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(offcanvasElement);
+                if (bsOffcanvas) {
+                    bsOffcanvas.hide();
+                }
+            }
+        }
     }
 
     // ==================== SISTEMA DE VARIANTES ====================
@@ -1817,7 +2110,10 @@ class VecyCarritoSystem {
             if (data.success) {
                 this.showNotification('Producto agregado al carrito', 'success');
                 this.updateCartCount(data.carrito_count);
-                this.toggleCart(); // Abrir carrito después de agregar
+                // ACTUALIZACIÓN INMEDIATA - Cargar carrito si está abierto
+                if (this.currentOpenOffcanvas === 'vecyCartOffcanvas') {
+                    this.loadCartContent();
+                }
             } else {
                 this.showNotification(data.message, 'error');
             }
@@ -2035,7 +2331,526 @@ class VecyCarritoSystem {
         }
     }
 
-    // ==================== SISTEMA DE PAGO MEJORADO ====================
+    // ==================== SISTEMA DE FAVORITOS CORREGIDO ====================
+    async toggleFavorites() {
+        console.log("❤️ Abriendo favoritos...");
+        const favoritosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyFavoritosOffcanvas'));
+        favoritosOffcanvas.show();
+        await this.loadFavoritosContent();
+    }
+
+    async loadFavoritosContent() {
+        const favoritosContent = document.getElementById('favoritosContent');
+        if (!favoritosContent) return;
+
+        console.log("📦 Cargando favoritos del usuario...");
+
+        // Mostrar loading
+        favoritosContent.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando tus favoritos...</p>
+            </div>
+        `;
+
+        try {
+            // PRIMERO INTENTAR CON EL NUEVO ENDPOINT API
+            let response = await fetch('/api/favoritos/', {
+                method: 'GET',
+                headers: { 
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            console.log("📥 Response status:", response.status);
+            
+            let data;
+            if (response.ok) {
+                data = await response.json();
+                console.log("✅ Datos de favoritos API recibidos:", data);
+            } else {
+                // FALLBACK: Intentar con el endpoint existente
+                console.log("🔄 Fallback a endpoint existente...");
+                response = await fetch(this.URLS.VER_FAVORITOS, {
+                    method: 'GET',
+                    headers: { 
+                        'X-CSRFToken': this.getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const responseText = await response.text();
+                console.log("📥 Response text:", responseText.substring(0, 500));
+                
+                // Intentar extraer datos del HTML o usar datos iniciales
+                data = this.extractFavoritosFromHTML(responseText);
+            }
+            
+            if (data && data.favoritos && data.favoritos.length > 0) {
+                this.renderFavoritos(data.favoritos);
+            } else {
+                this.showFavoritosEmptyState('Aún no tienes productos favoritos');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando favoritos:', error);
+            this.showFavoritosEmptyState('Error al cargar los favoritos: ' + error.message);
+        }
+    }
+
+    // Método para extraer favoritos del HTML (fallback)
+    extractFavoritosFromHTML(html) {
+        try {
+            // Crear un parser temporal
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Buscar elementos de favoritos en el HTML
+            const favoritosElements = doc.querySelectorAll('.producto-favorito, .favorito-card');
+            const favoritos = [];
+            
+            favoritosElements.forEach(element => {
+                const productoId = element.getAttribute('data-producto-id') || 
+                                 element.querySelector('[data-producto-id]')?.getAttribute('data-producto-id');
+                
+                if (productoId) {
+                    const nombre = element.querySelector('.producto-nombre, .favorito-nombre')?.textContent || 'Producto';
+                    const precio = element.querySelector('.producto-precio, .favorito-precio')?.textContent || '$0';
+                    const imagen = element.querySelector('img')?.src || 'https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY';
+                    const negocio = element.querySelector('.tienda-nombre, .favorito-tienda')?.textContent || 'Tienda';
+                    
+                    favoritos.push({
+                        producto_id: parseInt(productoId),
+                        nombre: nombre.trim(),
+                        precio_actual: precio.trim(),
+                        imagen: imagen,
+                        negocio: negocio.trim()
+                    });
+                }
+            });
+            
+            return { favoritos: favoritos, success: true };
+        } catch (error) {
+            console.error('Error extrayendo favoritos del HTML:', error);
+            return { favoritos: [], success: false };
+        }
+    }
+
+    renderFavoritos(favoritos) {
+    const favoritosContent = document.getElementById('favoritosContent');
+    
+    let html = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Tus Productos Favoritos</h6>
+            <span class="badge bg-danger">${favoritos.length} productos</span>
+        </div>
+    `;
+
+    favoritos.forEach(favorito => {
+        const precioFinal = typeof favorito.precio_final === 'number' ? 
+            favorito.precio_final : parseFloat(favorito.precio_final || 0);
+        const precioBase = typeof favorito.precio_base === 'number' ? 
+            favorito.precio_base : parseFloat(favorito.precio_base || 0);
+        const precioOriginal = typeof favorito.precio_original === 'number' ? 
+            favorito.precio_original : parseFloat(favorito.precio_original || 0);
+        
+        const tieneOferta = favorito.tiene_descuento && favorito.tiene_oferta_activa;
+        const ahorro = favorito.ahorro || 0;
+        const descuentoPorcentaje = favorito.descuento_porcentaje || 0;
+        const tieneVariantes = favorito.tiene_variantes || favorito.es_variante;
+        
+        // Badge de oferta
+        const badgeOferta = tieneOferta ? 
+            `<span class="favorito-oferta">-${descuentoPorcentaje}% OFF</span>` : '';
+        
+        // Badge de variante
+        const badgeVariante = tieneVariantes ? 
+            `<span class="variant-badge ms-2"><i class="fas fa-list-alt me-1"></i>Variantes</span>` : '';
+        
+        // Información de ahorro
+        const infoAhorro = tieneOferta && ahorro > 0 ? 
+            `<div class="favorito-ahorro">
+                <i class="fas fa-piggy-bank me-1"></i>Ahorras $${ahorro.toFixed(0)}
+            </div>` : '';
+        
+        // Información de variantes
+        const infoVariantes = tieneVariantes && favorito.variantes && favorito.variantes.length > 0 ? 
+            `<div class="favorito-variantes mt-2">
+                <small class="text-muted">Variantes disponibles:</small>
+                <div class="variantes-list mt-1">
+                    ${favorito.variantes.map(variante => `
+                        <span class="variante-item ${variante.tiene_descuento ? 'variante-seleccionada' : ''}">
+                            ${variante.nombre_variante} - $${variante.precio_final?.toFixed(0) || variante.precio_base?.toFixed(0)}
+                            ${variante.tiene_descuento ? ' 🔥' : ''}
+                        </span>
+                    `).join('')}
+                </div>
+            </div>` : '';
+
+        html += `
+        <div class="favorito-card" data-producto-id="${favorito.producto_id}">
+            <div class="favorito-header">
+                <div class="favorito-info">
+                    <div class="favorito-nombre">
+                        ${favorito.nombre || 'Producto'}
+                        ${badgeOferta}
+                        ${badgeVariante}
+                    </div>
+                    <div class="favorito-tienda">
+                        <i class="fas fa-store"></i> ${favorito.negocio || 'Tienda Vecy'}
+                    </div>
+                    
+                    <div class="favorito-precio-container">
+                        ${tieneOferta ? `
+                            <span class="favorito-precio-original">$${precioOriginal.toFixed(0)}</span>
+                        ` : ''}
+                        <span class="favorito-precio">$${precioFinal.toFixed(0)}</span>
+                    </div>
+                    
+                    ${infoAhorro}
+                </div>
+                <img src="${favorito.imagen || 'https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'}" 
+                     alt="${favorito.nombre || 'Producto'}" 
+                     class="variant-image-in-cart"
+                     onerror="this.src='https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'">
+            </div>
+            
+            ${infoVariantes}
+                
+            <div class="favorito-acciones">
+                <button class="btn-agregar-favorito" onclick="vecyCarritoSystem.agregarAlCarritoDesdeFavorito(${favorito.producto_id})">
+                    <i class="fas fa-cart-plus me-1"></i> Agregar al Carrito
+                </button>
+                <button class="btn-eliminar-favorito" onclick="vecyCarritoSystem.eliminarFavorito(${favorito.producto_id})">
+                    <i class="fas fa-trash me-1"></i> Eliminar
+                </button>
+            </div>
+        </div>
+        `;
+    });
+
+    favoritosContent.innerHTML = html;
+}
+
+    showFavoritosEmptyState(mensaje = 'Aún no tienes productos favoritos') {
+        const favoritosContent = document.getElementById('favoritosContent');
+        if (favoritosContent) {
+            favoritosContent.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="empty-favoritos-icon mb-3">
+                        <i class="fas fa-heart fa-4x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">${mensaje}</h5>
+                    <p class="text-muted">Agrega productos a tus favoritos para verlos aquí</p>
+                    <button class="btn btn-danger mt-3" data-bs-dismiss="offcanvas">
+                        <i class="fas fa-shopping-bag me-2"></i>
+                        Explorar Productos
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    async agregarAlCarritoDesdeFavorito(productoId) {
+        console.log(`🛒 Agregando desde favoritos: ${productoId}`);
+        await this.addToCart(productoId);
+    }
+
+    async agregarFavorito(productoId) {
+        console.log(`❤️ Agregando producto ${productoId} a favoritos`);
+
+        try {
+            const response = await fetch(this.URLS.AGREGAR_FAVORITO, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    producto_id: productoId
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification('Producto agregado a favoritos', 'success');
+                this.updateFavoritosCount(data.favoritos_count);
+                this.actualizarEstadoBotonFavorito(productoId, true);
+                // ACTUALIZACIÓN INMEDIATA - Recargar favoritos si está abierto
+                if (this.currentOpenOffcanvas === 'vecyFavoritosOffcanvas') {
+                    this.loadFavoritosContent();
+                }
+            } else {
+                this.showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error agregando a favoritos:', error);
+            this.showNotification('Error al agregar a favoritos', 'error');
+        }
+    }
+
+    async eliminarFavorito(productoId) {
+        console.log(`🗑️ Eliminando producto ${productoId} de favoritos`);
+
+        try {
+            const response = await fetch(this.URLS.ELIMINAR_FAVORITO, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    producto_id: productoId
+                })
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.showNotification('Producto eliminado de favoritos', 'success');
+                this.updateFavoritosCount(data.favoritos_count);
+                this.actualizarEstadoBotonFavorito(productoId, false);
+                
+                // ACTUALIZACIÓN INMEDIATA - Recargar contenido de favoritos si está abierto
+                if (this.currentOpenOffcanvas === 'vecyFavoritosOffcanvas') {
+                    this.loadFavoritosContent();
+                }
+            } else {
+                this.showNotification(data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error eliminando de favoritos:', error);
+            this.showNotification('Error al eliminar de favoritos', 'error');
+        }
+    }
+
+    actualizarEstadoBotonFavorito(productoId, esFavorito) {
+        const botonesFavorito = document.querySelectorAll(`.btn-favorito[data-producto-id="${productoId}"]`);
+        
+        botonesFavorito.forEach(boton => {
+            if (esFavorito) {
+                boton.classList.remove('btn-outline-danger');
+                boton.classList.add('btn-danger');
+                boton.innerHTML = '<i class="fas fa-heart"></i>';
+                boton.title = 'Quitar de favoritos';
+            } else {
+                boton.classList.remove('btn-danger');
+                boton.classList.add('btn-outline-danger');
+                boton.innerHTML = '<i class="far fa-heart"></i>';
+                boton.title = 'Agregar a favoritos';
+            }
+        });
+    }
+
+    async verificarFavorito(productoId) {
+        try {
+            const response = await fetch(`${this.URLS.VERIFICAR_FAVORITO}?producto_id=${productoId}`, {
+                method: 'GET',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.actualizarEstadoBotonFavorito(productoId, data.es_favorito);
+            }
+        } catch (error) {
+            console.error('Error verificando favorito:', error);
+        }
+    }
+
+    async updateFavoritosCountFromServer() {
+        try {
+            const response = await fetch(this.URLS.CONTAR_FAVORITOS, {
+                method: 'GET',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.updateFavoritosCount(data.favoritos_count);
+            }
+        } catch (error) {
+            console.error('Error obteniendo count de favoritos:', error);
+        }
+    }
+
+    updateFavoritosCount(count) {
+        const favoritosBadges = document.querySelectorAll('.vecy-fab-badge');
+        favoritosBadges.forEach(badge => {
+            const fabItem = badge.closest('.vecy-fab-favoritos');
+            if (fabItem) {
+                badge.textContent = count;
+                if (count > 0) {
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        });
+
+        // Actualizar también el badge del offcanvas
+        const offcanvasBadge = document.querySelector('#vecyFavoritosOffcanvasLabel .badge');
+        if (offcanvasBadge) {
+            offcanvasBadge.textContent = count;
+            if (count === 0) {
+                offcanvasBadge.style.display = 'none';
+            } else {
+                offcanvasBadge.style.display = 'inline';
+            }
+        }
+    }
+
+    // ==================== SISTEMA DE PEDIDOS ====================
+    togglePedidos() {
+        console.log("📋 Abriendo panel de pedidos...");
+        const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
+        pedidosOffcanvas.show();
+        this.loadPedidosContent();
+    }
+
+    async loadPedidosContent() {
+        const pedidosContent = document.getElementById('pedidosContent');
+        if (!pedidosContent) return;
+
+        console.log("📦 Cargando pedidos del usuario...");
+
+        pedidosContent.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2 text-muted">Cargando tus pedidos...</p>
+            </div>
+        `;
+
+        try {
+            const response = await fetch(this.URLS.MIS_PEDIDOS_DATA, {
+                method: 'GET',
+                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                this.renderPedidos(data.pedidos);
+            } else {
+                this.showPedidosEmptyState();
+            }
+        } catch (error) {
+            console.error('❌ Error cargando pedidos:', error);
+            this.showPedidosEmptyState('Error al cargar los pedidos');
+        }
+    }
+
+    renderPedidos(pedidos) {
+        const pedidosContent = document.getElementById('pedidosContent');
+        
+        if (!pedidos || pedidos.length === 0) {
+            this.showPedidosEmptyState();
+            return;
+        }
+
+        let html = '';
+        let pedidosRecientes = 0;
+        let pedidosAntiguos = 0;
+        const ahora = new Date();
+        const dosDiasAtras = new Date(ahora.getTime() - (2 * 24 * 60 * 60 * 1000));
+
+        html += `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Tus Pedidos</h6>
+                <button class="btn-mostrar-todos" onclick="vecyCarritoSystem.toggleMostrarTodosPedidos()" id="btnMostrarTodos">
+                    ${this.mostrarTodosPedidos ? 'Ocultar Antiguos' : 'Mostrar Todos'}
+                </button>
+            </div>
+        `;
+
+        pedidos.forEach(pedido => {
+            const fechaPedido = new Date(pedido.fecha_pedido);
+            const esReciente = fechaPedido >= dosDiasAtras;
+            const esCancelado = pedido.estado_pedido === 'cancelado';
+
+            if (esReciente) {
+                pedidosRecientes++;
+            } else {
+                pedidosAntiguos++;
+            }
+
+            if (!this.mostrarTodosPedidos && !esReciente) {
+                return;
+            }
+
+            const clasePedido = esCancelado ? 'pedido-cancelado' : '';
+            const claseOculto = !esReciente && !this.mostrarTodosPedidos ? 'pedido-eliminado' : '';
+
+            html += `
+            <div class="pedido-card ${clasePedido} ${claseOculto}" data-pedido-id="${pedido.pkid_pedido}" data-fecha="${pedido.fecha_pedido}">
+                <div class="pedido-header">
+                    <div class="pedido-info">
+                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
+                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
+                    </div>
+                    <span class="pedido-estado estado-${pedido.estado_pedido}">
+                        ${pedido.estado_display}
+                    </span>
+                </div>
+
+                <div class="pedido-negocio">
+                    <i class="fas fa-store"></i> ${pedido.negocio}
+                </div>
+
+                <div class="pedido-productos">
+                    ${pedido.productos.map(producto => `
+                        <div class="pedido-producto">
+                            <span class="producto-nombre">${producto.nombre}</span>
+                            <span class="producto-cantidad">${producto.cantidad}x</span>
+                            <span class="producto-precio">$${producto.precio_unitario}</span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="pedido-total">
+                    Total: $${pedido.total_pedido}
+                </div>
+
+                <div class="pedido-info-adicional">
+                    <div class="info-contacto">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Para consultas sobre tu pedido contacta a soporte@vecy.com
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+
+        pedidosContent.innerHTML = html;
+    }
+
+    showPedidosEmptyState(mensaje = 'Aún no tienes pedidos') {
+        const pedidosContent = document.getElementById('pedidosContent');
+        if (pedidosContent) {
+            pedidosContent.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="empty-pedidos-icon mb-3">
+                        <i class="fas fa-clipboard-list fa-4x text-muted"></i>
+                    </div>
+                    <h5 class="text-muted">${mensaje}</h5>
+                    <p class="text-muted">Realiza tu primer pedido y aparecerá aquí</p>
+                </div>
+            `;
+        }
+    }
+
+    toggleMostrarTodosPedidos() {
+        this.mostrarTodosPedidos = !this.mostrarTodosPedidos;
+        this.loadPedidosContent();
+    }
+
+    // ==================== SISTEMA DE PAGO ====================
     procederPago() {
         console.log("💳 Procediendo al pago...");
         this.mostrarModalMetodosPago();
@@ -2429,185 +3244,6 @@ class VecyCarritoSystem {
         }, 1000);
     }
 
-    // ==================== PEDIDOS ====================
-    togglePedidos() {
-        console.log("📋 Abriendo panel de pedidos...");
-        const pedidosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyPedidosOffcanvas'));
-        pedidosOffcanvas.show();
-        this.loadPedidosContent();
-    }
-
-    async loadPedidosContent() {
-        const pedidosContent = document.getElementById('pedidosContent');
-        if (!pedidosContent) return;
-
-        console.log("📦 Cargando pedidos del usuario...");
-
-        pedidosContent.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando pedidos...</span>
-                </div>
-                <p class="mt-2 text-muted">Cargando tus pedidos...</p>
-            </div>
-        `;
-
-        try {
-            const response = await fetch(this.URLS.MIS_PEDIDOS_DATA, {
-                method: 'GET',
-                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.renderPedidos(data.pedidos);
-            } else {
-                this.showPedidosEmptyState();
-            }
-        } catch (error) {
-            console.error('❌ Error cargando pedidos:', error);
-            this.showPedidosEmptyState('Error al cargar los pedidos');
-        }
-    }
-
-    renderPedidos(pedidos) {
-        const pedidosContent = document.getElementById('pedidosContent');
-        
-        if (!pedidos || pedidos.length === 0) {
-            this.showPedidosEmptyState();
-            return;
-        }
-
-        let html = '';
-        let pedidosRecientes = 0;
-        let pedidosAntiguos = 0;
-        const ahora = new Date();
-        const dosDiasAtras = new Date(ahora.getTime() - (2 * 24 * 60 * 60 * 1000));
-
-        html += `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Tus Pedidos</h6>
-                <button class="btn-mostrar-todos" onclick="vecyCarritoSystem.toggleMostrarTodosPedidos()" id="btnMostrarTodos">
-                    ${this.mostrarTodosPedidos ? 'Ocultar Antiguos' : 'Mostrar Todos'}
-                </button>
-            </div>
-        `;
-
-        pedidos.forEach(pedido => {
-            const fechaPedido = new Date(pedido.fecha_pedido);
-            const esReciente = fechaPedido >= dosDiasAtras;
-            const esCancelado = pedido.estado_pedido === 'cancelado';
-            const puedeCancelar = pedido.puede_cancelar;
-            const tiempoRestante = pedido.tiempo_restante;
-
-            if (esReciente) {
-                pedidosRecientes++;
-            } else {
-                pedidosAntiguos++;
-            }
-
-            if (!this.mostrarTodosPedidos && !esReciente) {
-                return;
-            }
-
-            const clasePedido = esCancelado ? 'pedido-cancelado' : '';
-            const claseOculto = !esReciente && !this.mostrarTodosPedidos ? 'pedido-eliminado' : '';
-
-            html += `
-            <div class="pedido-card ${clasePedido} ${claseOculto}" data-pedido-id="${pedido.pkid_pedido}" data-fecha="${pedido.fecha_pedido}">
-                <div class="pedido-header">
-                    <div class="pedido-info">
-                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
-                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
-                    </div>
-                    <span class="pedido-estado estado-${pedido.estado_pedido}">
-                        ${pedido.estado_display}
-                    </span>
-                </div>
-
-                <div class="pedido-negocio">
-                    <i class="fas fa-store"></i> ${pedido.negocio}
-                </div>
-
-                <div class="pedido-productos">
-                    ${pedido.productos.map(producto => `
-                        <div class="pedido-producto">
-                            <span class="producto-nombre">${producto.nombre}</span>
-                            <span class="producto-cantidad">${producto.cantidad}x</span>
-                            <span class="producto-precio">$${producto.precio_unitario}</span>
-                        </div>
-                    `).join('')}
-                </div>
-
-                <div class="pedido-total">
-                    Total: $${pedido.total_pedido}
-                </div>
-
-                ${puedeCancelar ? `
-                    <div class="pedido-acciones">
-                        <button class="btn-cancelar-pedido" onclick="vecyCarritoSystem.cancelarPedido(${pedido.pkid_pedido})">
-                            <i class="fas fa-times me-2"></i>
-                            Cancelar Pedido ${tiempoRestante ? `(${tiempoRestante})` : ''}
-                        </button>
-                    </div>
-                ` : ''}
-            </div>
-            `;
-        });
-
-        pedidosContent.innerHTML = html;
-    }
-
-    showPedidosEmptyState(mensaje = 'Aún no tienes pedidos') {
-        const pedidosContent = document.getElementById('pedidosContent');
-        if (pedidosContent) {
-            pedidosContent.innerHTML = `
-                <div class="text-center py-5">
-                    <div class="empty-pedidos-icon mb-3">
-                        <i class="fas fa-clipboard-list fa-4x text-muted"></i>
-                    </div>
-                    <h5 class="text-muted">${mensaje}</h5>
-                    <p class="text-muted">Realiza tu primer pedido y aparecerá aquí</p>
-                </div>
-            `;
-        }
-    }
-
-    toggleMostrarTodosPedidos() {
-        this.mostrarTodosPedidos = !this.mostrarTodosPedidos;
-        this.loadPedidosContent();
-    }
-
-    async cancelarPedido(pedidoId) {
-        if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
-            return;
-        }
-
-        try {
-            const response = await fetch(this.URLS.CANCELAR_PEDIDO, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': this.getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    pedido_id: pedidoId
-                })
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.showNotification('Pedido cancelado exitosamente', 'success');
-                this.loadPedidosContent();
-            } else {
-                this.showNotification(data.message, 'error');
-            }
-        } catch (error) {
-            console.error('Error cancelando pedido:', error);
-            this.showNotification('Error al cancelar el pedido', 'error');
-        }
-    }
-
     // ==================== FUNCIONES UTILITARIAS ====================
     getCookie(name) {
         let cookieValue = null;
@@ -2665,9 +3301,10 @@ class VecyCarritoSystem {
     }
 
     updateCartCount(count) {
-        const cartBadges = document.querySelectorAll('.vecy-fab-badge, #cartOffcanvasCount');
+        const cartBadges = document.querySelectorAll('.vecy-fab-badge');
         cartBadges.forEach(badge => {
-            if (badge) {
+            const fabMain = badge.closest('.vecy-fab-main');
+            if (fabMain) {
                 badge.textContent = count;
                 if (count > 0) {
                     badge.style.display = 'flex';
@@ -2676,20 +3313,51 @@ class VecyCarritoSystem {
                 }
             }
         });
+
+        // Actualizar también el badge del offcanvas
+        const offcanvasBadge = document.getElementById('cartOffcanvasCount');
+        if (offcanvasBadge) {
+            offcanvasBadge.textContent = count;
+        }
     }
 
-    setupEventListeners() {
-        const fabMain = document.querySelector('.vecy-fab-main');
-        const fabMenu = document.querySelector('.vecy-fab-menu');
-        
-        if (fabMain && fabMenu) {
-            fabMain.addEventListener('click', () => fabMenu.classList.toggle('active'));
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.vecy-floating-actions')) {
-                    fabMenu.classList.remove('active');
-                }
-            });
+    showSupport() {
+        this.showNotification('¿Necesitas ayuda? Escribe tu consulta en el chat de asistencia.', 'info');
+        // Abrir el chat automáticamente
+        if (window.toggleChat) {
+            window.toggleChat();
         }
+    }
+
+    // Funciones adicionales para métodos de pago
+    copiarAlPortapapeles(texto) {
+        navigator.clipboard.writeText(texto).then(() => {
+            this.showNotification('Texto copiado al portapapeles', 'success');
+        }).catch(err => {
+            console.error('Error al copiar: ', err);
+            this.showNotification('Error al copiar texto', 'error');
+        });
+    }
+
+    volverAMetodosPago() {
+        const transferenciaModal = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
+        if (transferenciaModal) transferenciaModal.hide();
+        
+        const metodosPagoModal = new bootstrap.Modal(document.getElementById('metodosPagoModal'));
+        metodosPagoModal.show();
+    }
+
+    confirmarTransferencia() {
+        this.showNotification('Transferencia confirmada. Por favor realiza el pago y guarda el comprobante.', 'success');
+        
+        const transferenciaModal = bootstrap.Modal.getInstance(document.getElementById('transferenciaModal'));
+        if (transferenciaModal) transferenciaModal.hide();
+        
+        // Aquí iría la lógica para procesar la transferencia
+        this.procesarPagoConDatos({
+            metodo_pago: 'transferencia',
+            metodo_pago_texto: 'Transferencia Bancaria'
+        }, 'Transferencia Bancaria', document.getElementById('confirmarTransferenciaBtn'), 'Confirmar Transferencia');
     }
 }
 
@@ -2725,14 +3393,31 @@ function togglePedidos() {
     }
 }
 
+function toggleFavorites() {
+    if (window.vecyCarritoSystem) {
+        window.vecyCarritoSystem.toggleFavorites();
+    }
+}
+
+function agregarFavorito(productoId) {
+    if (window.vecyCarritoSystem) {
+        window.vecyCarritoSystem.agregarFavorito(productoId);
+    }
+}
+
+function eliminarFavorito(productoId) {
+    if (window.vecyCarritoSystem) {
+        window.vecyCarritoSystem.eliminarFavorito(productoId);
+    }
+}
+
 function procederPago() {
     if (window.vecyCarritoSystem) {
         window.vecyCarritoSystem.procederPago();
     }
 }
 
-// ==================== CHAT FLOTANTE VECY - CÓDIGO CORREGIDO ====================
-// VARIABLES GLOBALES
+// ==================== CHAT FLOTANTE VECY ====================
 let chatAbierto = false;
 let historialChat = [];
 
@@ -2829,7 +3514,7 @@ function irAPagina(url) {
     window.location.href = url;
 }
 
-// OBTENER CSRF TOKEN - VERSIÓN MEJORADA
+// OBTENER CSRF TOKEN
 function getCSRFToken() {
     const cookieValue = document.cookie
         .split('; ')
@@ -2846,7 +3531,7 @@ function getCSRFToken() {
     return cookieValue;
 }
 
-// ENVIAR MENSAJE - VERSIÓN CORREGIDA
+// ENVIAR MENSAJE
 async function enviarMensaje() {
     const mensaje = chatInput.value.trim();
     
@@ -2924,47 +3609,24 @@ async function enviarMensaje() {
 }
 
 // EVENT LISTENERS MEJORADOS
-chatBtn.addEventListener('click', toggleChat);
-chatCerrar.addEventListener('click', toggleChat);
+if (chatBtn) chatBtn.addEventListener('click', toggleChat);
+if (chatCerrar) chatCerrar.addEventListener('click', toggleChat);
+if (chatEnviar) chatEnviar.addEventListener('click', enviarMensaje);
 
-chatEnviar.addEventListener('click', enviarMensaje);
-
-chatInput.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        enviarMensaje();
-    }
-});
+if (chatInput) {
+    chatInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            enviarMensaje();
+        }
+    });
+}
 
 // Cerrar chat al hacer clic fuera (opcional)
 document.addEventListener('click', function(e) {
-    if (chatAbierto && !chatFlotante.contains(e.target)) {
+    if (chatAbierto && chatFlotante && !chatFlotante.contains(e.target)) {
         toggleChat();
     }
 });
 
-// Inicializar con más logs
 console.log('💬 Chat flotante Vecy cargado - Con Gemini integrado');
-console.log('🔗 Endpoint configurado: /api/sugerencia/');
-
-// Función para probar la conexión
-async function probarConexionChat() {
-    try {
-        const response = await fetch('/api/sugerencia/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken(),
-            },
-            body: JSON.stringify({ mensaje: 'test' })
-        });
-        console.log('🧪 Test conexión chat:', response.status);
-        return response.ok;
-    } catch (error) {
-        console.error('🧪 Test conexión falló:', error);
-        return false;
-    }
-}
-
-// Ejecutar test al cargar
-setTimeout(probarConexionChat, 1000);
 </script>

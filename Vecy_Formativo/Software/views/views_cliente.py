@@ -19,7 +19,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 import os
 from django.contrib.auth.models import User
-
+from django.views.decorators.http import require_http_methods
 from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
 from django.db import connection
@@ -29,6 +29,47 @@ from ..models import (
     VariantesProducto, ResenasNegocios
 )
 from ..services.gemini_service import asistente_gemini
+
+# =============================================================================
+# VISTAS PARA ACTUALIZACIÓN EN TIEMPO REAL DE CONTADORES
+# =============================================================================
+
+@login_required
+def get_header_counts(request):
+    """Obtener contadores actualizados para el header"""
+    try:
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        # Contador del carrito
+        carrito_count = CarritoItem.objects.filter(
+            fkcarrito__fkusuario_carrito=perfil_cliente
+        ).count()
+        
+        # Contador de favoritos
+        favoritos_count = Favoritos.objects.filter(
+            fkusuario=perfil_cliente
+        ).count()
+        
+        # Contador de notificaciones no leídas
+        notificaciones_count = Notificacion.objects.filter(
+            usuario=request.user,
+            leida=False
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'carrito_count': carrito_count,
+            'favoritos_count': favoritos_count,
+            'notificaciones_count': notificaciones_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'carrito_count': 0,
+            'favoritos_count': 0,
+            'notificaciones_count': 0
+        })
 
 def chat_asistente(request):
     """Vista para el chat fluido con Gemini"""
@@ -608,6 +649,107 @@ def cliente_dashboard(request):
         from decimal import Decimal
         hoy = timezone.now().date()
 
+        # =============================================
+        # DETECCIÓN DE FECHAS ESPECIALES
+        # =============================================
+        fecha_especial = None
+        mensaje_especial = None
+        try:
+            mes_actual = hoy.month
+            dia_actual = hoy.day
+            
+            # Detectar fechas especiales - NAVIDAD CORREGIDA
+            if mes_actual == 11 and dia_actual >= 28:  # Desde 28 de noviembre
+                fecha_especial = "navidad"
+                mensaje_especial = "🎄 ¡Especiales de Navidad! 🎁"
+            elif mes_actual == 12:  # Todo diciembre
+                if dia_actual <= 25:
+                    fecha_especial = "navidad"
+                    mensaje_especial = "🎄 ¡Especiales de Navidad! 🎁"
+                else:
+                    fecha_especial = "navidad" 
+                    mensaje_especial = "🎄 ¡Ofertas Post-Navidad! 🎁"
+            elif mes_actual == 2 and dia_actual == 14:
+                fecha_especial = "san_valentin"
+                mensaje_especial = "💝 Ofertas de San Valentín"
+            elif mes_actual == 5 and (dia_actual >= 8 and dia_actual <= 15):
+                fecha_especial = "dia_madre"
+                mensaje_especial = "🌸 Especial Día de la Madre"
+            elif mes_actual == 6 and (dia_actual >= 15 and dia_actual <= 20):
+                fecha_especial = "dia_padre"
+                mensaje_especial = "👔 Especial Día del Padre"
+            elif mes_actual == 11 and dia_actual >= 20 and dia_actual <= 27:  # Black Friday antes del 28
+                fecha_especial = "black_friday"
+                mensaje_especial = "⚫️ Black Friday ⚫️"
+            elif (mes_actual == 12 and dia_actual >= 28) or (mes_actual == 1 and dia_actual <= 10):
+                fecha_especial = "ano_nuevo"
+                mensaje_especial = "🎉 Ofertas de Año Nuevo"
+            elif mes_actual == 9 and (dia_actual >= 15 and dia_actual <= 20):
+                 fecha_especial = "fiestas_patrias"
+                 mensaje_especial = "🇨🇱 ¡Fiestas Patrias! 🇨🇱"
+                
+        except Exception:
+            pass
+
+        # =============================================
+        # FUNCIÓN AUXILIAR PARA OFERTAS
+        # =============================================
+        def obtener_info_oferta_corregida(producto_id, variante_id=None):
+            try:
+                with connection.cursor() as cursor:
+                    if variante_id:
+                        cursor.execute("""
+                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                            FROM promociones p
+                            WHERE p.fkproducto_id = %s 
+                            AND p.variante_id = %s
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s 
+                            AND p.fecha_fin >= %s
+                            AND p.porcentaje_descuento > 0
+                            LIMIT 1
+                        """, [producto_id, variante_id, hoy, hoy])
+                        result = cursor.fetchone()
+                        
+                        if result:
+                            return {
+                                'porcentaje_descuento': float(result[0]),
+                                'pkid_promo': result[1],
+                                'variante_id': result[2],
+                                'es_oferta_especifica': True,
+                                'tiene_oferta': True
+                            }
+                    
+                    if variante_id is None:
+                        cursor.execute("""
+                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                            FROM promociones p
+                            WHERE p.fkproducto_id = %s 
+                            AND p.variante_id IS NULL
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s 
+                            AND p.fecha_fin >= %s
+                            AND p.porcentaje_descuento > 0
+                            LIMIT 1
+                        """, [producto_id, hoy, hoy])
+                        
+                        result = cursor.fetchone()
+                        if result:
+                            return {
+                                'porcentaje_descuento': float(result[0]),
+                                'pkid_promo': result[1],
+                                'variante_id': result[2],
+                                'es_oferta_especifica': False,
+                                'tiene_oferta': True
+                            }
+                    
+                    return None
+            except Exception:
+                return None
+
+        # =============================================
+        # OFERTAS CARRUSEL
+        # =============================================
         ofertas_carrusel_data = []
         try:
             fecha_limite = hoy - timezone.timedelta(days=5)
@@ -690,79 +832,156 @@ def cliente_dashboard(request):
         except Exception:
             pass
 
-        # FUNCIÓN AUXILIAR COMPLETAMENTE CORREGIDA - VERSIÓN MEJORADA
-        def obtener_info_oferta_corregida(producto_id, variante_id=None):
-            """
-            Versión corregida que NO permite que las variantes hereden descuentos del producto base
-            """
-            try:
-                with connection.cursor() as cursor:
-                    # PRIMERO: Buscar oferta ESPECÍFICA para la variante (si existe)
-                    if variante_id:
-                        cursor.execute("""
-                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
-                            FROM promociones p
-                            WHERE p.fkproducto_id = %s 
-                            AND p.variante_id = %s
-                            AND p.estado_promo = 'activa'
-                            AND p.fecha_inicio <= %s 
-                            AND p.fecha_fin >= %s
-                            AND p.porcentaje_descuento > 0
-                            LIMIT 1
-                        """, [producto_id, variante_id, hoy, hoy])
-                        result = cursor.fetchone()
-                        
-                        if result:
-                            return {
-                                'porcentaje_descuento': float(result[0]),
-                                'pkid_promo': result[1],
-                                'variante_id': result[2],
-                                'es_oferta_especifica': True,
-                                'tiene_oferta': True
-                            }
-                    
-                    # SEGUNDO: Buscar oferta del producto base SOLO si no hay variante_id
-                    # (las variantes NO heredan ofertas del producto base)
-                    if variante_id is None:
-                        cursor.execute("""
-                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
-                            FROM promociones p
-                            WHERE p.fkproducto_id = %s 
-                            AND p.variante_id IS NULL
-                            AND p.estado_promo = 'activa'
-                            AND p.fecha_inicio <= %s 
-                            AND p.fecha_fin >= %s
-                            AND p.porcentaje_descuento > 0
-                            LIMIT 1
-                        """, [producto_id, hoy, hoy])
-                        
-                        result = cursor.fetchone()
-                        if result:
-                            return {
-                                'porcentaje_descuento': float(result[0]),
-                                'pkid_promo': result[1],
-                                'variante_id': result[2],
-                                'es_oferta_especifica': False,
-                                'tiene_oferta': True
-                            }
-                    
-                    # Si no encuentra oferta, retornar None
-                    return None
-            except Exception as e:
-                print(f"Error en obtener_info_oferta_corregida: {e}")
-                return None
-
-        # PRODUCTOS BARATOS - COMPLETAMENTE CORREGIDO
-        productos_baratos_data = []
+        # =============================================
+        # PRODUCTOS POR FECHA ESPECIAL - CON CATEGORÍAS REALES
+        # =============================================
+        productos_fecha_especial_data = []
         try:
-            productos_baratos = Productos.objects.filter(
+            if fecha_especial:
+                categorias_fecha_especial = []
+                
+                if fecha_especial == "navidad":
+                    categorias_fecha_especial = [1, 5, 19, 12, 39]
+                elif fecha_especial == "san_valentin":
+                    categorias_fecha_especial = [12, 31, 14]
+                elif fecha_especial == "dia_madre":
+                    categorias_fecha_especial = [14, 6, 8, 5]
+                elif fecha_especial == "dia_padre":
+                    categorias_fecha_especial = [1, 17, 27]
+                elif fecha_especial == "black_friday":
+                    categorias_fecha_especial = [1, 2, 5, 33]
+                elif fecha_especial == "ano_nuevo":
+                    categorias_fecha_especial = [12, 46, 39]
+                elif fecha_especial == "fiestas_patrias":
+                    categorias_fecha_especial = [8, 46, 39]
+                
+                if categorias_fecha_especial:
+                    productos_fecha_especial = Productos.objects.filter(
+                        estado_prod='disponible',
+                        fkcategoria_prod__in=categorias_fecha_especial
+                    ).order_by('?')[:10]
+                    
+                    for producto in productos_fecha_especial:
+                        try:
+                            tiene_stock_base = (producto.stock_prod or 0) > 0
+                            tiene_variantes_con_stock = VariantesProducto.objects.filter(
+                                producto=producto,
+                                estado_variante='activa',
+                                stock_variante__gt=0
+                            ).exists()
+                            
+                            if not tiene_stock_base and not tiene_variantes_con_stock:
+                                continue
+                            
+                            precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
+                            
+                            info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                            if info_oferta_producto:
+                                descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
+                                ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
+                                precio_final_producto = precio_base_producto - ahorro_producto
+                                tiene_oferta_producto = True
+                            else:
+                                descuento_porcentaje_producto = 0
+                                ahorro_producto = 0
+                                precio_final_producto = precio_base_producto
+                                tiene_oferta_producto = False
+                            
+                            # Procesar variantes
+                            variantes_list = []
+                            tiene_variantes = VariantesProducto.objects.filter(
+                                producto=producto, 
+                                estado_variante='activa'
+                            ).exists()
+                            
+                            if tiene_variantes:
+                                variantes = VariantesProducto.objects.filter(
+                                    producto=producto,
+                                    estado_variante='activa'
+                                )
+                                
+                                for variante in variantes:
+                                    try:
+                                        stock_variante = variante.stock_variante or 0
+                                        if stock_variante <= 0:
+                                            continue
+                                        
+                                        precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                        precio_base_variante = precio_base_producto + precio_adicional
+                                        
+                                        info_oferta_variante = obtener_info_oferta_corregida(
+                                            producto.pkid_prod, 
+                                            variante.id_variante
+                                        )
+                                        
+                                        if info_oferta_variante:
+                                            descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
+                                            ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                            precio_final_variante = precio_base_variante - ahorro_variante
+                                            tiene_descuento_variante = True
+                                            tiene_oferta_activa_variante = True
+                                        else:
+                                            descuento_porcentaje_variante = 0
+                                            ahorro_variante = 0
+                                            precio_final_variante = precio_base_variante
+                                            tiene_descuento_variante = False
+                                            tiene_oferta_activa_variante = False
+                                        
+                                        variante_data = {
+                                            'id_variante': variante.id_variante,
+                                            'nombre_variante': variante.nombre_variante,
+                                            'precio_adicional': precio_adicional,
+                                            'stock_variante': stock_variante,
+                                            'imagen_variante': variante.imagen_variante,
+                                            'estado_variante': variante.estado_variante,
+                                            'sku_variante': variante.sku_variante,
+                                            'precio_base_calculado': round(precio_base_variante, 2),
+                                            'precio_final_calculado': round(precio_final_variante, 2),
+                                            'ahorro_calculado': round(ahorro_variante, 2),
+                                            'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                                            'tiene_descuento_calculado': tiene_descuento_variante,
+                                            'tiene_oferta_activa': tiene_oferta_activa_variante,
+                                        }
+                                        variantes_list.append(variante_data)
+                                        
+                                    except Exception:
+                                        continue
+                            
+                            tiene_stock_para_mostrar = tiene_stock_base or len(variantes_list) > 0
+                            
+                            if tiene_stock_para_mostrar:
+                                producto_data = {
+                                    'producto': producto,
+                                    'precio_base': precio_base_producto,
+                                    'precio_final': round(precio_final_producto, 2),
+                                    'tiene_descuento': tiene_oferta_producto,
+                                    'descuento_porcentaje': descuento_porcentaje_producto,
+                                    'ahorro': round(ahorro_producto, 2),
+                                    'tiene_variantes': tiene_variantes,
+                                    'variantes': variantes_list,
+                                    'stock': producto.stock_prod or 0,
+                                    'tiene_oferta_activa': tiene_oferta_producto,
+                                }
+                                
+                                productos_fecha_especial_data.append(producto_data)
+                                
+                        except Exception:
+                            continue
+        except Exception:
+            pass
+
+        # =============================================
+        # ELECTRODOMÉSTICOS - CON CATEGORÍA REAL
+        # =============================================
+        electrodomesticos_data = []
+        try:
+            electrodomesticos = Productos.objects.filter(
                 estado_prod='disponible',
-                precio_prod__lte=50000
-            ).order_by('precio_prod')[:12]
+                fkcategoria_prod=5
+            ).order_by('-precio_prod')[:8]
             
-            for producto in productos_baratos:
+            for producto in electrodomesticos:
                 try:
-                    # Verificar stock
                     tiene_stock_base = (producto.stock_prod or 0) > 0
                     tiene_variantes_con_stock = VariantesProducto.objects.filter(
                         producto=producto,
@@ -775,7 +994,6 @@ def cliente_dashboard(request):
                     
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
-                    # Oferta del PRODUCTO BASE (solo para producto base)
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
                     if info_oferta_producto:
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
@@ -788,7 +1006,7 @@ def cliente_dashboard(request):
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
                     
-                    # Procesar variantes - VERSIÓN CORREGIDA
+                    # Procesar variantes
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
                         producto=producto, 
@@ -803,7 +1021,6 @@ def cliente_dashboard(request):
                         
                         for variante in variantes:
                             try:
-                                # Solo incluir variantes con stock
                                 stock_variante = variante.stock_variante or 0
                                 if stock_variante <= 0:
                                     continue
@@ -811,22 +1028,18 @@ def cliente_dashboard(request):
                                 precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
                                 precio_base_variante = precio_base_producto + precio_adicional
                                 
-                                # CORRECCIÓN CLAVE: Cada variante busca SU PROPIA oferta
                                 info_oferta_variante = obtener_info_oferta_corregida(
                                     producto.pkid_prod, 
                                     variante.id_variante
                                 )
                                 
-                                # LAS VARIANTES NO HEREDAN OFERTAS DEL PRODUCTO BASE
                                 if info_oferta_variante:
-                                    # Esta variante tiene SU PROPIA oferta específica
                                     descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                     ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                     precio_final_variante = precio_base_variante - ahorro_variante
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
                                 else:
-                                    # La variante NO TIENE oferta (no hereda del producto base)
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
@@ -847,12 +1060,249 @@ def cliente_dashboard(request):
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
-                                    'es_oferta_especifica': info_oferta_variante and info_oferta_variante['es_oferta_especifica'],
                                 }
                                 variantes_list.append(variante_data)
                                 
-                            except Exception as e:
-                                print(f"Error procesando variante: {e}")
+                            except Exception:
+                                continue
+                    
+                    tiene_stock_para_mostrar = tiene_stock_base or len(variantes_list) > 0
+                    
+                    if tiene_stock_para_mostrar:
+                        producto_data = {
+                            'producto': producto,
+                            'precio_base': precio_base_producto,
+                            'precio_final': round(precio_final_producto, 2),
+                            'tiene_descuento': tiene_oferta_producto,
+                            'descuento_porcentaje': descuento_porcentaje_producto,
+                            'ahorro': round(ahorro_producto, 2),
+                            'tiene_variantes': tiene_variantes,
+                            'variantes': variantes_list,
+                            'stock': producto.stock_prod or 0,
+                            'tiene_oferta_activa': tiene_oferta_producto,
+                        }
+                        
+                        electrodomesticos_data.append(producto_data)
+                    
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # =============================================
+        # TECNOLOGÍA - CON CATEGORÍAS REALES
+        # =============================================
+        tecnologia_data = []
+        try:
+            categorias_tecnologia = [1, 2, 3, 4, 33]
+            
+            tecnologia = Productos.objects.filter(
+                estado_prod='disponible',
+                fkcategoria_prod__in=categorias_tecnologia
+            ).order_by('-precio_prod')[:8]
+            
+            for producto in tecnologia:
+                try:
+                    tiene_stock_base = (producto.stock_prod or 0) > 0
+                    tiene_variantes_con_stock = VariantesProducto.objects.filter(
+                        producto=producto,
+                        estado_variante='activa',
+                        stock_variante__gt=0
+                    ).exists()
+                    
+                    if not tiene_stock_base and not tiene_variantes_con_stock:
+                        continue
+                    
+                    precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
+                    
+                    info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    if info_oferta_producto:
+                        descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
+                        ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
+                        precio_final_producto = precio_base_producto - ahorro_producto
+                        tiene_oferta_producto = True
+                    else:
+                        descuento_porcentaje_producto = 0
+                        ahorro_producto = 0
+                        precio_final_producto = precio_base_producto
+                        tiene_oferta_producto = False
+                    
+                    # Procesar variantes
+                    variantes_list = []
+                    tiene_variantes = VariantesProducto.objects.filter(
+                        producto=producto, 
+                        estado_variante='activa'
+                    ).exists()
+                    
+                    if tiene_variantes:
+                        variantes = VariantesProducto.objects.filter(
+                            producto=producto,
+                            estado_variante='activa'
+                        )
+                        
+                        for variante in variantes:
+                            try:
+                                stock_variante = variante.stock_variante or 0
+                                if stock_variante <= 0:
+                                    continue
+                                
+                                precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                precio_base_variante = precio_base_producto + precio_adicional
+                                
+                                info_oferta_variante = obtener_info_oferta_corregida(
+                                    producto.pkid_prod, 
+                                    variante.id_variante
+                                )
+                                
+                                if info_oferta_variante:
+                                    descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
+                                    ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                    precio_final_variante = precio_base_variante - ahorro_variante
+                                    tiene_descuento_variante = True
+                                    tiene_oferta_activa_variante = True
+                                else:
+                                    descuento_porcentaje_variante = 0
+                                    ahorro_variante = 0
+                                    precio_final_variante = precio_base_variante
+                                    tiene_descuento_variante = False
+                                    tiene_oferta_activa_variante = False
+                                
+                                variante_data = {
+                                    'id_variante': variante.id_variante,
+                                    'nombre_variante': variante.nombre_variante,
+                                    'precio_adicional': precio_adicional,
+                                    'stock_variante': stock_variante,
+                                    'imagen_variante': variante.imagen_variante,
+                                    'estado_variante': variante.estado_variante,
+                                    'sku_variante': variante.sku_variante,
+                                    'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_final_calculado': round(precio_final_variante, 2),
+                                    'ahorro_calculado': round(ahorro_variante, 2),
+                                    'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                                    'tiene_descuento_calculado': tiene_descuento_variante,
+                                    'tiene_oferta_activa': tiene_oferta_activa_variante,
+                                }
+                                variantes_list.append(variante_data)
+                                
+                            except Exception:
+                                continue
+                    
+                    tiene_stock_para_mostrar = tiene_stock_base or len(variantes_list) > 0
+                    
+                    if tiene_stock_para_mostrar:
+                        producto_data = {
+                            'producto': producto,
+                            'precio_base': precio_base_producto,
+                            'precio_final': round(precio_final_producto, 2),
+                            'tiene_descuento': tiene_oferta_producto,
+                            'descuento_porcentaje': descuento_porcentaje_producto,
+                            'ahorro': round(ahorro_producto, 2),
+                            'tiene_variantes': tiene_variantes,
+                            'variantes': variantes_list,
+                            'stock': producto.stock_prod or 0,
+                            'tiene_oferta_activa': tiene_oferta_producto,
+                        }
+                        
+                        tecnologia_data.append(producto_data)
+                    
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        # =============================================
+        # PRODUCTOS BARATOS (MANTENER IGUAL)
+        # =============================================
+        productos_baratos_data = []
+        try:
+            productos_baratos = Productos.objects.filter(
+                estado_prod='disponible',
+                precio_prod__lte=50000
+            ).order_by('precio_prod')[:12]
+            
+            for producto in productos_baratos:
+                try:
+                    tiene_stock_base = (producto.stock_prod or 0) > 0
+                    tiene_variantes_con_stock = VariantesProducto.objects.filter(
+                        producto=producto,
+                        estado_variante='activa',
+                        stock_variante__gt=0
+                    ).exists()
+                    
+                    if not tiene_stock_base and not tiene_variantes_con_stock:
+                        continue
+                    
+                    precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
+                    
+                    info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    if info_oferta_producto:
+                        descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
+                        ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
+                        precio_final_producto = precio_base_producto - ahorro_producto
+                        tiene_oferta_producto = True
+                    else:
+                        descuento_porcentaje_producto = 0
+                        ahorro_producto = 0
+                        precio_final_producto = precio_base_producto
+                        tiene_oferta_producto = False
+                    
+                    variantes_list = []
+                    tiene_variantes = VariantesProducto.objects.filter(
+                        producto=producto, 
+                        estado_variante='activa'
+                    ).exists()
+                    
+                    if tiene_variantes:
+                        variantes = VariantesProducto.objects.filter(
+                            producto=producto,
+                            estado_variante='activa'
+                        )
+                        
+                        for variante in variantes:
+                            try:
+                                stock_variante = variante.stock_variante or 0
+                                if stock_variante <= 0:
+                                    continue
+                                
+                                precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                                precio_base_variante = precio_base_producto + precio_adicional
+                                
+                                info_oferta_variante = obtener_info_oferta_corregida(
+                                    producto.pkid_prod, 
+                                    variante.id_variante
+                                )
+                                
+                                if info_oferta_variante:
+                                    descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
+                                    ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                                    precio_final_variante = precio_base_variante - ahorro_variante
+                                    tiene_descuento_variante = True
+                                    tiene_oferta_activa_variante = True
+                                else:
+                                    descuento_porcentaje_variante = 0
+                                    ahorro_variante = 0
+                                    precio_final_variante = precio_base_variante
+                                    tiene_descuento_variante = False
+                                    tiene_oferta_activa_variante = False
+                                
+                                variante_data = {
+                                    'id_variante': variante.id_variante,
+                                    'nombre_variante': variante.nombre_variante,
+                                    'precio_adicional': precio_adicional,
+                                    'stock_variante': stock_variante,
+                                    'imagen_variante': variante.imagen_variante,
+                                    'estado_variante': variante.estado_variante,
+                                    'sku_variante': variante.sku_variante,
+                                    'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_final_calculado': round(precio_final_variante, 2),
+                                    'ahorro_calculado': round(ahorro_variante, 2),
+                                    'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                                    'tiene_descuento_calculado': tiene_descuento_variante,
+                                    'tiene_oferta_activa': tiene_oferta_activa_variante,
+                                }
+                                variantes_list.append(variante_data)
+                                
+                            except Exception:
                                 continue
                     
                     tiene_stock_para_mostrar = tiene_stock_base or len(variantes_list) > 0
@@ -873,15 +1323,15 @@ def cliente_dashboard(request):
                         
                         productos_baratos_data.append(producto_data)
                     
-                except Exception as e:
-                    print(f"Error procesando producto barato: {e}")
+                except Exception:
                     continue
                     
-        except Exception as e:
-            print(f"Error en productos baratos: {e}")
+        except Exception:
             pass
 
-        # PRODUCTOS DESTACADOS - CORREGIDO (misma lógica corregida)
+        # =============================================
+        # PRODUCTOS DESTACADOS (MANTENER IGUAL)
+        # =============================================
         productos_destacados_data = []
         try:
             productos_vendidos = DetallesPedido.objects.filter(
@@ -896,7 +1346,6 @@ def cliente_dashboard(request):
                 try:
                     producto = Productos.objects.get(pkid_prod=item['fkproducto_detalle'])
                     
-                    # Verificar stock
                     tiene_stock_base = (producto.stock_prod or 0) > 0
                     tiene_variantes_con_stock = VariantesProducto.objects.filter(
                         producto=producto,
@@ -909,7 +1358,6 @@ def cliente_dashboard(request):
                     
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
-                    # Oferta del PRODUCTO BASE
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
                     if info_oferta_producto:
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
@@ -922,7 +1370,6 @@ def cliente_dashboard(request):
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
                     
-                    # Procesar variantes - CORREGIDO (sin herencia de ofertas)
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
                         producto=producto, 
@@ -944,7 +1391,6 @@ def cliente_dashboard(request):
                                 precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
                                 precio_base_variante = precio_base_producto + precio_adicional
                                 
-                                # CORRECCIÓN: Cada variante busca SU PROPIA oferta
                                 info_oferta_variante = obtener_info_oferta_corregida(
                                     producto.pkid_prod, 
                                     variante.id_variante
@@ -957,7 +1403,6 @@ def cliente_dashboard(request):
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
                                 else:
-                                    # SIN HERENCIA - si no tiene oferta propia, no tiene descuento
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
@@ -978,7 +1423,6 @@ def cliente_dashboard(request):
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
-                                    'es_oferta_especifica': info_oferta_variante and info_oferta_variante['es_oferta_especifica'],
                                 }
                                 variantes_list.append(variante_data)
                                 
@@ -1006,14 +1450,14 @@ def cliente_dashboard(request):
                     
                 except Productos.DoesNotExist:
                     continue
-                except Exception as e:
-                    print(f"Error procesando producto destacado: {e}")
+                except Exception:
                     continue
-        except Exception as e:
-            print(f"Error en productos destacados: {e}")
+        except Exception:
             pass
 
-        # PRODUCTOS EN OFERTA - CORREGIDO (mantener igual que antes)
+        # =============================================
+        # PRODUCTOS EN OFERTA (MANTENER IGUAL)
+        # =============================================
         productos_oferta_data = []
         try:
             with connection.cursor() as cursor:
@@ -1091,8 +1535,7 @@ def cliente_dashboard(request):
                                                 'stock': stock_variante,
                                                 'imagen': imagen_variante
                                             }
-                                        except Exception as e:
-                                            print(f"Error procesando variante: {e}")
+                                        except Exception:
                                             continue
                                     else:
                                         if (producto.stock_prod or 0) > 0:
@@ -1102,8 +1545,7 @@ def cliente_dashboard(request):
                                             imagen_producto_url = producto.img_prod.url if producto.img_prod else None
                                         else:
                                             continue
-                            except (ValueError, TypeError) as e:
-                                print(f"Error en descuento: {e}")
+                            except (ValueError, TypeError):
                                 pass
                         
                         if not imagen_producto_url and producto.img_prod:
@@ -1131,14 +1573,14 @@ def cliente_dashboard(request):
                             
                             productos_oferta_data.append(producto_data)
                         
-                    except Exception as e:
-                        print(f"Error procesando oferta: {e}")
+                    except Exception:
                         continue
-        except Exception as e:
-            print(f"Error en productos oferta: {e}")
+        except Exception:
             pass
 
-        # Resto del código para negocios (sin cambios)
+        # =============================================
+        # NEGOCIOS DESTACADOS (MANTENER IGUAL)
+        # =============================================
         negocios_destacados_data = []
         try:
             negocios_con_resenas = Negocios.objects.filter(
@@ -1189,6 +1631,9 @@ def cliente_dashboard(request):
         except Exception:
             pass
 
+        # =============================================
+        # OTROS NEGOCIOS (MANTENER IGUAL)
+        # =============================================
         otros_negocios_data = []
         try:
             negocios_destacados_ids = [neg['negocio'].pkid_neg for neg in negocios_destacados_data]
@@ -1241,6 +1686,9 @@ def cliente_dashboard(request):
         except Exception:
             pass
 
+        # =============================================
+        # CONTADORES Y CONTEXT FINAL
+        # =============================================
         carrito_count = 0
         favoritos_count = 0
         
@@ -1270,6 +1718,7 @@ def cliente_dashboard(request):
             'favoritos_count': favoritos_count,
             'pedidos_pendientes_count': pedidos_pendientes_count,
             
+            # Secciones originales
             'ofertas_carrusel': ofertas_carrusel_data,
             'productos_baratos': productos_baratos_data,
             'productos_destacados': productos_destacados_data,
@@ -1277,18 +1726,29 @@ def cliente_dashboard(request):
             'negocios_destacados': negocios_destacados_data,
             'otros_negocios': otros_negocios_data,
             
+            # NUEVAS SECCIONES
+            'fecha_especial': fecha_especial,
+            'mensaje_especial': mensaje_especial,
+            'productos_fecha_especial': productos_fecha_especial_data,
+            'electrodomesticos': electrodomesticos_data,
+            'tecnologia': tecnologia_data,
+            
+            # Flags de existencia
             'hay_ofertas_activas': len(ofertas_carrusel_data) > 0,
             'hay_productos_baratos': len(productos_baratos_data) > 0,
             'hay_productos_destacados': len(productos_destacados_data) > 0,
             'hay_productos_oferta': len(productos_oferta_data) > 0,
             'hay_negocios_destacados': len(negocios_destacados_data) > 0,
             'hay_otros_negocios': len(otros_negocios_data) > 0,
+            'hay_fecha_especial': fecha_especial is not None,
+            'hay_productos_fecha_especial': len(productos_fecha_especial_data) > 0,
+            'hay_electrodomesticos': len(electrodomesticos_data) > 0,
+            'hay_tecnologia': len(tecnologia_data) > 0,
         }
         
         return render(request, 'Cliente/Cliente.html', context)
         
-    except Exception as e:
-        print(f"Error general en dashboard: {e}")
+    except Exception:
         return render(request, 'Cliente/Cliente.html', {
             'carrito_count': 0,
             'favoritos_count': 0,
@@ -1299,14 +1759,21 @@ def cliente_dashboard(request):
             'productos_oferta': [],
             'negocios_destacados': [],
             'otros_negocios': [],
+            'productos_fecha_especial': [],
+            'electrodomesticos': [],
+            'tecnologia': [],
             'hay_ofertas_activas': False,
             'hay_productos_baratos': False,
             'hay_productos_destacados': False,
             'hay_productos_oferta': False,
             'hay_negocios_destacados': False,
             'hay_otros_negocios': False,
+            'hay_fecha_especial': False,
+            'hay_productos_fecha_especial': False,
+            'hay_electrodomesticos': False,
+            'hay_tecnologia': False,
         })
-
+        
 @login_required(login_url='/auth/login/')
 def detalle_negocio_logeado(request, id):
     try:
@@ -1496,8 +1963,8 @@ def detalle_negocio_logeado(request, id):
     except UsuarioPerfil.DoesNotExist:
         messages.error(request, 'Complete su perfil para acceder a esta funcionalidad.')
         return redirect('completar_perfil')
-    except Exception as e:
-        messages.error(request, f'Error al cargar el detalle del negocio: {str(e)}')
+    except Exception:
+        messages.error(request, 'Error al cargar el detalle del negocio')
         return redirect('cliente_dashboard')  
 
 @login_required
@@ -1602,10 +2069,10 @@ def reportar_negocio(request):
                 'success': False, 
                 'message': 'Complete su perfil para realizar esta acción'
             })
-        except Exception as e:
+        except Exception:
             return JsonResponse({
                 'success': False, 
-                'message': f'Error al procesar el reporte: {str(e)}'
+                'message': 'Error al procesar el reporte'
             })
     
     return JsonResponse({'success': False, 'message': 'Método no permitido'})
@@ -1638,28 +2105,21 @@ def obtener_opciones_reporte(request):
 
 def descontar_stock_pedido(pedido, items_carrito=None):
     try:
-        print(f"🔍 [DEBUG] Iniciando descontar_stock_pedido para pedido #{pedido.pkid_pedido}")
-        
         if items_carrito is None:
             items_carrito = CarritoItem.objects.filter(
                 fkcarrito__fkusuario_carrito=pedido.fkusuario_pedido
             )
-            print(f"📦 [DEBUG] Se obtuvieron {items_carrito.count()} items del carrito")
         
         hoy = timezone.now().date()
-        print(f"📅 [DEBUG] Fecha actual: {hoy}")
         
         for item in items_carrito:
             producto = item.fkproducto
             cantidad = item.cantidad
             variante_id = item.variante_id
-            
-            print(f"🛒 [DEBUG] Procesando item: {producto.nom_prod}, cantidad: {cantidad}, variante_id: {variante_id}")
 
             # Verificar si el producto/variante tiene promoción activa con stock específico
             with connection.cursor() as cursor:
                 if variante_id:
-                    print(f"🔎 [DEBUG] Buscando promoción para variante {variante_id}")
                     cursor.execute("""
                         SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
                         FROM promociones 
@@ -1671,7 +2131,6 @@ def descontar_stock_pedido(pedido, items_carrito=None):
                         LIMIT 1
                     """, [producto.pkid_prod, variante_id, hoy, hoy])
                 else:
-                    print(f"🔎 [DEBUG] Buscando promoción para producto base")
                     cursor.execute("""
                         SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
                         FROM promociones 
@@ -1683,18 +2142,14 @@ def descontar_stock_pedido(pedido, items_carrito=None):
                     """, [producto.pkid_prod, hoy, hoy])
                 
                 promocion_data = cursor.fetchone()
-                print(f"📊 [DEBUG] Resultado promoción: {promocion_data}")
             
             # Si hay promoción con stock de oferta, descontar de ahí primero
-            if promocion_data and promocion_data[3]:  # activa_por_stock = True
+            if promocion_data and promocion_data[3]:
                 promo_id, stock_actual_oferta, stock_oferta, activa_por_stock = promocion_data
-                print(f"🎯 [DEBUG] Promoción encontrada: ID={promo_id}, stock_actual_oferta={stock_actual_oferta}, stock_oferta={stock_oferta}")
                 
                 if stock_actual_oferta is not None and stock_actual_oferta > 0:
                     cantidad_a_descontar_oferta = min(cantidad, stock_actual_oferta)
                     cantidad_restante = cantidad - cantidad_a_descontar_oferta
-                    
-                    print(f"📉 [DEBUG] Descontando de oferta: {cantidad_a_descontar_oferta} unidades, restante: {cantidad_restante}")
                     
                     # Actualizar stock de la oferta
                     nuevo_stock_oferta = stock_actual_oferta - cantidad_a_descontar_oferta
@@ -1704,8 +2159,6 @@ def descontar_stock_pedido(pedido, items_carrito=None):
                             SET stock_actual_oferta = %s 
                             WHERE pkid_promo = %s
                         """, [nuevo_stock_oferta, promo_id])
-                    
-                    print(f"✅ [DEBUG] Stock de oferta actualizado: {stock_actual_oferta} -> {nuevo_stock_oferta}")
                     
                     # Registrar movimiento de stock de oferta
                     try:
@@ -1721,42 +2174,30 @@ def descontar_stock_pedido(pedido, items_carrito=None):
                             pedido=pedido,
                             variante_id=variante_id
                         )
-                        print(f"📝 [DEBUG] Movimiento de stock de oferta registrado")
-                    except Exception as e:
-                        print(f"❌ [DEBUG] Error registrando movimiento de oferta: {e}")
+                    except Exception:
+                        pass
                     
                     # Si todavía queda cantidad por descontar, descontar del stock general
                     if cantidad_restante > 0:
-                        print(f"📦 [DEBUG] Descontando {cantidad_restante} unidades del stock general")
                         _descontar_stock_general(producto, cantidad_restante, pedido, variante_id)
                     
-                    continue  # Ya manejamos el descuento, pasar al siguiente item
+                    continue
                 else:
-                    print(f"⚠️ [DEBUG] Stock de oferta es 0 o nulo, descontando del stock general")
-            else:
-                print(f"ℹ️ [DEBUG] No hay promoción activa con stock de oferta")
+                    pass
             
             # Si no hay promoción con stock de oferta, descontar del stock general
-            print(f"📦 [DEBUG] Descontando {cantidad} unidades del stock general")
             _descontar_stock_general(producto, cantidad, pedido, variante_id)
         
-        print(f"🎉 [DEBUG] Descuento de stock completado exitosamente")
         return True
         
-    except Exception as e:
-        print(f"💥 [DEBUG ERROR] Error en descontar_stock_pedido: {str(e)}")
-        import traceback
-        print(f"📋 [DEBUG TRACEBACK] {traceback.format_exc()}")
+    except Exception:
         return False
 
 def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
     """Descontar del stock general del producto o variante"""
     try:
-        print(f"🔍 [DEBUG] Iniciando _descontar_stock_general para {producto.nom_prod}, variante: {variante_id}")
-        
         if variante_id:
             # Descontar de variante
-            print(f"🎯 [DEBUG] Descontando de variante {variante_id}")
             variante = VariantesProducto.objects.get(
                 id_variante=variante_id,
                 producto=producto,
@@ -1764,12 +2205,10 @@ def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
             )
             
             stock_anterior = variante.stock_variante
-            print(f"📊 [DEBUG] Stock anterior variante: {stock_anterior}")
             
             if stock_anterior >= cantidad:
                 variante.stock_variante -= cantidad
                 variante.save()
-                print(f"✅ [DEBUG] Stock variante actualizado: {stock_anterior} -> {variante.stock_variante}")
                 
                 try:
                     MovimientosStock.objects.create(
@@ -1784,26 +2223,21 @@ def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
                         pedido=pedido,
                         variante_id=variante_id
                     )
-                    print(f"📝 [DEBUG] Movimiento de stock variante registrado")
-                except Exception as e:
-                    print(f"❌ [DEBUG] Error registrando movimiento variante: {e}")
+                except Exception:
+                    pass
             else:
                 # Si no hay suficiente stock, descontar lo que haya
                 cantidad_real = stock_anterior
                 variante.stock_variante = 0
                 variante.save()
-                print(f"⚠️ [DEBUG] Stock insuficiente en variante, se descontó: {cantidad_real}")
                 
         else:
             # Descontar de producto base
-            print(f"🎯 [DEBUG] Descontando de producto base")
             stock_anterior = producto.stock_prod or 0
-            print(f"📊 [DEBUG] Stock anterior producto: {stock_anterior}")
             
             if stock_anterior >= cantidad:
                 producto.stock_prod -= cantidad
                 producto.save()
-                print(f"✅ [DEBUG] Stock producto actualizado: {stock_anterior} -> {producto.stock_prod}")
                 
                 try:
                     MovimientosStock.objects.create(
@@ -1818,163 +2252,16 @@ def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
                         pedido=pedido,
                         variante_id=None
                     )
-                    print(f"📝 [DEBUG] Movimiento de stock producto registrado")
-                except Exception as e:
-                    print(f"❌ [DEBUG] Error registrando movimiento producto: {e}")
+                except Exception:
+                    pass
             else:
                 # Si no hay suficiente stock, descontar lo que haya
                 cantidad_real = stock_anterior
                 producto.stock_prod = 0
                 producto.save()
-                print(f"⚠️ [DEBUG] Stock insuficiente en producto, se descontó: {cantidad_real}")
                 
-    except Exception as e:
-        print(f"💥 [DEBUG ERROR] Error en _descontar_stock_general: {str(e)}")
-        import traceback
-        print(f"📋 [DEBUG TRACEBACK] {traceback.format_exc()}")          
-
-def _descontar_producto_base(producto, cantidad, pedido):
-    try:
-        stock_anterior = producto.stock_prod or 0
-        
-        if stock_anterior >= cantidad:
-            producto.stock_prod -= cantidad
-            producto.save()
-            
-            try:
-                movimiento = MovimientosStock.objects.create(
-                    producto=producto,
-                    negocio=producto.fknegocioasociado_prod,
-                    tipo_movimiento='salida',
-                    motivo='venta',
-                    cantidad=cantidad,
-                    stock_anterior=stock_anterior,
-                    stock_nuevo=producto.stock_prod,
-                    usuario=pedido.fkusuario_pedido,
-                    pedido=pedido,
-                    variante_id=None
-                )
-            except Exception:
-                pass
-        else:
-            cantidad_real = stock_anterior
-            producto.stock_prod = 0
-            producto.save()
-            
     except Exception:
         pass
-
-def restaurar_stock_pedido(pedido):
-    try:
-        detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
-        hoy = timezone.now().date()
-        
-        for detalle in detalles_pedido:
-            producto = detalle.fkproducto_detalle
-            cantidad = detalle.cantidad_detalle
-            
-            # Buscar el item del carrito correspondiente para obtener variante_id
-            try:
-                carrito_items = CarritoItem.objects.filter(
-                    fkproducto=producto,
-                    fkcarrito__fkusuario_carrito=pedido.fkusuario_pedido
-                )
-                
-                item_correspondiente = None
-                for item in carrito_items:
-                    if item.cantidad == cantidad or abs(item.cantidad - cantidad) <= 2:
-                        item_correspondiente = item
-                        break
-                
-                if not item_correspondiente and carrito_items.exists():
-                    item_correspondiente = carrito_items.first()
-                
-                variante_id = item_correspondiente.variante_id if item_correspondiente else None
-                
-            except Exception:
-                variante_id = None
-            
-            # Verificar si este producto/variante estaba en oferta con stock específico
-            with connection.cursor() as cursor:
-                if variante_id:
-                    cursor.execute("""
-                        SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
-                        FROM promociones 
-                        WHERE fkproducto_id = %s 
-                        AND variante_id = %s
-                        AND estado_promo = 'activa'
-                        AND fecha_inicio <= %s 
-                        AND fecha_fin >= %s
-                        LIMIT 1
-                    """, [producto.pkid_prod, variante_id, hoy, hoy])
-                else:
-                    cursor.execute("""
-                        SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
-                        FROM promociones 
-                        WHERE fkproducto_id = %s 
-                        AND estado_promo = 'activa'
-                        AND fecha_inicio <= %s 
-                        AND fecha_fin >= %s
-                        LIMIT 1
-                    """, [producto.pkid_prod, hoy, hoy])
-                
-                promocion_data = cursor.fetchone()
-            
-            # Si había una promoción con stock de oferta, restaurar ahí primero
-            if promocion_data and promocion_data[3]:  # activa_por_stock = True
-                promo_id, stock_actual_oferta, stock_oferta, activa_por_stock = promocion_data
-                
-                if stock_actual_oferta is not None and stock_oferta is not None:
-                    # Restaurar al stock de oferta (hasta el máximo original)
-                    nuevo_stock_oferta = min(stock_actual_oferta + cantidad, stock_oferta)
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            UPDATE promociones 
-                            SET stock_actual_oferta = %s 
-                            WHERE pkid_promo = %s
-                        """, [nuevo_stock_oferta, promo_id])
-                    
-                    print(f"✅ [DEBUG] Stock de oferta restaurado: {stock_actual_oferta} -> {nuevo_stock_oferta}")
-                    
-                    # Si hay excedente después de llenar el stock de oferta, restaurar al stock general
-                    excedente = max(0, (stock_actual_oferta + cantidad) - stock_oferta)
-                    if excedente > 0:
-                        _restaurar_stock_general(producto, excedente, variante_id)
-                        print(f"📦 [DEBUG] Excedente restaurado en stock general: {excedente}")
-                    
-                    continue  # Ya manejamos la restauración
-            
-            # Si no había promoción con stock de oferta, restaurar al stock general
-            _restaurar_stock_general(producto, cantidad, variante_id)
-            print(f"📦 [DEBUG] Stock general restaurado: {cantidad} unidades")
-        
-        print(f"🎉 [DEBUG] Restauración de stock completada exitosamente")
-        return True
-        
-    except Exception as e:
-        print(f"💥 [DEBUG ERROR] Error en restaurar_stock_pedido: {str(e)}")
-        import traceback
-        print(f"📋 [DEBUG TRACEBACK] {traceback.format_exc()}")
-        return False
-
-def _restaurar_stock_general(producto, cantidad, variante_id=None):
-    """Restaurar stock general del producto o variante"""
-    try:
-        if variante_id:
-            # Restaurar stock de variante
-            variante = VariantesProducto.objects.get(
-                id_variante=variante_id,
-                producto=producto
-            )
-            variante.stock_variante += cantidad
-            variante.save()
-        else:
-            # Restaurar stock de producto base
-            producto.stock_prod += cantidad
-            producto.save()
-            
-    except Exception as e:
-        print(f"Error en _restaurar_stock_general: {str(e)}")
          
 def _restaurar_producto_base(producto, cantidad):
     try:
@@ -2030,7 +2317,7 @@ def validar_stock_pedido(pedido):
             
             stock_disponible = 0
             
-            if promocion_data and promocion_data[1]:  # activa_por_stock = True
+            if promocion_data and promocion_data[1]:
                 stock_oferta = promocion_data[0] or 0
                 # Sumar stock de oferta + stock general
                 if variante_id:
@@ -2085,8 +2372,6 @@ def agregar_al_carrito(request):
         cantidad = int(data.get('cantidad', 1))
         variante_id = data.get('variante_id', None)
         
-        print(f"🔍 [DEBUG INICIO] agregar_al_carrito - Producto: {producto_id}, Cantidad: {cantidad}, Variante: {variante_id}")
-        
         if not producto_id:
             return JsonResponse({'success': False, 'message': 'ID de producto requerido'}, status=400)
         
@@ -2110,14 +2395,11 @@ def agregar_al_carrito(request):
         descuento_porcentaje = 0
         promo_id = None
         
-        print(f"🔍 [DEBUG ANTES CONSULTA] Buscando ofertas para producto {producto_id}, variante {variante_id}")
-        
         # VERIFICAR OFERTAS ACTIVAS PRIMERO
         with connection.cursor() as cursor:
             if variante_id and variante_id != 'base':
                 try:
                     variante_id_int = int(variante_id)
-                    print(f"🔍 [DEBUG CONSULTA VARIANTE] Buscando oferta para variante {variante_id_int}")
                     cursor.execute("""
                         SELECT p.pkid_promo, p.porcentaje_descuento, p.stock_actual_oferta, p.stock_oferta, p.activa_por_stock
                         FROM promociones p
@@ -2131,7 +2413,6 @@ def agregar_al_carrito(request):
                 except ValueError:
                     return JsonResponse({'success': False, 'message': 'ID de variante inválido'}, status=400)
             else:
-                print(f"🔍 [DEBUG CONSULTA PRODUCTO] Buscando oferta para producto base")
                 cursor.execute("""
                     SELECT p.pkid_promo, p.porcentaje_descuento, p.stock_actual_oferta, p.stock_oferta, p.activa_por_stock
                     FROM promociones p
@@ -2143,7 +2424,6 @@ def agregar_al_carrito(request):
                 """, [producto.pkid_prod, hoy, hoy])
             
             promocion_data = cursor.fetchone()
-            print(f"🔍 [DEBUG RESULTADO CONSULTA] Datos de promoción: {promocion_data}")
         
         if promocion_data:
             promo_id = promocion_data[0]
@@ -2152,29 +2432,14 @@ def agregar_al_carrito(request):
             limite_oferta = promocion_data[3] if promocion_data[3] is not None else 0
             tiene_oferta_activa = promocion_data[4] if promocion_data[4] is not None else False
             
-            print(f"🎯 [DEBUG OFERTA ENCONTRADA]")
-            print(f"   - ID Promoción: {promo_id}")
-            print(f"   - Descuento: {descuento_porcentaje}%")
-            print(f"   - Stock Actual Oferta: {stock_oferta_disponible}")
-            print(f"   - Límite Oferta (stock_oferta): {limite_oferta}")
-            print(f"   - Activa por Stock: {tiene_oferta_activa}")
-            
             # VERIFICACIÓN CRÍTICA DEL LÍMITE
             if tiene_oferta_activa and limite_oferta > 0:
-                print(f"⚠️ [DEBUG LÍMITE OFERTA] OFERTA CON LÍMITE ACTIVO:")
-                print(f"   - Stock disponible en oferta: {stock_oferta_disponible}")
-                print(f"   - Límite máximo de oferta: {limite_oferta}")
-                print(f"   - Cantidad solicitada: {cantidad}")
-                
                 if cantidad > stock_oferta_disponible:
-                    print(f"❌ [DEBUG ERROR LÍMITE] Cantidad solicitada ({cantidad}) > Stock oferta disponible ({stock_oferta_disponible})")
                     return JsonResponse({
                         'success': False, 
                         'message': f'Límite de oferta alcanzado. Solo {stock_oferta_disponible} unidades disponibles en oferta especial'
                     }, status=400)
-                else:
-                    print(f"✅ [DEBUG LÍMITE OK] Cantidad dentro del límite de oferta")
-        
+
         if variante_id and variante_id != 'base':
             try:
                 variante_id_int = int(variante_id)
@@ -2184,32 +2449,21 @@ def agregar_al_carrito(request):
                     estado_variante='activa'
                 )
                 
-                print(f"🔍 [DEBUG VARIANTE ENCONTRADA] {variante.nombre_variante}")
-                print(f"   - Stock variante: {variante.stock_variante}")
-                
                 # CALCULAR STOCK TOTAL DISPONIBLE
                 if tiene_oferta_activa:
                     # Si hay oferta con stock específico
                     stock_general_disponible = variante.stock_variante or 0
                     stock_total_disponible = stock_oferta_disponible + stock_general_disponible
                     
-                    print(f"📊 [DEBUG STOCK VARIANTE CON OFERTA]")
-                    print(f"   - Stock oferta: {stock_oferta_disponible}")
-                    print(f"   - Stock general: {stock_general_disponible}")
-                    print(f"   - Stock total: {stock_total_disponible}")
-                    print(f"   - Cantidad solicitada: {cantidad}")
-                    
                     # Validación específica para ofertas con límite
                     if tiene_oferta_activa and limite_oferta > 0:
                         if cantidad > stock_oferta_disponible:
-                            print(f"❌ [DEBUG ERROR OFERTA VARIANTE] Excede stock de oferta")
                             return JsonResponse({
                                 'success': False, 
                                 'message': f'Solo {stock_oferta_disponible} unidades disponibles en oferta especial para esta variante'
                             }, status=400)
                     
                     if stock_total_disponible < cantidad:
-                        print(f"❌ [DEBUG ERROR STOCK TOTAL VARIANTE] Stock insuficiente")
                         mensaje_error = f'Stock insuficiente para la variante. Solo quedan {stock_total_disponible} unidades'
                         if tiene_oferta_activa:
                             mensaje_error += f' ({stock_oferta_disponible} en oferta especial)'
@@ -2220,10 +2474,8 @@ def agregar_al_carrito(request):
                 else:
                     # Solo stock general de variante
                     stock_total_disponible = variante.stock_variante or 0
-                    print(f"📊 [DEBUG STOCK VARIANTE SIN OFERTA] Stock total: {stock_total_disponible}")
                     
                     if stock_total_disponible < cantidad:
-                        print(f"❌ [DEBUG ERROR STOCK VARIANTE] Stock insuficiente sin oferta")
                         return JsonResponse({
                             'success': False, 
                             'message': f'Stock insuficiente. Solo quedan {stock_total_disponible} unidades'
@@ -2232,38 +2484,27 @@ def agregar_al_carrito(request):
                 if variante.precio_adicional and float(variante.precio_adicional) > 0:
                     precio_base += float(variante.precio_adicional)
                     precio_final = precio_base
-                    print(f"💰 [DEBUG PRECIO VARIANTE] Precio adicional: {variante.precio_adicional}, Precio final: {precio_final}")
                     
                 variante_nombre = variante.nombre_variante
                 
             except VariantesProducto.DoesNotExist:
-                print(f"❌ [DEBUG ERROR] Variante no encontrada: {variante_id_int}")
                 return JsonResponse({'success': False, 'message': 'Variante no encontrada'}, status=404)
         else:
             # PRODUCTO BASE - CALCULAR STOCK TOTAL
             stock_general_disponible = producto.stock_prod or 0
-            print(f"🔍 [DEBUG PRODUCTO BASE] Stock general: {stock_general_disponible}")
             
             if tiene_oferta_activa:
                 stock_total_disponible = stock_oferta_disponible + stock_general_disponible
                 
-                print(f"📊 [DEBUG STOCK PRODUCTO CON OFERTA]")
-                print(f"   - Stock oferta: {stock_oferta_disponible}")
-                print(f"   - Stock general: {stock_general_disponible}")
-                print(f"   - Stock total: {stock_total_disponible}")
-                print(f"   - Cantidad solicitada: {cantidad}")
-                
                 # Validación específica para ofertas con límite
                 if tiene_oferta_activa and limite_oferta > 0:
                     if cantidad > stock_oferta_disponible:
-                        print(f"❌ [DEBUG ERROR OFERTA PRODUCTO] Excede stock de oferta")
                         return JsonResponse({
                             'success': False, 
                             'message': f'Solo {stock_oferta_disponible} unidades disponibles en oferta especial para este producto'
                         }, status=400)
                 
                 if stock_total_disponible < cantidad:
-                    print(f"❌ [DEBUG ERROR STOCK TOTAL PRODUCTO] Stock insuficiente")
                     mensaje_error = f'Stock insuficiente. Solo quedan {stock_total_disponible} unidades'
                     if tiene_oferta_activa:
                         mensaje_error += f' ({stock_oferta_disponible} en oferta especial)'
@@ -2273,10 +2514,8 @@ def agregar_al_carrito(request):
                     }, status=400)
             else:
                 stock_total_disponible = stock_general_disponible
-                print(f"📊 [DEBUG STOCK PRODUCTO SIN OFERTA] Stock total: {stock_total_disponible}")
                 
                 if stock_total_disponible < cantidad:
-                    print(f"❌ [DEBUG ERROR STOCK PRODUCTO] Stock insuficiente sin oferta")
                     return JsonResponse({
                         'success': False, 
                         'message': f'Stock insuficiente. Solo quedan {stock_total_disponible} unidades'
@@ -2288,7 +2527,6 @@ def agregar_al_carrito(request):
         if descuento_porcentaje > 0:
             precio_original = precio_final
             precio_final = precio_final * (1 - (descuento_porcentaje / 100))
-            print(f"💰 [DEBUG DESCUENTO APLICADO] {descuento_porcentaje}% - De ${precio_original} a ${precio_final}")
         
         # AGREGAR AL CARRITO
         carrito, created = Carrito.objects.get_or_create(fkusuario_carrito=perfil_cliente)
@@ -2309,11 +2547,8 @@ def agregar_al_carrito(request):
             ).first()
         
         if item_existente:
-            print(f"🔍 [DEBUG ITEM EXISTENTE] Item encontrado en carrito, cantidad actual: {item_existente.cantidad}")
-            
             # VERIFICAR STOCK PARA LA NUEVA CANTIDAD TOTAL
             nueva_cantidad = item_existente.cantidad + cantidad
-            print(f"🔍 [DEBUG NUEVA CANTIDAD] {item_existente.cantidad} + {cantidad} = {nueva_cantidad}")
             
             # Recalcular stock disponible considerando ofertas
             stock_total_actual = 0
@@ -2334,7 +2569,6 @@ def agregar_al_carrito(request):
                     """, [producto.pkid_prod, variante_id_int, hoy, hoy])
                     
                     promocion_data_actual = cursor.fetchone()
-                    print(f"🔍 [DEBUG RECONSULTA VARIANTE] Datos actuales: {promocion_data_actual}")
                 
                 if promocion_data_actual and promocion_data_actual[2]:
                     stock_oferta_actual = promocion_data_actual[0] or 0
@@ -2343,24 +2577,15 @@ def agregar_al_carrito(request):
                     
                     stock_total_actual = stock_oferta_actual + stock_general_actual
                     
-                    print(f"📊 [DEBUG STOCK ACTUAL VARIANTE]")
-                    print(f"   - Stock oferta actual: {stock_oferta_actual}")
-                    print(f"   - Límite oferta actual: {limite_oferta_actual}")
-                    print(f"   - Stock general actual: {stock_general_actual}")
-                    print(f"   - Stock total actual: {stock_total_actual}")
-                    print(f"   - Nueva cantidad total: {nueva_cantidad}")
-                    
                     # Validación específica para ofertas con límite
                     if promocion_data_actual[2] and limite_oferta_actual > 0:
                         if nueva_cantidad > stock_oferta_actual:
-                            print(f"❌ [DEBUG ERROR ACTUALIZACIÓN OFERTA] Excede stock de oferta al actualizar")
                             return JsonResponse({
                                 'success': False,
                                 'message': f'Solo puedes agregar {stock_oferta_actual - item_existente.cantidad} unidades más (límite de oferta)'
                             }, status=400)
                 else:
                     stock_total_actual = variante.stock_variante or 0
-                    print(f"📊 [DEBUG STOCK ACTUAL VARIANTE SIN OFERTA] Stock total: {stock_total_actual}")
             else:
                 # Recalcular stock disponible para producto base
                 with connection.cursor() as cursor:
@@ -2375,7 +2600,6 @@ def agregar_al_carrito(request):
                     """, [producto.pkid_prod, hoy, hoy])
                     
                     promocion_data_actual = cursor.fetchone()
-                    print(f"🔍 [DEBUG RECONSULTA PRODUCTO] Datos actuales: {promocion_data_actual}")
                 
                 if promocion_data_actual and promocion_data_actual[2]:
                     stock_oferta_actual = promocion_data_actual[0] or 0
@@ -2384,27 +2608,17 @@ def agregar_al_carrito(request):
                     
                     stock_total_actual = stock_oferta_actual + stock_general_actual
                     
-                    print(f"📊 [DEBUG STOCK ACTUAL PRODUCTO]")
-                    print(f"   - Stock oferta actual: {stock_oferta_actual}")
-                    print(f"   - Límite oferta actual: {limite_oferta_actual}")
-                    print(f"   - Stock general actual: {stock_general_actual}")
-                    print(f"   - Stock total actual: {stock_total_actual}")
-                    print(f"   - Nueva cantidad total: {nueva_cantidad}")
-                    
                     # Validación específica para ofertas con límite
                     if promocion_data_actual[2] and limite_oferta_actual > 0:
                         if nueva_cantidad > stock_oferta_actual:
-                            print(f"❌ [DEBUG ERROR ACTUALIZACIÓN OFERTA PRODUCTO] Excede stock de oferta al actualizar")
                             return JsonResponse({
                                 'success': False,
                                 'message': f'Solo puedes agregar {stock_oferta_actual - item_existente.cantidad} unidades más (límite de oferta)'
                             }, status=400)
                 else:
                     stock_total_actual = producto.stock_prod or 0
-                    print(f"📊 [DEBUG STOCK ACTUAL PRODUCTO SIN OFERTA] Stock total: {stock_total_actual}")
             
             if stock_total_actual < nueva_cantidad:
-                print(f"❌ [DEBUG ERROR STOCK ACTUAL] Stock total insuficiente al actualizar")
                 unidades_disponibles = stock_total_actual - item_existente.cantidad
                 mensaje_error = f'Stock insuficiente. Solo puedes agregar {unidades_disponibles} unidades más'
                 if promocion_data_actual and promocion_data_actual[2] and stock_oferta_actual > 0:
@@ -2419,7 +2633,6 @@ def agregar_al_carrito(request):
             item_existente.save()
             
             mensaje = 'Cantidad actualizada en el carrito'
-            print(f"✅ [DEBUG ACTUALIZACIÓN EXITOSA] Cantidad actualizada a {nueva_cantidad}")
             
         else:
             nuevo_item = CarritoItem.objects.create(
@@ -2432,7 +2645,6 @@ def agregar_al_carrito(request):
                 variante_id=variante_id_int
             )
             mensaje = 'Producto agregado al carrito exitosamente'
-            print(f"✅ [DEBUG NUEVO ITEM] Producto agregado al carrito")
         
         carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         
@@ -2465,20 +2677,13 @@ def agregar_al_carrito(request):
         if variante_nombre:
             response_data['variante_nombre'] = variante_nombre
         
-        print(f"✅ [DEBUG FINAL] Respuesta exitosa: {response_data}")
-        
         return JsonResponse(response_data)
         
     except Productos.DoesNotExist:
-        print(f"❌ [DEBUG ERROR] Producto no encontrado: {producto_id}")
         return JsonResponse({'success': False, 'message': 'Producto no encontrado'}, status=404)
     except UsuarioPerfil.DoesNotExist:
-        print(f"❌ [DEBUG ERROR] Perfil de usuario no encontrado")
         return JsonResponse({'success': False, 'message': 'Perfil de usuario no encontrado'}, status=404)
-    except Exception as e:
-        print(f"❌ [DEBUG ERROR EXCEPCIÓN] {str(e)}")
-        import traceback
-        print(f"❌ [DEBUG TRACEBACK] {traceback.format_exc()}")
+    except Exception:
         return JsonResponse({
             'success': False, 
             'message': 'Error interno del servidor'
@@ -2492,8 +2697,6 @@ def actualizar_cantidad_carrito(request):
         item_id = data.get('item_id')
         cambio = data.get('cambio', 0)
         
-        print(f"🔍 [DEBUG ACTUALIZAR CANTIDAD] Item: {item_id}, Cambio: {cambio}")
-        
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
         
         carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
@@ -2501,11 +2704,8 @@ def actualizar_cantidad_carrito(request):
         
         nueva_cantidad = item.cantidad + cambio
         
-        print(f"🔍 [DEBUG NUEVA CANTIDAD] Actual: {item.cantidad} + {cambio} = {nueva_cantidad}")
-        
         if nueva_cantidad <= 0:
             item.delete()
-            print(f"✅ [DEBUG ELIMINADO] Item eliminado del carrito")
         else:
             stock_disponible = 0
             stock_oferta = 0
@@ -2516,7 +2716,6 @@ def actualizar_cantidad_carrito(request):
             # VERIFICAR SI EL PRODUCTO TIENE OFERTA ACTIVA
             with connection.cursor() as cursor:
                 if item.variante_id:
-                    print(f"🔍 [DEBUG VERIFICAR OFERTA VARIANTE] Variante: {item.variante_id}")
                     cursor.execute("""
                         SELECT COALESCE(stock_actual_oferta, 0), COALESCE(stock_oferta, 0), activa_por_stock
                         FROM promociones 
@@ -2528,7 +2727,6 @@ def actualizar_cantidad_carrito(request):
                         LIMIT 1
                     """, [item.fkproducto.pkid_prod, item.variante_id, hoy, hoy])
                 else:
-                    print(f"🔍 [DEBUG VERIFICAR OFERTA PRODUCTO] Producto base")
                     cursor.execute("""
                         SELECT COALESCE(stock_actual_oferta, 0), COALESCE(stock_oferta, 0), activa_por_stock
                         FROM promociones 
@@ -2540,14 +2738,11 @@ def actualizar_cantidad_carrito(request):
                     """, [item.fkproducto.pkid_prod, hoy, hoy])
                 
                 promocion_data = cursor.fetchone()
-                print(f"🔍 [DEBUG DATOS OFERTA ACTUALIZAR] {promocion_data}")
             
             if promocion_data:
                 stock_oferta = promocion_data[0] or 0
                 limite_oferta = promocion_data[1] or 0
                 tiene_oferta_activa = promocion_data[2]
-                
-                print(f"🎯 [DEBUG OFERTA ACTUALIZAR] Stock oferta: {stock_oferta}, Límite: {limite_oferta}, Activa: {tiene_oferta_activa}")
             
             if item.variante_id:
                 try:
@@ -2563,22 +2758,17 @@ def actualizar_cantidad_carrito(request):
                         stock_oferta_real = min(stock_oferta, limite_oferta) if limite_oferta > 0 else stock_oferta
                         stock_disponible = stock_oferta_real + stock_general
                         
-                        print(f"📊 [DEBUG STOCK VARIANTE ACTUALIZAR] Oferta real: {stock_oferta_real}, General: {stock_general}, Total: {stock_disponible}")
-                        
                         # VALIDACIÓN CRÍTICA: No permitir exceder el límite de oferta
                         if tiene_oferta_activa and limite_oferta > 0:
                             if nueva_cantidad > stock_oferta_real:
-                                print(f"❌ [DEBUG ERROR ACTUALIZAR OFERTA] Excede límite de oferta: {nueva_cantidad} > {stock_oferta_real}")
                                 return JsonResponse({
                                     'success': False,
                                     'message': f'Límite de oferta alcanzado. Máximo {stock_oferta_real} unidades en oferta especial'
                                 })
                     else:
                         stock_disponible = variante.stock_variante or 0
-                        print(f"📊 [DEBUG STOCK VARIANTE SIN OFERTA] {stock_disponible}")
                         
                 except VariantesProducto.DoesNotExist:
-                    print(f"❌ [DEBUG ERROR] Variante no encontrada al actualizar")
                     return JsonResponse({
                         'success': False,
                         'message': 'La variante seleccionada ya no está disponible'
@@ -2590,24 +2780,17 @@ def actualizar_cantidad_carrito(request):
                     stock_oferta_real = min(stock_oferta, limite_oferta) if limite_oferta > 0 else stock_oferta
                     stock_disponible = stock_oferta_real + stock_general
                     
-                    print(f"📊 [DEBUG STOCK PRODUCTO ACTUALIZAR] Oferta real: {stock_oferta_real}, General: {stock_general}, Total: {stock_disponible}")
-                    
                     # VALIDACIÓN CRÍTICA: No permitir exceder el límite de oferta
                     if tiene_oferta_activa and limite_oferta > 0:
                         if nueva_cantidad > stock_oferta_real:
-                            print(f"❌ [DEBUG ERROR ACTUALIZAR OFERTA PRODUCTO] Excede límite de oferta: {nueva_cantidad} > {stock_oferta_real}")
                             return JsonResponse({
                                 'success': False,
                                 'message': f'Límite de oferta alcanzado. Máximo {stock_oferta_real} unidades en oferta especial'
                             })
                 else:
                     stock_disponible = item.fkproducto.stock_prod or 0
-                    print(f"📊 [DEBUG STOCK PRODUCTO SIN OFERTA] {stock_disponible}")
-            
-            print(f"🔍 [DEBUG VALIDACIÓN FINAL] Nueva cantidad: {nueva_cantidad}, Stock disponible: {stock_disponible}")
             
             if stock_disponible < nueva_cantidad:
-                print(f"❌ [DEBUG ERROR STOCK INSUFICIENTE] {nueva_cantidad} > {stock_disponible}")
                 mensaje_error = f'Stock insuficiente. Solo quedan {stock_disponible} unidades'
                 if tiene_oferta_activa and stock_oferta > 0:
                     stock_oferta_real = min(stock_oferta, limite_oferta) if limite_oferta > 0 else stock_oferta
@@ -2619,19 +2802,15 @@ def actualizar_cantidad_carrito(request):
             
             item.cantidad = nueva_cantidad
             item.save()
-            print(f"✅ [DEBUG ACTUALIZACIÓN EXITOSA] Cantidad actualizada a {nueva_cantidad}")
         
         carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-        
-        print(f"✅ [DEBUG ACTUALIZACIÓN COMPLETADA] Carrito count: {carrito_count}")
         
         return JsonResponse({
             'success': True,
             'carrito_count': carrito_count
         })
         
-    except Exception as e:
-        print(f"❌ [DEBUG ERROR ACTUALIZAR] {str(e)}")
+    except Exception:
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
     
 @login_required(login_url='/auth/login/')
@@ -2654,7 +2833,7 @@ def eliminar_item_carrito(request):
             'carrito_count': carrito_count
         })
         
-    except Exception as e:
+    except Exception:
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
           
 @login_required(login_url='/auth/login/')
@@ -2724,7 +2903,7 @@ def ver_carrito(request):
         
         return render(request, 'Cliente/carrito.html', context)
         
-    except Exception as e:
+    except Exception:
         return render(request, 'Cliente/carrito.html', {
             'items_carrito': [],
             'total_carrito': 0,
@@ -2846,7 +3025,7 @@ def carrito_data(request):
         
         return JsonResponse(response_data)
         
-    except Exception as e:
+    except Exception:
         return JsonResponse({'success': False, 'items': [], 'totales': {}})
     
 @login_required(login_url='/auth/login/')
@@ -2971,6 +3150,42 @@ def procesar_pedido(request):
                 metodo_pago=metodo_pago
             )
 
+        # =====================================================================
+        # CREAR NOTIFICACIONES - AGREGADO AQUÍ
+        # =====================================================================
+        
+        # 1. Notificación para el CLIENTE
+        Notificacion.objects.create(
+            usuario=auth_user,
+            tipo='pedido',
+            titulo='✅ Pedido Confirmado',
+            mensaje=f'Tu pedido #{pedido.pkid_pedido} ha sido procesado exitosamente. Total: ${total_pedido:,.0f}',
+            url=f'/pedidos/{pedido.pkid_pedido}/'
+        )
+        
+        # 2. Notificación para el NEGOCIO PRINCIPAL
+        if negocio_principal and negocio_principal.fkpropietario_neg and negocio_principal.fkpropietario_neg.fkuser:
+            Notificacion.objects.create(
+                usuario=negocio_principal.fkpropietario_neg.fkuser,
+                tipo='pedido',
+                titulo='🛒 Nuevo Pedido Recibido',
+                mensaje=f'Tienes un nuevo pedido #{pedido.pkid_pedido} de {auth_user.first_name or auth_user.username}. Total: ${mayor_monto:,.0f}',
+                url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
+            )
+        
+        # 3. Notificaciones para otros negocios involucrados
+        for negocio, monto in negocios_involucrados.items():
+            if negocio != negocio_principal and negocio.fkpropietario_neg and negocio.fkpropietario_neg.fkuser:
+                Notificacion.objects.create(
+                    usuario=negocio.fkpropietario_neg.fkuser,
+                    tipo='pedido',
+                    titulo='🛒 Pedido Multi-Negocio',
+                    mensaje=f'Tienes productos en el pedido #{pedido.pkid_pedido}. Tu ganancia: ${monto:,.0f}',
+                    url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
+                )
+        
+        # =====================================================================
+
         items_carrito.delete()
 
         try:
@@ -2996,13 +3211,57 @@ def procesar_pedido(request):
             'correo_enviado': bool(email_cliente),
             'stock_validado': True,
             'stock_descontado': stock_descontado,
+            'notificaciones_creadas': 1 + len(negocios_involucrados),
         }
 
         return JsonResponse(response_data)
 
-    except Exception as e:
+    except Exception:
+        # Notificación de error si ocurre
+        try:
+            Notificacion.objects.create(
+                usuario=request.user,
+                tipo='alerta',
+                titulo='❌ Error en Pedido',
+                mensaje=f'Ocurrió un error al procesar tu pedido. Por favor intenta nuevamente.',
+                url='/carrito/'
+            )
+        except:
+            pass
+            
         return JsonResponse({'success': False, 'message': 'Error interno del servidor al procesar el pedido'}, status=500)
+
+def crear_notificacion_estado_pedido(pedido, nuevo_estado):
+    """Crear notificación cuando cambia el estado de un pedido"""
+    estados_mensajes = {
+        'confirmado': f'✅ Tu pedido #{pedido.pkid_pedido} ha sido confirmado por el negocio',
+        'preparando': f'👨‍🍳 Tu pedido #{pedido.pkid_pedido} está en preparación',
+        'en_camino': f'🚚 Tu pedido #{pedido.pkid_pedido} está en camino',
+        'entregado': f'🎉 Pedido #{pedido.pkid_pedido} entregado exitosamente',
+        'cancelado': f'❌ Pedido #{pedido.pkid_pedido} ha sido cancelado',
+    }
     
+    mensaje = estados_mensajes.get(nuevo_estado, f'Estado actualizado del pedido #{pedido.pkid_pedido}')
+    
+    # Notificación para el cliente
+    Notificacion.objects.create(
+        usuario=pedido.fkusuario_pedido.fkuser,
+        tipo='pedido',
+        titulo=f'Actualización de Pedido #{pedido.pkid_pedido}',
+        mensaje=mensaje,
+        url=f'/pedidos/{pedido.pkid_pedido}/'
+    )
+    
+    # Notificación para el negocio (si no es cancelado)
+    if nuevo_estado != 'cancelado' and pedido.fknegocio_pedido.fkpropietario_neg:
+        Notificacion.objects.create(
+            usuario=pedido.fknegocio_pedido.fkpropietario_neg.fkuser,
+            tipo='pedido', 
+            titulo=f'Estado Actualizado - Pedido #{pedido.pkid_pedido}',
+            mensaje=f'Has actualizado el pedido #{pedido.pkid_pedido} a: {nuevo_estado}',
+            url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
+        )
+        
 def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados):
     try:
         fecha_colombia = timezone.localtime(pedido.fecha_pedido)
@@ -3051,8 +3310,8 @@ def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_
         email.attach_alternative(html_content, "text/html")
         email.send()
         
-    except Exception as e:
-        raise e
+    except Exception:
+        pass
 
 @login_required(login_url='/auth/login/')
 def guardar_resena(request):
@@ -3101,8 +3360,8 @@ def guardar_resena(request):
         except UsuarioPerfil.DoesNotExist:
             messages.error(request, 'Perfil de usuario no encontrado')
             return redirect('cliente_dashboard')
-        except Exception as e:
-            messages.error(request, f'Error al guardar la reseña: {str(e)}')
+        except Exception:
+            messages.error(request, 'Error al guardar la reseña')
             if negocio_id:
                 if es_vista_logeada:
                     return redirect('detalle_negocio_logeado', id=negocio_id)
@@ -3379,7 +3638,7 @@ def mis_pedidos_data(request):
             'pedidos': pedidos_data
         })
         
-    except Exception as e:
+    except Exception:
         return JsonResponse({
             'success': False,
             'message': 'Error al cargar los pedidos'
@@ -3387,6 +3646,7 @@ def mis_pedidos_data(request):
 
 @login_required(login_url='/auth/login/')
 def cancelar_pedido(request):
+    """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -3394,11 +3654,13 @@ def cancelar_pedido(request):
             
             perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
             
+            # Obtener el pedido
             pedido = Pedidos.objects.get(
                 pkid_pedido=pedido_id,
                 fkusuario_pedido=perfil_cliente
             )
             
+            # Verificar que no haya pasado 1 hora
             tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
             if tiempo_transcurrido > timedelta(hours=1):
                 return JsonResponse({
@@ -3406,14 +3668,17 @@ def cancelar_pedido(request):
                     'message': 'No se puede cancelar el pedido. Ha pasado más de 1 hora desde que se realizó.'
                 })
             
+            # Verificar que el pedido esté en estado cancelable
             if pedido.estado_pedido not in ['pendiente', 'confirmado']:
                 return JsonResponse({
                     'success': False, 
                     'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
                 })
             
+            # ✅ RESTAURAR STOCK ANTES DE CANCELAR
             stock_restaurado = restaurar_stock_pedido(pedido)
             
+            # Actualizar estado del pedido
             pedido.estado_pedido = 'cancelado'
             pedido.fecha_actualizacion = timezone.now()
             pedido.save()
@@ -3435,7 +3700,7 @@ def cancelar_pedido(request):
                 'success': False,
                 'message': 'Pedido no encontrado'
             })
-        except Exception as e:
+        except Exception:
             return JsonResponse({
                 'success': False,
                 'message': 'Error al cancelar el pedido'
@@ -3446,133 +3711,875 @@ def cancelar_pedido(request):
         'message': 'Método no permitido'
     })
 
+# =============================================================================
+# VISTAS PARA FAVORITOS CON ACTUALIZACIÓN EN TIEMPO REAL
+# =============================================================================
+
 @login_required(login_url='/auth/login/')
-def cancelar_pedido(request):
-    """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
-    if request.method == 'POST':
+@require_POST
+def agregar_favorito(request):
+    """Agregar producto a favoritos"""
+    try:
+        data = json.loads(request.body)
+        producto_id = data.get('producto_id')
+        
+        if not producto_id:
+            return JsonResponse({'success': False, 'message': 'ID de producto requerido'})
+        
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        producto = Productos.objects.get(pkid_prod=producto_id, estado_prod='disponible')
+        
+        # Verificar si ya existe en favoritos
+        favorito_existente = Favoritos.objects.filter(
+            fkusuario=perfil_cliente,
+            fkproducto=producto
+        ).exists()
+        
+        if favorito_existente:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Este producto ya está en tus favoritos'
+            })
+        
+        # Crear nuevo favorito
+        favorito = Favoritos.objects.create(
+            fkusuario=perfil_cliente,
+            fkproducto=producto
+        )
+        
+        # Contar favoritos actualizados
+        favoritos_count = Favoritos.objects.filter(fkusuario=perfil_cliente).count()
+        carrito_count = CarritoItem.objects.filter(
+            fkcarrito__fkusuario_carrito=perfil_cliente
+        ).count()
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Producto agregado a favoritos',
+            'favoritos_count': favoritos_count,
+            'carrito_count': carrito_count
+        })
+            
+    except Productos.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Producto no encontrado'})
+    except UsuarioPerfil.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Perfil de usuario no encontrado'})
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Error al agregar a favoritos'})
+
+@login_required(login_url='/auth/login/')
+@require_POST
+def eliminar_favorito(request):
+    """Eliminar producto de favoritos"""
+    try:
+        data = json.loads(request.body)
+        producto_id = data.get('producto_id')
+        
+        if not producto_id:
+            return JsonResponse({'success': False, 'message': 'ID de producto requerido'})
+        
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        # Eliminar favorito
+        deleted_count, _ = Favoritos.objects.filter(
+            fkusuario=perfil_cliente,
+            fkproducto_id=producto_id
+        ).delete()
+        
+        if deleted_count == 0:
+            return JsonResponse({
+                'success': False, 
+                'message': 'El producto no estaba en tus favoritos'
+            })
+        
+        # Contar favoritos actualizados
+        favoritos_count = Favoritos.objects.filter(fkusuario=perfil_cliente).count()
+        carrito_count = CarritoItem.objects.filter(
+            fkcarrito__fkusuario_carrito=perfil_cliente
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Producto eliminado de favoritos',
+            'favoritos_count': favoritos_count,
+            'carrito_count': carrito_count
+        })
+        
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Error al eliminar de favoritos'})
+
+@login_required(login_url='/auth/login/')
+def ver_favoritos(request):
+    """Página para ver todos los favoritos del usuario con variantes y ofertas"""
+    try:
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        # Obtener favoritos con información completa
+        favoritos = Favoritos.objects.filter(
+            fkusuario=perfil_cliente
+        ).select_related(
+            'fkproducto',
+            'fkproducto__fknegocioasociado_prod'
+        ).order_by('-fecha_agregado')
+        
+        productos_favoritos = []
+        hoy = timezone.now().date()
+        
+        for favorito in favoritos:
+            producto = favorito.fkproducto
+            
+            # Verificar ofertas activas para el producto base
+            precio_base = float(producto.precio_prod)
+            precio_final = precio_base
+            tiene_descuento = False
+            descuento_porcentaje = 0
+            ahorro = 0
+            tiene_oferta_activa = False
+            
+            # Función auxiliar para obtener ofertas
+            def obtener_info_oferta_corregida(producto_id, variante_id=None):
+                try:
+                    with connection.cursor() as cursor:
+                        if variante_id:
+                            cursor.execute("""
+                                SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                                FROM promociones p
+                                WHERE p.fkproducto_id = %s 
+                                AND p.variante_id = %s
+                                AND p.estado_promo = 'activa'
+                                AND p.fecha_inicio <= %s 
+                                AND p.fecha_fin >= %s
+                                AND p.porcentaje_descuento > 0
+                                LIMIT 1
+                            """, [producto_id, variante_id, hoy, hoy])
+                            result = cursor.fetchone()
+                            
+                            if result:
+                                return {
+                                    'porcentaje_descuento': float(result[0]),
+                                    'pkid_promo': result[1],
+                                    'variante_id': result[2],
+                                    'es_oferta_especifica': True,
+                                    'tiene_oferta': True
+                                }
+                        
+                        # Buscar oferta para producto base
+                        cursor.execute("""
+                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                            FROM promociones p
+                            WHERE p.fkproducto_id = %s 
+                            AND p.variante_id IS NULL
+                            AND p.estado_promo = 'activa'
+                            AND p.fecha_inicio <= %s 
+                            AND p.fecha_fin >= %s
+                            AND p.porcentaje_descuento > 0
+                            LIMIT 1
+                        """, [producto_id, hoy, hoy])
+                        
+                        result = cursor.fetchone()
+                        if result:
+                            return {
+                                'porcentaje_descuento': float(result[0]),
+                                'pkid_promo': result[1],
+                                'variante_id': result[2],
+                                'es_oferta_especifica': False,
+                                'tiene_oferta': True
+                            }
+                        
+                        return None
+                except Exception:
+                    return None
+
+            # Obtener oferta para producto base
+            info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+            if info_oferta_producto:
+                descuento_porcentaje = info_oferta_producto['porcentaje_descuento']
+                ahorro = precio_base * (descuento_porcentaje / 100)
+                precio_final = precio_base - ahorro
+                tiene_descuento = True
+                tiene_oferta_activa = True
+            
+            # Verificar variantes
+            variantes_list = []
+            tiene_variantes = VariantesProducto.objects.filter(
+                producto=producto, 
+                estado_variante='activa'
+            ).exists()
+            
+            if tiene_variantes:
+                variantes = VariantesProducto.objects.filter(
+                    producto=producto,
+                    estado_variante='activa'
+                )
+                
+                for variante in variantes:
+                    try:
+                        stock_variante = variante.stock_variante or 0
+                        if stock_variante <= 0:
+                            continue
+                        
+                        precio_adicional = float(variante.precio_adicional) if variante.precio_adicional else 0
+                        precio_base_variante = precio_base + precio_adicional
+                        
+                        # Verificar oferta para esta variante específica
+                        info_oferta_variante = obtener_info_oferta_corregida(
+                            producto.pkid_prod, 
+                            variante.id_variante
+                        )
+                        
+                        if info_oferta_variante:
+                            descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
+                            ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
+                            precio_final_variante = precio_base_variante - ahorro_variante
+                            tiene_descuento_variante = True
+                            tiene_oferta_activa_variante = True
+                        else:
+                            # Si no hay oferta específica para la variante, usar la oferta del producto base
+                            descuento_porcentaje_variante = descuento_porcentaje
+                            ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100) if descuento_porcentaje_variante > 0 else 0
+                            precio_final_variante = precio_base_variante - ahorro_variante
+                            tiene_descuento_variante = tiene_descuento
+                            tiene_oferta_activa_variante = tiene_oferta_activa
+                        
+                        variante_data = {
+                            'id_variante': variante.id_variante,
+                            'nombre_variante': variante.nombre_variante,
+                            'precio_adicional': precio_adicional,
+                            'stock_variante': stock_variante,
+                            'imagen_variante': variante.imagen_variante,
+                            'estado_variante': variante.estado_variante,
+                            'sku_variante': variante.sku_variante,
+                            'precio_base_calculado': round(precio_base_variante, 2),
+                            'precio_final_calculado': round(precio_final_variante, 2),
+                            'ahorro_calculado': round(ahorro_variante, 2),
+                            'descuento_porcentaje_calculado': descuento_porcentaje_variante,
+                            'tiene_descuento_calculado': tiene_descuento_variante,
+                            'tiene_oferta_activa': tiene_oferta_activa_variante,
+                        }
+                        variantes_list.append(variante_data)
+                        
+                    except Exception:
+                        continue
+            
+            # Obtener URL de imagen
+            imagen_url = ''
+            if producto.img_prod:
+                try:
+                    imagen_url = request.build_absolute_uri(producto.img_prod.url)
+                except:
+                    imagen_url = '/static/img/placeholder-producto.jpg'
+            else:
+                imagen_url = '/static/img/placeholder-producto.jpg'
+            
+            producto_data = {
+                'producto': producto,
+                'precio_base': precio_base,
+                'precio_final': round(precio_final, 2),
+                'tiene_descuento': tiene_descuento,
+                'descuento_porcentaje': descuento_porcentaje,
+                'ahorro': round(ahorro, 2),
+                'tiene_variantes': tiene_variantes,
+                'variantes': variantes_list,
+                'stock': producto.stock_prod or 0,
+                'fecha_agregado': favorito.fecha_agregado,
+                'es_favorito': True,
+                'favorito_id': favorito.pkid_favorito,
+                'nombre': producto.nom_prod,
+                'precio_actual': str(producto.precio_prod),
+                'imagen': imagen_url,
+                'negocio': producto.fknegocioasociado_prod.nom_neg if producto.fknegocioasociado_prod else 'Vecy',
+                'tiene_oferta_activa': tiene_oferta_activa,
+                'tiene_stock': (producto.stock_prod or 0) > 0 or len(variantes_list) > 0
+            }
+            
+            productos_favoritos.append(producto_data)
+        
+        # Contadores para el dashboard
+        carrito_count = 0
+        favoritos_count = favoritos.count()
+        pedidos_pendientes_count = 0
+        
         try:
-            data = json.loads(request.body)
-            pedido_id = data.get('pedido_id')
+            carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+            carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
+        except Carrito.DoesNotExist:
+            pass
+        
+        try:
+            pedidos_pendientes_count = Pedidos.objects.filter(
+                fkusuario_pedido=perfil_cliente,
+                estado_pedido__in=['pendiente', 'confirmado', 'preparando']
+            ).count()
+        except Exception:
+            pass
+        
+        context = {
+            'productos_favoritos': productos_favoritos,
+            'total_favoritos': len(productos_favoritos),
+            'carrito_count': carrito_count,
+            'favoritos_count': favoritos_count,
+            'pedidos_pendientes_count': pedidos_pendientes_count,
+            'hay_favoritos': len(productos_favoritos) > 0,
+        }
+        
+        return render(request, 'cliente/favoritos.html', context)
+        
+    except UsuarioPerfil.DoesNotExist:
+        messages.error(request, 'Complete su perfil para acceder a esta funcionalidad.')
+        return redirect('completar_perfil')
+    except Exception:
+        messages.error(request, 'Error al cargar los favoritos')
+        return redirect('cliente_dashboard')
+    
+@login_required(login_url='/auth/login/')
+def verificar_favorito(request):
+    """Verificar si un producto está en favoritos"""
+    try:
+        producto_id = request.GET.get('producto_id')
+        
+        if not producto_id:
+            return JsonResponse({'success': False, 'es_favorito': False})
+        
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        es_favorito = Favoritos.objects.filter(
+            fkusuario=perfil_cliente,
+            fkproducto_id=producto_id
+        ).exists()
+        
+        return JsonResponse({
+            'success': True,
+            'es_favorito': es_favorito
+        })
+        
+    except Exception:
+        return JsonResponse({'success': False, 'es_favorito': False})
+
+@login_required(login_url='/auth/login/')
+def contar_favoritos(request):
+    """Obtener contador actual de favoritos"""
+    try:
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        favoritos_count = Favoritos.objects.filter(fkusuario=perfil_cliente).count()
+        
+        return JsonResponse({
+            'success': True,
+            'favoritos_count': favoritos_count
+        })
+        
+    except Exception:
+        return JsonResponse({'success': False, 'favoritos_count': 0})
+    
+@login_required
+def favoritos_data(request):
+    """API para obtener favoritos en formato JSON con variantes y ofertas"""
+    try:
+        perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+        
+        favoritos = Favoritos.objects.filter(
+            fkusuario=perfil_cliente
+        ).select_related(
+            'fkproducto',
+            'fkproducto__fknegocioasociado_prod'
+        ).order_by('-fecha_agregado')
+        
+        hoy = timezone.now().date()
+        favoritos_data = []
+        
+        for favorito in favoritos:
+            producto = favorito.fkproducto
             
-            perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
+            # INFORMACIÓN BASE DEL PRODUCTO
+            precio_base = float(producto.precio_prod)
+            precio_final = precio_base
+            tiene_descuento = False
+            descuento_porcentaje = 0
+            ahorro = 0
+            tiene_oferta_activa = False
             
-            # Obtener el pedido
-            pedido = Pedidos.objects.get(
-                pkid_pedido=pedido_id,
-                fkusuario_pedido=perfil_cliente
-            )
+            # VERIFICAR OFERTAS ACTIVAS
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT porcentaje_descuento, titulo_promo 
+                    FROM promociones 
+                    WHERE fkproducto_id = %s 
+                    AND estado_promo = 'activa'
+                    AND fecha_inicio <= %s 
+                    AND fecha_fin >= %s
+                    LIMIT 1
+                """, [producto.pkid_prod, hoy, hoy])
+                
+                result = cursor.fetchone()
+                if result and result[0] is not None:
+                    try:
+                        descuento_porcentaje = float(result[0])
+                        if descuento_porcentaje > 0:
+                            precio_final = precio_base * (1 - (descuento_porcentaje / 100))
+                            ahorro = precio_base - precio_final
+                            tiene_descuento = True
+                            tiene_oferta_activa = True
+                    except (ValueError, TypeError):
+                        pass
             
-            # Verificar que no haya pasado 1 hora
-            tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
-            if tiempo_transcurrido > timedelta(hours=1):
+            # INFORMACIÓN DE VARIANTES
+            variantes_list = []
+            tiene_variantes = VariantesProducto.objects.filter(
+                producto=producto, 
+                estado_variante='activa'
+            ).exists()
+            
+            if tiene_variantes:
+                variantes = VariantesProducto.objects.filter(
+                    producto=producto,
+                    estado_variante='activa'
+                )
+                
+                for variante in variantes:
+                    # Verificar ofertas para cada variante
+                    precio_base_variante = precio_base + float(variante.precio_adicional or 0)
+                    precio_final_variante = precio_base_variante
+                    tiene_descuento_variante = False
+                    descuento_porcentaje_variante = 0
+                    
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            SELECT porcentaje_descuento 
+                            FROM promociones 
+                            WHERE fkproducto_id = %s 
+                            AND variante_id = %s
+                            AND estado_promo = 'activa'
+                            AND fecha_inicio <= %s 
+                            AND fecha_fin >= %s
+                            LIMIT 1
+                        """, [producto.pkid_prod, variante.id_variante, hoy, hoy])
+                        
+                        result_variante = cursor.fetchone()
+                        if result_variante and result_variante[0] is not None:
+                            try:
+                                descuento_porcentaje_variante = float(result_variante[0])
+                                if descuento_porcentaje_variante > 0:
+                                    precio_final_variante = precio_base_variante * (1 - (descuento_porcentaje_variante / 100))
+                                    tiene_descuento_variante = True
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    variante_data = {
+                        'id_variante': variante.id_variante,
+                        'nombre_variante': variante.nombre_variante,
+                        'precio_adicional': float(variante.precio_adicional or 0),
+                        'stock_variante': variante.stock_variante or 0,
+                        'imagen_variante': variante.imagen_variante.url if variante.imagen_variante else None,
+                        'precio_base': precio_base_variante,
+                        'precio_final': precio_final_variante,
+                        'tiene_descuento': tiene_descuento_variante,
+                        'descuento_porcentaje': descuento_porcentaje_variante,
+                    }
+                    variantes_list.append(variante_data)
+            
+            # Obtener URL de imagen
+            imagen_url = ''
+            if producto.img_prod:
+                try:
+                    imagen_url = request.build_absolute_uri(producto.img_prod.url)
+                except:
+                    imagen_url = '/static/img/placeholder-producto.jpg'
+            else:
+                imagen_url = '/static/img/placeholder-producto.jpg'
+            
+            # Construir respuesta
+            favorito_item = {
+                'producto_id': producto.pkid_prod,
+                'nombre': producto.nom_prod,
+                'precio_base': precio_base,
+                'precio_final': round(precio_final, 2),
+                'precio_original': precio_base,  # Para comparar
+                'tiene_descuento': tiene_descuento,
+                'descuento_porcentaje': descuento_porcentaje,
+                'ahorro': round(ahorro, 2),
+                'tiene_oferta_activa': tiene_oferta_activa,
+                'imagen': imagen_url,
+                'negocio': producto.fknegocioasociado_prod.nom_neg if producto.fknegocioasociado_prod else 'Vecy',
+                'fecha_agregado': favorito.fecha_agregado.strftime('%Y-%m-%d %H:%M'),
+                'tiene_variantes': tiene_variantes,
+                'variantes': variantes_list,
+                'stock': producto.stock_prod or 0,
+                'tiene_stock': (producto.stock_prod or 0) > 0 or len(variantes_list) > 0,
+                'es_variante': tiene_variantes,  # Para mostrar badge en template
+            }
+            
+            favoritos_data.append(favorito_item)
+        
+        response_data = {
+            'success': True,
+            'favoritos': favoritos_data,
+            'total': len(favoritos_data),
+            'debug': {
+                'usuario': request.user.username,
+                'favoritos_count': favoritos.count(),
+                'timestamp': timezone.now().isoformat()
+            }
+        }
+        
+        return JsonResponse(response_data)
+        
+    except UsuarioPerfil.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Perfil de usuario no encontrado'
+        }, status=404)
+    except Exception:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error al cargar favoritos'
+        }, status=500)
+
+# =============================================================================
+# VISTAS PARA PERFIL DE USUARIO
+# =============================================================================
+
+from ..forms import UserProfileForm
+
+@login_required
+def get_perfil_form(request):
+    """Vista que retorna solo el formulario para el modal"""
+    try:
+        usuario = request.user
+        form = UserProfileForm(instance=usuario)
+        
+        context = {
+            'form': form,
+            'user': usuario
+        }
+        
+        return render(request, 'perfil/_perfil_form.html', context)
+        
+    except Exception:
+        form = UserProfileForm()
+        return render(request, 'perfil/_perfil_form.html', {
+            'form': form,
+            'error': 'Error al cargar el formulario'
+        })
+
+@login_required
+def actualizar_perfil(request):
+    """Vista para actualizar el perfil del usuario"""
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            usuario = request.user
+            form = UserProfileForm(request.POST, request.FILES, instance=usuario)
+            
+            if form.is_valid():
+                user = form.save()
+                
+                # ACTUALIZAR SESIÓN CON LA NUEVA IMAGEN
+                request.session['usuario_nombre'] = user.first_name
+                if hasattr(user, 'usuarioperfil') and user.usuarioperfil.img_user:
+                    request.session['usuario_imagen'] = user.usuarioperfil.img_user.url
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Perfil actualizado correctamente',
+                    'usuario_nombre': user.first_name,
+                    'usuario_imagen': user.usuarioperfil.img_user.url if hasattr(user, 'usuarioperfil') and user.usuarioperfil.img_user else None
+                })
+            else:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No se puede cancelar el pedido. Ha pasado más de 1 hora desde que se realizó.'
+                    'message': 'Por favor corrige los errores del formulario',
+                    'errors': form.errors
                 })
-            
-            # Verificar que el pedido esté en estado cancelable
-            if pedido.estado_pedido not in ['pendiente', 'confirmado']:
-                return JsonResponse({
-                    'success': False, 
-                    'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
-                })
-            
-            # ✅ RESTAURAR STOCK ANTES DE CANCELAR
-            stock_restaurado = restaurar_stock_pedido(pedido)
-            
-            # Actualizar estado del pedido
-            pedido.estado_pedido = 'cancelado'
-            pedido.fecha_actualizacion = timezone.now()
-            pedido.save()
-            
-            mensaje = 'Pedido cancelado exitosamente'
-            if stock_restaurado:
-                mensaje += ' y stock restaurado'
-            else:
-                mensaje += ' (pero hubo un problema al restaurar el stock)'
-            
-            return JsonResponse({
-                'success': True,
-                'message': mensaje,
-                'stock_restaurado': stock_restaurado
-            })
-            
-        except Pedidos.DoesNotExist:
+                
+        except Exception:
             return JsonResponse({
                 'success': False,
-                'message': 'Pedido no encontrado'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': 'Error al cancelar el pedido'
+                'message': 'Error al actualizar el perfil'
             })
     
     return JsonResponse({
         'success': False,
         'message': 'Método no permitido'
     })
-    """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            pedido_id = data.get('pedido_id')
-            
-            perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-            
-            # Obtener el pedido
-            pedido = Pedidos.objects.get(
-                pkid_pedido=pedido_id,
-                fkusuario_pedido=perfil_cliente
-            )
-            
-            # Verificar que no haya pasado 1 hora
-            tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
-            if tiempo_transcurrido > timedelta(hours=1):
-                return JsonResponse({
-                    'success': False,
-                    'message': 'No se puede cancelar el pedido. Ha pasado más de 1 hora desde que se realizó.'
-                })
-            
-            # Verificar que el pedido esté en estado cancelable
-            if pedido.estado_pedido not in ['pendiente', 'confirmado']:
-                return JsonResponse({
-                    'success': False, 
-                    'message': f'No se puede cancelar un pedido en estado: {pedido.estado_pedido}'
-                })
-            
-            # ✅ RESTAURAR STOCK ANTES DE CANCELAR
-            stock_restaurado = restaurar_stock_pedido(pedido)
-            
-            # Actualizar estado del pedido
-            pedido.estado_pedido = 'cancelado'
-            pedido.fecha_actualizacion = timezone.now()
-            pedido.save()
-            
-            mensaje = 'Pedido cancelado exitosamente'
-            if stock_restaurado:
-                mensaje += ' y stock restaurado'
-            else:
-                mensaje += ' (pero hubo un problema al restaurar el stock)'
-            
-            return JsonResponse({
-                'success': True,
-                'message': mensaje,
-                'stock_restaurado': stock_restaurado
+
+# =============================================================================
+# VISTAS PARA NOTIFICACIONES
+# =============================================================================
+
+@login_required
+def get_notifications(request):
+    """Obtener notificaciones no leídas y recientes"""
+    try:
+        # Obtener notificaciones no leídas + las últimas 10 leídas
+        notificaciones_no_leidas = Notificacion.objects.filter(
+            usuario=request.user, 
+            leida=False
+        ).order_by('-fecha_creacion')
+        
+        notificaciones_leidas = Notificacion.objects.filter(
+            usuario=request.user, 
+            leida=True
+        ).order_by('-fecha_creacion')[:10]
+        
+        notificaciones = list(notificaciones_no_leidas) + list(notificaciones_leidas)
+        notificaciones.sort(key=lambda x: x.fecha_creacion, reverse=True)
+        
+        notifications_data = []
+        for notificacion in notificaciones:
+            notifications_data.append({
+                'id': notificacion.id,
+                'tipo': notificacion.tipo,
+                'titulo': notificacion.titulo,
+                'mensaje': notificacion.mensaje,
+                'leida': notificacion.leida,
+                'tiempo': notificacion.tiempo_transcurrido,
+                'url': notificacion.url,
+                'fecha': notificacion.fecha_creacion.strftime("%d/%m/%Y %H:%M")
             })
-            
-        except Pedidos.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': 'Pedido no encontrado'
-            })
-        except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': 'Error al cancelar el pedido'
-            })
+        
+        return JsonResponse({
+            'success': True,
+            'notifications': notifications_data,
+            'unread_count': notificaciones_no_leidas.count()
+        })
+        
+    except Exception:
+        return JsonResponse({
+            'success': False,
+            'error': 'Error al cargar notificaciones'
+        })
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def mark_notification_read(request):
+    """Marcar una notificación como leída"""
+    try:
+        data = json.loads(request.body)
+        notification_id = data.get('notification_id')
+        
+        notificacion = Notificacion.objects.get(
+            id=notification_id, 
+            usuario=request.user
+        )
+        notificacion.leida = True
+        notificacion.save()
+        
+        return JsonResponse({'success': True})
+        
+    except Notificacion.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Notificación no encontrada'})
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Error al marcar notificación'})
+
+@login_required
+@require_http_methods(["POST"])
+@csrf_exempt
+def mark_all_notifications_read(request):
+    """Marcar todas las notificaciones como leídas"""
+    try:
+        Notificacion.objects.filter(
+            usuario=request.user, 
+            leida=False
+        ).update(leida=True)
+        
+        return JsonResponse({'success': True})
+        
+    except Exception:
+        return JsonResponse({'success': False, 'error': 'Error al marcar notificaciones'})
+
+@login_required
+def ver_notificaciones(request):
+    """Página para ver todas las notificaciones"""
+    notificaciones = Notificacion.objects.filter(usuario=request.user).order_by('-fecha_creacion')
     
-    return JsonResponse({
-        'success': False,
-        'message': 'Método no permitido'
+    # Paginación
+    paginator = Paginator(notificaciones, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    return render(request, 'notificaciones/ver_notificaciones.html', {
+        'page_obj': page_obj,
+        'unread_count': notificaciones.filter(leida=False).count()
     })
+
+# =============================================================================
+# FUNCIONES AUXILIARES PARA STOCK
+# =============================================================================
+
+def restaurar_stock_pedido(pedido):
+    """Restaurar stock cuando se cancela un pedido"""
+    try:
+        detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
+        hoy = timezone.now().date()
+        
+        for detalle in detalles_pedido:
+            producto = detalle.fkproducto_detalle
+            cantidad = detalle.cantidad_detalle
+            
+            # Buscar el item del carrito correspondiente para obtener variante_id
+            try:
+                carrito_items = CarritoItem.objects.filter(
+                    fkproducto=producto,
+                    fkcarrito__fkusuario_carrito=pedido.fkusuario_pedido
+                )
+                
+                item_correspondiente = None
+                for item in carrito_items:
+                    if item.cantidad == cantidad or abs(item.cantidad - cantidad) <= 2:
+                        item_correspondiente = item
+                        break
+                
+                if not item_correspondiente and carrito_items.exists():
+                    item_correspondiente = carrito_items.first()
+                
+                variante_id = item_correspondiente.variante_id if item_correspondiente else None
+                
+            except Exception:
+                variante_id = None
+            
+            # Verificar si este producto/variante estaba en oferta con stock específico
+            with connection.cursor() as cursor:
+                if variante_id:
+                    cursor.execute("""
+                        SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
+                        FROM promociones 
+                        WHERE fkproducto_id = %s 
+                        AND variante_id = %s
+                        AND estado_promo = 'activa'
+                        AND fecha_inicio <= %s 
+                        AND fecha_fin >= %s
+                        LIMIT 1
+                    """, [producto.pkid_prod, variante_id, hoy, hoy])
+                else:
+                    cursor.execute("""
+                        SELECT pkid_promo, stock_actual_oferta, stock_oferta, activa_por_stock
+                        FROM promociones 
+                        WHERE fkproducto_id = %s 
+                        AND estado_promo = 'activa'
+                        AND fecha_inicio <= %s 
+                        AND fecha_fin >= %s
+                        LIMIT 1
+                    """, [producto.pkid_prod, hoy, hoy])
+                
+                promocion_data = cursor.fetchone()
+            
+            # Si había una promoción con stock de oferta, restaurar ahí primero
+            if promocion_data and promocion_data[3]:
+                promo_id, stock_actual_oferta, stock_oferta, activa_por_stock = promocion_data
+                
+                if stock_actual_oferta is not None and stock_oferta is not None:
+                    # Restaurar al stock de oferta (hasta el máximo original)
+                    nuevo_stock_oferta = min(stock_actual_oferta + cantidad, stock_oferta)
+                    with connection.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE promociones 
+                            SET stock_actual_oferta = %s 
+                            WHERE pkid_promo = %s
+                        """, [nuevo_stock_oferta, promo_id])
+                    
+                    # Si hay excedente después de llenar el stock de oferta, restaurar al stock general
+                    excedente = max(0, (stock_actual_oferta + cantidad) - stock_oferta)
+                    if excedente > 0:
+                        _restaurar_stock_general(producto, excedente, variante_id)
+                    
+                    continue
+            
+            # Si no había promoción con stock de oferta, restaurar al stock general
+            _restaurar_stock_general(producto, cantidad, variante_id)
+        
+        return True
+        
+    except Exception:
+        return False
+
+def _restaurar_stock_general(producto, cantidad, variante_id=None):
+    """Restaurar stock general del producto o variante"""
+    try:
+        if variante_id:
+            # Restaurar stock de variante
+            variante = VariantesProducto.objects.get(
+                id_variante=variante_id,
+                producto=producto
+            )
+            variante.stock_variante += cantidad
+            variante.save()
+        else:
+            # Restaurar stock de producto base
+            producto.stock_prod += cantidad
+            producto.save()
+            
+    except Exception:
+        pass
+
+# =============================================================================
+# FUNCIONES PARA CREAR NOTIFICACIONES AUTOMÁTICAS
+# =============================================================================
+
+def crear_notificacion_pedido(usuario, pedido, tipo_estado):
+    """Crear notificación por cambio de estado de pedido"""
+    mensajes = {
+        'confirmado': f"Tu pedido #{pedido.pkid_pedido} ha sido confirmado",
+        'preparando': f"¡Tu pedido #{pedido.pkid_pedido} está en preparación!",
+        'en_camino': f"El repartidor está en camino con tu pedido #{pedido.pkid_pedido}",
+        'entregado': f"🎉 Pedido #{pedido.pkid_pedido} entregado exitosamente",
+        'cancelado': f"Pedido #{pedido.pkid_pedido} cancelado",
+    }
+    
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo='pedido',
+        titulo='Actualización de Pedido',
+        mensaje=mensajes.get(tipo_estado, f"Actualización en tu pedido #{pedido.pkid_pedido}"),
+        url=f"/pedidos/{pedido.pkid_pedido}/"
+    )
+
+def crear_notificacion_oferta_flash(usuario, producto, descuento, horas_duracion):
+    """Crear notificación de oferta flash"""
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo='oferta',
+        titulo='🔥 OFERTA FLASH',
+        mensaje=f"{descuento}% OFF en {producto.nom_prod} - Solo por {horas_duracion} horas!",
+        url=f"/producto/{producto.pkid_prod}/",
+        datos_extra={
+            'producto_id': producto.pkid_prod,
+            'descuento': descuento,
+            'valido_hasta': (timezone.now() + timedelta(hours=horas_duracion)).isoformat()
+        }
+    )
+
+def crear_notificacion_nuevo_producto(usuario, negocio, producto):
+    """Notificación cuando un negocio agrega nuevo producto"""
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo='negocio',
+        titulo='Nuevo Producto Disponible',
+        mensaje=f"{negocio.nom_neg} agregó: {producto.nom_prod}",
+        url=f"/producto/{producto.pkid_prod}/"
+    )
+
+def crear_notificacion_personalizada(usuario, producto, tipo):
+    """Notificaciones personalizadas basadas en comportamiento"""
+    mensajes = {
+        'precio_bajo': f"¡Buenas noticias! {producto.nom_prod} bajó de precio",
+        'stock_nuevo': f"¡Stock renovado! {producto.nom_prod} está disponible nuevamente",
+        'visto_recientemente': f"¿Te interesa? {producto.nom_prod} que viste está en oferta",
+    }
+    
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo='promocion',
+        titulo='Oportunidad Especial',
+        mensaje=mensajes.get(tipo, f"Oferta especial en {producto.nom_prod}"),
+        url=f"/producto/{producto.pkid_prod}/"
+    )
+
+def crear_notificacion_sistema(usuario, titulo, mensaje, url=None):
+    """Notificación genérica del sistema"""
+    Notificacion.objects.create(
+        usuario=usuario,
+        tipo='sistema',
+        titulo=titulo,
+        mensaje=mensaje,
+        url=url
+    )
