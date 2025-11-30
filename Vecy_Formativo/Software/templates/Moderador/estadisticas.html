@@ -13,10 +13,10 @@
                 <i class="fas fa-calendar me-2"></i>Todos los tiempos
             </button>
             <ul class="dropdown-menu">
-                <li><a class="dropdown-item" href="#" onclick="changeFilter('Hoy')">Hoy</a></li>
-                <li><a class="dropdown-item" href="#" onclick="changeFilter('2 días')">Últimos 2 días</a></li>
-                <li><a class="dropdown-item" href="#" onclick="changeFilter('5 días')">Últimos 5 días</a></li>
                 <li><a class="dropdown-item" href="#" onclick="changeFilter('7 días')">Últimos 7 días</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('1 mes')">Último mes</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('2 meses')">Últimos 2 meses</a></li>
+                <li><a class="dropdown-item" href="#" onclick="changeFilter('3 meses')">Últimos 3 meses</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="#" onclick="changeFilter('Todos los tiempos')">Todos los tiempos</a></li>
             </ul>
@@ -200,7 +200,7 @@
                 <div class="card-header bg-transparent border-0 py-3">
                     <h6 class="m-0 font-weight-bold text-dark">
                         <i class="fas fa-chart-line me-2 text-info"></i>
-                        Actividad Reciente (<span id="filtro-actual">7 días</span>)
+                        Actividad Reciente (<span id="filtro-actual">Todos los tiempos</span>)
                     </h6>
                     <small class="text-muted">Nuevos registros en el período seleccionado</small>
                 </div>
@@ -334,7 +334,7 @@
         // Aquí iría la lógica para actualizar los datos según el filtro
         console.log('Filtro cambiado a:', filter);
         
-        // Simular actualización de datos (en una aplicación real, harías una petición AJAX)
+        // Actualizar los datos de la gráfica según el filtro seleccionado
         updateChartData(filter);
     }
 
@@ -343,30 +343,30 @@
         let dataUsuarios, dataNegocios, labels;
         
         switch(filter) {
-            case 'Hoy':
-                labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
-                dataUsuarios = [2, 5, 8, 12, 7, 4];
-                dataNegocios = [1, 2, 3, 5, 3, 2];
-                break;
-            case '2 días':
-                labels = ['Ayer', 'Hoy'];
-                dataUsuarios = [25, 38];
-                dataNegocios = [12, 16];
-                break;
-            case '5 días':
-                labels = ['Día 1', 'Día 2', 'Día 3', 'Día 4', 'Día 5'];
-                dataUsuarios = [15, 22, 18, 25, 30];
-                dataNegocios = [8, 10, 7, 12, 14];
-                break;
             case '7 días':
                 labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
                 dataUsuarios = [12, 19, 8, 15, 12, 18, 14];
                 dataNegocios = [5, 8, 4, 7, 6, 9, 5];
                 break;
-            default:
-                labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-                dataUsuarios = [12, 19, 8, 15, 12, 18, 14];
-                dataNegocios = [5, 8, 4, 7, 6, 9, 5];
+            case '1 mes':
+                labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
+                dataUsuarios = [45, 52, 48, 55];
+                dataNegocios = [18, 22, 20, 25];
+                break;
+            case '2 meses':
+                labels = ['Mes 1', 'Mes 2'];
+                dataUsuarios = [200, 220];
+                dataNegocios = [85, 95];
+                break;
+            case '3 meses':
+                labels = ['Mes 1', 'Mes 2', 'Mes 3'];
+                dataUsuarios = [200, 220, 240];
+                dataNegocios = [85, 95, 105];
+                break;
+            default: // Todos los tiempos
+                labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                dataUsuarios = [180, 195, 210, 190, 220, 240, 260, 250, 270, 280, 290, 300];
+                dataNegocios = [75, 80, 85, 78, 90, 95, 100, 98, 105, 110, 115, 120];
         }
         
         // Actualizar la gráfica de actividad reciente
@@ -509,11 +509,11 @@
     const actividadChart = new Chart(actividadCtx, {
         type: 'line',
         data: {
-            labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
             datasets: [
                 {
                     label: 'Nuevos Usuarios',
-                    data: [12, 19, 8, 15, 12, 18, 14],
+                    data: [180, 195, 210, 190, 220, 240, 260, 250, 270, 280, 290, 300],
                     borderColor: colors.primary,
                     backgroundColor: colors.primary + '20',
                     tension: 0.4,
@@ -521,7 +521,7 @@
                 },
                 {
                     label: 'Nuevos Negocios',
-                    data: [5, 8, 4, 7, 6, 9, 5],
+                    data: [75, 80, 85, 78, 90, 95, 100, 98, 105, 110, 115, 120],
                     borderColor: colors.success,
                     backgroundColor: colors.success + '20',
                     tension: 0.4,
@@ -549,7 +549,7 @@
                 x: {
                     title: {
                         display: true,
-                        text: 'Días de la Semana'
+                        text: 'Meses del Año'
                     }
                 }
             }
