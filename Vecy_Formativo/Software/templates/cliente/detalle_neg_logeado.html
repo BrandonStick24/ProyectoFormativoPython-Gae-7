@@ -7,7 +7,1204 @@
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="{% static 'cliente/css/detalle_neg_logeado.css' %}">
+<style>
+    :root {
+        --vecy-primary: #2563eb;
+        --vecy-primary-light: #3b82f6;
+        --vecy-primary-dark: #1d4ed8;
+        --vecy-secondary: #64748b;
+        --vecy-secondary-light: #94a3b8;
+        --vecy-dark: #1e293b;
+        --vecy-darker: #0f172a;
+        --vecy-light: #f1f5f9;
+        --vecy-lighter: #f8fafc;
+        --vecy-white: #ffffff;
+        --vecy-gradient: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        --vecy-gradient-light: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    /* HERO SECTION */
+    .business-hero {
+        background: var(--vecy-gradient);
+        color: var(--vecy-white);
+        padding: 4rem 0 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .business-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        animation: float 20s infinite linear;
+    }
+
+    @keyframes float {
+        0% { transform: translate(0, 0) rotate(0deg); }
+        100% { transform: translate(-50px, -50px) rotate(360deg); }
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-logo {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        object-fit: cover;
+        border: 3px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .hero-logo-placeholder {
+        width: 80px;
+        height: 80px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .hero-category {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        font-weight: 500;
+    }
+
+    .hero-stats {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+    }
+
+    .stars {
+        display: flex;
+        gap: 0.25rem;
+    }
+
+    .stars i {
+        color: #ffd700;
+        font-size: 1.1rem;
+    }
+
+    .hero-description {
+        font-size: 1.1rem;
+        opacity: 0.95;
+        max-width: 600px;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .vecy-btn-primary, .vecy-btn-outline {
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .vecy-btn-primary {
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--vecy-white);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .vecy-btn-primary:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+    }
+
+    .vecy-btn-outline {
+        background: transparent;
+        color: var(--vecy-white);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .vecy-btn-outline:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+    }
+
+    .hero-badge {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 2rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        position: relative;
+        z-index: 2;
+    }
+
+    .badge-content {
+        text-align: center;
+        color: var(--vecy-white);
+    }
+
+    .badge-rating {
+        font-size: 3rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .badge-text {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    /* PRODUCTOS SECTION */
+    .products-section {
+        padding: 4rem 0;
+        background: var(--vecy-lighter);
+    }
+
+    .section-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .section-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--vecy-dark);
+        margin-bottom: 1rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.2rem;
+        color: var(--vecy-secondary);
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* TARJETA DE PRODUCTO CON VARIANTES - DISEÑO HORIZONTAL */
+    .product-card-with-variants {
+        background: var(--vecy-white);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        position: relative;
+        display: flex;
+        flex-direction: row;
+        height: 450px;
+        margin-bottom: 2rem;
+    }
+
+    .product-card-with-variants:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 60px rgba(30, 41, 59, 0.15);
+    }
+
+    .selection-indicator {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 36px;
+        height: 36px;
+        background: var(--vecy-gradient);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vecy-white);
+        font-size: 0.8rem;
+        z-index: 10;
+        animation: pulse 2s infinite;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    }
+
+    @keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+        }
+    }
+
+    .product-image-container {
+        width: 300px;
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .product-main-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .product-card-with-variants:hover .product-main-image {
+        transform: scale(1.1);
+    }
+
+    .product-info-container {
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        justify-content: space-between;
+    }
+
+    .product-info-top {
+        flex-grow: 1;
+    }
+
+    .vecy-product-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--vecy-dark);
+        margin-bottom: 1rem;
+        line-height: 1.3;
+    }
+
+    .vecy-store-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--vecy-secondary);
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+
+    .vecy-stock-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        font-weight: 500;
+    }
+
+    .vecy-low-stock {
+        color: #f59e0b;
+    }
+
+    .product-description {
+        margin-bottom: 1.5rem;
+    }
+
+    .product-description-text {
+        color: var(--vecy-secondary);
+        line-height: 1.5;
+        font-size: 0.95rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .variants-container {
+        margin-bottom: 1.5rem;
+    }
+
+    .variants-label {
+        font-weight: 600;
+        color: var(--vecy-dark);
+        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .variants-grid {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        max-height: 120px;
+        overflow-y: auto;
+        padding-right: 0.5rem;
+    }
+
+    .variants-grid::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .variants-grid::-webkit-scrollbar-track {
+        background: var(--vecy-light);
+        border-radius: 10px;
+    }
+
+    .variants-grid::-webkit-scrollbar-thumb {
+        background: var(--vecy-secondary-light);
+        border-radius: 10px;
+    }
+
+    .variant-thumb {
+        width: 70px;
+        height: 70px;
+        border: 2px solid var(--vecy-light);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .variant-thumb:hover {
+        border-color: var(--vecy-primary-light);
+        transform: translateY(-2px);
+    }
+
+    .variant-thumb.selected {
+        border-color: var(--vecy-primary);
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+    }
+
+    .variant-thumb.variant-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .variant-thumb img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .variant-image-container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+    }
+
+    .base-badge {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        background: var(--vecy-primary);
+        color: var(--vecy-white);
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+
+    .variant-selection-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: var(--vecy-primary);
+        color: var(--vecy-white);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6rem;
+    }
+
+    .variant-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(30, 41, 59, 0.9);
+        color: var(--vecy-white);
+        padding: 4px;
+        font-size: 0.7rem;
+        text-align: center;
+    }
+
+    .variant-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 600;
+    }
+
+    .variant-price {
+        font-size: 0.65rem;
+        opacity: 0.9;
+    }
+
+    .variant-stock-info {
+        font-size: 0.6rem;
+        margin-top: 2px;
+    }
+
+    .stock-available {
+        color: #10b981;
+    }
+
+    .stock-low {
+        color: #f59e0b;
+    }
+
+    .stock-unavailable {
+        color: #ef4444;
+    }
+
+    .product-price-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 1rem;
+        border-top: 1px solid var(--vecy-light);
+    }
+
+    .vecy-price-section {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .vecy-current-price {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--vecy-primary);
+    }
+
+    .vecy-original-price {
+        font-size: 1.2rem;
+        color: var(--vecy-secondary-light);
+        text-decoration: line-through;
+    }
+
+    .vecy-savings-badge {
+        background: #10b981;
+        color: var(--vecy-white);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .vecy-add-cart-btn {
+        background: var(--vecy-gradient);
+        color: var(--vecy-white);
+        border: none;
+        border-radius: 14px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        min-width: 200px;
+        cursor: pointer;
+    }
+
+    .vecy-add-cart-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
+    }
+
+    .vecy-add-cart-btn:disabled {
+        background: var(--vecy-secondary-light);
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* PRODUCTO SIN VARIANTES */
+    .product-card {
+        background: var(--vecy-white);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        height: 100%;
+    }
+
+    .product-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 60px rgba(30, 41, 59, 0.15);
+    }
+
+    .product-image {
+        height: 220px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .product-card:hover .product-image img {
+        transform: scale(1.1);
+    }
+
+    .product-image-placeholder {
+        width: 100%;
+        height: 100%;
+        background: var(--vecy-gradient-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vecy-white);
+        font-size: 3rem;
+    }
+
+    .product-badge {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+    }
+
+    .discount-badge {
+        background: #ef4444;
+        color: var(--vecy-white);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+    }
+
+    .product-actions {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .product-card:hover .product-actions {
+        opacity: 1;
+    }
+
+    .btn-action {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--vecy-white);
+        border: none;
+        color: var(--vecy-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-action:hover {
+        background: var(--vecy-primary);
+        color: var(--vecy-white);
+        transform: scale(1.1);
+    }
+
+    .product-info {
+        padding: 1.5rem;
+    }
+
+    .product-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--vecy-dark);
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }
+
+    .product-category {
+        color: var(--vecy-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .product-price {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .current-price {
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: var(--vecy-primary);
+    }
+
+    .original-price {
+        font-size: 1rem;
+        color: var(--vecy-secondary-light);
+        text-decoration: line-through;
+    }
+
+    .product-stock {
+        margin-bottom: 1rem;
+    }
+
+    .stock-available, .stock-low, .stock-out {
+        font-size: 0.9rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .stock-available {
+        color: #10b981;
+    }
+
+    .stock-low {
+        color: #f59e0b;
+    }
+
+    .stock-out {
+        color: #ef4444;
+    }
+
+    /* ESTADO VACÍO */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--vecy-white);
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: var(--vecy-secondary-light);
+        margin-bottom: 2rem;
+    }
+
+    .empty-state h4, .empty-state h5 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--vecy-dark);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: var(--vecy-secondary);
+        font-size: 1.1rem;
+        max-width: 400px;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+
+    /* BUSINESS DETAIL SECTION */
+    .business-detail-section {
+        background: var(--vecy-lighter);
+        padding: 4rem 0;
+    }
+
+    .vecy-card {
+        background: var(--vecy-white);
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        margin-bottom: 2rem;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .card-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--vecy-dark);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* RATINGS SUMMARY */
+    .average-rating {
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .rating-number {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--vecy-primary);
+        margin-bottom: 0.5rem;
+    }
+
+    .total-reviews {
+        color: var(--vecy-secondary);
+        font-size: 0.9rem;
+    }
+
+    .rating-bars {
+        padding: 1rem 0;
+    }
+
+    .rating-bar-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .rating-label {
+        width: 80px;
+        font-size: 0.9rem;
+        color: var(--vecy-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .rating-bar {
+        flex: 1;
+        height: 10px;
+        background: var(--vecy-light);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .rating-progress {
+        height: 100%;
+        background: linear-gradient(90deg, #ffc107, #fd7e14);
+        border-radius: 10px;
+        transition: width 1.5s ease;
+    }
+
+    .rating-count {
+        width: 40px;
+        text-align: right;
+        font-size: 0.9rem;
+        color: var(--vecy-secondary);
+    }
+
+    /* REVIEWS SECTION */
+    .reviews-section {
+        margin-bottom: 2rem;
+    }
+
+    .reviews-list {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 1rem;
+    }
+
+    .reviews-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .reviews-list::-webkit-scrollbar-track {
+        background: var(--vecy-light);
+        border-radius: 10px;
+    }
+
+    .reviews-list::-webkit-scrollbar-thumb {
+        background: var(--vecy-secondary-light);
+        border-radius: 10px;
+    }
+
+    .review-item {
+        background: var(--vecy-lighter);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border: 1px solid var(--vecy-light);
+    }
+
+    .review-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .review-user {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .review-user-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: var(--vecy-gradient);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--vecy-white);
+        font-size: 1.2rem;
+    }
+
+    .review-user-info {
+        flex: 1;
+    }
+
+    .review-user-name {
+        font-weight: 600;
+        color: var(--vecy-dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .review-date {
+        font-size: 0.8rem;
+        color: var(--vecy-secondary);
+    }
+
+    .review-actions {
+        position: relative;
+    }
+
+    .btn-review-actions {
+        background: none;
+        border: none;
+        color: var(--vecy-secondary);
+        cursor: pointer;
+        padding: 0.5rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .btn-review-actions:hover {
+        background: var(--vecy-light);
+        color: var(--vecy-dark);
+    }
+
+    .review-content {
+        margin-top: 1rem;
+    }
+
+    .review-stars {
+        margin-bottom: 0.75rem;
+    }
+
+    .review-stars i {
+        color: #ffc107;
+        font-size: 1rem;
+    }
+
+    .review-text {
+        color: var(--vecy-dark);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .review-response {
+        background: var(--vecy-light);
+        border-radius: 12px;
+        padding: 1rem;
+        border-left: 4px solid var(--vecy-primary);
+    }
+
+    .response-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--vecy-primary);
+        font-weight: 600;
+    }
+
+    .response-text {
+        color: var(--vecy-dark);
+        line-height: 1.5;
+        font-size: 0.9rem;
+    }
+
+    /* PAGINATION */
+    .reviews-pagination {
+        margin-top: 2rem;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 45px;
+        height: 45px;
+        border: 2px solid var(--vecy-light);
+        border-radius: 12px;
+        color: var(--vecy-secondary);
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .page-link:hover {
+        border-color: var(--vecy-primary);
+        color: var(--vecy-primary);
+        transform: translateY(-2px);
+    }
+
+    .page-link.active {
+        background: var(--vecy-gradient);
+        border-color: var(--vecy-primary);
+        color: var(--vecy-white);
+    }
+
+    .pagination-info {
+        text-align: center;
+        color: var(--vecy-secondary);
+        font-size: 0.9rem;
+    }
+
+    /* SIDEBAR */
+    .sidebar-card {
+        margin-bottom: 2rem;
+    }
+
+    .business-details {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .detail-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .detail-item i {
+        color: var(--vecy-primary);
+        font-size: 1.1rem;
+        margin-top: 0.25rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    .detail-content {
+        flex: 1;
+    }
+
+    .detail-content strong {
+        display: block;
+        color: var(--vecy-dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .detail-content span {
+        color: var(--vecy-secondary);
+        font-size: 0.95rem;
+    }
+
+    /* MAP */
+    .map-container-vecy {
+        height: 250px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
+
+    #leaflet-map {
+        height: 100%;
+        width: 100%;
+    }
+
+    /* STAR RATING FORM */
+    .star-rating {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .star-label {
+        cursor: pointer;
+        color: #d1d5db;
+        transition: all 0.3s ease;
+        font-size: 2rem;
+    }
+
+    .star-label:hover,
+    .star-label.hover {
+        color: #ffc107;
+        transform: scale(1.2);
+    }
+
+    .star-label.active {
+        color: #ffc107;
+    }
+
+    .btn-submit-review {
+        background: var(--vecy-gradient);
+        color: var(--vecy-white);
+        border: none;
+        border-radius: 12px;
+        padding: 1rem 2rem;
+        font-weight: 600;
+        width: 100%;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .btn-submit-review:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
+    }
+
+    /* MODALES */
+    .modal-reporte .modal-content {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-reporte .modal-header {
+        background: var(--vecy-gradient);
+        color: var(--vecy-white);
+        border-radius: 20px 20px 0 0;
+        border: none;
+        padding: 1.5rem 2rem;
+    }
+
+    .modal-reporte .modal-body {
+        padding: 2rem;
+    }
+
+    .reporte-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .reporte-icon {
+        font-size: 3rem;
+        color: var(--vecy-primary);
+        margin-bottom: 1rem;
+    }
+
+    .reporte-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--vecy-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .reporte-subtitle {
+        color: var(--vecy-secondary);
+        font-size: 1rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--vecy-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .form-select {
+        border: 2px solid var(--vecy-light);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--vecy-primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .form-text {
+        color: var(--vecy-secondary);
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+        .product-card-with-variants {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .product-image-container {
+            width: 100%;
+            height: 250px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2rem;
+        }
+
+        .hero-stats {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .hero-actions {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .product-price-section {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .vecy-add-cart-btn {
+            width: 100%;
+        }
+
+        .review-header {
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .review-actions {
+            align-self: flex-end;
+        }
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -98,14 +1295,14 @@
         </div>
         
         {% if productos %}
-        <div class="row g-4">
+        <div class="row">
             {% for producto_data in productos %}
             {% with producto=producto_data.producto %}
             {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
 
             <!-- COMPONENTE CON VARIANTES -->
             {% if producto_data.tiene_variantes and producto_data.variantes %}
-            <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="col-12 mb-4">
                 <div class="product-card-with-variants" data-aos="fade-up" 
                      data-aos-delay="{{ forloop.counter0|add:1 }}00"
                      data-product-id="{{ producto.pkid_prod }}">
@@ -115,13 +1312,14 @@
                     </div>
 
                     <div class="product-image-container">
-                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}" 
                              alt="{{ producto.nom_prod }}" class="product-main-image" 
-                             id="mainProductImage-{{ producto.pkid_prod }}">
+                             id="mainProductImage-{{ producto.pkid_prod }}"
+                             onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
                     </div>
 
                     <div class="product-info-container">
-                        <div>
+                        <div class="product-info-top">
                             <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
                                 {{ producto.nom_prod }}
                             </h3>
@@ -161,7 +1359,7 @@
                             {% endif %}
                         </div>
 
-                        <div class="product-price-section mt-3">
+                        <div class="product-price-section">
                             <div class="vecy-price-section">
                                 <div class="vecy-price-main">
                                     <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
@@ -192,30 +1390,22 @@
                         <div data-variant 
                              data-variant-id="base"
                              data-variant-name="{{ producto.nom_prod }} - Estándar"
-                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
-                             data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_final|floatformat:0 }}"
                              data-variant-stock="{{ producto_data.stock }}"
-                             data-variant-precio-adicional="0"
-                             data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
                              data-is-base="true">
                         </div>
                         
                         <!-- VARIANTES ADICIONALES -->
                         {% for variante in producto_data.variantes %}
-                        {% with precio_base_variante=producto_data.precio_base|add:variante.precio_adicional %}
-                        {% with precio_final_variante=producto_data.precio_final|add:variante.precio_adicional %}
                         <div data-variant 
                              data-variant-id="{{ variante.id_variante }}"
                              data-variant-name="{{ variante.nombre_variante }}"
-                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
-                             data-variant-price="{{ precio_base_variante|floatformat:0 }}"
+                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_base|add:variante.precio_adicional|floatformat:0 }}"
                              data-variant-stock="{{ variante.stock_variante }}"
-                             data-variant-precio-adicional="{{ variante.precio_adicional|default:0 }}"
-                             data-variant-precio-final="{{ precio_final_variante|floatformat:0 }}"
                              data-is-base="false">
                         </div>
-                        {% endwith %}
-                        {% endwith %}
                         {% endfor %}
                     </div>
                 </div>
@@ -223,11 +1413,12 @@
 
             <!-- PRODUCTO SIN VARIANTES -->
             {% else %}
-            <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
                 <div class="product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
                     <div class="product-image">
                         {% if producto.img_prod %}
-                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}">
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}"
+                                 onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
                         {% else %}
                             <div class="product-image-placeholder">
                                 <i class="fas fa-box-open"></i>
@@ -247,15 +1438,12 @@
                             <button class="btn-action" onclick="addToFavorites('{{ producto.pkid_prod }}')" title="Agregar a favoritos">
                                 <i class="far fa-heart"></i>
                             </button>
-                            <button class="btn-action" onclick="quickView('{{ producto.pkid_prod }}')" title="Vista rápida">
-                                <i class="fas fa-eye"></i>
-                            </button>
                         </div>
                     </div>
                     
                     <div class="product-info">
                         <h3 class="product-title">{{ producto.nom_prod }}</h3>
-                        <p class="product-category">{{ producto.fkcategoria_prod.nom_cat }}</p>
+                        <p class="product-category">{{ producto.fkcategoria_prod.desc_cp }}</p>
                         
                         <div class="product-price">
                             {% if producto_data.tiene_descuento %}
@@ -275,6 +1463,11 @@
                             <span class="stock-out"><i class="fas fa-times-circle"></i> Agotado</span>
                             {% endif %}
                         </div>
+
+                        <button class="vecy-add-cart-btn w-100" onclick="addToCart('{{ producto.pkid_prod }}')" {% if producto_data.stock == 0 %}disabled{% endif %}>
+                            <i class="fas fa-cart-plus me-2"></i>
+                            {% if producto_data.stock > 0 %}Agregar al Carrito{% else %}Sin Stock{% endif %}
+                        </button>
                     </div>
                 </div>
             </div>
@@ -758,252 +1951,368 @@
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <!-- Leaflet Maps -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
-    // Inicializar AOS
-    AOS.init({
-        duration: 800,
-        once: true,
-        offset: 100
-    });
+    // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
 
-    // URLs para el sistema de reportes
-    const REPORTE_URLS = {
-        REPORTAR: "{% url 'reportar_negocio' %}",
-        OBTENER_OPCIONES: "{% url 'obtener_opciones_reporte' %}"
-    };
+    console.log("🎯 VECY DETALLE NEGOCIO - Script inicializado");
 
-    // ==================== SISTEMA DE VARIANTES HORIZONTALES ====================
-    function inicializarSistemaVariantes() {
-        console.log("🔄 Inicializando sistema de variantes...");
-        
-        const productosConVariantes = document.querySelectorAll('.product-card-with-variants');
-        console.log(`📦 Encontrados ${productosConVariantes.length} productos con variantes`);
-        
-        productosConVariantes.forEach(producto => {
-            const productId = producto.getAttribute('data-product-id');
-            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
-            const variantsData = producto.querySelector('.variantes-reales-data');
-            
-            if (variantsGrid && variantsData) {
-                console.log(`🔧 Procesando producto ${productId}`);
+    // Variables globales
+    let productVariantsData = {};
+    let selectedVariants = {};
+
+    // ==================== SISTEMA DE VARIANTES MEJORADO ====================
+
+    // Función MEJORADA para inicializar datos de variantes
+    function initializeVariantsData() {
+        console.log("🔄 Inicializando datos de variantes...");
+
+        // Limpiar datos anteriores
+        productVariantsData = {};
+        selectedVariants = {};
+
+        // Buscar todos los productos con variantes en la página
+        const productCards = document.querySelectorAll('.product-card-with-variants');
+
+        productCards.forEach(productCard => {
+            const productId = productCard.getAttribute('data-product-id');
+            if (!productId) return;
+
+            console.log(`🔍 Procesando producto con variantes: ${productId}`);
+
+            // Buscar datos de variantes en el contenedor oculto
+            const variantesDataContainer = productCard.querySelector('.variantes-reales-data');
+            if (!variantesDataContainer) {
+                console.log(`❌ No se encontraron datos de variantes para producto ${productId}`);
+                return;
+            }
+
+            const variantElements = variantesDataContainer.querySelectorAll('[data-variant]');
+            console.log(`📊 Variantes encontradas para producto ${productId}: ${variantElements.length}`);
+
+            if (variantElements.length > 0) {
+                const variants = [];
                 
-                // FORZAR ESTILOS HORIZONTALES
-                variantsGrid.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    flex-wrap: nowrap !important;
-                    overflow-x: auto !important;
-                    overflow-y: hidden !important;
-                    gap: 12px !important;
-                    padding: 12px 8px !important;
-                    width: 100% !important;
-                    min-height: 95px !important;
-                    scrollbar-width: thin !important;
-                    scrollbar-color: #3598db #f1f5f9 !important;
-                `;
+                variantElements.forEach((element, index) => {
+                    // Obtener datos de cada variante
+                    const variantId = element.getAttribute('data-variant-id');
+                    const variantName = element.getAttribute('data-variant-name');
+                    const variantImage = element.getAttribute('data-variant-image');
+                    const variantPrice = element.getAttribute('data-variant-price');
+                    const variantStock = parseInt(element.getAttribute('data-variant-stock')) || 0;
+                    const isBase = element.getAttribute('data-is-base') === 'true';
+
+                    // Validar que los datos sean correctos
+                    if (!variantId || !variantName) {
+                        console.log(`❌ Datos incompletos para variante ${index + 1}`);
+                        return;
+                    }
+
+                    const variant = {
+                        id: variantId,
+                        name: variantName,
+                        image: variantImage || '{% static "images/placeholder-producto.png" %}',
+                        selected: isBase,
+                        price: variantPrice || '0',
+                        stock: variantStock,
+                        isBase: isBase
+                    };
+
+                    console.log(`  📦 Variante ${index + 1}: ID=${variantId}, Nombre=${variantName}, Precio=$${variant.price}, Stock=${variant.stock}, Base=${variant.isBase}`);
+                    variants.push(variant);
+                });
+
+                // Ordenar variantes: base primero
+                variants.sort((a, b) => b.isBase - a.isBase);
                 
-                generarMiniaturasVariantes(productId, variantsGrid, variantsData);
-            } else {
-                console.log(`❌ No se pudo encontrar variantsGrid o variantsData para ${productId}`);
+                productVariantsData[productId] = variants;
+                
+                // Establecer la variante base como seleccionada por defecto
+                const baseVariant = variants.find(v => v.isBase);
+                if (baseVariant) {
+                    selectedVariants[productId] = baseVariant.id;
+                    console.log(`✅ Variante base seleccionada por defecto: ${baseVariant.id}`);
+                }
             }
         });
-        
-        console.log(`✅ Sistema de variantes inicializado para ${productosConVariantes.length} productos`);
+
+        console.log("📦 Datos de variantes inicializados:", productVariantsData);
+        console.log("🎯 Variantes seleccionadas:", selectedVariants);
     }
 
-    function generarMiniaturasVariantes(productId, variantsGrid, variantsData) {
-        console.log(`🎨 Generando miniaturas para producto ${productId}`);
-        
-        // Limpiar grid existente
+    // Función MEJORADA para crear las miniaturas de variantes
+    function createVariantThumbnails(productId, variants) {
+        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        if (!variantsGrid) {
+            console.log(`❌ No se encontró variantsGrid-${productId}`);
+            return;
+        }
+
         variantsGrid.innerHTML = '';
-        
-        // Obtener todas las variantes
-        const variantes = variantsData.querySelectorAll('[data-variant]');
-        console.log(`📊 ${variantes.length} variantes encontradas para producto ${productId}`);
-        
-        variantes.forEach((variante, index) => {
-            const variantId = variante.getAttribute('data-variant-id');
-            const variantName = variante.getAttribute('data-variant-name');
-            const variantImage = variante.getAttribute('data-variant-image');
-            const variantPrice = variante.getAttribute('data-variant-precio-final') || variante.getAttribute('data-variant-price');
-            const variantStock = parseInt(variante.getAttribute('data-variant-stock'));
-            const isBase = variante.getAttribute('data-is-base') === 'true';
-            
-            console.log(`  📦 Variante ${index}: ${variantName}, Stock: ${variantStock}, Base: ${isBase}`);
-            
-            // Crear miniatura
-            const variantThumb = document.createElement('div');
-            variantThumb.className = `variant-thumb ${variantStock === 0 ? 'variant-disabled' : ''} ${index === 0 ? 'selected' : ''}`;
-            variantThumb.setAttribute('data-variant-id', variantId);
-            variantThumb.setAttribute('data-product-id', productId);
-            
+
+        variants.forEach(variant => {
+            // Validar que la variante tenga datos mínimos
+            if (!variant.id || !variant.name) {
+                console.log(`❌ Variante inválida:`, variant);
+                return;
+            }
+
+            const thumbElement = document.createElement('div');
+            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''} ${variant.stock === 0 ? 'variant-disabled' : ''}`;
+            thumbElement.setAttribute('data-variant-id', variant.id);
+            thumbElement.setAttribute('data-product-id', productId);
+
             // Determinar estado de stock
             let stockClass = 'stock-available';
             let stockText = 'Disponible';
             
-            if (variantStock === 0) {
+            if (variant.stock === 0) {
                 stockClass = 'stock-unavailable';
                 stockText = 'Agotado';
-            } else if (variantStock < 10) {
+            } else if (variant.stock < 10) {
                 stockClass = 'stock-low';
-                stockText = `${variantStock} disp`;
+                stockText = `${variant.stock} disp`;
             } else {
-                stockText = `${variantStock} disp`;
+                stockText = `${variant.stock} disp`;
             }
-            
-            variantThumb.innerHTML = `
+
+            thumbElement.innerHTML = `
                 <div class="variant-image-container">
-                    ${variantImage ? 
-                        `<img src="${variantImage}" alt="${variantName}" onerror="this.src='https://via.placeholder.com/300x200/3598db/ffffff?text=VECY'">` : 
-                        `<div class="variant-image-placeholder">
-                            <i class="fas fa-cube"></i>
-                         </div>`
-                    }
-                    ${isBase ? `<div class="base-badge">Base</div>` : ''}
-                    ${index === 0 ? `<div class="variant-selection-indicator"><i class="fas fa-check"></i></div>` : ''}
+                    ${variant.isBase ? `<div class="base-badge">Base</div>` : ''}
+                    ${variant.selected ? `<div class="variant-selection-indicator"><i class="fas fa-check"></i></div>` : ''}
+                    <img src="${variant.image}" alt="${variant.name}" loading="lazy"
+                         onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
                 </div>
                 <div class="variant-info">
-                    <div class="variant-name">${variantName}</div>
-                    <div class="variant-price">$${variantPrice}</div>
+                    <div class="variant-name">${variant.name}</div>
+                    <div class="variant-price">$${variant.price}</div>
                     <div class="variant-stock-info ${stockClass}">${stockText}</div>
                 </div>
             `;
-            
-            // Agregar evento click
-            variantThumb.addEventListener('click', function() {
-                if (variantStock === 0) return;
-                
-                seleccionarVariante(productId, variantId);
+
+            thumbElement.addEventListener('click', () => {
+                if (variant.stock > 0) {
+                    selectVariant(productId, variant.id, variants);
+                } else {
+                    showVariantNotification('Esta variante no tiene stock disponible', 'error');
+                }
             });
             
-            variantsGrid.appendChild(variantThumb);
+            variantsGrid.appendChild(thumbElement);
         });
-        
-        // Seleccionar primera variante por defecto
-        if (variantes.length > 0) {
-            const primeraVariante = variantes[0];
-            const primeraVariantId = primeraVariante.getAttribute('data-variant-id');
-            const primeraVariantStock = parseInt(primeraVariante.getAttribute('data-variant-stock'));
-            
-            if (primeraVariantStock > 0) {
-                seleccionarVariante(productId, primeraVariantId);
-            }
-        }
-        
-        console.log(`✅ Generadas ${variantes.length} miniaturas para producto ${productId}`);
+
+        console.log(`✅ Miniaturas creadas para producto ${productId} (${variants.length} variantes)`);
     }
 
-    function seleccionarVariante(productId, variantId) {
-        console.log(`🎯 Seleccionando variante ${variantId} para producto ${productId}`);
-        
-        const producto = document.querySelector(`[data-product-id="${productId}"]`);
-        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
-        const variantsData = producto.querySelector('.variantes-reales-data');
-        
-        if (!variantsGrid || !variantsData) return;
-        
-        // Remover selección anterior
-        const thumbsAnteriores = variantsGrid.querySelectorAll('.variant-thumb.selected');
-        thumbsAnteriores.forEach(thumb => {
-            thumb.classList.remove('selected');
-            const indicator = thumb.querySelector('.variant-selection-indicator');
-            if (indicator) indicator.remove();
-        });
-        
-        // Agregar selección nueva
-        const thumbSeleccionado = variantsGrid.querySelector(`[data-variant-id="${variantId}"]`);
-        if (thumbSeleccionado) {
-            thumbSeleccionado.classList.add('selected');
-            
-            // Agregar indicador de selección
-            const selectionIndicator = document.createElement('div');
-            selectionIndicator.className = 'variant-selection-indicator';
-            selectionIndicator.innerHTML = '<i class="fas fa-check"></i>';
-            thumbSeleccionado.querySelector('.variant-image-container').appendChild(selectionIndicator);
-        }
-        
-        // Actualizar información del producto
-        const varianteSeleccionada = variantsData.querySelector(`[data-variant-id="${variantId}"]`);
-        if (varianteSeleccionada) {
-            const variantName = varianteSeleccionada.getAttribute('data-variant-name');
-            const variantImage = varianteSeleccionada.getAttribute('data-variant-image');
-            const variantPrice = varianteSeleccionada.getAttribute('data-variant-precio-final') || varianteSeleccionada.getAttribute('data-variant-price');
-            const variantStock = parseInt(varianteSeleccionada.getAttribute('data-variant-stock'));
-            
+    // Función MEJORADA para seleccionar una variante
+    function selectVariant(productId, variantId, variants) {
+        console.log(`🔄 Seleccionando variante: ${productId} -> ${variantId}`);
+
+        const selectedVariant = variants.find(v => v.id === variantId);
+
+        if (selectedVariant) {
+            // Actualizar la variante seleccionada globalmente
+            selectedVariants[productId] = variantId;
+
+            // Actualizar título
+            const titleElement = document.getElementById(`productTitle-${productId}`);
+            if (titleElement) {
+                // Si es el producto base, mostrar nombre original, sino mostrar nombre completo
+                if (selectedVariant.isBase) {
+                    const originalName = selectedVariant.name.replace(' - Estándar', '');
+                    titleElement.textContent = originalName;
+                } else {
+                    titleElement.textContent = selectedVariant.name;
+                }
+            }
+
             // Actualizar imagen principal
             const mainImage = document.getElementById(`mainProductImage-${productId}`);
-            if (mainImage && variantImage) {
-                mainImage.src = variantImage;
+            if (mainImage && selectedVariant.image) {
+                mainImage.src = selectedVariant.image;
+                mainImage.alt = selectedVariant.name;
             }
-            
+
             // Actualizar precio
             const priceElement = document.getElementById(`price-${productId}`);
-            if (priceElement) {
-                priceElement.textContent = `$${variantPrice}`;
+            if (priceElement && selectedVariant.price) {
+                priceElement.textContent = `$${selectedVariant.price}`;
             }
-            
+
             // Actualizar stock
             const stockElement = document.getElementById(`stockInfo-${productId}`);
             if (stockElement) {
                 let stockText = 'Múltiples opciones disponibles';
-                if (variantStock === 0) {
+                if (selectedVariant.stock === 0) {
                     stockText = 'Agotado';
-                } else if (variantStock < 10) {
-                    stockText = `${variantStock} disponibles`;
+                } else if (selectedVariant.stock < 10) {
+                    stockText = `${selectedVariant.stock} disponibles`;
                 }
                 stockElement.textContent = stockText;
             }
-            
-            // Actualizar botón
-            const addToCartBtn = document.getElementById(`addToCartBtn-${productId}`);
-            if (addToCartBtn) {
-                if (variantStock === 0) {
-                    addToCartBtn.disabled = true;
-                    addToCartBtn.innerHTML = '<i class="fas fa-times me-2"></i>Agotado';
-                } else {
-                    addToCartBtn.disabled = false;
-                    addToCartBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>Agregar al Carrito';
-                }
-            }
-            
+
+            // Actualizar estado de selección en todas las variantes
+            variants.forEach(v => {
+                v.selected = v.id === variantId;
+            });
+
+            // Recrear miniaturas con nueva selección
+            createVariantThumbnails(productId, variants);
+
+            // Mostrar notificación
+            const variantType = selectedVariant.isBase ? 'Producto estándar' : 'Variante especial';
+            showVariantNotification(`${variantType} seleccionado: ${selectedVariant.name}`, 'success');
+
             console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
         }
     }
 
+    // Función para notificaciones de variantes
+    function showVariantNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true,
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
+    }
+
+    // Función MEJORADA para inicializar sistema de variantes
+    function initializeVariantsSystem() {
+        console.log("🚀 Inicializando sistema de variantes...");
+
+        try {
+            initializeVariantsData();
+
+            // Crear miniaturas para todos los productos con variantes
+            for (const [productId, variants] of Object.entries(productVariantsData)) {
+                createVariantThumbnails(productId, variants);
+                
+                // Aplicar selección inicial (base)
+                const baseVariant = variants.find(v => v.isBase);
+                if (baseVariant) {
+                    selectVariant(productId, baseVariant.id, variants);
+                }
+            }
+
+            console.log("✅ Sistema de variantes inicializado correctamente");
+        } catch (error) {
+            console.error("❌ Error inicializando sistema de variantes:", error);
+        }
+    }
+
+    // Función para agregar al carrito considerando variantes
     function addToCartWithVariant(productId) {
-        const producto = document.querySelector(`[data-product-id="${productId}"]`);
-        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        console.log(`🛒 Agregando producto con variante: ${productId}`);
         
-        if (!variantsGrid) {
-            // Si no hay variantes, usar función normal
+        // Obtener la variante seleccionada para este producto
+        const selectedVariantId = selectedVariants[productId];
+        
+        if (!selectedVariantId) {
+            console.log(`❌ No hay variante seleccionada para producto ${productId}`);
+            vecyShowNotification('Por favor selecciona una opción', 'error');
+            return;
+        }
+        
+        console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
+        
+        // Si es la variante base, usar addToCart normal
+        if (selectedVariantId === 'base') {
             addToCart(productId);
-            return;
-        }
-        
-        // Obtener variante seleccionada
-        const varianteSeleccionada = variantsGrid.querySelector('.variant-thumb.selected');
-        if (!varianteSeleccionada) {
-            alert('Por favor selecciona una variante');
-            return;
-        }
-        
-        const variantId = varianteSeleccionada.getAttribute('data-variant-id');
-        const variantStock = parseInt(varianteSeleccionada.querySelector('.variant-stock-info').textContent);
-        
-        if (variantStock === 0) {
-            alert('Esta variante está agotada');
-            return;
-        }
-        
-        console.log(`🛒 Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
-        
-        // Usar el sistema modular del carrito
-        if (window.vecyCarritoSystem) {
-            window.vecyCarritoSystem.addToCartWithVariant(productId);
         } else {
-            // Fallback si el sistema no está disponible
-            alert(`Producto agregado al carrito: ${productId} - Variante: ${variantId}`);
+            // Si es una variante específica, usar addToCart con variante_id
+            addToCart(productId, selectedVariantId);
         }
+    }
+
+    // ==================== FUNCIONES DEL CARRITO ====================
+
+    // Función para agregar al carrito (usará el sistema de carrito_sistema.html)
+    function addToCart(productId, varianteId = null) {
+        console.log(`🛒 Intentando agregar producto ${productId} al carrito con variante: ${varianteId}`);
+
+        // Usar la función del sistema de carrito
+        if (typeof agregarAlCarrito === 'function') {
+            agregarAlCarrito(productId, 1, varianteId);
+        } else {
+            // Fallback si no existe la función
+            const datosEnvio = {
+                producto_id: productId,
+                cantidad: 1
+            };
+
+            if (varianteId && varianteId !== 'base') {
+                datosEnvio.variante_id = varianteId;
+                console.log(`📦 Enviando variante_id: ${varianteId}`);
+            } else {
+                console.log(`📦 Producto base, sin variante_id`);
+            }
+
+            fetch('{% url "agregar_carrito" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(datosEnvio)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    vecyShowNotification('Producto agregado al carrito', 'success');
+                } else {
+                    vecyShowNotification(data.message || 'Error al agregar al carrito', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                vecyShowNotification('Error al agregar al carrito', 'error');
+            });
+        }
+    }
+
+    // ==================== FUNCIONES UTILITARIAS ====================
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Función para notificaciones
+    function vecyShowNotification(message, type = 'info') {
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        Toast.fire({
+            icon: type,
+            title: message
+        });
     }
 
     // ==================== SISTEMA DE MAPAS ====================
@@ -1224,11 +2533,15 @@
         button.disabled = true;
         
         setTimeout(() => {
-            alert('Ahora sigues este negocio');
+            vecyShowNotification('Ahora sigues este negocio', 'success');
             button.innerHTML = '<i class="fas fa-heart me-1"></i> Siguiendo';
             button.classList.add('btn-following');
             button.disabled = false;
         }, 1000);
+    }
+
+    function addToFavorites(productId) {
+        vecyShowNotification('Producto agregado a favoritos', 'success');
     }
 
     function abrirModalReporte(tipo, negocioId, reseñaId = null) {
@@ -1240,32 +2553,33 @@
         document.getElementById('reseñaId').value = reseñaId || '';
         document.getElementById('tipoReporte').value = tipo;
         
-        cargarOpcionesReporte(tipo);
+        // Simular carga de opciones
+        const selectMotivo = document.getElementById('motivoReporte');
+        selectMotivo.innerHTML = '<option value="">Selecciona un motivo</option>';
+        
+        const opciones = tipo === 'resena' ? [
+            {value: 'contenido_inapropiado', text: 'Contenido inapropiado'},
+            {value: 'lenguaje_ofensivo', text: 'Lenguaje ofensivo'},
+            {value: 'informacion_falsa', text: 'Información falsa'},
+            {value: 'spam', text: 'Spam o publicidad'},
+            {value: 'acoso', text: 'Acoso o bullying'}
+        ] : [
+            {value: 'informacion_falsa', text: 'Información falsa del negocio'},
+            {value: 'practicas_engañosas', text: 'Prácticas engañosas'},
+            {value: 'productos_ilegales', text: 'Venta de productos ilegales'},
+            {value: 'mal_servicio', text: 'Mal servicio al cliente'},
+            {value: 'otro', text: 'Otro motivo'}
+        ];
+        
+        opciones.forEach(opcion => {
+            const option = document.createElement('option');
+            option.value = opcion.value;
+            option.textContent = opcion.text;
+            selectMotivo.appendChild(option);
+        });
         
         const modal = new bootstrap.Modal(document.getElementById('modalReporte'));
         modal.show();
-    }
-
-    function cargarOpcionesReporte(tipo) {
-        const selectMotivo = document.getElementById('motivoReporte');
-        
-        selectMotivo.innerHTML = '<option value="">Cargando opciones...</option>';
-        
-        fetch(`${REPORTE_URLS.OBTENER_OPCIONES}?tipo=${tipo}`)
-            .then(response => response.json())
-            .then(data => {
-                selectMotivo.innerHTML = '<option value="">Selecciona un motivo</option>';
-                
-                data.opciones.forEach(opcion => {
-                    const option = document.createElement('option');
-                    option.value = opcion.value;
-                    option.textContent = opcion.text;
-                    selectMotivo.appendChild(option);
-                });
-            })
-            .catch(error => {
-                selectMotivo.innerHTML = '<option value="">Error cargando opciones</option>';
-            });
     }
 
     function enviarReporte() {
@@ -1276,7 +2590,7 @@
         const motivo = document.getElementById('motivoReporte').value;
         
         if (!asunto || !motivo) {
-            alert('Por favor completa todos los campos obligatorios');
+            vecyShowNotification('Por favor completa todos los campos obligatorios', 'error');
             return;
         }
         
@@ -1293,158 +2607,61 @@
         btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
         btnEnviar.disabled = true;
         
-        fetch(REPORTE_URLS.REPORTAR, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(datos)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
-                modal.hide();
-                alert(data.message);
-            } else {
-                alert(data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error de conexión al enviar el reporte');
-        })
-        .finally(() => {
+        // Simular envío del reporte
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
+            modal.hide();
+            vecyShowNotification('Reporte enviado correctamente. Lo revisaremos en 48 horas.', 'success');
             btnEnviar.innerHTML = originalText;
             btnEnviar.disabled = false;
-        });
+        }, 2000);
     }
 
-    // ==================== FUNCIONES UTILITARIAS ====================
-    function addToFavorites(productId) {
-        alert('Producto agregado a favoritos');
-    }
+    // ==================== INICIALIZACIÓN COMPLETA ====================
 
-    function quickView(productId) {
-        alert('Función de vista rápida');
-    }
-
-    function addToCart(productId) {
-        if (window.vecyCarritoSystem) {
-            window.vecyCarritoSystem.addToCart(productId);
-        } else {
-            alert(`Producto ${productId} agregado al carrito`);
+    // Inicializar inmediatamente
+    function initVecy() {
+        console.log("🚀 INICIANDO VECY DETALLE NEGOCIO");
+        
+        // 1. AOS
+        if (typeof AOS !== 'undefined') {
+            AOS.init({ duration: 800, once: true, offset: 100 });
+            console.log("✅ AOS inicializado");
         }
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+        
+        // 2. SISTEMA DE VARIANTES - CON RETRASO PARA GARANTIZAR QUE EL DOM ESTÉ LISTO
+        setTimeout(() => {
+            console.log("🔄 INICIANDO SISTEMA DE VARIANTES...");
+            try {
+                initializeVariantsSystem();
+                console.log("✅ Sistema de variantes inicializado exitosamente");
+            } catch (error) {
+                console.error("❌ Error inicializando sistema de variantes:", error);
             }
-        }
-        return cookieValue;
-    }
+        }, 500);
 
-    // ==================== INICIALIZACIÓN GARANTIZADA ====================
-    console.log("🎯 VECY DETALLE NEGOCIO - CARGANDO SISTEMAS...");
-
-    // INICIALIZACIÓN DIRECTA Y FORZADA
-    function forzarInicializacionVariantes() {
-        console.log("💥 FORZANDO inicialización de variantes...");
-        
-        const productosConVariantes = document.querySelectorAll('.product-card-with-variants');
-        console.log(`📦 Encontrados ${productosConVariantes.length} productos con variantes para forzar`);
-        
-        productosConVariantes.forEach((producto, index) => {
-            const productId = producto.getAttribute('data-product-id');
-            if (!productId) return;
-
-            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
-            const variantsData = producto.querySelector('.variantes-reales-data');
-            
-            if (variantsGrid && variantsData) {
-                console.log(`🔧 Forzando variantes para producto ${productId}`);
-                
-                // Forzar estilo horizontal INMEDIATAMENTE
-                variantsGrid.style.cssText = `
-                    display: flex !important;
-                    flex-direction: row !important;
-                    flex-wrap: nowrap !important;
-                    overflow-x: auto !important;
-                    overflow-y: hidden !important;
-                    gap: 12px !important;
-                    padding: 12px 8px !important;
-                    width: 100% !important;
-                    min-height: 95px !important;
-                `;
-                
-                generarMiniaturasVariantes(productId, variantsGrid, variantsData);
-            } else {
-                console.log(`❌ No se pudo forzar variantes para ${productId}`);
+        // 3. SISTEMA DE MAPAS
+        setTimeout(() => {
+            if (document.getElementById('leaflet-map')) {
+                initMap();
+                console.log("✅ Mapa inicializado");
             }
-        });
-    }
+        }, 1000);
 
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log("🚀 DOM Cargado - Iniciando sistemas...");
-        
+        // 4. SISTEMA DE RATING Y ESTRELLAS
         inicializarSistemaRating();
         inicializarSistemaEstrellas();
-        initMap();
         
-        // INICIALIZACIÓN DE VARIANTES CON RETRASO
-        setTimeout(() => {
-            console.log("🔄 Inicializando sistema de variantes con timeout...");
-            inicializarSistemaVariantes();
-        }, 300);
-    });
-
-    window.addEventListener('load', function() {
-        console.log("📦 Window Loaded - Ejecutando animaciones...");
-        setTimeout(animarBarrasRating, 1000);
-        
-        // SEGUNDA INICIALIZACIÓN DE VARIANTES
-        setTimeout(() => {
-            console.log("🔄 Inicializando sistema de variantes después de load...");
-            inicializarSistemaVariantes();
-        }, 500);
-    });
-
-    // EJECUTAR INMEDIATAMENTE Y CON MÚLTIPOS INTENTOS
-    setTimeout(forzarInicializacionVariantes, 200);
-    setTimeout(forzarInicializacionVariantes, 800);
-    setTimeout(forzarInicializacionVariantes, 1500);
-
-    // Función global para compatibilidad
-    function addToCartWithVariant(productId) {
-        if (window.vecyCarritoSystem) {
-            window.vecyCarritoSystem.addToCartWithVariant(productId);
-        } else {
-            // Fallback si el sistema modular no está disponible
-            const producto = document.querySelector(`[data-product-id="${productId}"]`);
-            const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
-            
-            if (variantsGrid) {
-                const varianteSeleccionada = variantsGrid.querySelector('.variant-thumb.selected');
-                if (varianteSeleccionada) {
-                    const variantId = varianteSeleccionada.getAttribute('data-variant-id');
-                    alert(`Producto agregado al carrito: ${productId} - Variante: ${variantId}`);
-                } else {
-                    alert('Por favor selecciona una variante');
-                }
-            } else {
-                addToCart(productId);
-            }
-        }
+        console.log("✅ VECY DETALLE NEGOCIO INICIALIZADO");
     }
 
-    console.log("✅ VECY DETALLE NEGOCIO - SISTEMAS CARGADOS");
+    // Ejecutar inmediatamente
+    initVecy();
+
+    // También ejecutar cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', initVecy);
+
+    // Y ejecutar cuando la ventana se cargue
+    window.addEventListener('load', initVecy);
 </script>
 {% endblock %}

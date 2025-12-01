@@ -330,7 +330,7 @@ class Pedidos(models.Model):
     fknegocio_pedido = models.ForeignKey(Negocios, models.DO_NOTHING, db_column='fknegocio_pedido')
     estado_pedido = models.CharField(max_length=10, blank=True, null=True)
     total_pedido = models.DecimalField(max_digits=10, decimal_places=2)
-    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    fecha_pedido = models.DateTimeField()
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     
     # NUEVOS CAMPOS PARA MÉTODOS DE PAGO

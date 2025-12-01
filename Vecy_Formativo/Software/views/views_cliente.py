@@ -101,6 +101,7 @@ def api_sugerencia(request):
     
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
+@never_cache
 def principal(request):
     negocios = Negocios.objects.filter(estado_neg='activo')
     categorias = CategoriaProductos.objects.all()[:20]
@@ -402,6 +403,7 @@ def principal(request):
     
     return render(request, 'cliente/principal.html', contexto)
 
+@never_cache
 def productos_todos(request):
     productos = Productos.objects.select_related(
         'fknegocioasociado_prod', 
@@ -509,6 +511,7 @@ def productos_todos(request):
     
     return render(request, 'Cliente/todos_productos.html', context)
 
+@never_cache
 def productos_por_categoria(request, categoria_id):
     categoria = get_object_or_404(CategoriaProductos, pkid_cp=categoria_id)
     
@@ -604,6 +607,7 @@ def productos_por_categoria(request, categoria_id):
     
     return render(request, 'cliente/todos_productos.html', context)
 
+@never_cache
 def detalle_negocio(request, id):
     negocio = get_object_or_404(Negocios, pkid_neg=id, estado_neg='activo')
     propietario = negocio.fkpropietario_neg
@@ -2010,6 +2014,8 @@ def cliente_dashboard(request):
             'hay_electrodomesticos': False,
             'hay_tecnologia': False,
         })     
+
+@never_cache
 @login_required(login_url='/auth/login/')
 def detalle_negocio_logeado(request, id):
     try:
@@ -2203,6 +2209,7 @@ def detalle_negocio_logeado(request, id):
         messages.error(request, 'Error al cargar el detalle del negocio')
         return redirect('cliente_dashboard')  
 
+@never_cache
 @login_required
 def reportar_negocio(request):
     if request.method == 'POST':
@@ -2313,6 +2320,7 @@ def reportar_negocio(request):
     
     return JsonResponse({'success': False, 'message': 'Método no permitido'})
 
+@never_cache
 @login_required
 def obtener_opciones_reporte(request):
     tipo = request.GET.get('tipo')
@@ -2339,6 +2347,79 @@ def obtener_opciones_reporte(request):
     
     return JsonResponse({'opciones': opciones.get(tipo, [])})
 
+@never_cache
+def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
+    """Descontar del stock general del producto o variante"""
+    try:
+        if variante_id:
+            # Descontar de variante
+            variante = VariantesProducto.objects.get(
+                id_variante=variante_id,
+                producto=producto,
+                estado_variante='activa'
+            )
+            
+            stock_anterior = variante.stock_variante
+            
+            if stock_anterior >= cantidad:
+                variante.stock_variante -= cantidad
+                variante.save()
+                
+                try:
+                    MovimientosStock.objects.create(
+                        producto=producto,
+                        negocio=producto.fknegocioasociado_prod,
+                        tipo_movimiento='salida',
+                        motivo='venta',
+                        cantidad=cantidad,
+                        stock_anterior=stock_anterior,
+                        stock_nuevo=variante.stock_variante,
+                        usuario=pedido.fkusuario_pedido,
+                        pedido=pedido,
+                        variante_id=variante_id
+                    )
+                except Exception:
+                    pass
+            else:
+                # Si no hay suficiente stock, descontar lo que haya
+                cantidad_real = stock_anterior
+                variante.stock_variante = 0
+                variante.save()
+                
+        else:
+            # Descontar de producto base
+            stock_anterior = producto.stock_prod or 0
+            
+            if stock_anterior >= cantidad:
+                producto.stock_prod -= cantidad
+                producto.save()
+                
+                try:
+                    MovimientosStock.objects.create(
+                        producto=producto,
+                        negocio=producto.fknegocioasociado_prod,
+                        tipo_movimiento='salida',
+                        motivo='venta',
+                        cantidad=cantidad,
+                        stock_anterior=stock_anterior,
+                        stock_nuevo=producto.stock_prod,
+                        usuario=pedido.fkusuario_pedido,
+                        pedido=pedido,
+                        variante_id=None
+                    )
+                except Exception:
+                    pass
+            else:
+                # Si no hay suficiente stock, descontar lo que haya
+                cantidad_real = stock_anterior
+                producto.stock_prod = 0
+                producto.save()
+                
+    except Exception:
+        pass
+  
+  
+@never_cache
 def descontar_stock_pedido(pedido, items_carrito=None):
     try:
         if items_carrito is None:
@@ -2429,76 +2510,7 @@ def descontar_stock_pedido(pedido, items_carrito=None):
     except Exception:
         return False
 
-def _descontar_stock_general(producto, cantidad, pedido, variante_id=None):
-    """Descontar del stock general del producto o variante"""
-    try:
-        if variante_id:
-            # Descontar de variante
-            variante = VariantesProducto.objects.get(
-                id_variante=variante_id,
-                producto=producto,
-                estado_variante='activa'
-            )
-            
-            stock_anterior = variante.stock_variante
-            
-            if stock_anterior >= cantidad:
-                variante.stock_variante -= cantidad
-                variante.save()
-                
-                try:
-                    MovimientosStock.objects.create(
-                        producto=producto,
-                        negocio=producto.fknegocioasociado_prod,
-                        tipo_movimiento='salida',
-                        motivo='venta',
-                        cantidad=cantidad,
-                        stock_anterior=stock_anterior,
-                        stock_nuevo=variante.stock_variante,
-                        usuario=pedido.fkusuario_pedido,
-                        pedido=pedido,
-                        variante_id=variante_id
-                    )
-                except Exception:
-                    pass
-            else:
-                # Si no hay suficiente stock, descontar lo que haya
-                cantidad_real = stock_anterior
-                variante.stock_variante = 0
-                variante.save()
-                
-        else:
-            # Descontar de producto base
-            stock_anterior = producto.stock_prod or 0
-            
-            if stock_anterior >= cantidad:
-                producto.stock_prod -= cantidad
-                producto.save()
-                
-                try:
-                    MovimientosStock.objects.create(
-                        producto=producto,
-                        negocio=producto.fknegocioasociado_prod,
-                        tipo_movimiento='salida',
-                        motivo='venta',
-                        cantidad=cantidad,
-                        stock_anterior=stock_anterior,
-                        stock_nuevo=producto.stock_prod,
-                        usuario=pedido.fkusuario_pedido,
-                        pedido=pedido,
-                        variante_id=None
-                    )
-                except Exception:
-                    pass
-            else:
-                # Si no hay suficiente stock, descontar lo que haya
-                cantidad_real = stock_anterior
-                producto.stock_prod = 0
-                producto.save()
-                
-    except Exception:
-        pass
-         
+@never_cache       
 def _restaurar_producto_base(producto, cantidad):
     try:
         stock_anterior = producto.stock_prod or 0
@@ -2507,7 +2519,8 @@ def _restaurar_producto_base(producto, cantidad):
         
     except Exception:
         pass
-        
+   
+@never_cache     
 def validar_stock_pedido(pedido):
     try:
         detalles_pedido = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
@@ -2599,6 +2612,7 @@ def validar_stock_pedido(pedido):
     except Exception as e:
         return False, f"Error validando stock: {str(e)}"
     
+@never_cache
 @login_required(login_url='/auth/login/')
 @require_POST
 def agregar_al_carrito(request):
@@ -2924,7 +2938,8 @@ def agregar_al_carrito(request):
             'success': False, 
             'message': 'Error interno del servidor'
         }, status=500)
-              
+
+@never_cache         
 @login_required(login_url='/auth/login/')
 @require_POST
 def actualizar_cantidad_carrito(request):
@@ -3048,7 +3063,8 @@ def actualizar_cantidad_carrito(request):
         
     except Exception:
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
-    
+
+@never_cache    
 @login_required(login_url='/auth/login/')
 @require_POST
 def eliminar_item_carrito(request):
@@ -3071,7 +3087,8 @@ def eliminar_item_carrito(request):
         
     except Exception:
         return JsonResponse({'success': False, 'message': 'Error interno del servidor'})
-          
+
+@never_cache         
 @login_required(login_url='/auth/login/')
 def ver_carrito(request):
     try:
@@ -3147,7 +3164,8 @@ def ver_carrito(request):
             'carrito_count': 0,
             'carrito_vacio': True
         })
-        
+
+@never_cache        
 @login_required(login_url='/auth/login/')
 def carrito_data(request):
     try:
@@ -3263,210 +3281,398 @@ def carrito_data(request):
         
     except Exception:
         return JsonResponse({'success': False, 'items': [], 'totales': {}})
-    
+
 @login_required(login_url='/auth/login/')
 @require_POST
 @csrf_exempt
 def procesar_pedido(request):
     try:
-        data = json.loads(request.body)
-
-        auth_user = request.user
-        perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
-
+        print("=== INICIANDO PROCESO DE PEDIDO ===")
+        
+        # Obtener hora actual (Django ya maneja la conversión a zona local)
+        from django.utils import timezone
+        
+        # Esta hora ya debería estar en Colombia porque TIME_ZONE = 'America/Bogota'
+        fecha_actual = timezone.localtime(timezone.now())
+        print(f"Hora Colombia (desde Django): {fecha_actual}")
+        
+        # Convertir a formato sin timezone para MySQL
+        fecha_mysql = fecha_actual.replace(tzinfo=None)
+        print(f"Hora para MySQL: {fecha_mysql}")
+        
+        # 1. Validar que sea una solicitud JSON
+        if request.content_type != 'application/json':
+            return JsonResponse({
+                'success': False, 
+                'message': 'Content-Type debe ser application/json'
+            }, status=400)
+        
+        # 2. Parsear JSON
         try:
-            carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
+            data = json.loads(request.body)
+            print(f"Datos recibidos: {data}")
+        except json.JSONDecodeError as e:
+            print(f"Error JSON: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'message': 'Error en el formato de datos JSON'
+            }, status=400)
+        
+        # 3. Verificar datos mínimos
+        if 'metodo_pago' not in data:
+            return JsonResponse({
+                'success': False, 
+                'message': 'Método de pago requerido'
+            }, status=400)
+        
+        auth_user = request.user
+        print(f"Usuario autenticado: {auth_user.username} ({auth_user.id})")
+        
+        # 4. Obtener perfil del cliente
+        try:
+            perfil_cliente = UsuarioPerfil.objects.get(fkuser=auth_user)
+            print(f"Perfil cliente obtenido: ID {perfil_cliente.pk}")
+        except UsuarioPerfil.DoesNotExist:
+            print("ERROR: UsuarioPerfil no encontrado")
+            return JsonResponse({
+                'success': False, 
+                'message': 'Perfil de usuario no encontrado. Complete su perfil.'
+            }, status=404)
+        
+        # 5. Obtener carrito del usuario
+        try:
+            carrito, created = Carrito.objects.get_or_create(
+                fkusuario_carrito=perfil_cliente
+            )
+            print(f"Carrito obtenido/creado: ID {carrito.pkid_carrito}, Creado: {created}")
+        except Exception as e:
+            print(f"ERROR al obtener/crear carrito: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al acceder al carrito: {str(e)}'
+            }, status=500)
+        
+        # 6. Obtener items del carrito
+        try:
             items_carrito = CarritoItem.objects.filter(fkcarrito=carrito)
+            items_count = items_carrito.count()
+            print(f"Items en carrito: {items_count}")
+            
+            if items_count == 0:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'El carrito está vacío'
+                }, status=400)
                 
-        except Carrito.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'No hay items en el carrito'}, status=400)
-
-        if not items_carrito.exists():
-            return JsonResponse({'success': False, 'message': 'El carrito está vacío'}, status=400)
-
+        except Exception as e:
+            print(f"ERROR al obtener items del carrito: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al obtener items del carrito: {str(e)}'
+            }, status=500)
+        
+        # 7. Validar stock y calcular total
         total_pedido = 0
         negocios_involucrados = {}
         items_detallados = []
-
-        for item_carrito in items_carrito:
-            if item_carrito.variante_id:
-                try:
-                    variante = VariantesProducto.objects.get(
-                        id_variante=item_carrito.variante_id,
-                        producto=item_carrito.fkproducto,
-                        estado_variante='activa'
-                    )
-                    if (variante.stock_variante or 0) < item_carrito.cantidad:
+        
+        try:
+            for item_carrito in items_carrito:
+                print(f"Procesando item: {item_carrito.pkid_item} - Producto: {item_carrito.fkproducto.nom_prod}")
+                
+                # Validar stock para producto base o variante
+                if item_carrito.variante_id:
+                    try:
+                        variante = VariantesProducto.objects.get(
+                            id_variante=item_carrito.variante_id,
+                            producto=item_carrito.fkproducto,
+                            estado_variante='activa'
+                        )
+                        if (variante.stock_variante or 0) < item_carrito.cantidad:
+                            return JsonResponse({
+                                'success': False, 
+                                'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod} - {variante.nombre_variante}. Solo quedan {variante.stock_variante} unidades'
+                            }, status=400)
+                    except VariantesProducto.DoesNotExist:
                         return JsonResponse({
                             'success': False, 
-                            'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod} - {variante.nombre_variante}. Solo quedan {variante.stock_variante} unidades'
+                            'message': f'La variante de {item_carrito.fkproducto.nom_prod} ya no está disponible'
                         }, status=400)
-                except VariantesProducto.DoesNotExist:
-                    return JsonResponse({
-                        'success': False, 
-                        'message': f'La variante de {item_carrito.fkproducto.nom_prod} ya no está disponible'
-                    }, status=400)
-            else:
-                if (item_carrito.fkproducto.stock_prod or 0) < item_carrito.cantidad:
-                    return JsonResponse({
-                        'success': False, 
-                        'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
-                    }, status=400)
-
-        for item_carrito in items_carrito:
-            monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
-            total_pedido += monto_item
-            negocio = item_carrito.fknegocio
+                else:
+                    if (item_carrito.fkproducto.stock_prod or 0) < item_carrito.cantidad:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
+                        }, status=400)
+                
+                # Calcular monto del item
+                monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
+                total_pedido += monto_item
+                negocio = item_carrito.fknegocio
+                
+                if negocio in negocios_involucrados:
+                    negocios_involucrados[negocio] += monto_item
+                else:
+                    negocios_involucrados[negocio] = monto_item
+                
+                items_detallados.append({
+                    'producto': item_carrito.fkproducto,
+                    'cantidad': item_carrito.cantidad,
+                    'precio_unitario': item_carrito.precio_unitario,
+                    'subtotal': monto_item,
+                    'negocio': negocio,
+                    'variante_seleccionada': item_carrito.variante_seleccionada,
+                    'variante_id': item_carrito.variante_id,
+                    'carrito_item_id': item_carrito.pkid_item
+                })
+                
+            print(f"Total pedido calculado: {total_pedido}")
+            print(f"Negocios involucrados: {len(negocios_involucrados)}")
             
-            if negocio in negocios_involucrados:
-                negocios_involucrados[negocio] += monto_item
-            else:
-                negocios_involucrados[negocio] = monto_item
+        except Exception as e:
+            print(f"ERROR al validar stock/calcular total: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al validar stock: {str(e)}'
+            }, status=500)
+        
+        # 8. Determinar negocio principal (mayor monto)
+        try:
+            negocio_principal = None
+            mayor_monto = 0
             
-            items_detallados.append({
-                'producto': item_carrito.fkproducto,
-                'cantidad': item_carrito.cantidad,
-                'precio_unitario': item_carrito.precio_unitario,
-                'subtotal': monto_item,
-                'negocio': negocio,
-                'variante_seleccionada': item_carrito.variante_seleccionada,
-                'variante_id': item_carrito.variante_id,
-                'carrito_item_id': item_carrito.pkid_item
-            })
-
-        negocio_principal = None
-        mayor_monto = 0
-
-        for negocio, monto in negocios_involucrados.items():
-            if monto > mayor_monto:
-                mayor_monto = monto
-                negocio_principal = negocio
-
-        pedido = Pedidos.objects.create(
-            fkusuario_pedido=perfil_cliente,
-            fknegocio_pedido=negocio_principal,
-            estado_pedido='pendiente',
-            total_pedido=total_pedido,
-            metodo_pago=data.get('metodo_pago'),
-            metodo_pago_texto=data.get('metodo_pago_texto'),
-            banco=data.get('banco', None),
-            fecha_pedido=timezone.now(),
-            fecha_actualizacion=timezone.now()
-        )
-
-        detalles_creados = []
-        for item_detallado in items_detallados:
-            detalle = DetallesPedido.objects.create(
-                fkpedido_detalle=pedido,
-                fkproducto_detalle=item_detallado['producto'],
-                cantidad_detalle=item_detallado['cantidad'],
-                precio_unitario=item_detallado['precio_unitario']
-            )
-            detalles_creados.append(detalle)
+            for negocio, monto in negocios_involucrados.items():
+                if monto > mayor_monto:
+                    mayor_monto = monto
+                    negocio_principal = negocio
+            
+            if not negocio_principal:
+                return JsonResponse({
+                    'success': False, 
+                    'message': 'No se pudo determinar el negocio principal'
+                }, status=500)
+                
+            print(f"Negocio principal: {negocio_principal.nom_neg} (ID: {negocio_principal.pkid_neg})")
+            
+        except Exception as e:
+            print(f"ERROR al determinar negocio principal: {str(e)}")
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al determinar negocio principal: {str(e)}'
+            }, status=500)
         
-        stock_descontado = descontar_stock_pedido(pedido, items_carrito)
-
-        for negocio, monto in negocios_involucrados.items():
-            metodo_pago = data.get('metodo_pago')
-            if metodo_pago in ['transferencia', 'nequi', 'daviplata', 'pse']:
-                estado_pago = 'pagado'
-            elif metodo_pago == 'contra_entrega':
-                estado_pago = 'por_cobrar'
-            elif metodo_pago == 'tarjeta':
-                estado_pago = 'completado'
-            else:
-                estado_pago = 'pendiente'
-
-            PagosNegocios.objects.create(
-                fkpedido=pedido,
-                fknegocio=negocio,
-                monto=monto,
-                fecha_pago=timezone.now(),
-                estado_pago=estado_pago,
-                metodo_pago=metodo_pago
-            )
-
-        # =====================================================================
-        # CREAR NOTIFICACIONES - AGREGADO AQUÍ
-        # =====================================================================
+        # 9. Crear pedido en la base de datos
+        try:
+            # Usar la fecha/hora Colombia que preparamos
+            pedido_fecha = fecha_mysql
+            
+            # Insertar con SQL directo para control total
+            with connection.cursor() as cursor:
+                sql = """
+                    INSERT INTO pedidos (
+                        fkusuario_pedido, fknegocio_pedido, estado_pedido, 
+                        total_pedido, metodo_pago, metodo_pago_texto, banco,
+                        fecha_pedido, fecha_actualizacion
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                
+                cursor.execute(sql, [
+                    perfil_cliente.pk,
+                    negocio_principal.pk,
+                    'pendiente',
+                    float(total_pedido),
+                    data.get('metodo_pago', ''),
+                    data.get('metodo_pago_texto', '').strip(),
+                    data.get('banco', ''),
+                    pedido_fecha,  # Hora Colombia
+                    pedido_fecha   # Hora Colombia
+                ])
+                
+                pedido_id = cursor.lastrowid
+            
+            # Recuperar el pedido
+            pedido = Pedidos.objects.get(pkid_pedido=pedido_id)
+            
+            print(f"✅ Pedido creado: ID {pedido.pkid_pedido}")
+            print(f"✅ Fecha/hora guardada en MySQL: {pedido.fecha_pedido}")
+            
+        except Exception as e:
+            print(f"ERROR al crear pedido: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al crear el pedido: {str(e)}'
+            }, status=500)
         
-        # 1. Notificación para el CLIENTE
-        Notificacion.objects.create(
-            usuario=auth_user,
-            tipo='pedido',
-            titulo='✅ Pedido Confirmado',
-            mensaje=f'Tu pedido #{pedido.pkid_pedido} ha sido procesado exitosamente. Total: ${total_pedido:,.0f}',
-            url=f'/pedidos/{pedido.pkid_pedido}/'
-        )
-        
-        # 2. Notificación para el NEGOCIO PRINCIPAL
-        if negocio_principal and negocio_principal.fkpropietario_neg and negocio_principal.fkpropietario_neg.fkuser:
-            Notificacion.objects.create(
-                usuario=negocio_principal.fkpropietario_neg.fkuser,
-                tipo='pedido',
-                titulo='🛒 Nuevo Pedido Recibido',
-                mensaje=f'Tienes un nuevo pedido #{pedido.pkid_pedido} de {auth_user.first_name or auth_user.username}. Total: ${mayor_monto:,.0f}',
-                url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
-            )
-        
-        # 3. Notificaciones para otros negocios involucrados
-        for negocio, monto in negocios_involucrados.items():
-            if negocio != negocio_principal and negocio.fkpropietario_neg and negocio.fkpropietario_neg.fkuser:
-                Notificacion.objects.create(
-                    usuario=negocio.fkpropietario_neg.fkuser,
-                    tipo='pedido',
-                    titulo='🛒 Pedido Multi-Negocio',
-                    mensaje=f'Tienes productos en el pedido #{pedido.pkid_pedido}. Tu ganancia: ${monto:,.0f}',
-                    url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
+        # 10. Crear detalles del pedido
+        try:
+            detalles_creados = []
+            for item_detallado in items_detallados:
+                detalle = DetallesPedido.objects.create(
+                    fkpedido_detalle=pedido,
+                    fkproducto_detalle=item_detallado['producto'],
+                    cantidad_detalle=item_detallado['cantidad'],
+                    precio_unitario=item_detallado['precio_unitario']
                 )
+                detalles_creados.append(detalle)
+            
+            print(f"Detalles creados: {len(detalles_creados)}")
+            
+        except Exception as e:
+            print(f"ERROR al crear detalles: {str(e)}")
+            # Revertir pedido si fallan los detalles
+            pedido.delete()
+            return JsonResponse({
+                'success': False, 
+                'message': f'Error al crear detalles del pedido: {str(e)}'
+            }, status=500)
         
-        # =====================================================================
+        # 11. Descontar stock
+        try:
+            stock_descontado = descontar_stock_pedido(pedido, items_carrito)
+            print(f"Stock descontado: {stock_descontado}")
+        except Exception as e:
+            print(f"ERROR al descontar stock: {str(e)}")
+            # Continuar aunque falle el descuento de stock
+        
+        # 12. Crear pagos para cada negocio
+        try:
+            for negocio, monto in negocios_involucrados.items():
+                metodo_pago = data.get('metodo_pago')
+                if metodo_pago in ['transferencia', 'nequi', 'daviplata', 'pse']:
+                    estado_pago = 'pagado'
+                elif metodo_pago == 'contra_entrega':
+                    estado_pago = 'por_cobrar'
+                elif metodo_pago == 'tarjeta':
+                    estado_pago = 'completado'
+                else:
+                    estado_pago = 'pendiente'
 
-        items_carrito.delete()
-
+                PagosNegocios.objects.create(
+                    fkpedido=pedido,
+                    fknegocio=negocio,
+                    monto=monto,
+                    fecha_pago=fecha_mysql,  # Usar misma hora Colombia
+                    estado_pago=estado_pago,
+                    metodo_pago=metodo_pago
+                )
+            
+            print(f"Pagos creados: {len(negocios_involucrados)}")
+            
+        except Exception as e:
+            print(f"ERROR al crear pagos: {str(e)}")
+            # Continuar aunque falle la creación de pagos
+        
+        # 13. Crear notificaciones
+        try:
+            # Notificación para el CLIENTE
+            Notificacion.objects.create(
+                usuario=auth_user,
+                tipo='pedido',
+                titulo='✅ Pedido Confirmado',
+                mensaje=f'Tu pedido #{pedido.pkid_pedido} ha sido procesado exitosamente. Total: ${total_pedido:,.0f}',
+                url=f'/pedidos/{pedido.pkid_pedido}/',
+                fecha_creacion=fecha_mysql
+            )
+            
+            # Notificación para el NEGOCIO PRINCIPAL
+            if negocio_principal and negocio_principal.fkpropietario_neg and negocio_principal.fkpropietario_neg.fkuser:
+                Notificacion.objects.create(
+                    usuario=negocio_principal.fkpropietario_neg.fkuser,
+                    tipo='pedido',
+                    titulo='🛒 Nuevo Pedido Recibido',
+                    mensaje=f'Tienes un nuevo pedido #{pedido.pkid_pedido} de {auth_user.first_name or auth_user.username}. Total: ${mayor_monto:,.0f}',
+                    url=f'/negocio/pedidos/{pedido.pkid_pedido}/',
+                    fecha_creacion=fecha_mysql
+                )
+            
+            # Notificaciones para otros negocios
+            for negocio, monto in negocios_involucrados.items():
+                if negocio != negocio_principal and negocio.fkpropietario_neg and negocio.fkpropietario_neg.fkuser:
+                    Notificacion.objects.create(
+                        usuario=negocio.fkpropietario_neg.fkuser,
+                        tipo='pedido',
+                        titulo='🛒 Pedido Multi-Negocio',
+                        mensaje=f'Tienes productos en el pedido #{pedido.pkid_pedido}. Tu ganancia: ${monto:,.0f}',
+                        url=f'/negocio/pedidos/{pedido.pkid_pedido}/',
+                        fecha_creacion=fecha_mysql
+                    )
+            
+            print(f"Notificaciones creadas: {1 + len(negocios_involucrados)}")
+            
+        except Exception as e:
+            print(f"ERROR al crear notificaciones: {str(e)}")
+            # Continuar aunque falle la creación de notificaciones
+        
+        # 14. Vaciar carrito
+        try:
+            items_carrito.delete()
+            print("Carrito vaciado exitosamente")
+        except Exception as e:
+            print(f"ERROR al vaciar carrito: {str(e)}")
+            # Continuar aunque falle el vaciado del carrito
+        
+        # 15. Enviar comprobante por correo
         try:
             email_cliente = auth_user.email
             if email_cliente:
                 enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados)
-        except Exception:
-            pass
-
-        fecha_colombia = timezone.localtime(pedido.fecha_pedido)
-        fecha_formateada = fecha_colombia.strftime("%d/%m/%Y %I:%M %p").lower()
-
+                print(f"Correo enviado a: {email_cliente}")
+        except Exception as e:
+            print(f"ERROR al enviar correo: {str(e)}")
+            # Continuar aunque falle el envío de correo
+        
+        # 16. Formatear respuesta exitosa
+        # Usar la fecha del pedido que guardamos
+        fecha_respuesta = timezone.localtime(pedido.fecha_pedido)
+        fecha_formateada = fecha_respuesta.strftime("%d/%m/%Y %I:%M:%S %p").lower()
+        
         response_data = {
             'success': True,
-            'message': 'Pedido procesado exitosamente. Stock descontado correctamente.',
+            'message': 'Pedido procesado exitosamente',
             'numero_pedido': pedido.pkid_pedido,
-            'total': total_pedido,
-            'metodo_pago': data.get('metodo_pago_texto'),
+            'total': float(total_pedido),
+            'metodo_pago': data.get('metodo_pago_texto', '').strip(),
             'fecha': fecha_formateada,
+            'fecha_raw': pedido.fecha_pedido.isoformat() if hasattr(pedido.fecha_pedido, 'isoformat') else str(pedido.fecha_pedido),
             'estado_pedido': pedido.estado_pedido,
             'pagos_creados': len(negocios_involucrados),
             'negocio_principal': negocio_principal.nom_neg,
-            'correo_enviado': bool(email_cliente),
-            'stock_validado': True,
-            'stock_descontado': stock_descontado,
-            'notificaciones_creadas': 1 + len(negocios_involucrados),
+            'items_procesados': len(items_detallados),
+            'stock_descontado': stock_descontado if 'stock_descontado' in locals() else False,
         }
-
+        
+        print(f"=== PEDIDO PROCESADO EXITOSAMENTE ===")
+        print(f"ID Pedido: {pedido.pkid_pedido}")
+        print(f"Hora Colombia guardada: {pedido.fecha_pedido}")
+        print(f"Hora Colombia formateada: {fecha_formateada}")
+        
         return JsonResponse(response_data)
 
-    except Exception:
-        # Notificación de error si ocurre
+    except Exception as e:
+        print(f"=== ERROR CRÍTICO NO CAPTURADO: {str(e)} ===")
+        import traceback
+        traceback.print_exc()
+        
+        # Crear notificación de error
         try:
             Notificacion.objects.create(
                 usuario=request.user,
                 tipo='alerta',
                 titulo='❌ Error en Pedido',
-                mensaje=f'Ocurrió un error al procesar tu pedido. Por favor intenta nuevamente.',
+                mensaje='Ocurrió un error crítico al procesar tu pedido. Por favor intenta nuevamente.',
                 url='/carrito/'
             )
         except:
             pass
             
-        return JsonResponse({'success': False, 'message': 'Error interno del servidor al procesar el pedido'}, status=500)
-
+        return JsonResponse({
+            'success': False, 
+            'message': f'Error interno del servidor: {str(e)[:100]}...'
+        }, status=500)
+        
+@never_cache
 def crear_notificacion_estado_pedido(pedido, nuevo_estado):
     """Crear notificación cuando cambia el estado de un pedido"""
     estados_mensajes = {
@@ -3497,7 +3703,8 @@ def crear_notificacion_estado_pedido(pedido, nuevo_estado):
             mensaje=f'Has actualizado el pedido #{pedido.pkid_pedido} a: {nuevo_estado}',
             url=f'/negocio/pedidos/{pedido.pkid_pedido}/'
         )
-        
+ 
+       
 def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados):
     try:
         fecha_colombia = timezone.localtime(pedido.fecha_pedido)
@@ -3549,6 +3756,7 @@ def enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_
     except Exception:
         pass
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def guardar_resena(request):
     if request.method == 'POST':
@@ -3607,22 +3815,27 @@ def guardar_resena(request):
     
     return redirect('cliente_dashboard')
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def productos_filtrados_logeado(request):
+    # Importar connection aquí para evitar el error
+    from django.db import connection
+    from datetime import date
     
+    # Obtener todos los parámetros de filtro
     filtro_tipo = request.GET.get('filtro', '')
     categoria_id = request.GET.get('categoria', '')
+    negocio_id = request.GET.get('negocio', '')
     precio_min = request.GET.get('precio_min', '')
     precio_max = request.GET.get('precio_max', '')
-    ordenar = request.GET.get('ordenar', '')
+    ordenar = request.GET.get('ordenar', 'recientes')  # Valor por defecto
     buscar = request.GET.get('buscar', '')
     
+    # Iniciar con todos los productos disponibles
     productos = Productos.objects.filter(estado_prod='disponible')
     
+    # Aplicar filtro por tipo
     if filtro_tipo == 'ofertas':
-        from django.db import connection
-        from datetime import date
-        
         hoy = date.today()
         
         with connection.cursor() as cursor:
@@ -3632,6 +3845,7 @@ def productos_filtrados_logeado(request):
                 WHERE estado_promo = 'activa' 
                 AND fecha_inicio <= %s 
                 AND fecha_fin >= %s
+                AND porcentaje_descuento > 0
             """, [hoy, hoy])
             
             resultados = cursor.fetchall()
@@ -3642,41 +3856,56 @@ def productos_filtrados_logeado(request):
         else:
             productos = productos.none()
         
-        titulo_filtro = "Ofertas Especiales"
+        titulo_filtro = "🎯 Ofertas Especiales"
     
     elif filtro_tipo == 'destacados':
-        productos = productos.filter(stock_prod__gt=0)
-        titulo_filtro = "Productos Destacados"
+        productos = productos.filter(stock_prod__gt=0).order_by('?')
+        titulo_filtro = "⭐ Productos Destacados"
     
     elif filtro_tipo == 'economicos':
         productos = productos.order_by('precio_prod')
-        titulo_filtro = "Productos Baratos"
+        titulo_filtro = "💰 Productos Económicos"
     
     elif filtro_tipo == 'nuevos':
         productos = productos.order_by('-fecha_creacion')
-        titulo_filtro = "Nuevos Productos"
+        titulo_filtro = "🆕 Nuevos Productos"
     
     elif filtro_tipo == 'mas-vendidos':
-        productos = productos.filter(stock_prod__gt=0)
-        titulo_filtro = "Productos Disponibles"
+        # Productos con más ventas
+        productos = productos.annotate(
+            total_vendido=Sum('detallespedido__cantidad_detalle')
+        ).filter(total_vendido__gt=0).order_by('-total_vendido')
+        titulo_filtro = "🔥 Más Vendidos"
     
     else:
-        titulo_filtro = "Todos los Productos"
+        titulo_filtro = "🛍️ Todos los Productos"
 
-    if buscar:
+    # Aplicar filtro de búsqueda
+    if buscar and buscar.strip():
         productos = productos.filter(
             models.Q(nom_prod__icontains=buscar) |
-            models.Q(desc_prod__icontains=buscar)
+            models.Q(desc_prod__icontains=buscar) |
+            models.Q(fknegocioasociado_prod__nom_neg__icontains=buscar) |
+            models.Q(fkcategoria_prod__desc_cp__icontains=buscar)
         )
 
-    if categoria_id:
-        productos = productos.filter(fkcategoria_prod_id=categoria_id)
+    # Aplicar filtro por categoría
+    if categoria_id and categoria_id.isdigit():
+        productos = productos.filter(fkcategoria_prod_id=int(categoria_id))
     
-    if precio_min:
-        productos = productos.filter(precio_prod__gte=precio_min)
-    if precio_max:
-        productos = productos.filter(precio_prod__lte=precio_max)
+    # Aplicar filtro por negocio
+    if negocio_id and negocio_id.isdigit():
+        productos = productos.filter(fknegocioasociado_prod_id=int(negocio_id))
     
+    # Aplicar filtro por precio mínimo
+    if precio_min and precio_min.isdigit():
+        productos = productos.filter(precio_prod__gte=float(precio_min))
+    
+    # Aplicar filtro por precio máximo
+    if precio_max and precio_max.isdigit():
+        productos = productos.filter(precio_prod__lte=float(precio_max))
+    
+    # Aplicar ordenamiento
     if ordenar == 'precio_asc':
         productos = productos.order_by('precio_prod')
     elif ordenar == 'precio_desc':
@@ -3687,18 +3916,24 @@ def productos_filtrados_logeado(request):
         productos = productos.order_by('-fecha_creacion')
     elif ordenar == 'stock':
         productos = productos.order_by('-stock_prod')
-    else:
+    elif ordenar == 'recientes':
         productos = productos.order_by('-fecha_creacion')
+    else:
+        productos = productos.order_by('-fecha_creacion')  # Orden por defecto
     
+    # Obtener categorías y negocios para los filtros
     categorias = CategoriaProductos.objects.annotate(
         num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
-    )
+    ).order_by('desc_cp')
     
     negocios = Negocios.objects.annotate(
         num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
-    ).filter(estado_neg='activo')
+    ).filter(estado_neg='activo').order_by('nom_neg')
     
+    # Procesar productos con variantes y ofertas
     productos_data = []
+    hoy = date.today()
+    
     for producto in productos:
         producto_data = {
             'producto': producto,
@@ -3712,6 +3947,7 @@ def productos_filtrados_logeado(request):
             'variantes': []
         }
         
+        # Verificar variantes
         variantes = VariantesProducto.objects.filter(
             producto=producto, 
             estado_variante='activa'
@@ -3725,8 +3961,8 @@ def productos_filtrados_logeado(request):
                 variante_data = {
                     'id_variante': variante.id_variante,
                     'nombre_variante': variante.nombre_variante,
-                    'precio_adicional': float(variante.precio_adicional),
-                    'stock_variante': variante.stock_variante,
+                    'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
+                    'stock_variante': variante.stock_variante or 0,
                     'imagen_variante': variante.imagen_variante,
                     'sku_variante': variante.sku_variante
                 }
@@ -3734,10 +3970,7 @@ def productos_filtrados_logeado(request):
             
             producto_data['variantes'] = variantes_detalladas
         
-        from django.db import connection
-        from datetime import date
-        
-        hoy = date.today()
+        # Verificar ofertas activas
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT porcentaje_descuento, titulo_promo 
@@ -3755,35 +3988,36 @@ def productos_filtrados_logeado(request):
             porcentaje_descuento, titulo_promo = resultado
             
             try:
-                descuento = float(porcentaje_descuento)
+                descuento = float(porcentaje_descuento) if porcentaje_descuento else 0
                 
-                producto_data['precio_final'] = float(producto.precio_prod) * (1 - descuento / 100)
-                producto_data['tiene_descuento'] = True
-                producto_data['descuento_porcentaje'] = descuento
-                producto_data['ahorro'] = float(producto.precio_prod) - producto_data['precio_final']
+                if descuento > 0:
+                    producto_data['precio_final'] = float(producto.precio_prod) * (1 - descuento / 100)
+                    producto_data['tiene_descuento'] = True
+                    producto_data['descuento_porcentaje'] = descuento
+                    producto_data['ahorro'] = float(producto.precio_prod) - producto_data['precio_final']
             except (ValueError, TypeError):
                 pass
         
         productos_data.append(producto_data)
     
+    # Paginación
     paginator = Paginator(productos_data, 12)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Obtener contador del carrito
     carrito_count = 0
     try:
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-        
         try:
             carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
             carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
         except Carrito.DoesNotExist:
-            carrito = Carrito.objects.create(fkusuario_carrito=perfil_cliente)
             carrito_count = 0
-            
     except Exception:
         carrito_count = 0
     
+    # Preparar contexto
     context = {
         'productos_data': page_obj,
         'categorias': categorias,
@@ -3792,22 +4026,25 @@ def productos_filtrados_logeado(request):
         'filtros_aplicados': {
             'buscar': buscar,
             'categoria': categoria_id,
-            'negocio': request.GET.get('negocio', ''),
+            'negocio': negocio_id,
             'precio_min': precio_min,
             'precio_max': precio_max,
-            'ordenar_por': ordenar,
+            'ordenar': ordenar,
         },
         'filtro_actual': filtro_tipo,
         'categoria_actual': categoria_id,
+        'negocio_actual': negocio_id,
         'precio_min_actual': precio_min,
         'precio_max_actual': precio_max,
         'ordenar_actual': ordenar,
+        'buscar_actual': buscar,
         'titulo_filtro': titulo_filtro,
         'carrito_count': carrito_count,
     }
     
     return render(request, 'Cliente/productos_filtros_logeado.html', context)
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def mis_pedidos_data(request):
     try:
@@ -3880,6 +4117,7 @@ def mis_pedidos_data(request):
             'message': 'Error al cargar los pedidos'
         })
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def cancelar_pedido(request):
     """Cancelar un pedido si no ha pasado 1 hora y restaurar stock"""
@@ -3951,6 +4189,7 @@ def cancelar_pedido(request):
 # VISTAS PARA FAVORITOS CON ACTUALIZACIÓN EN TIEMPO REAL
 # =============================================================================
 
+@never_cache
 @login_required(login_url='/auth/login/')
 @require_POST
 def agregar_favorito(request):
@@ -4003,6 +4242,7 @@ def agregar_favorito(request):
     except Exception:
         return JsonResponse({'success': False, 'message': 'Error al agregar a favoritos'})
 
+@never_cache
 @login_required(login_url='/auth/login/')
 @require_POST
 def eliminar_favorito(request):
@@ -4044,6 +4284,7 @@ def eliminar_favorito(request):
     except Exception:
         return JsonResponse({'success': False, 'message': 'Error al eliminar de favoritos'})
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def ver_favoritos(request):
     """Página para ver todos los favoritos del usuario con variantes y ofertas"""
@@ -4266,7 +4507,8 @@ def ver_favoritos(request):
     except Exception:
         messages.error(request, 'Error al cargar los favoritos')
         return redirect('cliente_dashboard')
-    
+
+@never_cache   
 @login_required(login_url='/auth/login/')
 def verificar_favorito(request):
     """Verificar si un producto está en favoritos"""
@@ -4291,6 +4533,7 @@ def verificar_favorito(request):
     except Exception:
         return JsonResponse({'success': False, 'es_favorito': False})
 
+@never_cache
 @login_required(login_url='/auth/login/')
 def contar_favoritos(request):
     """Obtener contador actual de favoritos"""
@@ -4306,7 +4549,8 @@ def contar_favoritos(request):
         
     except Exception:
         return JsonResponse({'success': False, 'favoritos_count': 0})
-    
+
+@never_cache    
 @login_required
 def favoritos_data(request):
     """API para obtener favoritos en formato JSON con variantes y ofertas"""
@@ -4819,3 +5063,71 @@ def crear_notificacion_sistema(usuario, titulo, mensaje, url=None):
         mensaje=mensaje,
         url=url
     )
+
+# En tu vista o servicio
+def procesar_pedido_contraentrega(negocio, pedido_data):
+    """
+    Lógica simple para pago contraentrega
+    """
+    # 1. Verificar si el negocio ofrece domicilio
+    if pedido_data.get('tipo_entrega') == 'domicilio' and not negocio.ofrece_domicilio:
+        return False, "Este negocio no ofrece servicio a domicilio"
+    
+    # 2. Calcular montos
+    total = pedido_data['total_pedido']
+    anticipo_porcentaje = pedido_data.get('anticipo_porcentaje', 20)
+    monto_anticipo = (total * anticipo_porcentaje) / 100
+    monto_pendiente = total - monto_anticipo
+    
+    # 3. Crear pedido con pago contraentrega
+    pedido = Pedidos(
+        fknegocio_pedido=negocio,
+        total_pedido=total,
+        tipo_entrega=pedido_data.get('tipo_entrega', 'recoge'),
+        pago_contraentrega=True,
+        anticipo_porcentaje=anticipo_porcentaje,
+        monto_anticipo=monto_anticipo,
+        monto_pendiente=monto_pendiente,
+        direccion_entrega=pedido_data.get('direccion_entrega'),
+        estado_pedido='pendiente'
+    )
+    pedido.save()
+    
+    return True, pedido
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def verificar_domicilio_negocio(request):
+    """Verifica si el negocio ofrece domicilio y su costo"""
+    try:
+        # Obtener información del negocio desde el carrito
+        carrito = Carrito.objects.filter(fkusuario_carrito=request.user.usuario_perfil).first()
+        
+        if carrito:
+            items = CarritoItem.objects.filter(fkcarrito=carrito)
+            if items.exists():
+                negocio = items.first().fknegocio
+                
+                return JsonResponse({
+                    'success': True,
+                    'ofrece_domicilio': negocio.ofrece_domicilio if hasattr(negocio, 'ofrece_domicilio') else False,
+                    'costo_domicilio': float(negocio.costo_domicilio) if hasattr(negocio, 'costo_domicilio') else 0,
+                    'nombre_negocio': negocio.nom_neg,
+                    'direccion_negocio': negocio.direcc_neg
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'ofrece_domicilio': False,
+            'costo_domicilio': 0,
+            'nombre_negocio': '',
+            'direccion_negocio': ''
+        })
+        
+    except Exception as e:
+        print(f"Error verificando domicilio: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
