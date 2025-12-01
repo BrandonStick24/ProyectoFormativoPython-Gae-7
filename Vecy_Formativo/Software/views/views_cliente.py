@@ -650,6 +650,30 @@ def cliente_dashboard(request):
         hoy = timezone.now().date()
 
         # =============================================
+        # FUNCIÓN PARA FORMATEAR PRECIOS CON PUNTOS DECIMALES
+        # =============================================
+        def formatear_precio(valor):
+            """Formatea un valor numérico como precio con 2 decimales"""
+            try:
+                if valor is None:
+                    return "0.00"
+                # Convertir a float y luego formatear
+                valor_float = float(valor)
+                return "{:,.2f}".format(valor_float).replace(',', 'X').replace('.', ',').replace('X', '.')
+            except (ValueError, TypeError):
+                return "0.00"
+
+        def formatear_precio_simple(valor):
+            """Formatea un valor numérico como precio con 2 decimales (formato simple)"""
+            try:
+                if valor is None:
+                    return "0.00"
+                valor_float = float(valor)
+                return f"{valor_float:.2f}"
+            except (ValueError, TypeError):
+                return "0.00"
+
+        # =============================================
         # DETECCIÓN DE FECHAS ESPECIALES
         # =============================================
         fecha_especial = None
@@ -692,14 +716,15 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # FUNCIÓN AUXILIAR PARA OFERTAS
+        # FUNCIÓN AUXILIAR PARA OFERTAS - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         def obtener_info_oferta_corregida(producto_id, variante_id=None):
             try:
                 with connection.cursor() as cursor:
                     if variante_id:
                         cursor.execute("""
-                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id, 
+                                   p.stock_actual_oferta, p.stock_inicial_oferta, p.activa_por_stock
                             FROM promociones p
                             WHERE p.fkproducto_id = %s 
                             AND p.variante_id = %s
@@ -712,17 +737,21 @@ def cliente_dashboard(request):
                         result = cursor.fetchone()
                         
                         if result:
+                            stock_oferta = result[3] if result[5] == 1 else None  # activa_por_stock = 1
                             return {
                                 'porcentaje_descuento': float(result[0]),
                                 'pkid_promo': result[1],
                                 'variante_id': result[2],
+                                'stock_oferta': stock_oferta,
+                                'activa_por_stock': result[5],
                                 'es_oferta_especifica': True,
                                 'tiene_oferta': True
                             }
                     
                     if variante_id is None:
                         cursor.execute("""
-                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id
+                            SELECT p.porcentaje_descuento, p.pkid_promo, p.variante_id,
+                                   p.stock_actual_oferta, p.stock_inicial_oferta, p.activa_por_stock
                             FROM promociones p
                             WHERE p.fkproducto_id = %s 
                             AND p.variante_id IS NULL
@@ -735,10 +764,13 @@ def cliente_dashboard(request):
                         
                         result = cursor.fetchone()
                         if result:
+                            stock_oferta = result[3] if result[5] == 1 else None  # activa_por_stock = 1
                             return {
                                 'porcentaje_descuento': float(result[0]),
                                 'pkid_promo': result[1],
                                 'variante_id': result[2],
+                                'stock_oferta': stock_oferta,
+                                'activa_por_stock': result[5],
                                 'es_oferta_especifica': False,
                                 'tiene_oferta': True
                             }
@@ -748,7 +780,23 @@ def cliente_dashboard(request):
                 return None
 
         # =============================================
-        # OFERTAS CARRUSEL
+        # FUNCIÓN PARA VERIFICAR STOCK DE OFERTA - NUEVA
+        # =============================================
+        def verificar_stock_oferta(info_oferta, stock_base):
+            """Verifica si hay stock disponible considerando el stock de oferta"""
+            if not info_oferta or not info_oferta['tiene_oferta']:
+                return stock_base > 0
+            
+            # Si la oferta está activa por stock, usar el stock de oferta
+            if info_oferta.get('activa_por_stock') == 1:
+                stock_oferta = info_oferta.get('stock_oferta', 0)
+                return stock_oferta > 0
+            else:
+                # Si no está activa por stock, usar el stock base del producto/variante
+                return stock_base > 0
+
+        # =============================================
+        # OFERTAS CARRUSEL - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         ofertas_carrusel_data = []
         try:
@@ -759,13 +807,17 @@ def cliente_dashboard(request):
                     SELECT p.pkid_promo, p.titulo_promo, p.descripcion_promo, 
                            p.porcentaje_descuento, p.fecha_inicio, p.fecha_fin,
                            p.estado_promo, p.imagen_promo,
-                           p.fknegocio_id, p.fkproducto_id, p.variante_id
+                           p.fknegocio_id, p.fkproducto_id, p.variante_id,
+                           p.stock_actual_oferta, p.activa_por_stock
                     FROM promociones p
                     INNER JOIN productos pr ON p.fkproducto_id = pr.pkid_prod
                     WHERE p.estado_promo = 'activa'
                     AND p.fecha_inicio >= %s
                     AND p.fecha_fin >= %s
-                    AND pr.stock_prod > 0
+                    AND (
+                        (p.activa_por_stock = 1 AND p.stock_actual_oferta > 0) OR
+                        (p.activa_por_stock = 0 AND pr.stock_prod > 0)
+                    )
                     AND pr.estado_prod = 'disponible'
                     ORDER BY p.fecha_inicio DESC
                     LIMIT 5
@@ -785,6 +837,8 @@ def cliente_dashboard(request):
                         producto = Productos.objects.get(pkid_prod=row[9])
                         negocio = Negocios.objects.get(pkid_neg=row[8])
                         variante_id = row[10]
+                        stock_oferta = row[11]
+                        activa_por_stock = row[12]
                         
                         precio_base = float(producto.precio_prod) if producto.precio_prod else 0
                         variante_nombre = None
@@ -810,19 +864,32 @@ def cliente_dashboard(request):
                         
                         descripcion_corta = f"Oferta especial -{descuento_valor}% OFF"
                         
+                        # Determinar stock para mostrar
+                        if activa_por_stock == 1:
+                            stock_mostrar = stock_oferta
+                            es_stock_limitado = True
+                        else:
+                            stock_mostrar = producto.stock_prod or 0
+                            es_stock_limitado = False
+                        
                         oferta_data = {
                             'pkid_promo': row[0],
                             'titulo_promo': titulo_corto,
                             'descripcion_promo': descripcion_corta,
                             'porcentaje_descuento': descuento_valor,
                             'precio_base': precio_base,
+                            'precio_base_formateado': formatear_precio(precio_base),
                             'precio_final': precio_base - ahorro_oferta,
+                            'precio_final_formateado': formatear_precio(precio_base - ahorro_oferta),
                             'ahorro_oferta': round(ahorro_oferta, 2),
+                            'ahorro_oferta_formateado': formatear_precio(ahorro_oferta),
                             'imagen_promo': row[7] or (producto.img_prod.url if producto.img_prod else None),
                             'fkproducto': producto,
                             'fknegocio': negocio,
                             'variante_id': variante_id,
                             'variante_nombre': variante_nombre,
+                            'stock_oferta': stock_mostrar,
+                            'es_stock_limitado': es_stock_limitado,
                         }
                         
                         ofertas_carrusel_data.append(oferta_data)
@@ -833,7 +900,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # PRODUCTOS POR FECHA ESPECIAL - CON CATEGORÍAS REALES
+        # PRODUCTOS POR FECHA ESPECIAL - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         productos_fecha_especial_data = []
         try:
@@ -876,16 +943,26 @@ def cliente_dashboard(request):
                             precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                             
                             info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                            
+                            # Verificar stock considerando oferta
                             if info_oferta_producto:
+                                tiene_stock_oferta = verificar_stock_oferta(info_oferta_producto, producto.stock_prod or 0)
+                                if not tiene_stock_oferta:
+                                    continue
+                                    
                                 descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
                                 ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
                                 precio_final_producto = precio_base_producto - ahorro_producto
                                 tiene_oferta_producto = True
+                                stock_mostrar = info_oferta_producto.get('stock_oferta') if info_oferta_producto.get('activa_por_stock') == 1 else producto.stock_prod
+                                es_stock_limitado = info_oferta_producto.get('activa_por_stock') == 1
                             else:
                                 descuento_porcentaje_producto = 0
                                 ahorro_producto = 0
                                 precio_final_producto = precio_base_producto
                                 tiene_oferta_producto = False
+                                stock_mostrar = producto.stock_prod or 0
+                                es_stock_limitado = False
                             
                             # Procesar variantes
                             variantes_list = []
@@ -914,30 +991,44 @@ def cliente_dashboard(request):
                                             variante.id_variante
                                         )
                                         
+                                        # Verificar stock de variante considerando oferta
                                         if info_oferta_variante:
+                                            tiene_stock_variante_oferta = verificar_stock_oferta(info_oferta_variante, stock_variante)
+                                            if not tiene_stock_variante_oferta:
+                                                continue
+                                            
                                             descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                             ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                             precio_final_variante = precio_base_variante - ahorro_variante
                                             tiene_descuento_variante = True
                                             tiene_oferta_activa_variante = True
+                                            stock_variante_mostrar = info_oferta_variante.get('stock_oferta') if info_oferta_variante.get('activa_por_stock') == 1 else stock_variante
+                                            es_stock_variante_limitado = info_oferta_variante.get('activa_por_stock') == 1
                                         else:
                                             descuento_porcentaje_variante = 0
                                             ahorro_variante = 0
                                             precio_final_variante = precio_base_variante
                                             tiene_descuento_variante = False
                                             tiene_oferta_activa_variante = False
+                                            stock_variante_mostrar = stock_variante
+                                            es_stock_variante_limitado = False
                                         
                                         variante_data = {
                                             'id_variante': variante.id_variante,
                                             'nombre_variante': variante.nombre_variante,
                                             'precio_adicional': precio_adicional,
-                                            'stock_variante': stock_variante,
+                                            'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                            'stock_variante': stock_variante_mostrar,
+                                            'es_stock_limitado': es_stock_variante_limitado,
                                             'imagen_variante': variante.imagen_variante,
                                             'estado_variante': variante.estado_variante,
                                             'sku_variante': variante.sku_variante,
                                             'precio_base_calculado': round(precio_base_variante, 2),
+                                            'precio_base_calculado_formateado': formatear_precio(precio_base_variante),
                                             'precio_final_calculado': round(precio_final_variante, 2),
+                                            'precio_final_calculado_formateado': formatear_precio(precio_final_variante),
                                             'ahorro_calculado': round(ahorro_variante, 2),
+                                            'ahorro_calculado_formateado': formatear_precio(ahorro_variante),
                                             'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                             'tiene_descuento_calculado': tiene_descuento_variante,
                                             'tiene_oferta_activa': tiene_oferta_activa_variante,
@@ -953,13 +1044,17 @@ def cliente_dashboard(request):
                                 producto_data = {
                                     'producto': producto,
                                     'precio_base': precio_base_producto,
+                                    'precio_base_formateado': formatear_precio(precio_base_producto),
                                     'precio_final': round(precio_final_producto, 2),
+                                    'precio_final_formateado': formatear_precio(precio_final_producto),
                                     'tiene_descuento': tiene_oferta_producto,
                                     'descuento_porcentaje': descuento_porcentaje_producto,
                                     'ahorro': round(ahorro_producto, 2),
+                                    'ahorro_formateado': formatear_precio(ahorro_producto),
                                     'tiene_variantes': tiene_variantes,
                                     'variantes': variantes_list,
-                                    'stock': producto.stock_prod or 0,
+                                    'stock': stock_mostrar,
+                                    'es_stock_limitado': es_stock_limitado,
                                     'tiene_oferta_activa': tiene_oferta_producto,
                                 }
                                 
@@ -971,7 +1066,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # ELECTRODOMÉSTICOS - CON CATEGORÍA REAL
+        # ELECTRODOMÉSTICOS - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         electrodomesticos_data = []
         try:
@@ -995,16 +1090,26 @@ def cliente_dashboard(request):
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    
+                    # Verificar stock considerando oferta
                     if info_oferta_producto:
+                        tiene_stock_oferta = verificar_stock_oferta(info_oferta_producto, producto.stock_prod or 0)
+                        if not tiene_stock_oferta:
+                            continue
+                            
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
                         ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
                         precio_final_producto = precio_base_producto - ahorro_producto
                         tiene_oferta_producto = True
+                        stock_mostrar = info_oferta_producto.get('stock_oferta') if info_oferta_producto.get('activa_por_stock') == 1 else producto.stock_prod
+                        es_stock_limitado = info_oferta_producto.get('activa_por_stock') == 1
                     else:
                         descuento_porcentaje_producto = 0
                         ahorro_producto = 0
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
+                        stock_mostrar = producto.stock_prod or 0
+                        es_stock_limitado = False
                     
                     # Procesar variantes
                     variantes_list = []
@@ -1033,30 +1138,44 @@ def cliente_dashboard(request):
                                     variante.id_variante
                                 )
                                 
+                                # Verificar stock de variante considerando oferta
                                 if info_oferta_variante:
+                                    tiene_stock_variante_oferta = verificar_stock_oferta(info_oferta_variante, stock_variante)
+                                    if not tiene_stock_variante_oferta:
+                                        continue
+                                    
                                     descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                     ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                     precio_final_variante = precio_base_variante - ahorro_variante
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
+                                    stock_variante_mostrar = info_oferta_variante.get('stock_oferta') if info_oferta_variante.get('activa_por_stock') == 1 else stock_variante
+                                    es_stock_variante_limitado = info_oferta_variante.get('activa_por_stock') == 1
                                 else:
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
                                     tiene_descuento_variante = False
                                     tiene_oferta_activa_variante = False
+                                    stock_variante_mostrar = stock_variante
+                                    es_stock_variante_limitado = False
                                 
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
                                     'precio_adicional': precio_adicional,
-                                    'stock_variante': stock_variante,
+                                    'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                    'stock_variante': stock_variante_mostrar,
+                                    'es_stock_limitado': es_stock_variante_limitado,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
                                     'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_base_calculado_formateado': formatear_precio(precio_base_variante),
                                     'precio_final_calculado': round(precio_final_variante, 2),
+                                    'precio_final_calculado_formateado': formatear_precio(precio_final_variante),
                                     'ahorro_calculado': round(ahorro_variante, 2),
+                                    'ahorro_calculado_formateado': formatear_precio(ahorro_variante),
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
@@ -1072,13 +1191,17 @@ def cliente_dashboard(request):
                         producto_data = {
                             'producto': producto,
                             'precio_base': precio_base_producto,
+                            'precio_base_formateado': formatear_precio(precio_base_producto),
                             'precio_final': round(precio_final_producto, 2),
+                            'precio_final_formateado': formatear_precio(precio_final_producto),
                             'tiene_descuento': tiene_oferta_producto,
                             'descuento_porcentaje': descuento_porcentaje_producto,
                             'ahorro': round(ahorro_producto, 2),
+                            'ahorro_formateado': formatear_precio(ahorro_producto),
                             'tiene_variantes': tiene_variantes,
                             'variantes': variantes_list,
-                            'stock': producto.stock_prod or 0,
+                            'stock': stock_mostrar,
+                            'es_stock_limitado': es_stock_limitado,
                             'tiene_oferta_activa': tiene_oferta_producto,
                         }
                         
@@ -1090,7 +1213,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # TECNOLOGÍA - CON CATEGORÍAS REALES
+        # TECNOLOGÍA - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         tecnologia_data = []
         try:
@@ -1116,16 +1239,26 @@ def cliente_dashboard(request):
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    
+                    # Verificar stock considerando oferta
                     if info_oferta_producto:
+                        tiene_stock_oferta = verificar_stock_oferta(info_oferta_producto, producto.stock_prod or 0)
+                        if not tiene_stock_oferta:
+                            continue
+                            
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
                         ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
                         precio_final_producto = precio_base_producto - ahorro_producto
                         tiene_oferta_producto = True
+                        stock_mostrar = info_oferta_producto.get('stock_oferta') if info_oferta_producto.get('activa_por_stock') == 1 else producto.stock_prod
+                        es_stock_limitado = info_oferta_producto.get('activa_por_stock') == 1
                     else:
                         descuento_porcentaje_producto = 0
                         ahorro_producto = 0
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
+                        stock_mostrar = producto.stock_prod or 0
+                        es_stock_limitado = False
                     
                     # Procesar variantes
                     variantes_list = []
@@ -1154,30 +1287,44 @@ def cliente_dashboard(request):
                                     variante.id_variante
                                 )
                                 
+                                # Verificar stock de variante considerando oferta
                                 if info_oferta_variante:
+                                    tiene_stock_variante_oferta = verificar_stock_oferta(info_oferta_variante, stock_variante)
+                                    if not tiene_stock_variante_oferta:
+                                        continue
+                                    
                                     descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                     ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                     precio_final_variante = precio_base_variante - ahorro_variante
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
+                                    stock_variante_mostrar = info_oferta_variante.get('stock_oferta') if info_oferta_variante.get('activa_por_stock') == 1 else stock_variante
+                                    es_stock_variante_limitado = info_oferta_variante.get('activa_por_stock') == 1
                                 else:
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
                                     tiene_descuento_variante = False
                                     tiene_oferta_activa_variante = False
+                                    stock_variante_mostrar = stock_variante
+                                    es_stock_variante_limitado = False
                                 
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
                                     'precio_adicional': precio_adicional,
-                                    'stock_variante': stock_variante,
+                                    'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                    'stock_variante': stock_variante_mostrar,
+                                    'es_stock_limitado': es_stock_variante_limitado,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
                                     'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_base_calculado_formateado': formatear_precio(precio_base_variante),
                                     'precio_final_calculado': round(precio_final_variante, 2),
+                                    'precio_final_calculado_formateado': formatear_precio(precio_final_variante),
                                     'ahorro_calculado': round(ahorro_variante, 2),
+                                    'ahorro_calculado_formateado': formatear_precio(ahorro_variante),
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
@@ -1193,13 +1340,17 @@ def cliente_dashboard(request):
                         producto_data = {
                             'producto': producto,
                             'precio_base': precio_base_producto,
+                            'precio_base_formateado': formatear_precio(precio_base_producto),
                             'precio_final': round(precio_final_producto, 2),
+                            'precio_final_formateado': formatear_precio(precio_final_producto),
                             'tiene_descuento': tiene_oferta_producto,
                             'descuento_porcentaje': descuento_porcentaje_producto,
                             'ahorro': round(ahorro_producto, 2),
+                            'ahorro_formateado': formatear_precio(ahorro_producto),
                             'tiene_variantes': tiene_variantes,
                             'variantes': variantes_list,
-                            'stock': producto.stock_prod or 0,
+                            'stock': stock_mostrar,
+                            'es_stock_limitado': es_stock_limitado,
                             'tiene_oferta_activa': tiene_oferta_producto,
                         }
                         
@@ -1211,7 +1362,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # PRODUCTOS BARATOS (MANTENER IGUAL)
+        # PRODUCTOS BARATOS - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         productos_baratos_data = []
         try:
@@ -1235,16 +1386,26 @@ def cliente_dashboard(request):
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    
+                    # Verificar stock considerando oferta
                     if info_oferta_producto:
+                        tiene_stock_oferta = verificar_stock_oferta(info_oferta_producto, producto.stock_prod or 0)
+                        if not tiene_stock_oferta:
+                            continue
+                            
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
                         ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
                         precio_final_producto = precio_base_producto - ahorro_producto
                         tiene_oferta_producto = True
+                        stock_mostrar = info_oferta_producto.get('stock_oferta') if info_oferta_producto.get('activa_por_stock') == 1 else producto.stock_prod
+                        es_stock_limitado = info_oferta_producto.get('activa_por_stock') == 1
                     else:
                         descuento_porcentaje_producto = 0
                         ahorro_producto = 0
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
+                        stock_mostrar = producto.stock_prod or 0
+                        es_stock_limitado = False
                     
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
@@ -1272,30 +1433,44 @@ def cliente_dashboard(request):
                                     variante.id_variante
                                 )
                                 
+                                # Verificar stock de variante considerando oferta
                                 if info_oferta_variante:
+                                    tiene_stock_variante_oferta = verificar_stock_oferta(info_oferta_variante, stock_variante)
+                                    if not tiene_stock_variante_oferta:
+                                        continue
+                                    
                                     descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                     ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                     precio_final_variante = precio_base_variante - ahorro_variante
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
+                                    stock_variante_mostrar = info_oferta_variante.get('stock_oferta') if info_oferta_variante.get('activa_por_stock') == 1 else stock_variante
+                                    es_stock_variante_limitado = info_oferta_variante.get('activa_por_stock') == 1
                                 else:
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
                                     tiene_descuento_variante = False
                                     tiene_oferta_activa_variante = False
+                                    stock_variante_mostrar = stock_variante
+                                    es_stock_variante_limitado = False
                                 
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
                                     'precio_adicional': precio_adicional,
-                                    'stock_variante': stock_variante,
+                                    'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                    'stock_variante': stock_variante_mostrar,
+                                    'es_stock_limitado': es_stock_variante_limitado,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
                                     'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_base_calculado_formateado': formatear_precio(precio_base_variante),
                                     'precio_final_calculado': round(precio_final_variante, 2),
+                                    'precio_final_calculado_formateado': formatear_precio(precio_final_variante),
                                     'ahorro_calculado': round(ahorro_variante, 2),
+                                    'ahorro_calculado_formateado': formatear_precio(ahorro_variante),
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
@@ -1311,13 +1486,17 @@ def cliente_dashboard(request):
                         producto_data = {
                             'producto': producto,
                             'precio_base': precio_base_producto,
+                            'precio_base_formateado': formatear_precio(precio_base_producto),
                             'precio_final': round(precio_final_producto, 2),
+                            'precio_final_formateado': formatear_precio(precio_final_producto),
                             'tiene_descuento': tiene_oferta_producto,
                             'descuento_porcentaje': descuento_porcentaje_producto,
                             'ahorro': round(ahorro_producto, 2),
+                            'ahorro_formateado': formatear_precio(ahorro_producto),
                             'tiene_variantes': tiene_variantes,
                             'variantes': variantes_list,
-                            'stock': producto.stock_prod or 0,
+                            'stock': stock_mostrar,
+                            'es_stock_limitado': es_stock_limitado,
                             'tiene_oferta_activa': tiene_oferta_producto,
                         }
                         
@@ -1330,7 +1509,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # PRODUCTOS DESTACADOS (MANTENER IGUAL)
+        # PRODUCTOS DESTACADOS - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         productos_destacados_data = []
         try:
@@ -1359,16 +1538,26 @@ def cliente_dashboard(request):
                     precio_base_producto = float(producto.precio_prod) if producto.precio_prod else 0
                     
                     info_oferta_producto = obtener_info_oferta_corregida(producto.pkid_prod)
+                    
+                    # Verificar stock considerando oferta
                     if info_oferta_producto:
+                        tiene_stock_oferta = verificar_stock_oferta(info_oferta_producto, producto.stock_prod or 0)
+                        if not tiene_stock_oferta:
+                            continue
+                            
                         descuento_porcentaje_producto = info_oferta_producto['porcentaje_descuento']
                         ahorro_producto = precio_base_producto * (descuento_porcentaje_producto / 100)
                         precio_final_producto = precio_base_producto - ahorro_producto
                         tiene_oferta_producto = True
+                        stock_mostrar = info_oferta_producto.get('stock_oferta') if info_oferta_producto.get('activa_por_stock') == 1 else producto.stock_prod
+                        es_stock_limitado = info_oferta_producto.get('activa_por_stock') == 1
                     else:
                         descuento_porcentaje_producto = 0
                         ahorro_producto = 0
                         precio_final_producto = precio_base_producto
                         tiene_oferta_producto = False
+                        stock_mostrar = producto.stock_prod or 0
+                        es_stock_limitado = False
                     
                     variantes_list = []
                     tiene_variantes = VariantesProducto.objects.filter(
@@ -1396,30 +1585,44 @@ def cliente_dashboard(request):
                                     variante.id_variante
                                 )
                                 
+                                # Verificar stock de variante considerando oferta
                                 if info_oferta_variante:
+                                    tiene_stock_variante_oferta = verificar_stock_oferta(info_oferta_variante, stock_variante)
+                                    if not tiene_stock_variante_oferta:
+                                        continue
+                                    
                                     descuento_porcentaje_variante = info_oferta_variante['porcentaje_descuento']
                                     ahorro_variante = precio_base_variante * (descuento_porcentaje_variante / 100)
                                     precio_final_variante = precio_base_variante - ahorro_variante
                                     tiene_descuento_variante = True
                                     tiene_oferta_activa_variante = True
+                                    stock_variante_mostrar = info_oferta_variante.get('stock_oferta') if info_oferta_variante.get('activa_por_stock') == 1 else stock_variante
+                                    es_stock_variante_limitado = info_oferta_variante.get('activa_por_stock') == 1
                                 else:
                                     descuento_porcentaje_variante = 0
                                     ahorro_variante = 0
                                     precio_final_variante = precio_base_variante
                                     tiene_descuento_variante = False
                                     tiene_oferta_activa_variante = False
+                                    stock_variante_mostrar = stock_variante
+                                    es_stock_variante_limitado = False
                                 
                                 variante_data = {
                                     'id_variante': variante.id_variante,
                                     'nombre_variante': variante.nombre_variante,
                                     'precio_adicional': precio_adicional,
-                                    'stock_variante': stock_variante,
+                                    'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                    'stock_variante': stock_variante_mostrar,
+                                    'es_stock_limitado': es_stock_variante_limitado,
                                     'imagen_variante': variante.imagen_variante,
                                     'estado_variante': variante.estado_variante,
                                     'sku_variante': variante.sku_variante,
                                     'precio_base_calculado': round(precio_base_variante, 2),
+                                    'precio_base_calculado_formateado': formatear_precio(precio_base_variante),
                                     'precio_final_calculado': round(precio_final_variante, 2),
+                                    'precio_final_calculado_formateado': formatear_precio(precio_final_variante),
                                     'ahorro_calculado': round(ahorro_variante, 2),
+                                    'ahorro_calculado_formateado': formatear_precio(ahorro_variante),
                                     'descuento_porcentaje_calculado': descuento_porcentaje_variante,
                                     'tiene_descuento_calculado': tiene_descuento_variante,
                                     'tiene_oferta_activa': tiene_oferta_activa_variante,
@@ -1435,14 +1638,18 @@ def cliente_dashboard(request):
                         producto_data = {
                             'producto': producto,
                             'precio_base': precio_base_producto,
+                            'precio_base_formateado': formatear_precio(precio_base_producto),
                             'precio_final': round(precio_final_producto, 2),
+                            'precio_final_formateado': formatear_precio(precio_final_producto),
                             'total_vendido': item['total_vendido'],
                             'tiene_descuento': tiene_oferta_producto,
                             'descuento_porcentaje': descuento_porcentaje_producto,
                             'ahorro': round(ahorro_producto, 2),
+                            'ahorro_formateado': formatear_precio(ahorro_producto),
                             'tiene_variantes': tiene_variantes,
                             'variantes': variantes_list,
-                            'stock': producto.stock_prod or 0,
+                            'stock': stock_mostrar,
+                            'es_stock_limitado': es_stock_limitado,
                             'tiene_oferta_activa': tiene_oferta_producto,
                         }
                         
@@ -1456,7 +1663,7 @@ def cliente_dashboard(request):
             pass
 
         # =============================================
-        # PRODUCTOS EN OFERTA (MANTENER IGUAL)
+        # PRODUCTOS EN OFERTA - CORREGIDA CON STOCK DE OFERTA
         # =============================================
         productos_oferta_data = []
         try:
@@ -1468,7 +1675,8 @@ def cliente_dashboard(request):
                         pr.nom_prod, pr.precio_prod, pr.desc_prod, 
                         pr.stock_prod, pr.img_prod, pr.fknegocioasociado_prod,
                         vp.nombre_variante, vp.precio_adicional, vp.stock_variante, 
-                        vp.imagen_variante, vp.id_variante
+                        vp.imagen_variante, vp.id_variante,
+                        p.stock_actual_oferta, p.activa_por_stock
                     FROM promociones p
                     INNER JOIN productos pr ON p.fkproducto_id = pr.pkid_prod
                     LEFT JOIN variantes_producto vp ON p.variante_id = vp.id_variante AND vp.producto_id = pr.pkid_prod
@@ -1478,8 +1686,11 @@ def cliente_dashboard(request):
                     AND p.fecha_fin >= %s
                     AND p.porcentaje_descuento > 0
                     AND (
-                        (p.variante_id IS NULL AND pr.stock_prod > 0) OR 
-                        (p.variante_id IS NOT NULL AND vp.stock_variante > 0)
+                        (p.activa_por_stock = 1 AND p.stock_actual_oferta > 0) OR
+                        (p.activa_por_stock = 0 AND (
+                            (p.variante_id IS NULL AND pr.stock_prod > 0) OR 
+                            (p.variante_id IS NOT NULL AND vp.stock_variante > 0)
+                        ))
                     )
                     ORDER BY p.porcentaje_descuento DESC
                     LIMIT 12
@@ -1492,6 +1703,8 @@ def cliente_dashboard(request):
                         producto_id = row[4]
                         producto = Productos.objects.get(pkid_prod=producto_id)
                         variante_id = row[5]
+                        stock_oferta = row[17]
+                        activa_por_stock = row[18]
                         
                         precio_base = float(row[7]) if row[7] else 0
                         precio_original = precio_base
@@ -1528,11 +1741,21 @@ def cliente_dashboard(request):
                                             else:
                                                 imagen_producto_url = producto.img_prod.url if producto.img_prod else None
                                             
+                                            # Determinar stock para mostrar
+                                            if activa_por_stock == 1:
+                                                stock_mostrar = stock_oferta
+                                                es_stock_limitado = True
+                                            else:
+                                                stock_mostrar = stock_variante
+                                                es_stock_limitado = False
+                                            
                                             variante_info = {
                                                 'id': id_variante,
                                                 'nombre': variante_nombre,
                                                 'precio_adicional': precio_adicional,
-                                                'stock': stock_variante,
+                                                'precio_adicional_formateado': formatear_precio(precio_adicional),
+                                                'stock': stock_mostrar,
+                                                'es_stock_limitado': es_stock_limitado,
                                                 'imagen': imagen_variante
                                             }
                                         except Exception:
@@ -1543,6 +1766,14 @@ def cliente_dashboard(request):
                                             descuento_monto = precio_base * (descuento_porcentaje / 100)
                                             precio_final = precio_base - descuento_monto
                                             imagen_producto_url = producto.img_prod.url if producto.img_prod else None
+                                            
+                                            # Determinar stock para mostrar
+                                            if activa_por_stock == 1:
+                                                stock_mostrar = stock_oferta
+                                                es_stock_limitado = True
+                                            else:
+                                                stock_mostrar = producto.stock_prod or 0
+                                                es_stock_limitado = False
                                         else:
                                             continue
                             except (ValueError, TypeError):
@@ -1555,16 +1786,22 @@ def cliente_dashboard(request):
                             producto_data = {
                                 'producto': producto,
                                 'precio_base': precio_base,
+                                'precio_base_formateado': formatear_precio(precio_base),
                                 'precio_final': round(precio_final, 2),
+                                'precio_final_formateado': formatear_precio(precio_final),
                                 'precio_original': precio_original,
+                                'precio_original_formateado': formatear_precio(precio_original),
                                 'tiene_descuento': True,
                                 'descuento_porcentaje': descuento_porcentaje,
                                 'descuento_monto': round(descuento_monto, 2),
+                                'descuento_monto_formateado': formatear_precio(descuento_monto),
                                 'ahorro': round(descuento_monto, 2),
+                                'ahorro_formateado': formatear_precio(descuento_monto),
                                 'tiene_variantes': variante_info is not None,
                                 'variantes': [],
                                 'variante': variante_info,
-                                'stock': row[9] or 0,
+                                'stock': stock_mostrar,
+                                'es_stock_limitado': es_stock_limitado,
                                 'tiene_oferta_activa': True,
                                 'imagen_producto': imagen_producto_url,
                                 'pkid_promo': row[0],
@@ -1772,8 +2009,7 @@ def cliente_dashboard(request):
             'hay_productos_fecha_especial': False,
             'hay_electrodomesticos': False,
             'hay_tecnologia': False,
-        })
-        
+        })     
 @login_required(login_url='/auth/login/')
 def detalle_negocio_logeado(request, id):
     try:

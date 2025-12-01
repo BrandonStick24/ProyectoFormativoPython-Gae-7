@@ -1769,7 +1769,8 @@ const VECY_URLS = {
     VER_FAVORITOS: "{% url 'ver_favoritos' %}",
     VERIFICAR_FAVORITO: "{% url 'verificar_favorito' %}",
     CONTAR_FAVORITOS: "{% url 'contar_favoritos' %}",
-    FAVORITOS_DATA: "{% url 'favoritos_data' %}"
+    FAVORITOS_DATA: "{% url 'favoritos_data' %}",
+    GET_HEADER_COUNTS: "{% url 'get_header_counts' %}" // NUEVO ENDPOINT PARA ACTUALIZACIÓN INMEDIATA
 };
 
 console.log("🔗 URLs Django configuradas:", VECY_URLS);
@@ -1794,10 +1795,121 @@ class VecyCarritoSystem {
     init() {
         console.log("🚀 Iniciando VecyCarritoSystem...");
         this.initializeVariantsSystem();
-        this.updateCartCountFromServer();
-        this.updateFavoritosCountFromServer();
+        this.updateAllCountsFromServer(); // ACTUALIZAR TODOS LOS CONTADORES AL INICIAR
         this.setupOffcanvasListeners();
+        this.setupPeriodicUpdates(); // ACTUALIZACIÓN PERIÓDICA AUTOMÁTICA
         console.log("✅ Sistema de carrito inicializado");
+    }
+
+    // ==================== ACTUALIZACIÓN INMEDIATA DE CONTADORES ====================
+    
+    async updateAllCountsFromServer() {
+        try {
+            const response = await fetch(this.URLS.GET_HEADER_COUNTS, {
+                method: 'GET',
+                headers: { 
+                    'X-CSRFToken': this.getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                    this.updateHeaderCounts(data);
+                }
+            }
+        } catch (error) {
+            console.error('Error actualizando contadores:', error);
+        }
+    }
+
+    updateHeaderCounts(data) {
+        // Actualizar contador del carrito
+        const carritoCountElements = document.querySelectorAll('#carrito-count, .carrito-count');
+        carritoCountElements.forEach(element => {
+            element.textContent = data.carrito_count;
+            if (data.carrito_count > 0) {
+                element.style.display = 'inline';
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            } else {
+                element.style.display = 'none';
+            }
+        });
+
+        // Actualizar contador de favoritos
+        const favoritosCountElements = document.querySelectorAll('#favoritos-count, .favoritos-count');
+        favoritosCountElements.forEach(element => {
+            element.textContent = data.favoritos_count;
+            if (data.favoritos_count > 0) {
+                element.style.display = 'inline';
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            } else {
+                element.style.display = 'none';
+            }
+        });
+
+        // Actualizar contador de notificaciones
+        const notificacionesCountElements = document.querySelectorAll('#notificaciones-count, .notificaciones-count');
+        notificacionesCountElements.forEach(element => {
+            element.textContent = data.notificaciones_count;
+            if (data.notificaciones_count > 0) {
+                element.style.display = 'inline';
+            } else {
+                element.style.display = 'none';
+            }
+        });
+
+        // Actualizar badges flotantes
+        this.updateFloatingBadges(data);
+    }
+
+    updateFloatingBadges(data) {
+        // Badge del carrito flotante
+        const cartBadge = document.querySelector('.vecy-fab-main .vecy-fab-badge');
+        if (cartBadge) {
+            cartBadge.textContent = data.carrito_count;
+            if (data.carrito_count > 0) {
+                cartBadge.style.display = 'flex';
+                cartBadge.classList.add('pulse-animation');
+                setTimeout(() => cartBadge.classList.remove('pulse-animation'), 600);
+            } else {
+                cartBadge.style.display = 'none';
+            }
+        }
+
+        // Badge de favoritos flotante
+        const favBadge = document.querySelector('.vecy-fab-favoritos .vecy-fab-badge');
+        if (favBadge) {
+            favBadge.textContent = data.favoritos_count;
+            if (data.favoritos_count > 0) {
+                favBadge.style.display = 'flex';
+                favBadge.classList.add('pulse-animation');
+                setTimeout(() => favBadge.classList.remove('pulse-animation'), 600);
+            } else {
+                favBadge.style.display = 'none';
+            }
+        }
+
+        // Badge de pedidos flotante
+        const pedidosBadge = document.querySelector('.vecy-fab-pedidos .vecy-fab-badge');
+        if (pedidosBadge) {
+            pedidosBadge.textContent = data.pedidos_pendientes_count || 0;
+            if ((data.pedidos_pendientes_count || 0) > 0) {
+                pedidosBadge.style.display = 'flex';
+            } else {
+                pedidosBadge.style.display = 'none';
+            }
+        }
+    }
+
+    setupPeriodicUpdates() {
+        // Actualizar contadores cada 30 segundos
+        setInterval(() => {
+            this.updateAllCountsFromServer();
+        }, 30000);
     }
 
     // ==================== MANEJO DE OFFCANVAS ====================
@@ -2063,14 +2175,14 @@ class VecyCarritoSystem {
         });
     }
 
-    // ==================== AGREGAR AL CARRITO ====================
+    // ==================== AGREGAR AL CARRITO CON ACTUALIZACIÓN INMEDIATA ====================
     async addToCartWithVariant(productId) {
         console.log(`🛒 Agregando producto ${productId} al carrito con variante...`);
         
         const selectedVariantId = this.selectedVariants[productId];
         if (!selectedVariantId) {
             this.showNotification('Por favor selecciona una variante', 'error');
-            return;
+            return false;
         }
 
         const variants = this.productVariantsData[productId];
@@ -2078,15 +2190,15 @@ class VecyCarritoSystem {
         
         if (!selectedVariant) {
             this.showNotification('Variante no encontrada', 'error');
-            return;
+            return false;
         }
 
         if (selectedVariant.stock === 0) {
             this.showNotification('Esta variante no tiene stock disponible', 'error');
-            return;
+            return false;
         }
 
-        await this.addToCart(productId, selectedVariantId);
+        return await this.addToCart(productId, selectedVariantId);
     }
 
     async addToCart(productId, varianteId = null) {
@@ -2105,25 +2217,33 @@ class VecyCarritoSystem {
                     cantidad: 1
                 })
             });
+            
             const data = await response.json();
             
             if (data.success) {
                 this.showNotification('Producto agregado al carrito', 'success');
-                this.updateCartCount(data.carrito_count);
-                // ACTUALIZACIÓN INMEDIATA - Cargar carrito si está abierto
+                
+                // ACTUALIZACIÓN INMEDIATA - Actualizar todos los contadores
+                await this.updateAllCountsFromServer();
+                
+                // Recargar contenido del carrito si está abierto
                 if (this.currentOpenOffcanvas === 'vecyCartOffcanvas') {
-                    this.loadCartContent();
+                    await this.loadCartContent();
                 }
+                
+                return true;
             } else {
                 this.showNotification(data.message, 'error');
+                return false;
             }
         } catch (error) {
             console.error('Error agregando al carrito:', error);
             this.showNotification('Error al agregar producto al carrito', 'error');
+            return false;
         }
     }
 
-    // ==================== CARRITO ====================
+    // ==================== CARRITO CON ACTUALIZACIÓN INMEDIATA ====================
     toggleCart() {
         console.log("🛒 Abriendo carrito...");
         const cartOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyCartOffcanvas'));
@@ -2287,11 +2407,13 @@ class VecyCarritoSystem {
                     cambio: change
                 })
             });
+            
             const data = await response.json();
             
             if (data.success) {
-                this.loadCartContent();
-                this.updateCartCount(data.carrito_count);
+                // ACTUALIZACIÓN INMEDIATA
+                await this.updateAllCountsFromServer();
+                await this.loadCartContent();
                 this.showNotification('Cantidad actualizada', 'success');
             } else {
                 this.showNotification(data.message, 'error');
@@ -2316,11 +2438,13 @@ class VecyCarritoSystem {
                     item_id: itemId
                 })
             });
+            
             const data = await response.json();
             
             if (data.success) {
-                this.loadCartContent();
-                this.updateCartCount(data.carrito_count);
+                // ACTUALIZACIÓN INMEDIATA
+                await this.updateAllCountsFromServer();
+                await this.loadCartContent();
                 this.showNotification('Producto eliminado del carrito', 'success');
             } else {
                 this.showNotification(data.message, 'error');
@@ -2331,7 +2455,7 @@ class VecyCarritoSystem {
         }
     }
 
-    // ==================== SISTEMA DE FAVORITOS CORREGIDO ====================
+    // ==================== SISTEMA DE FAVORITOS CON ACTUALIZACIÓN INMEDIATA ====================
     async toggleFavorites() {
         console.log("❤️ Abriendo favoritos...");
         const favoritosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyFavoritosOffcanvas'));
@@ -2443,100 +2567,100 @@ class VecyCarritoSystem {
     }
 
     renderFavoritos(favoritos) {
-    const favoritosContent = document.getElementById('favoritosContent');
-    
-    let html = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h6 class="mb-0">Tus Productos Favoritos</h6>
-            <span class="badge bg-danger">${favoritos.length} productos</span>
-        </div>
-    `;
-
-    favoritos.forEach(favorito => {
-        const precioFinal = typeof favorito.precio_final === 'number' ? 
-            favorito.precio_final : parseFloat(favorito.precio_final || 0);
-        const precioBase = typeof favorito.precio_base === 'number' ? 
-            favorito.precio_base : parseFloat(favorito.precio_base || 0);
-        const precioOriginal = typeof favorito.precio_original === 'number' ? 
-            favorito.precio_original : parseFloat(favorito.precio_original || 0);
+        const favoritosContent = document.getElementById('favoritosContent');
         
-        const tieneOferta = favorito.tiene_descuento && favorito.tiene_oferta_activa;
-        const ahorro = favorito.ahorro || 0;
-        const descuentoPorcentaje = favorito.descuento_porcentaje || 0;
-        const tieneVariantes = favorito.tiene_variantes || favorito.es_variante;
-        
-        // Badge de oferta
-        const badgeOferta = tieneOferta ? 
-            `<span class="favorito-oferta">-${descuentoPorcentaje}% OFF</span>` : '';
-        
-        // Badge de variante
-        const badgeVariante = tieneVariantes ? 
-            `<span class="variant-badge ms-2"><i class="fas fa-list-alt me-1"></i>Variantes</span>` : '';
-        
-        // Información de ahorro
-        const infoAhorro = tieneOferta && ahorro > 0 ? 
-            `<div class="favorito-ahorro">
-                <i class="fas fa-piggy-bank me-1"></i>Ahorras $${ahorro.toFixed(0)}
-            </div>` : '';
-        
-        // Información de variantes
-        const infoVariantes = tieneVariantes && favorito.variantes && favorito.variantes.length > 0 ? 
-            `<div class="favorito-variantes mt-2">
-                <small class="text-muted">Variantes disponibles:</small>
-                <div class="variantes-list mt-1">
-                    ${favorito.variantes.map(variante => `
-                        <span class="variante-item ${variante.tiene_descuento ? 'variante-seleccionada' : ''}">
-                            ${variante.nombre_variante} - $${variante.precio_final?.toFixed(0) || variante.precio_base?.toFixed(0)}
-                            ${variante.tiene_descuento ? ' 🔥' : ''}
-                        </span>
-                    `).join('')}
-                </div>
-            </div>` : '';
-
-        html += `
-        <div class="favorito-card" data-producto-id="${favorito.producto_id}">
-            <div class="favorito-header">
-                <div class="favorito-info">
-                    <div class="favorito-nombre">
-                        ${favorito.nombre || 'Producto'}
-                        ${badgeOferta}
-                        ${badgeVariante}
-                    </div>
-                    <div class="favorito-tienda">
-                        <i class="fas fa-store"></i> ${favorito.negocio || 'Tienda Vecy'}
-                    </div>
-                    
-                    <div class="favorito-precio-container">
-                        ${tieneOferta ? `
-                            <span class="favorito-precio-original">$${precioOriginal.toFixed(0)}</span>
-                        ` : ''}
-                        <span class="favorito-precio">$${precioFinal.toFixed(0)}</span>
-                    </div>
-                    
-                    ${infoAhorro}
-                </div>
-                <img src="${favorito.imagen || 'https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'}" 
-                     alt="${favorito.nombre || 'Producto'}" 
-                     class="variant-image-in-cart"
-                     onerror="this.src='https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'">
+        let html = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Tus Productos Favoritos</h6>
+                <span class="badge bg-danger">${favoritos.length} productos</span>
             </div>
-            
-            ${infoVariantes}
-                
-            <div class="favorito-acciones">
-                <button class="btn-agregar-favorito" onclick="vecyCarritoSystem.agregarAlCarritoDesdeFavorito(${favorito.producto_id})">
-                    <i class="fas fa-cart-plus me-1"></i> Agregar al Carrito
-                </button>
-                <button class="btn-eliminar-favorito" onclick="vecyCarritoSystem.eliminarFavorito(${favorito.producto_id})">
-                    <i class="fas fa-trash me-1"></i> Eliminar
-                </button>
-            </div>
-        </div>
         `;
-    });
 
-    favoritosContent.innerHTML = html;
-}
+        favoritos.forEach(favorito => {
+            const precioFinal = typeof favorito.precio_final === 'number' ? 
+                favorito.precio_final : parseFloat(favorito.precio_final || 0);
+            const precioBase = typeof favorito.precio_base === 'number' ? 
+                favorito.precio_base : parseFloat(favorito.precio_base || 0);
+            const precioOriginal = typeof favorito.precio_original === 'number' ? 
+                favorito.precio_original : parseFloat(favorito.precio_original || 0);
+            
+            const tieneOferta = favorito.tiene_descuento && favorito.tiene_oferta_activa;
+            const ahorro = favorito.ahorro || 0;
+            const descuentoPorcentaje = favorito.descuento_porcentaje || 0;
+            const tieneVariantes = favorito.tiene_variantes || favorito.es_variante;
+            
+            // Badge de oferta
+            const badgeOferta = tieneOferta ? 
+                `<span class="favorito-oferta">-${descuentoPorcentaje}% OFF</span>` : '';
+            
+            // Badge de variante
+            const badgeVariante = tieneVariantes ? 
+                `<span class="variant-badge ms-2"><i class="fas fa-list-alt me-1"></i>Variantes</span>` : '';
+            
+            // Información de ahorro
+            const infoAhorro = tieneOferta && ahorro > 0 ? 
+                `<div class="favorito-ahorro">
+                    <i class="fas fa-piggy-bank me-1"></i>Ahorras $${ahorro.toFixed(0)}
+                </div>` : '';
+            
+            // Información de variantes
+            const infoVariantes = tieneVariantes && favorito.variantes && favorito.variantes.length > 0 ? 
+                `<div class="favorito-variantes mt-2">
+                    <small class="text-muted">Variantes disponibles:</small>
+                    <div class="variantes-list mt-1">
+                        ${favorito.variantes.map(variante => `
+                            <span class="variante-item ${variante.tiene_descuento ? 'variante-seleccionada' : ''}">
+                                ${variante.nombre_variante} - $${variante.precio_final?.toFixed(0) || variante.precio_base?.toFixed(0)}
+                                ${variante.tiene_descuento ? ' 🔥' : ''}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>` : '';
+
+            html += `
+            <div class="favorito-card" data-producto-id="${favorito.producto_id}">
+                <div class="favorito-header">
+                    <div class="favorito-info">
+                        <div class="favorito-nombre">
+                            ${favorito.nombre || 'Producto'}
+                            ${badgeOferta}
+                            ${badgeVariante}
+                        </div>
+                        <div class="favorito-tienda">
+                            <i class="fas fa-store"></i> ${favorito.negocio || 'Tienda Vecy'}
+                        </div>
+                        
+                        <div class="favorito-precio-container">
+                            ${tieneOferta ? `
+                                <span class="favorito-precio-original">$${precioOriginal.toFixed(0)}</span>
+                            ` : ''}
+                            <span class="favorito-precio">$${precioFinal.toFixed(0)}</span>
+                        </div>
+                        
+                        ${infoAhorro}
+                    </div>
+                    <img src="${favorito.imagen || 'https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'}" 
+                         alt="${favorito.nombre || 'Producto'}" 
+                         class="variant-image-in-cart"
+                         onerror="this.src='https://via.placeholder.com/60x60/f1f5f9/64748b?text=VECY'">
+                </div>
+                
+                ${infoVariantes}
+                    
+                <div class="favorito-acciones">
+                    <button class="btn-agregar-favorito" onclick="vecyCarritoSystem.agregarAlCarritoDesdeFavorito(${favorito.producto_id})">
+                        <i class="fas fa-cart-plus me-1"></i> Agregar al Carrito
+                    </button>
+                    <button class="btn-eliminar-favorito" onclick="vecyCarritoSystem.eliminarFavorito(${favorito.producto_id})">
+                        <i class="fas fa-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+            `;
+        });
+
+        favoritosContent.innerHTML = html;
+    }
 
     showFavoritosEmptyState(mensaje = 'Aún no tienes productos favoritos') {
         const favoritosContent = document.getElementById('favoritosContent');
@@ -2576,22 +2700,30 @@ class VecyCarritoSystem {
                     producto_id: productoId
                 })
             });
+            
             const data = await response.json();
             
             if (data.success) {
                 this.showNotification('Producto agregado a favoritos', 'success');
-                this.updateFavoritosCount(data.favoritos_count);
+                
+                // ACTUALIZACIÓN INMEDIATA
+                await this.updateAllCountsFromServer();
                 this.actualizarEstadoBotonFavorito(productoId, true);
-                // ACTUALIZACIÓN INMEDIATA - Recargar favoritos si está abierto
+                
+                // Recargar favoritos si está abierto
                 if (this.currentOpenOffcanvas === 'vecyFavoritosOffcanvas') {
-                    this.loadFavoritosContent();
+                    await this.loadFavoritosContent();
                 }
+                
+                return true;
             } else {
                 this.showNotification(data.message, 'error');
+                return false;
             }
         } catch (error) {
             console.error('Error agregando a favoritos:', error);
             this.showNotification('Error al agregar a favoritos', 'error');
+            return false;
         }
     }
 
@@ -2609,23 +2741,30 @@ class VecyCarritoSystem {
                     producto_id: productoId
                 })
             });
+            
             const data = await response.json();
             
             if (data.success) {
                 this.showNotification('Producto eliminado de favoritos', 'success');
-                this.updateFavoritosCount(data.favoritos_count);
+                
+                // ACTUALIZACIÓN INMEDIATA
+                await this.updateAllCountsFromServer();
                 this.actualizarEstadoBotonFavorito(productoId, false);
                 
-                // ACTUALIZACIÓN INMEDIATA - Recargar contenido de favoritos si está abierto
+                // Recargar favoritos si está abierto
                 if (this.currentOpenOffcanvas === 'vecyFavoritosOffcanvas') {
-                    this.loadFavoritosContent();
+                    await this.loadFavoritosContent();
                 }
+                
+                return true;
             } else {
                 this.showNotification(data.message, 'error');
+                return false;
             }
         } catch (error) {
             console.error('Error eliminando de favoritos:', error);
             this.showNotification('Error al eliminar de favoritos', 'error');
+            return false;
         }
     }
 
@@ -2660,48 +2799,6 @@ class VecyCarritoSystem {
             }
         } catch (error) {
             console.error('Error verificando favorito:', error);
-        }
-    }
-
-    async updateFavoritosCountFromServer() {
-        try {
-            const response = await fetch(this.URLS.CONTAR_FAVORITOS, {
-                method: 'GET',
-                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.updateFavoritosCount(data.favoritos_count);
-            }
-        } catch (error) {
-            console.error('Error obteniendo count de favoritos:', error);
-        }
-    }
-
-    updateFavoritosCount(count) {
-        const favoritosBadges = document.querySelectorAll('.vecy-fab-badge');
-        favoritosBadges.forEach(badge => {
-            const fabItem = badge.closest('.vecy-fab-favoritos');
-            if (fabItem) {
-                badge.textContent = count;
-                if (count > 0) {
-                    badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        });
-
-        // Actualizar también el badge del offcanvas
-        const offcanvasBadge = document.querySelector('#vecyFavoritosOffcanvasLabel .badge');
-        if (offcanvasBadge) {
-            offcanvasBadge.textContent = count;
-            if (count === 0) {
-                offcanvasBadge.style.display = 'none';
-            } else {
-                offcanvasBadge.style.display = 'inline';
-            }
         }
     }
 
@@ -3235,8 +3332,8 @@ class VecyCarritoSystem {
         const cartOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('vecyCartOffcanvas'));
         if (cartOffcanvas) cartOffcanvas.hide();
 
-        // Resetear carrito
-        this.updateCartCount(0);
+        // Resetear carrito - ACTUALIZACIÓN INMEDIATA
+        this.updateAllCountsFromServer();
         
         // Redirigir o mostrar mensaje de éxito
         setTimeout(() => {
@@ -3281,43 +3378,6 @@ class VecyCarritoSystem {
             });
         } else {
             console.log(`[${type.toUpperCase()}] ${message}`);
-        }
-    }
-
-    async updateCartCountFromServer() {
-        try {
-            const response = await fetch(this.URLS.CARRITO_DATA, {
-                method: 'GET',
-                headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
-            });
-            const data = await response.json();
-            
-            if (data.success) {
-                this.updateCartCount(data.carrito_count);
-            }
-        } catch (error) {
-            console.error('Error obteniendo count del carrito:', error);
-        }
-    }
-
-    updateCartCount(count) {
-        const cartBadges = document.querySelectorAll('.vecy-fab-badge');
-        cartBadges.forEach(badge => {
-            const fabMain = badge.closest('.vecy-fab-main');
-            if (fabMain) {
-                badge.textContent = count;
-                if (count > 0) {
-                    badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
-                }
-            }
-        });
-
-        // Actualizar también el badge del offcanvas
-        const offcanvasBadge = document.getElementById('cartOffcanvasCount');
-        if (offcanvasBadge) {
-            offcanvasBadge.textContent = count;
         }
     }
 
@@ -3371,14 +3431,16 @@ document.addEventListener('DOMContentLoaded', function() {
 // Funciones globales para compatibilidad con código existente
 function addToCart(productId, varianteId = null) {
     if (window.vecyCarritoSystem) {
-        window.vecyCarritoSystem.addToCart(productId, varianteId);
+        return window.vecyCarritoSystem.addToCart(productId, varianteId);
     }
+    return false;
 }
 
 function addToCartWithVariant(productId) {
     if (window.vecyCarritoSystem) {
-        window.vecyCarritoSystem.addToCartWithVariant(productId);
+        return window.vecyCarritoSystem.addToCartWithVariant(productId);
     }
+    return false;
 }
 
 function toggleCart() {
@@ -3401,19 +3463,28 @@ function toggleFavorites() {
 
 function agregarFavorito(productoId) {
     if (window.vecyCarritoSystem) {
-        window.vecyCarritoSystem.agregarFavorito(productoId);
+        return window.vecyCarritoSystem.agregarFavorito(productoId);
     }
+    return false;
 }
 
 function eliminarFavorito(productoId) {
     if (window.vecyCarritoSystem) {
-        window.vecyCarritoSystem.eliminarFavorito(productoId);
+        return window.vecyCarritoSystem.eliminarFavorito(productoId);
     }
+    return false;
 }
 
 function procederPago() {
     if (window.vecyCarritoSystem) {
         window.vecyCarritoSystem.procederPago();
+    }
+}
+
+// Función global para forzar actualización de contadores
+function updateVecyCounters() {
+    if (window.vecyCarritoSystem) {
+        window.vecyCarritoSystem.updateAllCountsFromServer();
     }
 }
 

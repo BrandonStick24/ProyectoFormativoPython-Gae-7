@@ -56,6 +56,7 @@ urlpatterns = [
     path('notificaciones/marcar-leida/', views_cliente.mark_notification_read, name='mark_notification_read'),
     path('notificaciones/marcar-todas-leidas/', views_cliente.mark_all_notifications_read, name='mark_all_notifications_read'),
     path('notificaciones/ver-todas/', views_cliente.ver_notificaciones, name='ver_notificaciones'),
+    path('get-header-counts/', views_cliente.get_header_counts, name='get_header_counts'),
     
     path('chat-asistente/', views_cliente.chat_asistente, name='chat_asistente'),
     path('api/sugerencia/', views_cliente.api_sugerencia, name='api_sugerencia'),
