@@ -1,6 +1,7 @@
 <!-- templates/Vendedor/reporte_stock.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
+{% load tz %}
 
 {% block title %}Reporte de Movimientos de Stock - {{ negocio_activo.nom_neg }}{% endblock %}
 
@@ -42,6 +43,11 @@
     background-color: #f8f9fa;
 }
 
+.movimiento-row.entrega {
+    border-left: 4px solid #17a2b8;
+    background-color: #e7f3ff;
+}
+
 .filtros-container {
     background: #f8f9fa;
     border-radius: 10px;
@@ -63,6 +69,10 @@
 
 .badge-eliminacion {
     background-color: #6c757d;
+}
+
+.badge-entrega {
+    background-color: #17a2b8;
 }
 
 /* ✅ ESTILOS PARA LA TABLA CON SCROLL */
@@ -124,15 +134,90 @@
     white-space: normal;
 }
 
-.table-container table th:nth-child(5), /* Motivo */
-.table-container table td:nth-child(5) {
+.table-container table th:nth-child(4), /* Motivo */
+.table-container table td:nth-child(4) {
     min-width: 250px;
     white-space: normal;
 }
 
-.table-container table th:nth-child(9), /* Pedido ID */
-.table-container table td:nth-child(9) {
-    min-width: 100px;
+/* Estilos para la columna de stock */
+.stock-evolucion {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.stock-anterior {
+    color: #6c757d;
+    text-decoration: line-through;
+}
+
+.stock-flecha {
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.stock-nuevo {
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.stock-positivo {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.stock-negativo {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.stock-neutral {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+/* Mejoras visuales para las fechas */
+.fecha-movimiento {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Destacar movimientos recientes */
+.movimiento-reciente {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Badge para No Aplica */
+.badge-na {
+    background-color: #6c757d;
+    color: white;
+    font-size: 0.75rem;
+}
+
+/* Badge para Producto Principal */
+.badge-principal {
+    background-color: #4f46e5;
+    color: white;
+    font-size: 0.75rem;
+}
+
+/* Estilos para movimientos de entrega */
+.movimiento-entrega {
+    background: linear-gradient(135deg, #e7f3ff 0%, #d1ecf1 100%);
+}
+
+.badge-pedido {
+    background-color: #6f42c1;
+    color: white;
 }
 </style>
 {% endblock %}
@@ -149,7 +234,12 @@
                             <i class="fas fa-chart-line me-2"></i>Reporte de Movimientos de Stock
                         </h2>
                         <p class="mb-0 opacity-75">{{ negocio_activo.nom_neg }}</p>
-                        <small class="opacity-75">Generado el: {% now "d/m/Y H:i" %}</small>
+                        <small class="opacity-75">
+                            Generado el: 
+                            {% now "d/m/Y" %} 
+                            a las 
+                            <span id="hora-colombiana">{% timezone "America/Bogota" %}{% now "H:i" %}{% endtimezone %}</span>
+                        </small>
                     </div>
                     <div class="text-end">
                         <button onclick="window.print()" class="btn btn-light me-2">
@@ -215,15 +305,15 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stats-card border-start border-warning border-4">
+            <div class="card stats-card border-start border-info border-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <h3 class="fw-bold text-warning mb-0">{{ estadisticas.total_ajustes|floatformat:0 }}</h3>
-                            <p class="text-muted mb-0">Total Ajustes</p>
+                            <h3 class="fw-bold text-info mb-0">{{ estadisticas.total_entregas|floatformat:0 }}</h3>
+                            <p class="text-muted mb-0">Entregas Realizadas</p>
                         </div>
                         <div class="align-self-center">
-                            <i class="fas fa-sliders-h fa-2x text-warning"></i>
+                            <i class="fas fa-truck fa-2x text-info"></i>
                         </div>
                     </div>
                 </div>
@@ -254,6 +344,9 @@
                             <option value="entrada" {% if filtros.tipo_movimiento == 'entrada' %}selected{% endif %}>Entradas</option>
                             <option value="salida" {% if filtros.tipo_movimiento == 'salida' %}selected{% endif %}>Salidas</option>
                             <option value="ajuste" {% if filtros.tipo_movimiento == 'ajuste' %}selected{% endif %}>Ajustes</option>
+                            <option value="eliminacion" {% if filtros.tipo_movimiento == 'eliminacion' %}selected{% endif %}>Eliminaciones</option>
+                            <!-- ✅ NUEVA OPCIÓN PARA FILTRAR SOLO ENTREGAS -->
+                            <option value="entrega" {% if filtros.tipo_movimiento == 'entrega' %}selected{% endif %}>Entregas Realizadas</option>
                         </select>
                     </div>
                     <div class="col-md-3 d-flex align-items-end">
@@ -279,7 +372,7 @@
                     </h5>
                     <span class="badge bg-primary">{{ movimientos|length }} registros</span>
                 </div>
-                <div class="card-body p-0"> <!-- ✅ Quitamos el padding para que el scroll ocupe todo el espacio -->
+                <div class="card-body p-0">
                     
                     {% if movimientos %}
                     <!-- ✅ CONTENEDOR CON SCROLL -->
@@ -293,29 +386,51 @@
                                     <th>Tipo</th>
                                     <th>Motivo</th>
                                     <th>Cantidad</th>
-                                    <th>Stock Anterior</th>
-                                    <th>Stock Nuevo</th>
-                                    <th>Pedido ID</th>
+                                    <th>Evolución del Stock</th>
+                                    <th>Pedido</th>
+                                    <th>Estado Pedido</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for movimiento in movimientos %}
-                                <tr class="movimiento-row {{ movimiento.tipo }}">
+                                {# ✅ MOSTRAR TODOS LOS MOVIMIENTOS - LA FILTRACIÓN SE HACE EN LA VISTA #}
+                                <tr class="movimiento-row 
+                                    {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}entrega{% else %}{{ movimiento.tipo }}{% endif %} 
+                                    {% if movimiento.es_reciente %}movimiento-reciente{% endif %}">
+                                    
                                     <td>
-                                        <small class="text-muted">{{ movimiento.fecha }}</small>
+                                        <small class="text-muted fecha-movimiento">
+                                            {% timezone "America/Bogota" %}
+                                                {{ movimiento.fecha|date:"d/m/Y H:i" }}
+                                            {% endtimezone %}
+                                        </small>
                                     </td>
                                     <td>
                                         <strong>{{ movimiento.producto }}</strong>
+                                        {% if movimiento.producto == 'PRODUCTO ELIMINADO' %}
+                                        <span class="badge bg-danger ms-1">ELIMINADO</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         {% if movimiento.es_variante %}
                                         <span class="badge bg-info">{{ movimiento.variante }}</span>
                                         {% else %}
-                                        <span class="text-muted">Producto principal</span>
+                                        <span class="badge badge-principal">Principal</span>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if movimiento.tipo == 'entrada' %}
+                                        {# ✅ MOSTRAR "Entrega" SOLO PARA VENTAS DE PEDIDOS ENTREGADOS #}
+                                        {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
+                                            {% if movimiento.estado_pedido == 'entregado' %}
+                                                <span class="badge badge-entrega">
+                                                    <i class="fas fa-truck me-1"></i>Entrega
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-pedido">
+                                                    <i class="fas fa-clock me-1"></i>Pedido
+                                                </span>
+                                            {% endif %}
+                                        {% elif movimiento.tipo == 'entrada' %}
                                             <span class="badge badge-entrada">
                                                 <i class="fas fa-arrow-down me-1"></i>Entrada
                                             </span>
@@ -334,26 +449,80 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <small>{{ movimiento.motivo }}</small>
+                                        <small>
+                                            {# ✅ CAMBIAR EL TEXTO SEGÚN EL ESTADO DEL PEDIDO #}
+                                            {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
+                                                {% if movimiento.estado_pedido == 'entregado' %}
+                                                    🎉 <strong>PEDIDO ENTREGADO</strong>
+                                                {% else %}
+                                                    📦 <strong>PEDIDO EN PROCESO</strong>
+                                                    <br><small class="text-muted">Estado: {{ movimiento.estado_pedido }}</small>
+                                                {% endif %}
+                                                {% if movimiento.variante and movimiento.variante != 'Producto principal' %}
+                                                <br><small class="text-muted">Variante: {{ movimiento.variante }}</small>
+                                                {% endif %}
+                                            {% elif 'compra_proveedor' in movimiento.motivo %}
+                                                📦 Compra a Proveedor
+                                            {% elif 'importacion_excel' in movimiento.motivo %}
+                                                📊 Importación Excel
+                                            {% elif 'creacion_producto' in movimiento.motivo %}
+                                                🆕 Creación Producto
+                                            {% elif 'creacion_variante' in movimiento.motivo %}
+                                                🆕 Creación Variante
+                                            {% elif 'ajuste manual' in movimiento.motivo or 'ajuste_stock' in movimiento.motivo or 'ajuste_rapido' in movimiento.motivo %}
+                                                ⚙️ Ajuste Manual
+                                            {% elif 'devolucion_cliente' in movimiento.motivo %}
+                                                🔄 Devolución
+                                            {% elif 'eliminacion_producto' in movimiento.motivo %}
+                                                🗑️ Eliminación Producto
+                                            {% elif 'eliminacion_variante' in movimiento.motivo %}
+                                                🗑️ Eliminación Variante
+                                            {% elif 'correccion_manual' in movimiento.motivo %}
+                                                🔧 Corrección Manual
+                                            {% elif 'envio_pedido' in movimiento.motivo %}
+                                                🚚 Envío de Pedido
+                                            {% else %}
+                                                {{ movimiento.motivo }}
+                                            {% endif %}
+                                        </small>
                                     </td>
                                     <td>
-                                        <span class="fw-bold {% if movimiento.tipo == 'entrada' %}text-success{% elif movimiento.tipo == 'salida' %}text-danger{% else %}text-warning{% endif %}">
-                                            {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' %}-{% endif %}{{ movimiento.cantidad }}
+                                        <span class="fw-bold 
+                                        {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
+                                            {% if movimiento.estado_pedido == 'entregado' %}text-info{% else %}text-warning{% endif %}
+                                        {% elif movimiento.tipo == 'entrada' %}text-success
+                                        {% elif movimiento.tipo == 'salida' or movimiento.tipo == 'eliminacion' %}text-danger
+                                        {% else %}text-warning{% endif %}">
+                                            {% if movimiento.tipo == 'entrada' %}+{% elif movimiento.tipo == 'salida' or movimiento.tipo == 'eliminacion' or movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}-{% endif %}{{ movimiento.cantidad }}
                                         </span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary">{{ movimiento.stock_anterior }}</span>
+                                        <div class="stock-evolucion">
+                                            <span class="stock-anterior">{{ movimiento.stock_anterior }}</span>
+                                            <span class="stock-flecha">→</span>
+                                            <span class="stock-nuevo {% if movimiento.stock_nuevo > movimiento.stock_anterior %}stock-positivo{% elif movimiento.stock_nuevo < movimiento.stock_anterior %}stock-negativo{% else %}stock-neutral{% endif %}">
+                                                {{ movimiento.stock_nuevo }}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td>
-                                        <span class="badge {% if movimiento.stock_nuevo <= 0 %}bg-danger{% elif movimiento.stock_nuevo <= 5 %}bg-warning{% else %}bg-success{% endif %}">
-                                            {{ movimiento.stock_nuevo }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        {% if movimiento.pedido_id != 'N/A' %}
-                                        <span class="badge bg-info">#{{ movimiento.pedido_id }}</span>
+                                        {% if movimiento.pedido_id and movimiento.pedido_id != 'N/A' and movimiento.pedido_id != None %}
+                                        <span class="badge badge-pedido">#{{ movimiento.pedido_id }}</span>
                                         {% else %}
-                                        <span class="text-muted">N/A</span>
+                                        <span class="badge badge-na">No Aplica</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
+                                            {% if movimiento.estado_pedido == 'entregado' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Entregado
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-clock me-1"></i>{{ movimiento.estado_pedido }}
+                                            </span>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -372,12 +541,46 @@
             </div>
         </div>
     </div>
+
+    <!-- Información adicional -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h6><i class="fas fa-info-circle me-2"></i>Información sobre los movimientos</h6>
+                <ul class="mb-0">
+                    <li><strong>Entregas (🎉):</strong> Movimientos cuando marcas un pedido como ENTREGADO</li>
+                    <li><strong>Pedidos en Proceso (📦):</strong> Movimientos de pedidos pendientes de entrega</li>
+                    <li><strong>Entradas (+):</strong> Aumentan el stock (compras, creaciones, importaciones)</li>
+                    <li><strong>Salidas (-):</strong> Disminuyen el stock (eliminaciones, ajustes)</li>
+                    <li><strong>Ajustes:</strong> Modificaciones manuales del stock</li>
+                    <li><strong>Evolución:</strong> Muestra el cambio del stock anterior al nuevo</li>
+                </ul>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Actualizar hora colombiana en tiempo real
+    function actualizarHoraColombiana() {
+        const ahora = new Date();
+        // Colombia está en UTC-5
+        const offsetColombia = -5 * 60; // en minutos
+        const horaColombia = new Date(ahora.getTime() + (offsetColombia + ahora.getTimezoneOffset()) * 60000);
+        
+        const horas = horaColombia.getHours().toString().padStart(2, '0');
+        const minutos = horaColombia.getMinutes().toString().padStart(2, '0');
+        
+        document.getElementById('hora-colombiana').textContent = `${horas}:${minutos}`;
+    }
+    
+    // Actualizar cada minuto
+    actualizarHoraColombiana();
+    setInterval(actualizarHoraColombiana, 60000);
+    
     // Establecer fecha máxima como hoy para los filtros
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('fecha_hasta').max = today;
@@ -393,6 +596,30 @@ document.addEventListener('DOMContentLoaded', function() {
     fechaHasta.addEventListener('change', function() {
         fechaDesde.max = this.value;
     });
+    
+    // Resaltar movimientos recientes (últimas 24 horas)
+    function resaltarMovimientosRecientes() {
+        const ahora = new Date();
+        const movimientos = document.querySelectorAll('.movimiento-row');
+        
+        movimientos.forEach(movimiento => {
+            const fechaTexto = movimiento.querySelector('.fecha-movimiento').textContent.trim();
+            // Asumimos formato "d/m/Y H:i"
+            const [fecha, hora] = fechaTexto.split(' ');
+            const [dia, mes, año] = fecha.split('/');
+            const [horas, minutos] = hora.split(':');
+            
+            const fechaMovimiento = new Date(año, mes - 1, dia, horas, minutos);
+            const diferenciaHoras = (ahora - fechaMovimiento) / (1000 * 60 * 60);
+            
+            if (diferenciaHoras <= 24) {
+                movimiento.classList.add('movimiento-reciente');
+                movimiento.style.backgroundColor = '#f8ffff';
+            }
+        });
+    }
+    
+    resaltarMovimientosRecientes();
 });
 </script>
 {% endblock %}

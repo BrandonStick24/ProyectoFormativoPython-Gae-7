@@ -2332,11 +2332,7 @@ def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
         
     except Exception as e:
         print(f"❌ Error enviando correo: {e}")
-        return False
-    
-# ==================== FIN DE CÓDIGO PARA GESTIÓN DE VENTAS VENDEDOR ====================
-
-
+        return False    
 
 @login_required(login_url='login')
 def descargar_plantilla_productos(request):
