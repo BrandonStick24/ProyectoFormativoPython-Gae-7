@@ -259,19 +259,31 @@
                         <span class="categoria">{{ producto.fkcategoria_prod.desc_cp }}</span>
                         
                         <!-- Información de Stock Detallada para Producto Base -->
+        
+                        <!-- Información de Stock Detallada para Producto Base -->
                         <div class="stock-detallado">
                             <span class="stock-item stock-total">
-                                <i class="fas fa-boxes"></i> Total: {{ producto.stock_prod }}
+                                <i class="fas fa-boxes"></i> Total: {{ producto_data.stock_total }}
                             </span>
-                            {% if oferta_producto %}
+                            {% if producto_data.en_oferta %}
                             <span class="stock-item stock-oferta">
-                                <i class="fas fa-tag"></i> Oferta: {{ stock_oferta_producto }}
+                                <i class="fas fa-tag"></i> Oferta: {{ producto_data.stock_oferta }}
+                            </span>
+                            <span class="stock-item stock-normal">
+                                <i class="fas fa-cube"></i> Base: {{ producto_data.stock_normal }}
+                            </span>
+                            {% else %}
+                            <span class="stock-item {% if producto_data.stock_total == 0 %}stock-critico{% elif producto_data.stock_total <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-cube"></i> Base: {{ producto_data.stock_total }}
                             </span>
                             {% endif %}
-                            <span class="stock-item {% if producto.stock_prod == 0 %}stock-critico{% elif producto.stock_prod <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                <i class="fas fa-cube"></i> Base: {{ producto.stock_prod|add:"-"|add:stock_oferta_producto|default:producto.stock_prod }}
-                            </span>
                         </div>
+
+                        {% if producto_data.en_oferta %}
+                        <span class="badge-oferta">
+                            <i class="fas fa-percentage"></i> {{ producto_data.descuento }}% OFF
+                        </span>
+                        {% endif %}
                         
                         {% if oferta_producto %}
                         <span class="badge-oferta">
@@ -340,6 +352,7 @@
                         </div>
                         
                         <!-- Información de Stock Detallada para Variante -->
+                        <!-- Información de Stock Detallada para Variante -->
                         <div class="stock-detallado">
                             <span class="stock-item stock-total">
                                 <i class="fas fa-box"></i> Total: {{ variante.stock }}
@@ -348,11 +361,23 @@
                             <span class="stock-item stock-oferta">
                                 <i class="fas fa-tag"></i> Oferta: {{ variante.stock_oferta }}
                             </span>
-                            {% endif %}
-                            <span class="stock-item {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                            <span class="stock-item stock-normal">
                                 <i class="fas fa-cube"></i> Normal: {{ variante.stock_normal }}
                             </span>
+                            {% else %}
+                            <span class="stock-item {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                <i class="fas fa-cube"></i> Base: {{ variante.stock }}
+                            </span>
+                            {% endif %}
                         </div>
+
+                        {% if variante.en_oferta %}
+                        <div class="variante-info">
+                            <span class="badge-oferta">
+                                <i class="fas fa-percentage"></i> {{ variante.porcentaje_oferta }}% OFF
+                            </span>
+                        </div>
+                        {% endif %}
                         
                         {% if variante.sku %}
                         <div class="variante-info">

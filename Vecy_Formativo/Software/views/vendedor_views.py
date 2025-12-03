@@ -485,7 +485,7 @@ def vendedor_dash(request):
 # ==================== VISTAS VENDEDOR - PRODUCTOS ====================
 @login_required(login_url='login')
 def Crud_V(request):
-    """Vista principal de productos CON VARIANTES"""
+    """Vista principal de productos CON VARIANTES Y OFERTAS - CORREGIDA"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos:
@@ -500,53 +500,144 @@ def Crud_V(request):
         # Obtener productos del negocio
         productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
         
-        # Obtener variantes para cada producto
+        # Diccionario para almacenar información de ofertas por producto
+        ofertas_por_producto = {}
+        ofertas_por_variante = {}
+        
+        # Obtener información de ofertas activas - CONSULTA CORREGIDA
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    fkproducto_id, 
+                    variante_id,
+                    stock_oferta,
+                    stock_actual_oferta,
+                    porcentaje_descuento
+                FROM promociones 
+                WHERE fknegocio_id = %s 
+                AND estado_promo = 'activa'
+                AND (fecha_fin >= CURDATE() OR tipo_oferta = 'stock')
+                AND stock_actual_oferta > 0
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                producto_id = row[0]
+                variante_id = row[1]
+                stock_oferta = row[2]
+                stock_actual_oferta = row[3] or stock_oferta
+                descuento = row[4]
+                
+                if variante_id:
+                    # Es una oferta para variante
+                    ofertas_por_variante[variante_id] = {
+                        'stock_oferta': stock_actual_oferta,
+                        'descuento': descuento
+                    }
+                else:
+                    # Es una oferta para producto base
+                    if producto_id not in ofertas_por_producto:
+                        ofertas_por_producto[producto_id] = {
+                            'stock_oferta': 0,
+                            'descuento': 0
+                        }
+                    ofertas_por_producto[producto_id]['stock_oferta'] += stock_actual_oferta
+                    ofertas_por_producto[producto_id]['descuento'] = descuento
+        
+        print(f"DEBUG: Ofertas por producto: {ofertas_por_producto}")
+        print(f"DEBUG: Ofertas por variante: {ofertas_por_variante}")
+        
+        # Obtener productos con variantes y ofertas
         productos_con_variantes = []
         for producto in productos:
             # Obtener variantes del producto
             variantes = []
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante
+                    SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante
                     FROM variantes_producto 
-                    WHERE producto_id = %s
+                    WHERE producto_id = %s AND estado_variante = 'activa'
                     ORDER BY nombre_variante
                 """, [producto.pkid_prod])
                 
                 for row in cursor.fetchall():
                     precio_total = float(producto.precio_prod) + float(row[2])
+                    variante_id = row[0]
+                    
+                    # Verificar si esta variante tiene oferta activa
+                    en_oferta = variante_id in ofertas_por_variante
+                    stock_oferta_variante = ofertas_por_variante.get(variante_id, {}).get('stock_oferta', 0)
+                    porcentaje_oferta_variante = ofertas_por_variante.get(variante_id, {}).get('descuento', 0)
+                    
+                    # Calcular stock normal (sin oferta) - garantizar que no sea negativo
+                    stock_variante_total = row[3]
+                    stock_normal_variante = stock_variante_total - stock_oferta_variante
+                    if stock_normal_variante < 0:
+                        stock_normal_variante = 0
+                    
                     variantes.append({
-                        'id': row[0],
+                        'id': variante_id,
                         'nombre': row[1],
                         'precio_adicional': float(row[2]),
                         'precio_total': precio_total,
-                        'stock': row[3],
-                        'estado': row[4]
+                        'stock': stock_variante_total,  # Stock total de la variante
+                        'stock_oferta': stock_oferta_variante,  # Stock en oferta
+                        'stock_normal': stock_normal_variante,  # Stock base (sin oferta)
+                        'estado': row[4],
+                        'sku': row[5],
+                        'en_oferta': en_oferta,
+                        'porcentaje_oferta': porcentaje_oferta_variante
                     })
+            
+            # Obtener información de oferta para el producto base
+            oferta_info = ofertas_por_producto.get(producto.pkid_prod, {})
+            stock_oferta_producto = oferta_info.get('stock_oferta', 0)
+            descuento_producto = oferta_info.get('descuento', 0)
+            en_oferta_producto = stock_oferta_producto > 0
+            
+            # Calcular stock total del producto (principal + variantes)
+            stock_total_variantes = sum(v['stock'] for v in variantes)
+            stock_total_producto = producto.stock_prod + stock_total_variantes
+            
+            # Calcular stock base (sin ofertas) - CORRECCIÓN IMPORTANTE
+            # Primero calculamos el stock normal del producto principal
+            stock_normal_principal = producto.stock_prod - stock_oferta_producto
+            if stock_normal_principal < 0:
+                stock_normal_principal = 0
+            
+            # Luego calculamos el stock normal de todas las variantes
+            stock_normal_variantes = sum(v['stock_normal'] for v in variantes)
+            
+            # Stock normal total = stock normal principal + stock normal variantes
+            stock_normal_total = stock_normal_principal + stock_normal_variantes
+            
+            # Verificar cálculos
+            print(f"DEBUG Producto {producto.nom_prod}:")
+            print(f"  - Stock principal: {producto.stock_prod}")
+            print(f"  - Stock oferta: {stock_oferta_producto}")
+            print(f"  - Stock normal principal: {stock_normal_principal}")
+            print(f"  - Stock variantes: {stock_total_variantes}")
+            print(f"  - Stock normal variantes: {stock_normal_variantes}")
+            print(f"  - Stock total: {stock_total_producto}")
+            print(f"  - Stock normal total: {stock_normal_total}")
             
             productos_con_variantes.append({
                 'producto': producto,
                 'variantes': variantes,
                 'total_variantes': len(variantes),
-                'stock_total_variantes': sum(v['stock'] for v in variantes)
+                'stock_total_variantes': stock_total_variantes,
+                'stock_total': stock_total_producto,
+                'stock_oferta': stock_oferta_producto,
+                'stock_normal': stock_normal_total,
+                'en_oferta': en_oferta_producto,
+                'descuento': descuento_producto
             })
         
         # Calcular estadísticas
         productos_disponibles = productos.filter(estado_prod='disponible', stock_prod__gt=0)
         productos_sin_stock = productos.filter(stock_prod=0) | productos.filter(estado_prod='agotado')
         
-        # Obtener productos en oferta
-        productos_en_oferta_ids = set()
-        if negocio:
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT DISTINCT fkproducto_id 
-                    FROM promociones 
-                    WHERE fknegocio_id = %s AND estado_promo = 'activa'
-                    AND fecha_fin >= CURDATE()
-                """, [negocio.pkid_neg])
-                resultados = cursor.fetchall()
-                productos_en_oferta_ids = {row[0] for row in resultados}
+        # Obtener productos en oferta (IDs)
+        productos_en_oferta_ids = set(ofertas_por_producto.keys())
         
         # Obtener categorías filtradas por tipo de negocio
         categorias_filtradas = []
@@ -574,6 +665,9 @@ def Crud_V(request):
         return render(request, 'Vendedor/Crud_V.html', contexto)
         
     except Exception as e:
+        print(f"ERROR en Crud_V: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
