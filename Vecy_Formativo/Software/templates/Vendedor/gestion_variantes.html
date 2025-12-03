@@ -2,35 +2,519 @@
 {% extends 'Layout_V.html' %}
 {% load static %}
 
-{% block title %}Gestionar Variantes - {{ producto.nom_prod }}{% endblock %}
+{% block title %}Gestión de Variantes - {{ producto.nom_prod }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'vendedor/css/Variantes.css' %}">
-{% endblock %}
+<style>
+    /* ========== HEADER ESPECTACULAR (MANTENIDO DEL NUEVO) ========== */
+    .variantes-hero {
+        background: linear-gradient(135deg, #26282B 0%, #353941 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
 
+    .variantes-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 200%;
+        background: linear-gradient(45deg, 
+            rgba(95, 133, 219, 0.1) 0%, 
+            transparent 50%,
+            rgba(144, 184, 248, 0.05) 100%);
+        transform: rotate(30deg);
+        z-index: 1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-title h1 {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(135deg, #90B8F8, #5F85DB);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .hero-subtitle .badge {
+        background: rgba(144, 184, 248, 0.2);
+        color: #90B8F8;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        border: 1px solid rgba(144, 184, 248, 0.3);
+    }
+
+    .btn-outline-light {
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        background: transparent;
+        transition: all 0.3s;
+    }
+
+    .btn-outline-light:hover {
+        background: white;
+        color: #26282B;
+        border-color: white;
+    }
+
+    .btn-light {
+        background: white;
+        color: #26282B;
+        border: none;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-light:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+    }
+
+    /* ========== ESTILOS DEL ANTIGUO CON COLORES DEL NUEVO ========== */
+    .variantes-container {
+        background: white;
+        border-radius: 18px;
+        padding: 2rem;
+        margin-top: 1rem;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        border: 1px solid #F3F4F6;
+    }
+
+    .variantes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #F3F4F6;
+    }
+
+    .variantes-title h2 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #1F2937;
+        margin: 0;
+    }
+
+    .variantes-title h2 i {
+        color: #5F85DB;
+    }
+
+    .variantes-actions .btn-primary {
+        background: linear-gradient(135deg, #5F85DB, #90B8F8);
+        border: none;
+        color: white;
+        font-weight: 600;
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        transition: all 0.3s;
+        box-shadow: 0 3px 10px rgba(95, 133, 219, 0.3);
+    }
+
+    .variantes-actions .btn-primary:hover {
+        background: linear-gradient(135deg, #4A6FC1, #7AA3F6);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(95, 133, 219, 0.4);
+    }
+
+    .variantes-actions .btn-outline-secondary {
+        border: 2px solid #E5E7EB;
+        color: #6B7280;
+        font-weight: 500;
+        padding: 0.6rem 1.5rem;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+
+    .variantes-actions .btn-outline-secondary:hover {
+        background: #F9FAFB;
+        border-color: #D1D5DB;
+        color: #374151;
+    }
+
+    /* Info Card mejorada */
+    .info-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 15px;
+        padding: 1.8rem;
+        margin-bottom: 2rem;
+        border: 1px solid #E5E7EB;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .info-card h5 {
+        color: #374151;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1.2rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .info-card h5 i {
+        color: #5F85DB;
+        margin-right: 0.5rem;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .info-label {
+        font-size: 0.85rem;
+        color: #6B7280;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.3rem;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .precio-total {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #10B981;
+    }
+
+    /* Tabla de variantes */
+    .variantes-table-container {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid #F3F4F6;
+    }
+
+    .variantes-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .variantes-table thead th {
+        background: linear-gradient(135deg, #5F85DB, #90B8F8);
+        color: white;
+        font-weight: 600;
+        padding: 1rem 1.5rem;
+        border: none;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .variantes-table thead th:first-child {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+    }
+
+    .variantes-table thead th:last-child {
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+
+    .variantes-table tbody tr {
+        border-bottom: 1px solid #F3F4F6;
+        transition: all 0.2s;
+    }
+
+    .variantes-table tbody tr:hover {
+        background: #F9FAFB;
+    }
+
+    .variantes-table tbody td {
+        padding: 1.2rem 1.5rem;
+        vertical-align: middle;
+        color: #374151;
+    }
+
+    .variante-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #F0F4FF, #E8F0FF);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5F85DB;
+        font-size: 1.2rem;
+    }
+
+    /* Botones de acción */
+    .btn-group-sm .btn {
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        margin: 0 2px;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+
+    .btn-outline-warning {
+        border: 1px solid #F59E0B;
+        color: #F59E0B;
+    }
+
+    .btn-outline-warning:hover {
+        background: linear-gradient(135deg, #F59E0B, #D97706);
+        color: white;
+        border-color: #F59E0B;
+    }
+
+    .btn-outline-info {
+        border: 1px solid #0EA5E9;
+        color: #0EA5E9;
+    }
+
+    .btn-outline-info:hover {
+        background: linear-gradient(135deg, #0EA5E9, #0284C7);
+        color: white;
+        border-color: #0EA5E9;
+    }
+
+    .btn-outline-danger {
+        border: 1px solid #EF4444;
+        color: #EF4444;
+    }
+
+    .btn-outline-danger:hover {
+        background: linear-gradient(135deg, #EF4444, #DC2626);
+        color: white;
+        border-color: #EF4444;
+    }
+
+    /* Modal mejorado */
+    .modal-content {
+        border-radius: 20px;
+        border: none;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #5F85DB, #90B8F8);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-bottom: none;
+        border-radius: 20px 20px 0 0;
+    }
+
+    .modal-title {
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .modal-title i {
+        font-size: 1.2rem;
+    }
+
+    .modal-header .btn-close {
+        filter: invert(1);
+        opacity: 0.8;
+    }
+
+    .modal-body {
+        padding: 2rem;
+    }
+
+    .precio-preview {
+        background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+        border: 2px solid #bae6fd;
+        border-radius: 12px;
+        padding: 1.2rem;
+        margin-top: 1.5rem;
+    }
+
+    .precio-base {
+        color: #475569;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .precio-total-preview {
+        color: #10B981;
+        font-weight: 700;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Estado vacío */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: #F9FAFB;
+        border-radius: 15px;
+        border: 2px dashed #E5E7EB;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        color: #5F85DB;
+        opacity: 0.6;
+    }
+
+    .empty-state h5 {
+        color: #374151;
+        font-weight: 700;
+        margin-bottom: 0.8rem;
+    }
+
+    /* Stock badges consistentes */
+    .stock-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        border: 1px solid;
+    }
+
+    .stock-critico {
+        background: #FEE2E2;
+        color: #DC2626;
+        border-color: #FECACA;
+    }
+
+    .stock-bajo {
+        background: #FEF3C7;
+        color: #D97706;
+        border-color: #FDE68A;
+    }
+
+    .stock-normal {
+        background: #D1FAE5;
+        color: #065F46;
+        border-color: #A7F3D0;
+    }
+
+    .badge.bg-success {
+        background: linear-gradient(135deg, #10B981, #059669) !important;
+        border: none;
+        padding: 0.5rem 1rem;
+    }
+
+    .badge.bg-secondary {
+        background: linear-gradient(135deg, #6B7280, #4B5563) !important;
+        border: none;
+        padding: 0.5rem 1rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .variantes-hero {
+            padding: 1.5rem;
+            border-radius: 15px;
+        }
+        
+        .hero-title h1 {
+            font-size: 1.8rem;
+        }
+        
+        .variantes-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .variantes-actions {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+        
+        .variantes-actions .btn {
+            width: 100%;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .variantes-table-container {
+            overflow-x: auto;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Header Mejorado -->
-    <div class="variantes-container">
-        <div class="variantes-header">
-            <div class="variantes-title">
-                <h2>
-                    <i class="fas fa-layer-group me-2"></i>
+    <!-- ========== HEADER ESPECTACULAR (MANTENIDO DEL NUEVO) ========== -->
+    <div class="variantes-hero">
+        <div class="hero-content">
+            <div class="hero-title">
+                <h1>
+                    <i class="fas fa-layer-group me-3"></i>
                     Gestión de Variantes
-                </h2>
-                <p class="text-muted mb-0">Administra las variantes del producto: <strong>{{ producto.nom_prod }}</strong></p>
+                </h1>
             </div>
-            <div class="variantes-actions">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarVariante">
-                    <i class="fas fa-plus me-1"></i> Agregar Variante
-                </button>
-                <a href="{% url 'Crud_V' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Volver a Productos
-                </a>
+            <div class="hero-subtitle">
+                <p class="mb-3">
+                    Administra las diferentes variantes del producto principal. 
+                    <span class="badge ms-2">
+                        <i class="fas fa-box me-1"></i>
+                        Producto Base: {{ producto.nom_prod }}
+                    </span>
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="{% url 'Crud_V' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i> Volver a Productos
+                    </a>
+                    <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#modalAgregarVariante">
+                        <i class="fas fa-plus me-2"></i> Nueva Variante
+                    </button>
+                </div>
             </div>
         </div>
+    </div>
 
+    <!-- ========== CONTENIDO DEL ANTIGUO (CON COLORES ACTUALIZADOS) ========== -->
+    <div class="variantes-container">
         {% if messages %}
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
@@ -115,29 +599,6 @@
                                 <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
                                     <i class="fas fa-box"></i> {{ variante.stock }} unidades
                                 </span>
-                                
-                                <!-- Botones rápidos de ajuste de stock 
-                                <div class="mt-2">
-                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="tipo_ajuste" value="entrada">
-                                        <input type="hidden" name="motivo_ajuste" value="ajuste_rapido">
-                                        <input type="hidden" name="cantidad_ajuste" value="1">
-                                        <button type="submit" class="btn btn-sm btn-success" title="Agregar 1 unidad">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    </form>
-
-                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" class="d-inline">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="tipo_ajuste" value="salida">
-                                        <input type="hidden" name="motivo_ajuste" value="ajuste_rapido">
-                                        <input type="hidden" name="cantidad_ajuste" value="1">
-                                        <button type="submit" class="btn btn-sm btn-warning" title="Quitar 1 unidad">
-                                            <i class="fas fa-minus"></i>
-                                        </button>
-                                    </form>
-                                </div> -->
                             </td>
                             <td>
                                 <span class="badge {% if variante.estado == 'activa' %}bg-success{% else %}bg-secondary{% endif %}">
@@ -147,7 +608,7 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <!-- Botón Editar - MODIFICADO para usar modal específico -->
+                                    <!-- Botón Editar -->
                                     <button class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#modalEditarVariante{{ variante.id }}" title="Editar variante">
                                         <i class="fas fa-edit"></i>
                                     </button>
@@ -168,7 +629,7 @@
                             </td>
                         </tr>
                         
-                        <!-- Modal Editar Variante para esta variante específica - NUEVO -->
+                        <!-- Modal Editar Variante para esta variante específica -->
                         <div class="modal fade" id="modalEditarVariante{{ variante.id }}" tabindex="-1">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
@@ -268,7 +729,7 @@
                         </div>
                         
                         <!-- Modal Ajustar Stock para esta variante específica -->
-                        <!-- Modal Ajustar Stock para esta variante específica - NUEVA VERSIÓN MEJORADA -->
+                        <!-- Modal Ajustar Stock para esta variante específica -->
                         <div class="modal fade" id="modalAjustarStockVariante{{ variante.id }}" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -281,7 +742,7 @@
                                     </div>
                                     <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" id="formAjustarStockVariante{{ variante.id }}">
                                         {% csrf_token %}
-                                        <input type="hidden" id="producto_id_stock_variante{{ variante.id }}" name="variante_id" value="{{ variante.id }}">
+                                        <input type="hidden" name="variante_id" value="{{ variante.id }}">
                                         <div class="modal-body">
                                             <div class="alert alert-info">
                                                 <i class="fas fa-info-circle me-2"></i>
@@ -307,7 +768,7 @@
                                                     <div class="mb-3">
                                                         <label class="form-label">Tipo de Ajuste:</label>
                                                         <select class="form-control" id="tipo_ajuste_variante{{ variante.id }}" 
-                                                                name="tipo_ajuste" required onchange="calcularStockFinalVariante('{{ variante.id }}')">
+                                                                name="tipo_ajuste" required>
                                                             <option value="entrada">Entrada (+)</option>
                                                             <option value="salida">Salida (-)</option>
                                                             <option value="ajuste">Ajuste Manual</option>
@@ -320,18 +781,17 @@
                                                 <label for="cantidad_ajuste_variante{{ variante.id }}" class="form-label">Cantidad:</label>
                                                 <input type="number" class="form-control" id="cantidad_ajuste_variante{{ variante.id }}" 
                                                     name="cantidad_ajuste" min="1" required 
-                                                    placeholder="Ingrese la cantidad"
-                                                    oninput="calcularStockFinalVariante('{{ variante.id }}')">
+                                                    placeholder="Ingrese la cantidad">
                                                 <div class="form-text" id="texto_ayuda_variante{{ variante.id }}">
                                                     Ingrese la cantidad a sumar al stock actual
                                                 </div>
                                             </div>
 
-                                            <!-- NUEVO: Campo de Stock Final en tiempo real -->
+                                            <!-- Campo de Stock Final en tiempo real -->
                                             <div class="mb-3" id="campo_stock_final_variante{{ variante.id }}" style="display: none;">
                                                 <label for="stock_final_variante{{ variante.id }}" class="form-label">Stock Final:</label>
                                                 <input type="number" class="form-control" id="stock_final_variante{{ variante.id }}" readonly>
-                                                <div class="form-text text-success" id="indicador_stock_variante{{ variante.id }}">
+                                                <div class="form-text" id="indicador_stock_variante{{ variante.id }}">
                                                     <!-- Se mostrará el indicador de stock (normal/bajo/crítico) -->
                                                 </div>
                                             </div>
@@ -348,7 +808,7 @@
                                                 </select>
                                             </div>
                                             
-                                            <!-- NUEVO: Información de precio para contexto -->
+                                            <!-- Información de precio para contexto -->
                                             <div class="alert alert-secondary mt-3">
                                                 <div class="row">
                                                     <div class="col-md-6">
@@ -484,46 +944,8 @@
 
 {% block extra_js %}
 <script>
-// ========== CÁLCULO PRECIO TOTAL PARA AGREGAR VARIANTE ==========
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== INICIANDO SCRIPT DE GESTIÓN DE VARIANTES ===');
-    
-    const precioBase = {{ producto.precio_prod }};
-    const inputPrecioAdicional = document.getElementById('precio-adicional-input');
-    const previewPrecioTotal = document.getElementById('precio-total-preview');
-    
-    if (inputPrecioAdicional && previewPrecioTotal) {
-        inputPrecioAdicional.addEventListener('input', function() {
-            const precioAdicional = parseFloat(this.value) || 0;
-            const precioTotal = precioBase + precioAdicional;
-            previewPrecioTotal.textContent = precioTotal.toFixed(2);
-        });
-    }
-
-    // ========== VALIDACIÓN FORMULARIO ELIMINAR VARIANTE ==========
-    const formsEliminar = document.querySelectorAll('form[action*="eliminar"]');
-    formsEliminar.forEach(form => {
-        form.addEventListener('submit', function(event) {
-            const confirmed = confirm('¿Estás seguro de que deseas eliminar esta variante? Esta acción no se puede deshacer.');
-            if (!confirmed) {
-                event.preventDefault();
-                return false;
-            }
-            return true;
-        });
-    });
-
-    console.log('✅ Script de gestión de variantes cargado correctamente');
-});
-</script>
-
-<script>
-// ========== FUNCIONES ESPECÍFICAS PARA MODALES DE AJUSTE DE STOCK ==========
-
+// Función para calcular stock final
 function calcularStockFinalVariante(varianteId) {
-    console.log(`=== DEBUG: Calculando stock final para variante ${varianteId} ===`);
-    
-    // Obtener elementos del DOM
     const stockActualElement = document.getElementById(`stock_actual_variante${varianteId}`);
     const cantidadElement = document.getElementById(`cantidad_ajuste_variante${varianteId}`);
     const tipoAjusteElement = document.getElementById(`tipo_ajuste_variante${varianteId}`);
@@ -533,15 +955,12 @@ function calcularStockFinalVariante(varianteId) {
     const indicadorStock = document.getElementById(`indicador_stock_variante${varianteId}`);
     
     if (!stockActualElement || !cantidadElement || !tipoAjusteElement) {
-        console.error('❌ Elementos no encontrados para variante:', varianteId);
         return;
     }
     
     const stockActual = parseInt(stockActualElement.value) || 0;
     const cantidad = parseInt(cantidadElement.value) || 0;
     const tipoAjuste = tipoAjusteElement.value;
-    
-    console.log(`Stock actual: ${stockActual}, Cantidad: ${cantidad}, Tipo: ${tipoAjuste}`);
     
     let stockFinal = stockActual;
     let mensaje = '';
@@ -607,8 +1026,6 @@ function calcularStockFinalVariante(varianteId) {
                 }
             }
         }
-        
-        console.log(`✅ Stock final calculado: ${stockFinal}`);
     } else {
         // Ocultar campo de stock final si no hay cantidad
         if (campoStockFinal) {
@@ -621,16 +1038,11 @@ function calcularStockFinalVariante(varianteId) {
     }
 }
 
-// ========== FUNCIÓN PARA INICIALIZAR MODALES ==========
-
+// Función para inicializar el modal
 function inicializarModalStockVariante(varianteId) {
-    console.log(`=== INICIALIZANDO MODAL PARA VARIANTE ${varianteId} ===`);
-    
     // Obtener elementos del modal
     const cantidadInput = document.getElementById(`cantidad_ajuste_variante${varianteId}`);
     const tipoSelect = document.getElementById(`tipo_ajuste_variante${varianteId}`);
-    const stockFinalDiv = document.getElementById(`campo_stock_final_variante${varianteId}`);
-    const stockFinalInput = document.getElementById(`stock_final_variante${varianteId}`);
     
     // Resetear valores al abrir el modal
     if (cantidadInput) {
@@ -648,66 +1060,10 @@ function inicializarModalStockVariante(varianteId) {
             calcularStockFinalVariante(varianteId);
         });
     }
-    
-    if (stockFinalDiv) {
-        stockFinalDiv.style.display = 'none';
-    }
-    
-    if (stockFinalInput) {
-        stockFinalInput.value = '';
-    }
-    
-    // Configurar el formulario para validación
-    const form = document.getElementById(`formAjustarStockVariante${varianteId}`);
-    if (form) {
-        form.addEventListener('submit', function(event) {
-            // Validación básica
-            const cantidad = parseInt(cantidadInput.value) || 0;
-            const tipoAjuste = tipoSelect.value;
-            const stockActual = parseInt(document.getElementById(`stock_actual_variante${varianteId}`).value) || 0;
-            
-            if (cantidad <= 0) {
-                event.preventDefault();
-                alert('❌ Error: La cantidad debe ser mayor a 0');
-                cantidadInput.focus();
-                return false;
-            }
-            
-            // Calcular stock final para validación
-            let stockFinal;
-            if (tipoAjuste === 'entrada') {
-                stockFinal = stockActual + cantidad;
-            } else if (tipoAjuste === 'salida') {
-                stockFinal = stockActual - cantidad;
-            } else if (tipoAjuste === 'ajuste') {
-                stockFinal = cantidad;
-            }
-            
-            if (stockFinal < 0) {
-                event.preventDefault();
-                alert('❌ Error: No puedes tener stock negativo. Stock resultante: ' + stockFinal);
-                cantidadInput.focus();
-                return false;
-            }
-            
-            // Mostrar loading
-            const submitBtn = this.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
-                submitBtn.disabled = true;
-            }
-            
-            console.log(`✅ Enviando ajuste de stock para variante ${varianteId}`);
-            return true;
-        });
-    }
 }
 
-// ========== CONFIGURAR TODOS LOS BOTONES DE AJUSTE DE STOCK ==========
-
+// Configurar todos los botones de ajuste de stock cuando se cargue la página
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('=== CONFIGURANDO BOTONES DE AJUSTE DE STOCK ===');
-    
     // Configurar todos los botones que abren modales de ajuste de stock
     const botonesAjustarStock = document.querySelectorAll('[data-bs-target^="#modalAjustarStockVariante"]');
     
@@ -718,28 +1074,25 @@ document.addEventListener('DOMContentLoaded', function() {
         if (varianteId) {
             // Agregar evento click al botón
             boton.addEventListener('click', function() {
+                // Pequeño retraso para asegurar que el modal esté cargado
+                setTimeout(function() {
+                    inicializarModalStockVariante(varianteId);
+                }, 100);
+            });
+        }
+    });
+    
+    // También configurar el evento cuando se muestre el modal
+    const modales = document.querySelectorAll('.modal[id^="modalAjustarStockVariante"]');
+    modales.forEach(modal => {
+        modal.addEventListener('shown.bs.modal', function(event) {
+            const modalId = this.id;
+            const varianteId = modalId.replace('modalAjustarStockVariante', '');
+            if (varianteId) {
                 inicializarModalStockVariante(varianteId);
-            });
-        }
+            }
+        });
     });
-    
-    // Configurar validación para botones rápidos (+/-)
-    const formsRapidos = document.querySelectorAll('form[action*="ajustar-stock"]');
-    formsRapidos.forEach(form => {
-        // Filtrar solo formularios de botones rápidos (no modales)
-        if (!form.id || !form.id.startsWith('formAjustarStockVariante')) {
-            form.addEventListener('submit', function(event) {
-                // Estos formularios ya tienen cantidad fija (1), solo validar
-                const tipoAjuste = this.querySelector('input[name="tipo_ajuste"]').value;
-                const varianteId = this.action.split('/').filter(part => part).pop();
-                
-                console.log(`✅ Enviando ajuste rápido (${tipoAjuste}) para variante: ${varianteId}`);
-                return true;
-            });
-        }
-    });
-    
-    console.log('✅ Botones de ajuste de stock configurados correctamente');
 });
 </script>
 {% endblock %}
