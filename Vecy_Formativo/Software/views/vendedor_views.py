@@ -485,7 +485,7 @@ def vendedor_dash(request):
 # ==================== VISTAS VENDEDOR - PRODUCTOS ====================
 @login_required(login_url='login')
 def Crud_V(request):
-    """Vista principal de productos CON VARIANTES"""
+    """Vista principal de productos CON VARIANTES Y OFERTAS - CORREGIDA"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos:
@@ -500,53 +500,144 @@ def Crud_V(request):
         # Obtener productos del negocio
         productos = Productos.objects.filter(fknegocioasociado_prod=negocio)
         
-        # Obtener variantes para cada producto
+        # Diccionario para almacenar información de ofertas por producto
+        ofertas_por_producto = {}
+        ofertas_por_variante = {}
+        
+        # Obtener información de ofertas activas - CONSULTA CORREGIDA
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT 
+                    fkproducto_id, 
+                    variante_id,
+                    stock_oferta,
+                    stock_actual_oferta,
+                    porcentaje_descuento
+                FROM promociones 
+                WHERE fknegocio_id = %s 
+                AND estado_promo = 'activa'
+                AND (fecha_fin >= CURDATE() OR tipo_oferta = 'stock')
+                AND stock_actual_oferta > 0
+            """, [negocio.pkid_neg])
+            
+            for row in cursor.fetchall():
+                producto_id = row[0]
+                variante_id = row[1]
+                stock_oferta = row[2]
+                stock_actual_oferta = row[3] or stock_oferta
+                descuento = row[4]
+                
+                if variante_id:
+                    # Es una oferta para variante
+                    ofertas_por_variante[variante_id] = {
+                        'stock_oferta': stock_actual_oferta,
+                        'descuento': descuento
+                    }
+                else:
+                    # Es una oferta para producto base
+                    if producto_id not in ofertas_por_producto:
+                        ofertas_por_producto[producto_id] = {
+                            'stock_oferta': 0,
+                            'descuento': 0
+                        }
+                    ofertas_por_producto[producto_id]['stock_oferta'] += stock_actual_oferta
+                    ofertas_por_producto[producto_id]['descuento'] = descuento
+        
+        print(f"DEBUG: Ofertas por producto: {ofertas_por_producto}")
+        print(f"DEBUG: Ofertas por variante: {ofertas_por_variante}")
+        
+        # Obtener productos con variantes y ofertas
         productos_con_variantes = []
         for producto in productos:
             # Obtener variantes del producto
             variantes = []
             with connection.cursor() as cursor:
                 cursor.execute("""
-                    SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante
+                    SELECT id_variante, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante
                     FROM variantes_producto 
-                    WHERE producto_id = %s
+                    WHERE producto_id = %s AND estado_variante = 'activa'
                     ORDER BY nombre_variante
                 """, [producto.pkid_prod])
                 
                 for row in cursor.fetchall():
                     precio_total = float(producto.precio_prod) + float(row[2])
+                    variante_id = row[0]
+                    
+                    # Verificar si esta variante tiene oferta activa
+                    en_oferta = variante_id in ofertas_por_variante
+                    stock_oferta_variante = ofertas_por_variante.get(variante_id, {}).get('stock_oferta', 0)
+                    porcentaje_oferta_variante = ofertas_por_variante.get(variante_id, {}).get('descuento', 0)
+                    
+                    # Calcular stock normal (sin oferta) - garantizar que no sea negativo
+                    stock_variante_total = row[3]
+                    stock_normal_variante = stock_variante_total - stock_oferta_variante
+                    if stock_normal_variante < 0:
+                        stock_normal_variante = 0
+                    
                     variantes.append({
-                        'id': row[0],
+                        'id': variante_id,
                         'nombre': row[1],
                         'precio_adicional': float(row[2]),
                         'precio_total': precio_total,
-                        'stock': row[3],
-                        'estado': row[4]
+                        'stock': stock_variante_total,  # Stock total de la variante
+                        'stock_oferta': stock_oferta_variante,  # Stock en oferta
+                        'stock_normal': stock_normal_variante,  # Stock base (sin oferta)
+                        'estado': row[4],
+                        'sku': row[5],
+                        'en_oferta': en_oferta,
+                        'porcentaje_oferta': porcentaje_oferta_variante
                     })
+            
+            # Obtener información de oferta para el producto base
+            oferta_info = ofertas_por_producto.get(producto.pkid_prod, {})
+            stock_oferta_producto = oferta_info.get('stock_oferta', 0)
+            descuento_producto = oferta_info.get('descuento', 0)
+            en_oferta_producto = stock_oferta_producto > 0
+            
+            # Calcular stock total del producto (principal + variantes)
+            stock_total_variantes = sum(v['stock'] for v in variantes)
+            stock_total_producto = producto.stock_prod + stock_total_variantes
+            
+            # Calcular stock base (sin ofertas) - CORRECCIÓN IMPORTANTE
+            # Primero calculamos el stock normal del producto principal
+            stock_normal_principal = producto.stock_prod - stock_oferta_producto
+            if stock_normal_principal < 0:
+                stock_normal_principal = 0
+            
+            # Luego calculamos el stock normal de todas las variantes
+            stock_normal_variantes = sum(v['stock_normal'] for v in variantes)
+            
+            # Stock normal total = stock normal principal + stock normal variantes
+            stock_normal_total = stock_normal_principal + stock_normal_variantes
+            
+            # Verificar cálculos
+            print(f"DEBUG Producto {producto.nom_prod}:")
+            print(f"  - Stock principal: {producto.stock_prod}")
+            print(f"  - Stock oferta: {stock_oferta_producto}")
+            print(f"  - Stock normal principal: {stock_normal_principal}")
+            print(f"  - Stock variantes: {stock_total_variantes}")
+            print(f"  - Stock normal variantes: {stock_normal_variantes}")
+            print(f"  - Stock total: {stock_total_producto}")
+            print(f"  - Stock normal total: {stock_normal_total}")
             
             productos_con_variantes.append({
                 'producto': producto,
                 'variantes': variantes,
                 'total_variantes': len(variantes),
-                'stock_total_variantes': sum(v['stock'] for v in variantes)
+                'stock_total_variantes': stock_total_variantes,
+                'stock_total': stock_total_producto,
+                'stock_oferta': stock_oferta_producto,
+                'stock_normal': stock_normal_total,
+                'en_oferta': en_oferta_producto,
+                'descuento': descuento_producto
             })
         
         # Calcular estadísticas
         productos_disponibles = productos.filter(estado_prod='disponible', stock_prod__gt=0)
         productos_sin_stock = productos.filter(stock_prod=0) | productos.filter(estado_prod='agotado')
         
-        # Obtener productos en oferta
-        productos_en_oferta_ids = set()
-        if negocio:
-            with connection.cursor() as cursor:
-                cursor.execute("""
-                    SELECT DISTINCT fkproducto_id 
-                    FROM promociones 
-                    WHERE fknegocio_id = %s AND estado_promo = 'activa'
-                    AND fecha_fin >= CURDATE()
-                """, [negocio.pkid_neg])
-                resultados = cursor.fetchall()
-                productos_en_oferta_ids = {row[0] for row in resultados}
+        # Obtener productos en oferta (IDs)
+        productos_en_oferta_ids = set(ofertas_por_producto.keys())
         
         # Obtener categorías filtradas por tipo de negocio
         categorias_filtradas = []
@@ -574,6 +665,9 @@ def Crud_V(request):
         return render(request, 'Vendedor/Crud_V.html', contexto)
         
     except Exception as e:
+        print(f"ERROR en Crud_V: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
@@ -1779,7 +1873,7 @@ def gestionar_ventas(request):
 
 @login_required(login_url='login')
 def ver_recibo_pedido(request, pedido_id):
-    """Vista para ver el recibo completo de un pedido"""
+    """Vista para ver el recibo completo de un pedido con variantes y ofertas"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -1787,6 +1881,10 @@ def ver_recibo_pedido(request, pedido_id):
             return redirect('principal')
         
         negocio = datos['negocio_activo']
+        
+        # Obtener la fecha actual en formato adecuado para MySQL
+        from datetime import datetime
+        fecha_actual = datetime.now().strftime('%Y-%m-%d')
         
         # Obtener información completa del pedido con pago
         with connection.cursor() as cursor:
@@ -1804,7 +1902,8 @@ def ver_recibo_pedido(request, pedido_id):
                     pg.metodo_pago,
                     pg.estado_pago,
                     pg.monto,
-                    pg.fecha_pago
+                    pg.fecha_pago,
+                    p.metodo_pago_texto
                 FROM pedidos p
                 JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
                 JOIN auth_user u ON up.fkuser_id = u.id
@@ -1818,18 +1917,24 @@ def ver_recibo_pedido(request, pedido_id):
                 messages.error(request, "Pedido no encontrado")
                 return redirect('gestionar_ventas')
             
-            # Obtener detalles del pedido (productos)
+            # Obtener detalles del pedido con información de variantes
             cursor.execute("""
                 SELECT 
                     d.cantidad_detalle,
                     d.precio_unitario,
                     pr.nom_prod,
                     pr.desc_prod,
-                    c.desc_cp as categoria
+                    pr.precio_prod as precio_regular,
+                    c.desc_cp as categoria,
+                    d.variante_id,
+                    vp.nombre_variante,
+                    vp.precio_adicional
                 FROM detalles_pedido d
                 JOIN productos pr ON d.fkproducto_detalle = pr.pkid_prod
                 JOIN categoria_productos c ON pr.fkcategoria_prod = c.pkid_cp
+                LEFT JOIN variantes_producto vp ON d.variante_id = vp.id_variante
                 WHERE d.fkpedido_detalle = %s
+                ORDER BY d.pkid_detalle
             """, [pedido_id])
             
             detalles = cursor.fetchall()
@@ -1838,29 +1943,76 @@ def ver_recibo_pedido(request, pedido_id):
         pedido = {
             'id': pedido_info[0],
             'estado': pedido_info[1],
-            'total': pedido_info[2],
-            'fecha': pedido_info[3].strftime('%d/%m/%Y %H:%M'),
+            'total': float(pedido_info[2]) if pedido_info[2] else 0,
+            'fecha': pedido_info[3].strftime('%d/%m/%Y %H:%M') if pedido_info[3] else '',
             'cliente_nombre': pedido_info[4] or pedido_info[5] or f"Usuario {pedido_info[0]}",
             'cliente_email': pedido_info[6],
             'cliente_documento': pedido_info[7],
             'metodo_pago': pedido_info[8] or 'No especificado',
             'estado_pago': pedido_info[9] or 'pendiente',
-            'monto_pago': pedido_info[10] or pedido_info[2],
-            'fecha_pago': pedido_info[11].strftime('%d/%m/%Y %H:%M') if pedido_info[11] else 'No procesado'
+            'monto_pago': float(pedido_info[10]) if pedido_info[10] else 0,
+            'fecha_pago': pedido_info[11].strftime('%d/%m/%Y %H:%M') if pedido_info[11] else 'No procesado',
+            'metodo_pago_texto': pedido_info[12] or pedido_info[8]
         }
         
-        # Procesar detalles
+        # Procesar detalles con información de variantes
         productos = []
+        subtotal_total = 0
+        
         for detalle in detalles:
-            subtotal = detalle[0] * detalle[1]
-            productos.append({
-                'cantidad': detalle[0],
-                'precio_unitario': detalle[1],
-                'nombre': detalle[2],
+            cantidad = detalle[0]
+            precio_unitario = float(detalle[1]) if detalle[1] else 0
+            precio_regular = float(detalle[4]) if detalle[4] else precio_unitario
+            variante_id = detalle[6]
+            variante_nombre = detalle[7]
+            precio_adicional = float(detalle[8]) if detalle[8] else 0
+            
+            # Construir nombre del producto
+            nombre_producto = detalle[2] or 'Producto sin nombre'
+            
+            # Si hay variante, usar el nombre de la variante como nombre principal
+            if variante_nombre:
+                # Para variantes, el nombre principal es la variante
+                nombre_mostrar = variante_nombre
+                # Y mostramos el producto base como información adicional
+                producto_base = f"({nombre_producto})"
+            else:
+                nombre_mostrar = nombre_producto
+                producto_base = None
+            
+            # Calcular subtotal
+            subtotal = cantidad * precio_unitario
+            
+            # Verificar si hubo oferta (si el precio unitario es menor al precio regular)
+            oferta_activa = precio_unitario < precio_regular
+            porcentaje_oferta = 0
+            if oferta_activa and precio_regular > 0:
+                porcentaje_oferta = round(((precio_regular - precio_unitario) / precio_regular) * 100, 1)
+            
+            # Preparar información del producto
+            producto_data = {
+                'cantidad': cantidad,
+                'precio_unitario': precio_unitario,
+                'precio_regular': precio_regular,
+                'nombre': nombre_mostrar,  # Nombre principal (variante si existe)
+                'producto_base': nombre_producto,  # Producto base para mostrar como info
+                'producto_base_info': producto_base,  # Info del producto base para mostrar
                 'descripcion': detalle[3],
-                'categoria': detalle[4],
-                'subtotal': subtotal
-            })
+                'categoria': detalle[5] or 'Sin categoría',
+                'subtotal': subtotal,
+                'variante_id': variante_id,
+                'variante_nombre': variante_nombre,
+                'precio_adicional': precio_adicional,
+                'oferta_activa': oferta_activa,
+                'porcentaje_oferta': porcentaje_oferta,
+                'titulo_oferta': f"Oferta {porcentaje_oferta}% OFF" if oferta_activa else None
+            }
+            
+            productos.append(producto_data)
+            subtotal_total += subtotal
+        
+        # Actualizar información del pedido
+        pedido['subtotal'] = round(subtotal_total, 2)
         
         contexto = {
             'nombre': datos['nombre_usuario'],
@@ -1874,8 +2026,10 @@ def ver_recibo_pedido(request, pedido_id):
         return render(request, 'Vendedor/recibo_pedido.html', contexto)
         
     except Exception as e:
+        import traceback
         print(f"ERROR al cargar recibo: {str(e)}")
-        messages.error(request, "Error al cargar el recibo del pedido")
+        print(f"Traceback: {traceback.format_exc()}")
+        messages.error(request, f"Error al cargar el recibo del pedido: {str(e)}")
         return redirect('gestionar_ventas')
 
 @login_required(login_url='login')

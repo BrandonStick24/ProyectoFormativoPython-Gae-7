@@ -388,7 +388,7 @@
                                     <th>Cantidad</th>
                                     <th>Evolución del Stock</th>
                                     <th>Pedido</th>
-                                    <th>Estado Pedido</th>
+                                    
                                 </tr>
                             </thead>
                             <tbody>
@@ -413,9 +413,15 @@
                                     </td>
                                     <td>
                                         {% if movimiento.es_variante %}
-                                        <span class="badge bg-info">{{ movimiento.variante }}</span>
+                                            <span class="badge bg-info">
+                                                {% if movimiento.nombre_variante %}
+                                                    {{ movimiento.nombre_variante }}
+                                                {% else %}
+                                                    Variante ID: {{ movimiento.variante_id }}
+                                                {% endif %}
+                                            </span>
                                         {% else %}
-                                        <span class="badge badge-principal">Principal</span>
+                                            <span class="badge badge-principal">Principal</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -451,15 +457,15 @@
                                     <td>
                                         <small>
                                             {# ✅ CAMBIAR EL TEXTO SEGÚN EL ESTADO DEL PEDIDO #}
-                                            {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
-                                                {% if movimiento.estado_pedido == 'entregado' %}
+                                            {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' or movimiento.motivo == 'pedido_entregado' or movimiento.motivo == 'pedido_entregado_variante' %}
+                                                {% if movimiento.estado_pedido == 'entregado' or movimiento.motivo in 'pedido_entregado,pedido_entregado_variante' %}
                                                     🎉 <strong>PEDIDO ENTREGADO</strong>
                                                 {% else %}
                                                     📦 <strong>PEDIDO EN PROCESO</strong>
                                                     <br><small class="text-muted">Estado: {{ movimiento.estado_pedido }}</small>
                                                 {% endif %}
-                                                {% if movimiento.variante and movimiento.variante != 'Producto principal' %}
-                                                <br><small class="text-muted">Variante: {{ movimiento.variante }}</small>
+                                                {% if movimiento.nombre_variante and movimiento.nombre_variante != 'Producto principal' %}
+                                                <br><small class="text-muted">Variante: {{ movimiento.nombre_variante }}</small>
                                                 {% endif %}
                                             {% elif 'compra_proveedor' in movimiento.motivo %}
                                                 📦 Compra a Proveedor
@@ -482,7 +488,14 @@
                                             {% elif 'envio_pedido' in movimiento.motivo %}
                                                 🚚 Envío de Pedido
                                             {% else %}
-                                                {{ movimiento.motivo }}
+                                                {# Mostrar el motivo con emoji si es un texto simple #}
+                                                {% if 'pedido_entregado' in movimiento.motivo %}
+                                                    🎉 Pedido Entregado
+                                                {% elif 'entrega' in movimiento.motivo %}
+                                                    🚚 Entrega
+                                                {% else %}
+                                                    {{ movimiento.motivo }}
+                                                {% endif %}
                                             {% endif %}
                                         </small>
                                     </td>
@@ -512,19 +525,7 @@
                                         <span class="badge badge-na">No Aplica</span>
                                         {% endif %}
                                     </td>
-                                    <td>
-                                        {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
-                                            {% if movimiento.estado_pedido == 'entregado' %}
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check-circle me-1"></i>Entregado
-                                            </span>
-                                            {% else %}
-                                            <span class="badge bg-warning">
-                                                <i class="fas fa-clock me-1"></i>{{ movimiento.estado_pedido }}
-                                            </span>
-                                            {% endif %}
-                                        {% endif %}
-                                    </td>
+                                    
                                 </tr>
                                 {% endfor %}
                             </tbody>

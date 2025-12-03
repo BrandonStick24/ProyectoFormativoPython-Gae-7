@@ -14,7 +14,7 @@
     <div class="row align-items-center">
         <div class="col-md-6">
             <h2>Gestión de Negocios</h2>
-            <p class="text-muted">Administra y selecciona el negocio que deseas gestionar.</p>
+            <p style="white">Administra y selecciona el negocio que deseas gestionar.</p>
         </div>
         <div class="col-md-6">
             <div class="estadisticas-grid">
@@ -130,7 +130,7 @@
                     data-negocio-descripcion="{{ negocio_activo.desc_neg }}"
                     data-negocio-tipo="{{ negocio_activo.fktiponeg_neg.pkid_tiponeg }}"
                     data-negocio-imagen="{% if negocio_activo.img_neg %}{{ negocio_activo.img_neg.url }}{% endif %}">
-                <i class="fas fa-edit"></i> Configurar
+                <i class="fas fa-edit"></i> Editar
             </button>
         </div>
     </div>

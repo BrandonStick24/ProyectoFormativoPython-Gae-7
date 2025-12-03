@@ -59,74 +59,36 @@ def obtener_datos_vendedor_ofertas(request):
         return None
 
 def actualizar_estado_ofertas_automatico(negocio_id):
-    """Función MEJORADA para actualizar automáticamente el estado de las ofertas con manejo de horas"""
+    """Función MEJORADA para actualizar automáticamente el estado de las ofertas"""
     try:
+        print(f"🔄 DEBUG actualizar_estado_ofertas: Iniciando para negocio {negocio_id}")
+        
         with connection.cursor() as cursor:
             ahora = timezone.now()
-            hoy = date.today()
 
-            # 1. ✅ IDENTIFICAR OFERTAS QUE EXPIRARON Y REINTEGRAR STOCK
+            # Verificar cuántas ofertas activas hay antes
             cursor.execute("""
-                SELECT pkid_promo, fkproducto_id, variante_id, stock_actual_oferta, tipo_oferta
-                FROM promociones 
-                WHERE fknegocio_id = %s 
-                AND estado_promo = 'activa'
-                AND tipo_oferta = 'stock'
-                AND stock_actual_oferta > 0
-                AND fecha_fin < %s
-            """, [negocio_id, ahora])
-            
-            ofertas_expiradas = cursor.fetchall()
-            
-            for oferta in ofertas_expiradas:
-                oferta_id, producto_id, variante_id, stock_restante, tipo_oferta = oferta
-                
-                # REINTEGRAR STOCK SOBRANTE
-                if stock_restante > 0:
-                    if variante_id:
-                        cursor.execute("""
-                            UPDATE variantes_producto 
-                            SET stock_variante = stock_variante + %s
-                            WHERE id_variante = %s
-                        """, [stock_restante, variante_id])
-                    else:
-                        cursor.execute("""
-                            UPDATE productos 
-                            SET stock_prod = stock_prod + %s
-                            WHERE pkid_prod = %s
-                        """, [stock_restante, producto_id])
-                    
-                    # Registrar movimiento de reintegración
-                    registrar_movimiento_oferta(
-                        producto_id, negocio_id, None, stock_restante,
-                        'devolucion_automatica_oferta',
-                        f"Devolución automática oferta expirada ID: {oferta_id}",
-                        variante_id
-                    )
-            
-            # 2. ACTUALIZAR ESTADO DE OFERTAS EXPIRADAS
+                SELECT COUNT(*) FROM promociones 
+                WHERE fknegocio_id = %s AND estado_promo = 'activa'
+            """, [negocio_id])
+            ofertas_antes = cursor.fetchone()[0]
+            print(f"🔄 DEBUG: Ofertas activas antes: {ofertas_antes}")
+
+            # ✅ CORRECCIÓN: Actualizar ofertas por tiempo que han expirado
             cursor.execute("""
                 UPDATE promociones 
                 SET estado_promo = 'finalizada',
                     activa_por_stock = 0,
-                    stock_actual_oferta = 0  # ✅ LIMPIAR STOCK RESTANTE
-                WHERE fknegocio_id = %s 
-                AND estado_promo = 'activa'
-                AND fecha_fin < %s
-            """, [negocio_id, ahora])
-            
-            # 1. Actualizar ofertas por tiempo que han expirado (considerando hora)
-            cursor.execute("""
-                UPDATE promociones 
-                SET estado_promo = 'finalizada',
-                    activa_por_stock = 0
+                    stock_actual_oferta = 0
                 WHERE fknegocio_id = %s 
                 AND estado_promo = 'activa'
                 AND tipo_oferta = 'tiempo'
                 AND fecha_fin < %s
             """, [negocio_id, ahora])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Ofertas por tiempo finalizadas: {filas_afectadas}")
             
-            # 2. Actualizar ofertas por stock que se han agotado
+            # ✅ CORRECCIÓN: Actualizar ofertas por stock que se han agotado
             cursor.execute("""
                 UPDATE promociones 
                 SET estado_promo = 'finalizada',
@@ -136,8 +98,10 @@ def actualizar_estado_ofertas_automatico(negocio_id):
                 AND tipo_oferta = 'stock'
                 AND stock_actual_oferta <= 0
             """, [negocio_id])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Ofertas por stock agotadas: {filas_afectadas}")
             
-            # 3. Reactivar ofertas por stock que tienen stock
+            # ✅ CORRECCIÓN: Reactivar ofertas por stock que tienen stock y no han expirado
             cursor.execute("""
                 UPDATE promociones 
                 SET estado_promo = 'activa',
@@ -148,8 +112,10 @@ def actualizar_estado_ofertas_automatico(negocio_id):
                 AND stock_actual_oferta > 0
                 AND (fecha_fin IS NULL OR fecha_fin >= %s)
             """, [negocio_id, ahora])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Ofertas por stock reactivadas: {filas_afectadas}")
             
-            # 4. Para ofertas por tiempo, verificar que estén en fecha y hora
+            # ✅ CORRECCIÓN: Para ofertas por tiempo, verificar que estén en fecha
             cursor.execute("""
                 UPDATE promociones 
                 SET estado_promo = 'activa'
@@ -159,9 +125,21 @@ def actualizar_estado_ofertas_automatico(negocio_id):
                 AND fecha_fin >= %s
                 AND fecha_inicio <= %s
             """, [negocio_id, ahora, ahora])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Ofertas por tiempo reactivadas: {filas_afectadas}")
+            
+            # Verificar cuántas ofertas activas hay después
+            cursor.execute("""
+                SELECT COUNT(*) FROM promociones 
+                WHERE fknegocio_id = %s AND estado_promo = 'activa'
+            """, [negocio_id])
+            ofertas_despues = cursor.fetchone()[0]
+            print(f"🔄 DEBUG: Ofertas activas después: {ofertas_despues}")
             
     except Exception as e:
-        logger.error(f"Error actualizando estado de ofertas: {str(e)}")
+        print(f"❌ ERROR actualizando estado de ofertas: {str(e)}")
+        import traceback
+        print(f"❌ TRACEBACK: {traceback.format_exc()}")
 
 def registrar_movimiento_oferta(producto_id, negocio_id, usuario_id, cantidad, motivo, descripcion, variante_id=None):
     """Registrar movimiento de stock para ofertas - MEJORADO CON VARIANTES"""

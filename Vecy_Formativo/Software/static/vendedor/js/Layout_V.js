@@ -1193,4 +1193,321 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error('❌ Error cargando horarios del servidor:', error);
             });
     }
+    
+    // MODAL EDITAR PERFIL
+    // ==================== FUNCIONES DEL MODAL DE PERFIL ====================
+
+    // Función para cargar el formulario en el modal
+    function cargarFormularioPerfil() {
+        const container = document.getElementById('perfil-form-container');
+        
+        if (!container) {
+            console.error('❌ No se encontró el contenedor del formulario de perfil');
+            return;
+        }
+        
+        // Mostrar spinner
+        container.innerHTML = `
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="text-muted small mb-0">Cargando formulario...</p>
+            </div>
+        `;
+        
+        console.log('📥 Cargando formulario de perfil...');
+        
+        // Cargar formulario via AJAX - USANDO URL DEL CLIENTE
+        fetch('/perfil/form/', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                console.log('✅ Formulario cargado correctamente');
+                container.innerHTML = html;
+                inicializarEventosPerfil();
+            })
+            .catch(error => {
+                console.error('❌ Error cargando formulario:', error);
+                container.innerHTML = `
+                    <div class="alert alert-danger m-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error al cargar el formulario. Recarga la página e intenta de nuevo.
+                    </div>
+                `;
+            });
+    }
+
+    // Función para inicializar eventos del formulario
+    function inicializarEventosPerfil() {
+        const form = document.getElementById('perfilForm');
+        const fileInput = document.getElementById('id_img_user');
+        const btnCambiarFoto = document.getElementById('btnCambiarFoto');
+        
+        console.log('🔄 Inicializando eventos del formulario...');
+        
+        // Configurar envío del formulario
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                guardarPerfil(e);
+            });
+            console.log('✅ Evento submit configurado');
+        }
+        
+        // Botón para cambiar foto
+        if (btnCambiarFoto && fileInput) {
+            btnCambiarFoto.addEventListener('click', function() {
+                fileInput.click();
+                console.log('📸 Abriendo selector de archivos...');
+            });
+            
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    console.log('🖼️ Imagen seleccionada:', this.files[0].name);
+                    
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        let preview = document.getElementById('profile-picture-preview');
+                        let placeholder = document.getElementById('profile-picture-placeholder');
+                        
+                        if (preview) {
+                            preview.src = e.target.result;
+                            console.log('✅ Vista previa actualizada');
+                        } else if (placeholder) {
+                            const newImg = document.createElement('img');
+                            newImg.src = e.target.result;
+                            newImg.className = 'profile-picture';
+                            newImg.id = 'profile-picture-preview';
+                            newImg.alt = 'Foto de perfil';
+                            placeholder.parentNode.replaceChild(newImg, placeholder);
+                            console.log('✅ Placeholder reemplazado con imagen');
+                        }
+                        
+                        mostrarToast('✅ Foto cargada correctamente', 'success');
+                    };
+                    
+                    reader.onerror = function() {
+                        console.error('❌ Error al leer el archivo');
+                        mostrarToast('❌ Error al cargar la imagen', 'error');
+                    };
+                    
+                    reader.readAsDataURL(this.files[0]);
+                }
+            });
+        }
+        
+        // Botones para mostrar/ocultar contraseña
+        document.querySelectorAll('.btn-toggle-password').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                
+                if (input) {
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        this.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                        console.log(`👁️ Mostrando contraseña: ${targetId}`);
+                    } else {
+                        input.type = 'password';
+                        this.innerHTML = '<i class="fas fa-eye"></i>';
+                        console.log(`👁️ Ocultando contraseña: ${targetId}`);
+                    }
+                }
+            });
+        });
+        
+        console.log('✅ Eventos del formulario inicializados');
+    }
+
+    // Función para guardar perfil
+    function guardarPerfil(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const btnGuardar = document.getElementById('btn-guardar') || form.querySelector('button[type="submit"]');
+        let messagesDiv = document.getElementById('form-messages');
+        
+        // Crear contenedor de mensajes si no existe
+        if (!messagesDiv) {
+            messagesDiv = document.createElement('div');
+            messagesDiv.id = 'form-messages';
+            messagesDiv.className = 'alert d-none mt-3';
+            form.prepend(messagesDiv);
+        }
+        
+        // Cambiar estado del botón
+        const originalText = btnGuardar.innerHTML;
+        const originalDisabled = btnGuardar.disabled;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+        btnGuardar.disabled = true;
+        
+        console.log('💾 Guardando perfil...');
+        
+        // Limpiar mensajes anteriores
+        messagesDiv.className = 'alert d-none mt-3';
+        messagesDiv.innerHTML = '';
+        
+        // Limpiar errores anteriores
+        document.querySelectorAll('.text-danger').forEach(el => {
+            el.textContent = '';
+        });
+        document.querySelectorAll('.is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+        });
+        
+        // Enviar datos - USANDO URL DEL CLIENTE
+        fetch('/perfil/actualizar/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('📥 Respuesta del servidor:', data);
+            
+            if (data.success) {
+                messagesDiv.className = 'alert alert-success mt-3';
+                messagesDiv.innerHTML = `<i class="fas fa-check me-2"></i>${data.message || 'Perfil actualizado correctamente'}`;
+                
+                // Actualizar interfaz
+                actualizarInterfazUsuario(data);
+                
+                // Cerrar modal después de 2 segundos
+                setTimeout(() => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarPerfil'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    console.log('✅ Modal cerrado después de guardar');
+                }, 2000);
+                
+            } else {
+                messagesDiv.className = 'alert alert-danger mt-3';
+                messagesDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message || 'Error al guardar los cambios'}`;
+                
+                // Mostrar errores de validación
+                if (data.errors) {
+                    for (const [field, error] of Object.entries(data.errors)) {
+                        const errorElement = document.getElementById(`error-${field}`);
+                        const inputElement = document.getElementById(`id_${field}`) || document.getElementById(field);
+                        
+                        if (errorElement) {
+                            errorElement.textContent = error;
+                            errorElement.className = 'text-danger small';
+                        }
+                        
+                        if (inputElement) {
+                            inputElement.classList.add('is-invalid');
+                        }
+                    }
+                }
+                
+                // Restaurar botón
+                btnGuardar.innerHTML = originalText;
+                btnGuardar.disabled = originalDisabled;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Error en la petición:', error);
+            messagesDiv.className = 'alert alert-danger mt-3';
+            messagesDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error de conexión. Verifica tu internet e intenta de nuevo.';
+            
+            // Restaurar botón
+            btnGuardar.innerHTML = originalText;
+            btnGuardar.disabled = originalDisabled;
+        });
+    }
+
+    // Función para actualizar interfaz de usuario
+    function actualizarInterfazUsuario(data) {
+        console.log('🔄 Actualizando interfaz con datos:', data);
+        
+        // Actualizar nombre en el header
+        if (data.usuario_nombre) {
+            const nombreUsuarioElements = document.querySelectorAll('.nombre-usuario');
+            nombreUsuarioElements.forEach(el => {
+                el.textContent = data.usuario_nombre;
+            });
+            console.log('✅ Nombre actualizado:', data.usuario_nombre);
+        }
+        
+        // Actualizar foto si existe
+        if (data.usuario_imagen) {
+            console.log('🖼️ Actualizando imagen:', data.usuario_imagen);
+            
+            // Actualizar en el modal si está abierto
+            const fotoPreview = document.getElementById('profile-picture-preview');
+            if (fotoPreview) {
+                fotoPreview.src = data.usuario_imagen;
+            }
+            
+            // Actualizar en el header del vendedor si existe
+            const userAvatar = document.querySelector('.encabezado-derecha .fa-user-circle');
+            if (userAvatar && data.usuario_imagen) {
+                // Podrías convertir el icono a imagen si quieres
+                console.log('ℹ️ Imagen disponible para actualizar en header');
+            }
+        }
+    }
+
+    // Inicializar eventos del modal de perfil
+    function inicializarModalPerfil() {
+        const modal = document.getElementById('modalEditarPerfil');
+        
+        if (modal) {
+            console.log('✅ Modal de perfil encontrado, configurando eventos...');
+            
+            // Cargar formulario cuando se abre el modal
+            modal.addEventListener('show.bs.modal', function() {
+                console.log('🚀 Abriendo modal de perfil...');
+                cargarFormularioPerfil();
+            });
+            
+            // Limpiar cuando se cierra el modal
+            modal.addEventListener('hidden.bs.modal', function() {
+                console.log('🗑️ Limpiando formulario de perfil...');
+                const container = document.getElementById('perfil-form-container');
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;" role="status">
+                                <span class="visually-hidden">Cargando...</span>
+                            </div>
+                            <p class="text-muted small mb-0">Cargando formulario...</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            // También configurar el enlace en el menú desplegable
+            const enlaceEditarPerfil = document.querySelector('a[data-bs-target="#modalEditarPerfil"]');
+            if (enlaceEditarPerfil) {
+                enlaceEditarPerfil.addEventListener('click', function() {
+                    console.log('🔗 Click en enlace de editar perfil');
+                });
+            }
+            
+        } else {
+            console.warn('⚠️ Modal de perfil no encontrado en el DOM');
+        }
+    }
+
+    // Hacer función accesible globalmente
+    window.cargarFormularioPerfil = cargarFormularioPerfil;
+
 });

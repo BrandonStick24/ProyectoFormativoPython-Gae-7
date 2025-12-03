@@ -1,16 +1,21 @@
+/* static/css/Vendedor/Ofertas_V.css - VERSIÓN MEJORADA CON PALETA DEL CRUD */
 
-/* Estilos generales mejorados basados en el diseño del CRUD */
 :root {
-    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --secondary-gradient: linear-gradient(135deg, #4F46E5, #7C3AED);
-    --success-gradient: linear-gradient(135deg, #10B981, #059669);
-    --warning-gradient: linear-gradient(135deg, #F59E0B, #D97706);
-    --danger-gradient: linear-gradient(135deg, #EF4444, #DC2626);
+    --primary-blue: #5F85DB;
+    --light-blue: #90B8F8;
+    --dark-blue: #4a6bb8;
+    --gradient-primary: linear-gradient(135deg, #5F85DB, #90B8F8);
+    --gradient-dark: linear-gradient(135deg, #26282B 0%, #353941 100%);
+    --gradient-success: linear-gradient(135deg, #10B981, #059669);
+    --gradient-warning: linear-gradient(135deg, #F59E0B, #D97706);
+    --gradient-danger: linear-gradient(135deg, #EF4444, #DC2626);
+    --gradient-info: linear-gradient(135deg, #0EA5E9, #0284C7);
+    --gradient-variant: linear-gradient(135deg, #8B5CF6, #7C3AED);
 }
 
 /* Tarjeta de Bienvenida */
 .tarjeta-bienvenida {
-    background: var(--primary-gradient);
+    background: var(--gradient-dark);
     color: white;
     padding: 2rem;
     border-radius: 20px;
@@ -27,7 +32,7 @@
     right: -50%;
     width: 100%;
     height: 200%;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(95, 133, 219, 0.1);
     transform: rotate(30deg);
 }
 
@@ -53,12 +58,12 @@
 }
 
 .estadistica-card {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(95, 133, 219, 0.15);
     backdrop-filter: blur(10px);
     padding: 1.5rem;
     border-radius: 15px;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(95, 133, 219, 0.25);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -66,13 +71,15 @@
 
 .estadistica-card:hover {
     transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(95, 133, 219, 0.25);
+    border-color: rgba(144, 184, 248, 0.4);
 }
 
 .estadistica-icono {
     font-size: 2rem;
     margin-bottom: 0.5rem;
     opacity: 0.9;
+    color: #90B8F8;
 }
 
 .estadistica-numero {
@@ -90,51 +97,7 @@
     letter-spacing: 0.5px;
 }
 
-/* Información del Negocio */
-.info-negocio-card {
-    background: white;
-    padding: 1.5rem;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-}
-
-.info-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.info-item i {
-    font-size: 1.5rem;
-    color: #4F46E5;
-    width: 40px;
-    height: 40px;
-    background: #EEF2FF;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.info-content {
-    display: flex;
-    flex-direction: column;
-}
-
-.info-label {
-    font-size: 0.85rem;
-    color: #6B7280;
-    font-weight: 500;
-}
-
-.info-value {
-    font-size: 1.1rem;
-    color: #1F2937;
-    font-weight: 600;
-}
-
-/* Barra de Herramientas */
+/* Barra de Herramientas Mejorada */
 .barra-herramientas {
     background: white;
     padding: 1.5rem;
@@ -170,25 +133,36 @@
 }
 
 .boton-primario {
-    background: var(--secondary-gradient);
+    background: var(--gradient-primary);
     color: white;
 }
 
 .boton-primario:hover {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 4px 15px rgba(95, 133, 219, 0.4);
     color: white;
 }
 
 .boton-secundario {
     background: white;
-    color: #4F46E5;
-    border: 2px solid #4F46E5;
+    color: #5F85DB;
+    border: 2px solid #5F85DB;
 }
 
 .boton-secundario:hover {
-    background: #4F46E5;
+    background: #5F85DB;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.boton-info {
+    background: var(--gradient-info);
+    color: white;
+}
+
+.boton-info:hover {
+    background: linear-gradient(135deg, #0284C7, #0369A1);
     color: white;
     transform: translateY(-2px);
 }
@@ -227,8 +201,8 @@
 
 .input-busqueda:focus {
     outline: none;
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    border-color: #5F85DB;
+    box-shadow: 0 0 0 3px rgba(95, 133, 219, 0.1);
 }
 
 .contenedor-filtros {
@@ -250,7 +224,7 @@
 
 .select-filtro:focus {
     outline: none;
-    border-color: #4F46E5;
+    border-color: #5F85DB;
 }
 
 /* Secciones */
@@ -282,7 +256,7 @@
 }
 
 .contador-seccion {
-    background: var(--secondary-gradient);
+    background: var(--gradient-primary);
     color: white;
     padding: 0.4rem 0.8rem;
     border-radius: 20px;
@@ -310,7 +284,7 @@
 .producto-card-oferta:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     transform: translateY(-3px);
-    border-color: #4F46E5;
+    border-color: #5F85DB;
 }
 
 .producto-header-oferta {
@@ -413,15 +387,15 @@
 }
 
 .btn-producto-base {
-    background: var(--secondary-gradient);
+    background: var(--gradient-primary);
     color: white;
-    box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 2px 5px rgba(95, 133, 219, 0.3);
 }
 
 .btn-producto-base:hover:not(:disabled) {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 4px 10px rgba(95, 133, 219, 0.4);
 }
 
 .btn-producto-base:disabled {
@@ -441,7 +415,7 @@
 }
 
 .btn-variantes-toggle {
-    background: #8B5CF6;
+    background: var(--gradient-variant);
     color: white;
     width: 100%;
     justify-content: space-between;
@@ -449,7 +423,7 @@
 }
 
 .btn-variantes-toggle:hover {
-    background: #7C3AED;
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
     transform: translateY(-1px);
     box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4);
 }
@@ -486,7 +460,7 @@
 
 .btn-variante:hover:not(:disabled) {
     background: #E5E7EB;
-    border-color: #4F46E5;
+    border-color: #5F85DB;
     transform: translateX(5px);
 }
 
@@ -522,13 +496,13 @@
     text-align: center;
 }
 
-/* CONFIGURACIÓN DE OFERTAS - CORREGIDO COMPLETAMENTE */
+/* Configuración de Ofertas */
 .contenedor-configuraciones-scroll {
     padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    max-height: 500px; /* Altura base */
+    max-height: 500px;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 200px;
@@ -536,9 +510,8 @@
     transition: all 0.3s ease;
 }
 
-/* Cuando hay 2 o más productos, activar scroll con altura reducida */
 .contenedor-configuraciones-scroll.con-scroll-activo {
-    max-height: 400px; /* Altura reducida para scroll */
+    max-height: 400px;
 }
 
 .configuracion-oferta-card {
@@ -553,8 +526,8 @@
 }
 
 .configuracion-oferta-card:hover {
-    border-color: #4F46E5;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+    border-color: #5F85DB;
+    box-shadow: 0 4px 12px rgba(95, 133, 219, 0.15);
 }
 
 .configuracion-header {
@@ -647,7 +620,7 @@
     color: white;
 }
 
-/* DISEÑO COMPACTO DEL FORMULARIO */
+/* Diseño compacto del formulario */
 .configuracion-body {
     padding: 1rem;
     min-height: auto;
@@ -698,8 +671,8 @@
 
 .control-formulario:focus {
     outline: none;
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+    border-color: #5F85DB;
+    box-shadow: 0 0 0 2px rgba(95, 133, 219, 0.1);
 }
 
 .sufijo-input {
@@ -792,7 +765,7 @@
     line-height: 1.3;
 }
 
-/* Botón Crear Oferta - SIEMPRE VISIBLE */
+/* Botón Crear Oferta */
 .acciones-configuracion {
     text-align: center;
     margin-top: 1rem;
@@ -801,7 +774,7 @@
 }
 
 .btn-crear-oferta {
-    background: var(--success-gradient);
+    background: var(--gradient-success);
     color: white;
     padding: 0.75rem 1.5rem;
     border: none;
@@ -850,8 +823,8 @@
 }
 
 .oferta-activa-card:hover {
-    border-color: #4F46E5;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+    border-color: #5F85DB;
+    box-shadow: 0 4px 12px rgba(95, 133, 219, 0.15);
 }
 
 .oferta-inactiva {
@@ -900,7 +873,7 @@
 }
 
 .oferta-descuento .porcentaje-descuento {
-    background: var(--danger-gradient);
+    background: var(--gradient-danger);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 20px;
@@ -957,7 +930,7 @@
 
 .progreso-bar {
     height: 100%;
-    background: var(--success-gradient);
+    background: var(--gradient-success);
     border-radius: 10px;
     transition: width 0.3s ease;
 }
@@ -1076,7 +1049,7 @@
     color: #9CA3AF;
 }
 
-/* SCROLLBAR MEJORADO - MÁS VISIBLE */
+/* Scrollbar mejorado */
 .contenedor-configuraciones-scroll::-webkit-scrollbar {
     width: 12px;
 }
@@ -1101,20 +1074,9 @@
     background: #64748b;
 }
 
-/* Para Firefox */
 .contenedor-configuraciones-scroll {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 #f1f5f9;
-}
-
-.boton-info {
-    background: #0EA5E9;
-    color: white;
-}
-
-.boton-info:hover {
-    background: #0284C7;
-    color: white;
 }
 
 .sin-stock-principal {
@@ -1142,7 +1104,7 @@
     border: 1px dashed #E5E7EB;
 }
 
-/* RESPONSIVE */
+/* Responsive */
 @media (max-width: 1200px) {
     .configuracion-grid-compacto {
         grid-template-columns: repeat(2, 1fr);
@@ -1283,6 +1245,4 @@
         font-size: 0.8rem;
         min-height: 36px;
     }
-    
-    
 }

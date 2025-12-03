@@ -251,8 +251,6 @@ def entrada_stock_producto(request, producto_id):
     # IMPORTANTE: Esta función redirige a Stock_V porque se usa desde el dashboard de stock
     return redirect('Stock_V')
 
-
-
 @login_required(login_url='login')
 def reporte_movimientos_stock(request):
     """Vista para ver reporte completo de movimientos de stock - CORREGIDA"""
@@ -269,7 +267,7 @@ def reporte_movimientos_stock(request):
         fecha_hasta = request.GET.get('fecha_hasta', '')
         tipo_movimiento = request.GET.get('tipo_movimiento', '')
         
-        # ✅ CONSULTA MEJORADA - EXCLUIR VENTAS DE PEDIDOS NO ENTREGADOS
+        # ✅ CONSULTA MEJORADA - OBTENER INFORMACIÓN COMPLETA DE VARIANTES
         query = """
             SELECT 
                 ms.fecha_movimiento, 
@@ -282,8 +280,9 @@ def reporte_movimientos_stock(request):
                 COALESCE(u.first_name, 'Sistema') as usuario_nombre,
                 COALESCE(ped.pkid_pedido, 'N/A') as pedido_id,
                 ms.variante_id,
-                COALESCE(vp.nombre_variante, 'Producto principal') as nombre_variante,
-                ped.estado_pedido as estado_pedido  -- ✅ NUEVO: Obtener estado del pedido
+                COALESCE(vp.nombre_variante, '') as nombre_variante,
+                ped.estado_pedido as estado_pedido,
+                ms.descripcion_variante as descripcion_variante_directa
             FROM movimientos_stock ms
             LEFT JOIN productos p ON ms.producto_id = p.pkid_prod
             LEFT JOIN variantes_producto vp ON ms.variante_id = vp.id_variante
@@ -309,8 +308,12 @@ def reporte_movimientos_stock(request):
             params.append(fecha_hasta)
             
         if tipo_movimiento:
-            query += " AND ms.tipo_movimiento = %s"
-            params.append(tipo_movimiento)
+            if tipo_movimiento == 'entrega':
+                # Filtrar solo entregas
+                query += " AND (ped.estado_pedido = 'entregado' OR ms.motivo IN ('pedido_entregado', 'pedido_entregado_variante'))"
+            else:
+                query += " AND ms.tipo_movimiento = %s"
+                params.append(tipo_movimiento)
             
         query += " ORDER BY ms.fecha_movimiento DESC"
         
@@ -320,7 +323,25 @@ def reporte_movimientos_stock(request):
             
             movimientos = []
             for row in resultados:
-                fecha, producto, tipo, motivo, cantidad, stock_anterior, stock_nuevo, usuario, pedido_id, variante_id, nombre_variante, estado_pedido = row
+                (fecha, producto, tipo, motivo, cantidad, stock_anterior, 
+                 stock_nuevo, usuario, pedido_id, variante_id, nombre_variante, 
+                 estado_pedido, descripcion_variante_directa) = row
+                
+                # ✅ LÓGICA MEJORADA PARA DETERMINAR EL NOMBRE DE LA VARIANTE:
+                nombre_variante_final = None
+                es_variante = False
+                
+                if variante_id:
+                    es_variante = True
+                    # Prioridad 1: descripcion_variante_directa (si existe en movimientos_stock)
+                    if descripcion_variante_directa:
+                        nombre_variante_final = descripcion_variante_directa
+                    # Prioridad 2: nombre_variante de la tabla variantes_producto
+                    elif nombre_variante:
+                        nombre_variante_final = nombre_variante
+                    # Prioridad 3: Si no hay nombre, mostrar el ID de la variante
+                    else:
+                        nombre_variante_final = f"Variante ID: {variante_id}"
                 
                 movimientos.append({
                     'fecha': fecha,
@@ -332,9 +353,10 @@ def reporte_movimientos_stock(request):
                     'stock_nuevo': stock_nuevo,
                     'usuario': usuario,
                     'pedido_id': pedido_id,
-                    'variante': nombre_variante,
-                    'es_variante': variante_id is not None and nombre_variante != 'Producto principal',
-                    'estado_pedido': estado_pedido  # ✅ NUEVO: Incluir estado del pedido
+                    'variante_id': variante_id,
+                    'nombre_variante': nombre_variante_final,
+                    'es_variante': es_variante,
+                    'estado_pedido': estado_pedido
                 })
         
         # Calcular estadísticas CORRECTAMENTE (excluyendo ventas no entregadas)
@@ -362,7 +384,7 @@ def reporte_movimientos_stock(request):
                 'total_entradas': stats[1] or 0,
                 'total_salidas': stats[2] or 0,
                 'total_ajustes': stats[3] or 0,
-                'total_entregas': stats[4] or 0,  # ✅ NUEVO: Entregas reales
+                'total_entregas': stats[4] or 0,
             }
         
         contexto = {
@@ -384,7 +406,7 @@ def reporte_movimientos_stock(request):
         print(f"ERROR en reporte_movimientos_stock: {str(e)}")
         messages.error(request, f"Error al cargar el reporte: {str(e)}")
         return redirect('Stock_V')
-
+    
 # Función para registrar movimientos automáticos por pedidos
 def registrar_movimiento_pedido(pedido_id, tipo_movimiento, motivo):
     """Función para registrar movimientos de stock automáticamente por pedidos"""

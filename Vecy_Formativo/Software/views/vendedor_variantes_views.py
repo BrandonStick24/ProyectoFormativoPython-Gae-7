@@ -309,7 +309,7 @@ def editar_variante(request):
                     # Eliminar imagen anterior si existe
                     if imagen_actual:
                         try:
-                            imagen_path = os.path.join(settings.MEDIA_ROOT, 'variantes', imagen_actual)
+                            imagen_path = os.path.join(settings.MEDIA_ROOT, imagen_actual)
                             if os.path.exists(imagen_path):
                                 os.remove(imagen_path)
                         except Exception as e:

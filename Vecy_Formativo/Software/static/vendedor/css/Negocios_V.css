@@ -1,7 +1,7 @@
-/* static/vendedor/css/Negocio_V.css */
-/* ===== ESTILOS BASE UNIFICADOS ===== */
+/* static/vendedor/css/Negocios_V.css - VERSIÓN MEJORADA CON CRUD */
+/* ===== ESTILOS BASE UNIFICADOS CON CRUD ===== */
 .tarjeta-bienvenida {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #26282B 0%, #353941 100%);
     color: white;
     padding: 2rem;
     border-radius: 20px;
@@ -18,7 +18,7 @@
     right: -50%;
     width: 100%;
     height: 200%;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(95, 133, 219, 0.1);
     transform: rotate(30deg);
 }
 
@@ -35,7 +35,7 @@
     position: relative;
 }
 
-/* ===== ESTADÍSTICAS UNIFICADAS ===== */
+/* ===== ESTADÍSTICAS UNIFICADAS CON CRUD ===== */
 .estadisticas-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -44,12 +44,12 @@
 }
 
 .estadistica-card {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(95, 133, 219, 0.15);
     backdrop-filter: blur(10px);
     padding: 1.5rem;
     border-radius: 15px;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(95, 133, 219, 0.25);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -57,13 +57,15 @@
 
 .estadistica-card:hover {
     transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(95, 133, 219, 0.25);
+    border-color: rgba(144, 184, 248, 0.4);
 }
 
 .estadistica-icono {
     font-size: 2rem;
     margin-bottom: 0.5rem;
     opacity: 0.9;
+    color: #90B8F8;
 }
 
 .estadistica-numero {
@@ -116,14 +118,25 @@
 }
 
 .boton-primario {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
     color: white;
 }
 
 .boton-primario:hover {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 4px 15px rgba(95, 133, 219, 0.4);
+}
+
+.boton-masivo {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+    color: white;
+}
+
+.boton-masivo:hover {
+    background: linear-gradient(135deg, #D97706, #B45309);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
 }
 
 /* ===== BÚSQUEDA Y FILTROS UNIFICADOS ===== */
@@ -161,8 +174,8 @@
 
 .input-busqueda:focus {
     outline: none;
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    border-color: #5F85DB;
+    box-shadow: 0 0 0 3px rgba(95, 133, 219, 0.1);
 }
 
 .contenedor-filtros {
@@ -184,31 +197,39 @@
 
 .select-filtro:focus {
     outline: none;
-    border-color: #4F46E5;
+    border-color: #5F85DB;
 }
 
-/* ===== NEGOCIO ACTIVO DESTACADO ===== */
+/* ===== NEGOCIO ACTIVO DESTACADO - MEJORADO ===== */
 .negocio-activo-card {
-    background: white;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.15) 100%);
     border-radius: 15px;
-    box-shadow: 0 8px 25px rgba(79, 70, 229, 0.15);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2);
     margin-bottom: 2rem;
-    border: 2px solid #4F46E5;
+    border: 3px solid #10B981;
     position: relative;
     overflow: hidden;
+    animation: pulseSelected 2s infinite;
+}
+
+@keyframes pulseSelected {
+    0% { border-color: #10B981; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2); }
+    50% { border-color: #34D399; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); }
+    100% { border-color: #10B981; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.2); }
 }
 
 .negocio-activo-badge {
     position: absolute;
     top: 1rem;
     right: 1rem;
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    background: linear-gradient(135deg, #10B981, #34D399);
     color: white;
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.8rem;
     font-weight: 600;
     z-index: 2;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .negocio-activo-content {
@@ -219,12 +240,24 @@
 }
 
 .negocio-activo-imagen {
-    width: 120px;
-    height: 120px;
-    border-radius: 12px;
+    width: 140px;
+    height: 140px;
+    border-radius: 15px;
     overflow: hidden;
     flex-shrink: 0;
-    border: 3px solid #E5E7EB;
+    border: 3px solid white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.negocio-activo-imagen::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), transparent);
 }
 
 .negocio-activo-imagen img {
@@ -238,15 +271,33 @@
 }
 
 .negocio-activo-info h3 {
-    color: #1F2937;
+    color: #065F46;
     margin-bottom: 0.5rem;
     font-weight: 700;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.negocio-activo-info h3::before {
+    content: '✓';
+    background: #10B981;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
 }
 
 .negocio-activo-descripcion {
-    color: #6B7280;
+    color: #047857;
     margin-bottom: 1rem;
     line-height: 1.5;
+    font-size: 0.95rem;
 }
 
 .negocio-activo-meta {
@@ -259,12 +310,16 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #6B7280;
+    color: #065F46;
     font-size: 0.9rem;
+    background: rgba(255, 255, 255, 0.7);
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .meta-item i {
-    color: #4F46E5;
+    color: #10B981;
     width: 16px;
 }
 
@@ -289,7 +344,7 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
     overflow: hidden;
     transition: all 0.3s ease;
-    border: 1px solid #F3F4F6;
+    border: 2px solid #F3F4F6;
     display: flex;
     flex-direction: column;
 }
@@ -297,7 +352,7 @@
 .negocio-card-item:hover {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
     transform: translateY(-5px);
-    border-color: #4F46E5;
+    border-color: #5F85DB;
 }
 
 .negocio-card-header {
@@ -390,6 +445,14 @@
 
 .negocio-card-meta .meta-item {
     font-size: 0.8rem;
+    background: transparent;
+    padding: 0;
+    border: none;
+    color: #6B7280;
+}
+
+.negocio-card-meta .meta-item i {
+    color: #6B7280;
 }
 
 .negocio-card-footer {
@@ -401,7 +464,7 @@
     gap: 0.5rem;
 }
 
-/* ===== BOTONES MEJORADOS ===== */
+/* ===== BOTONES MEJORADOS (CONSISTENTES CON CRUD) ===== */
 .btn {
     display: flex;
     align-items: center;
@@ -422,16 +485,16 @@
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
     color: white;
-    box-shadow: 0 2px 5px rgba(79, 70, 229, 0.3);
+    box-shadow: 0 2px 5px rgba(95, 133, 219, 0.3);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
     color: white;
     transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4);
+    box-shadow: 0 4px 10px rgba(95, 133, 219, 0.4);
 }
 
 .btn-warning {
@@ -447,6 +510,32 @@
     box-shadow: 0 4px 10px rgba(245, 158, 11, 0.4);
 }
 
+.btn-info {
+    background: linear-gradient(135deg, #0EA5E9, #0284C7);
+    color: white;
+    box-shadow: 0 2px 5px rgba(14, 165, 233, 0.3);
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #0284C7, #0369A1);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(14, 165, 233, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #DC2626, #B91C1C);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+}
+
 .btn-outline-secondary {
     background: white;
     color: #6B7280;
@@ -457,6 +546,17 @@
     background: #F9FAFB;
     color: #374151;
     border-color: #9CA3AF;
+}
+
+/* Botón de editar negocio (cambiado de Configurar a Editar) */
+.btn-editar-negocio {
+    background: linear-gradient(135deg, #0EA5E9, #0284C7) !important;
+    color: white !important;
+    border: none !important;
+}
+
+.btn-editar-negocio:hover {
+    background: linear-gradient(135deg, #0284C7, #0369A1) !important;
 }
 
 /* ===== DROPDOWN MEJORADO ===== */
@@ -562,6 +662,7 @@
     
     .negocio-activo-actions {
         align-items: center;
+        width: 100%;
     }
     
     .contenedor-negocios-grid {
@@ -582,6 +683,11 @@
         padding: 1.5rem;
     }
     
+    .negocio-activo-imagen {
+        width: 120px;
+        height: 120px;
+    }
+    
     .negocio-card-body {
         padding: 1rem;
     }
@@ -599,45 +705,15 @@
     }
 }
 
-/* ===== ESTILOS PARA MODAL DE EDICIÓN ===== */
-.section-title {
-    color: #374151;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-    font-weight: 600;
-    font-size: 1rem;
-}
-
-.current-image {
-    max-width: 150px;
-    max-height: 150px;
-    border-radius: 8px;
-    border: 2px solid #e5e7eb;
-    object-fit: cover;
-}
-
-.image-placeholder {
-    width: 150px;
-    height: 150px;
-    border: 2px dashed #d1d5db;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #9ca3af;
-    background-color: #f9fafb;
-}
-
-/* Mejoras para el modal */
+/* ===== MODALES UNIFICADOS CON CRUD ===== */
 .modal-content {
     border-radius: 15px;
     border: none;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 20px 60px rgba(95, 133, 219, 0.3);
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #55AD9B, #95D2B3);
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
     color: white;
     border-radius: 15px 15px 0 0;
     border-bottom: none;
@@ -646,6 +722,13 @@
 
 .modal-header .btn-close {
     filter: invert(1);
+    opacity: 0.8;
+    transition: all 0.3s;
+}
+
+.modal-header .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .modal-body {
@@ -655,40 +738,56 @@
 }
 
 .modal-footer {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid #E5E7EB;
     padding: 1rem 1.5rem;
+    background: #F9FAFB;
+    border-radius: 0 0 15px 15px;
 }
 
-/* Responsive para el modal */
-@media (max-width: 768px) {
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-    
-    .modal-body {
-        padding: 1rem;
-        max-height: 60vh;
-    }
-    
-    .modal-header {
-        padding: 1rem;
-    }
-    
-    .current-image {
-        max-width: 120px;
-        max-height: 120px;
-    }
-    
-    .image-placeholder {
-        width: 120px;
-        height: 120px;
-    }
+/* Formularios en modales */
+.modal .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
 }
 
-/* ===== ESTILOS PARA MODAL DE EDICIÓN UNIFICADO ===== */
+.modal .form-control,
+.modal .form-select {
+    border: 2px solid #E5E7EB;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    transition: all 0.3s;
+}
+
+.modal .form-control:focus,
+.modal .form-select:focus {
+    border-color: #5F85DB;
+    box-shadow: 0 0 0 3px rgba(95, 133, 219, 0.1);
+    outline: none;
+}
+
+/* Botones en modales */
+.modal .btn-primary {
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
+    border: none;
+    border-radius: 10px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.modal .btn-primary:hover {
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(95, 133, 219, 0.4);
+}
+
+/* Secciones en modal de edición */
 .section-title {
     color: #374151;
-    border-bottom: 2px solid #4F46E5;
+    border-bottom: 2px solid #5F85DB;
     padding-bottom: 0.5rem;
     margin-bottom: 1.5rem;
     font-weight: 600;
@@ -699,7 +798,7 @@
 }
 
 .section-title i {
-    color: #4F46E5;
+    color: #5F85DB;
 }
 
 .current-image {
@@ -720,244 +819,16 @@
     align-items: center;
     justify-content: center;
     color: #9CA3AF;
-    background: linear-gradient(135deg, #F9FAFB, #F3F4F6);
-    transition: all 0.3s ease;
+    background: #F9FAFB;
+    transition: all 0.3s;
 }
 
 .image-placeholder:hover {
-    border-color: #4F46E5;
-    background: linear-gradient(135deg, #F3F4F6, #E5E7EB);
+    border-color: #5F85DB;
+    background: #F3F4F6;
 }
 
-/* Mejoras para el modal unificado */
-.modal-content {
-    border-radius: 20px;
-    border: none;
-    box-shadow: 0 25px 50px rgba(79, 70, 229, 0.2);
-    overflow: hidden;
-}
-
-.modal-header {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    color: white;
-    border-radius: 20px 20px 0 0;
-    border-bottom: none;
-    padding: 1.5rem 2rem;
-    position: relative;
-}
-
-.modal-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #4F46E5, #7C3AED, #4F46E5);
-}
-
-.modal-header .btn-close {
-    filter: invert(1);
-    opacity: 0.8;
-    transition: all 0.3s ease;
-}
-
-.modal-header .btn-close:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-.modal-body {
-    padding: 2rem;
-    max-height: 70vh;
-    overflow-y: auto;
-    background: #F9FAFB;
-}
-
-.modal-footer {
-    border-top: 1px solid #E5E7EB;
-    padding: 1.5rem 2rem;
-    background: white;
-    border-radius: 0 0 20px 20px;
-}
-
-/* Estilos específicos para formularios en modales */
-.modal .form-label {
-    font-weight: 600;
-    color: #374151;
-    margin-bottom: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.modal .form-control,
-.modal .form-select {
-    border: 2px solid #E5E7EB;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    background: white;
-}
-
-.modal .form-control:focus,
-.modal .form-select:focus {
-    border-color: #4F46E5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-    outline: none;
-}
-
-.modal .form-text {
-    font-size: 0.8rem;
-    color: #6B7280;
-    margin-top: 0.25rem;
-}
-
-/* Botones del modal unificados */
-.modal .btn-primary {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    border: none;
-    border-radius: 10px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
-}
-
-.modal .btn-primary:hover {
-    background: linear-gradient(135deg, #4338CA, #6D28D9);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4);
-}
-
-.modal .btn-outline-secondary {
-    border: 2px solid #6B7280;
-    border-radius: 10px;
-    padding: 0.75rem 1.5rem;
-    font-weight: 600;
-    font-size: 0.9rem;
-    color: #6B7280;
-    background: white;
-    transition: all 0.3s ease;
-}
-
-.modal .btn-outline-secondary:hover {
-    background: #6B7280;
-    color: white;
-    border-color: #6B7280;
-    transform: translateY(-2px);
-}
-
-/* Alertas en modales */
-.modal .alert {
-    border-radius: 10px;
-    border: none;
-    font-size: 0.9rem;
-    padding: 1rem 1.25rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.modal .alert-success {
-    background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
-    color: #065F46;
-    border-left: 4px solid #10B981;
-}
-
-.modal .alert-warning {
-    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
-    color: #92400E;
-    border-left: 4px solid #F59E0B;
-}
-
-.modal .alert-danger {
-    background: linear-gradient(135deg, #FEE2E2, #FECACA);
-    color: #DC2626;
-    border-left: 4px solid #EF4444;
-}
-
-.modal .alert-info {
-    background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
-    color: #1E40AF;
-    border-left: 4px solid #3B82F6;
-}
-
-/* Efectos hover para elementos del modal */
-.modal .form-control:hover,
-.modal .form-select:hover {
-    border-color: #9CA3AF;
-}
-
-.modal .image-placeholder:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* Responsive para el modal unificado */
-@media (max-width: 768px) {
-    .modal-dialog {
-        margin: 1rem;
-    }
-    
-    .modal-body {
-        padding: 1.5rem;
-        max-height: 60vh;
-    }
-    
-    .modal-header {
-        padding: 1.25rem 1.5rem;
-    }
-    
-    .modal-footer {
-        padding: 1.25rem 1.5rem;
-    }
-    
-    .current-image {
-        max-width: 120px;
-        max-height: 120px;
-    }
-    
-    .image-placeholder {
-        width: 120px;
-        height: 120px;
-    }
-    
-    .section-title {
-        font-size: 1rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .modal-body {
-        padding: 1rem;
-    }
-    
-    .modal-header {
-        padding: 1rem 1.25rem;
-    }
-    
-    .modal-footer {
-        padding: 1rem 1.25rem;
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-    
-    .modal-footer .btn {
-        width: 100%;
-    }
-    
-    .current-image {
-        max-width: 100px;
-        max-height: 100px;
-    }
-    
-    .image-placeholder {
-        width: 100px;
-        height: 100px;
-    }
-}
-
-/* Animaciones para el modal */
+/* Animaciones para modales */
 @keyframes modalSlideIn {
     from {
         opacity: 0;
@@ -973,9 +844,41 @@
     animation: modalSlideIn 0.3s ease-out;
 }
 
-/* Efectos de focus mejorados */
-.modal .form-control:focus,
-.modal .form-select:focus {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+/* Alertas en modales */
+.modal .alert {
+    border-radius: 10px;
+    border: none;
+    font-size: 0.9rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.modal .alert-warning {
+    background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+    color: #92400E;
+    border-left: 4px solid #F59E0B;
+}
+
+/* Estilos específicos para el modal de negocio seleccionado */
+.negocio-activo-actions .estado-badge.activo {
+    background: linear-gradient(135deg, #10B981, #34D399);
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.negocio-activo-actions .btn-warning {
+    background: linear-gradient(135deg, #0EA5E9, #0284C7);
+    border: none;
+    padding: 0.5rem 1.5rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+.negocio-activo-actions .btn-warning:hover {
+    background: linear-gradient(135deg, #0284C7, #0369A1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(14, 165, 233, 0.4);
 }
