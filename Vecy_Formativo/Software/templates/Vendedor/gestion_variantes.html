@@ -68,7 +68,7 @@
                 </div>
                 <div class="info-item">
                     <span class="info-label">Categoría</span>
-                    <span class="info-value">{{ producto.categoria_nombre }}</span>
+                    <span class="info-value">{{ producto.fkcategoria_prod.desc_cp }}</span>
                 </div>
             </div>
         </div>
@@ -116,7 +116,7 @@
                                     <i class="fas fa-box"></i> {{ variante.stock }} unidades
                                 </span>
                                 
-                                <!-- Botones rápidos de ajuste de stock -->
+                                <!-- Botones rápidos de ajuste de stock 
                                 <div class="mt-2">
                                     <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" class="d-inline">
                                         {% csrf_token %}
@@ -137,7 +137,7 @@
                                             <i class="fas fa-minus"></i>
                                         </button>
                                     </form>
-                                </div>
+                                </div> -->
                             </td>
                             <td>
                                 <span class="badge {% if variante.estado == 'activa' %}bg-success{% else %}bg-secondary{% endif %}">
@@ -268,6 +268,7 @@
                         </div>
                         
                         <!-- Modal Ajustar Stock para esta variante específica -->
+                        <!-- Modal Ajustar Stock para esta variante específica - NUEVA VERSIÓN MEJORADA -->
                         <div class="modal fade" id="modalAjustarStockVariante{{ variante.id }}" tabindex="-1">
                             <div class="modal-dialog">
                                 <div class="modal-content">
@@ -278,26 +279,35 @@
                                         </h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}">
+                                    <form method="post" action="{% url 'ajustar_stock_variante' variante.id %}" id="formAjustarStockVariante{{ variante.id }}">
                                         {% csrf_token %}
-                                        <input type="hidden" name="variante_id" value="{{ variante.id }}">
+                                        <input type="hidden" id="producto_id_stock_variante{{ variante.id }}" name="variante_id" value="{{ variante.id }}">
                                         <div class="modal-body">
                                             <div class="alert alert-info">
                                                 <i class="fas fa-info-circle me-2"></i>
-                                                Variante: <strong>{{ variante.nombre }}</strong>
+                                                <div>
+                                                    <h6 class="alert-heading mb-1">Variante:</h6>
+                                                    <span class="fw-bold">{{ variante.nombre }}</span>
+                                                    {% if variante.sku %}
+                                                    <br>
+                                                    <small class="text-muted">SKU: {{ variante.sku }}</small>
+                                                    {% endif %}
+                                                </div>
                                             </div>
 
                                             <div class="row">
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
                                                         <label class="form-label">Stock Actual:</label>
-                                                        <input type="number" class="form-control" value="{{ variante.stock }}" readonly>
+                                                        <input type="number" class="form-control" id="stock_actual_variante{{ variante.id }}" 
+                                                            value="{{ variante.stock }}" readonly>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
                                                         <label class="form-label">Tipo de Ajuste:</label>
-                                                        <select class="form-control" name="tipo_ajuste" required>
+                                                        <select class="form-control" id="tipo_ajuste_variante{{ variante.id }}" 
+                                                                name="tipo_ajuste" required onchange="calcularStockFinalVariante('{{ variante.id }}')">
                                                             <option value="entrada">Entrada (+)</option>
                                                             <option value="salida">Salida (-)</option>
                                                             <option value="ajuste">Ajuste Manual</option>
@@ -307,10 +317,22 @@
                                             </div>
 
                                             <div class="mb-3">
-                                                <label class="form-label">Cantidad:</label>
-                                                <input type="number" class="form-control" name="cantidad_ajuste" min="1" required placeholder="Ingrese la cantidad">
-                                                <div class="form-text">
-                                                    Ingrese la cantidad a sumar, restar o establecer
+                                                <label for="cantidad_ajuste_variante{{ variante.id }}" class="form-label">Cantidad:</label>
+                                                <input type="number" class="form-control" id="cantidad_ajuste_variante{{ variante.id }}" 
+                                                    name="cantidad_ajuste" min="1" required 
+                                                    placeholder="Ingrese la cantidad"
+                                                    oninput="calcularStockFinalVariante('{{ variante.id }}')">
+                                                <div class="form-text" id="texto_ayuda_variante{{ variante.id }}">
+                                                    Ingrese la cantidad a sumar al stock actual
+                                                </div>
+                                            </div>
+
+                                            <!-- NUEVO: Campo de Stock Final en tiempo real -->
+                                            <div class="mb-3" id="campo_stock_final_variante{{ variante.id }}" style="display: none;">
+                                                <label for="stock_final_variante{{ variante.id }}" class="form-label">Stock Final:</label>
+                                                <input type="number" class="form-control" id="stock_final_variante{{ variante.id }}" readonly>
+                                                <div class="form-text text-success" id="indicador_stock_variante{{ variante.id }}">
+                                                    <!-- Se mostrará el indicador de stock (normal/bajo/crítico) -->
                                                 </div>
                                             </div>
 
@@ -324,6 +346,24 @@
                                                     <option value="promocion">Preparación para Promoción</option>
                                                     <option value="otro">Otro</option>
                                                 </select>
+                                            </div>
+                                            
+                                            <!-- NUEVO: Información de precio para contexto -->
+                                            <div class="alert alert-secondary mt-3">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-tag me-1"></i>
+                                                            Precio base: ${{ producto.precio_prod|floatformat:2 }}
+                                                        </small>
+                                                    </div>
+                                                    <div class="col-md-6 text-end">
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-calculator me-1"></i>
+                                                            Precio variante: ${{ variante.precio_total|floatformat:2 }}
+                                                        </small>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
@@ -444,10 +484,10 @@
 
 {% block extra_js %}
 <script>
+// ========== CÁLCULO PRECIO TOTAL PARA AGREGAR VARIANTE ==========
 document.addEventListener('DOMContentLoaded', function() {
     console.log('=== INICIANDO SCRIPT DE GESTIÓN DE VARIANTES ===');
     
-    // ========== CÁLCULO PRECIO TOTAL PARA AGREGAR VARIANTE ==========
     const precioBase = {{ producto.precio_prod }};
     const inputPrecioAdicional = document.getElementById('precio-adicional-input');
     const previewPrecioTotal = document.getElementById('precio-total-preview');
@@ -459,51 +499,6 @@ document.addEventListener('DOMContentLoaded', function() {
             previewPrecioTotal.textContent = precioTotal.toFixed(2);
         });
     }
-
-    // ========== VALIDACIÓN FORMULARIO AJUSTAR STOCK ==========
-    const formsAjustarStock = document.querySelectorAll('form[action*="ajustar-stock"]');
-    formsAjustarStock.forEach(form => {
-        form.addEventListener('submit', function(event) {
-            const cantidadInput = this.querySelector('input[name="cantidad_ajuste"]');
-            const tipoSelect = this.querySelector('select[name="tipo_ajuste"]');
-            const stockActual = this.querySelector('input[readonly]').value;
-            
-            if (!cantidadInput || !tipoSelect) {
-                event.preventDefault();
-                alert('❌ Error: Datos del formulario incompletos');
-                return false;
-            }
-            
-            const cantidad = parseInt(cantidadInput.value) || 0;
-            const tipoAjuste = tipoSelect.value;
-            
-            if (cantidad <= 0) {
-                event.preventDefault();
-                alert('❌ Error: La cantidad debe ser mayor a 0');
-                cantidadInput.focus();
-                return false;
-            }
-            
-            let stockFinal;
-            if (tipoAjuste === 'entrada') {
-                stockFinal = parseInt(stockActual) + cantidad;
-            } else if (tipoAjuste === 'salida') {
-                stockFinal = parseInt(stockActual) - cantidad;
-            } else if (tipoAjuste === 'ajuste') {
-                stockFinal = cantidad;
-            }
-            
-            if (stockFinal < 0) {
-                event.preventDefault();
-                alert('❌ Error: No puedes tener stock negativo. Stock resultante: ' + stockFinal);
-                cantidadInput.focus();
-                return false;
-            }
-            
-            console.log('✅ Formulario válido, enviando...');
-            return true;
-        });
-    });
 
     // ========== VALIDACIÓN FORMULARIO ELIMINAR VARIANTE ==========
     const formsEliminar = document.querySelectorAll('form[action*="eliminar"]');
@@ -519,6 +514,232 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     console.log('✅ Script de gestión de variantes cargado correctamente');
+});
+</script>
+
+<script>
+// ========== FUNCIONES ESPECÍFICAS PARA MODALES DE AJUSTE DE STOCK ==========
+
+function calcularStockFinalVariante(varianteId) {
+    console.log(`=== DEBUG: Calculando stock final para variante ${varianteId} ===`);
+    
+    // Obtener elementos del DOM
+    const stockActualElement = document.getElementById(`stock_actual_variante${varianteId}`);
+    const cantidadElement = document.getElementById(`cantidad_ajuste_variante${varianteId}`);
+    const tipoAjusteElement = document.getElementById(`tipo_ajuste_variante${varianteId}`);
+    const stockFinalElement = document.getElementById(`stock_final_variante${varianteId}`);
+    const campoStockFinal = document.getElementById(`campo_stock_final_variante${varianteId}`);
+    const textoAyuda = document.getElementById(`texto_ayuda_variante${varianteId}`);
+    const indicadorStock = document.getElementById(`indicador_stock_variante${varianteId}`);
+    
+    if (!stockActualElement || !cantidadElement || !tipoAjusteElement) {
+        console.error('❌ Elementos no encontrados para variante:', varianteId);
+        return;
+    }
+    
+    const stockActual = parseInt(stockActualElement.value) || 0;
+    const cantidad = parseInt(cantidadElement.value) || 0;
+    const tipoAjuste = tipoAjusteElement.value;
+    
+    console.log(`Stock actual: ${stockActual}, Cantidad: ${cantidad}, Tipo: ${tipoAjuste}`);
+    
+    let stockFinal = stockActual;
+    let mensaje = '';
+    
+    if (cantidad > 0) {
+        // Mostrar campo de stock final
+        if (campoStockFinal) {
+            campoStockFinal.style.display = 'block';
+        }
+        
+        // Calcular según tipo de ajuste
+        if (tipoAjuste === 'entrada') {
+            stockFinal = stockActual + cantidad;
+            mensaje = `Se sumarán ${cantidad} unidades al stock actual`;
+            if (textoAyuda) {
+                textoAyuda.textContent = mensaje;
+                textoAyuda.className = 'form-text text-success';
+            }
+        } else if (tipoAjuste === 'salida') {
+            stockFinal = stockActual - cantidad;
+            mensaje = `Se restarán ${cantidad} unidades al stock actual`;
+            if (textoAyuda) {
+                textoAyuda.textContent = mensaje;
+                textoAyuda.className = stockFinal < 0 ? 'form-text text-danger' : 'form-text text-warning';
+            }
+        } else if (tipoAjuste === 'ajuste') {
+            stockFinal = cantidad;
+            mensaje = `El stock se establecerá en ${cantidad} unidades`;
+            if (textoAyuda) {
+                textoAyuda.textContent = mensaje;
+                textoAyuda.className = 'form-text text-info';
+            }
+        }
+        
+        // Actualizar campo de stock final
+        if (stockFinalElement) {
+            stockFinalElement.value = stockFinal;
+            
+            // Aplicar clases visuales según el stock final
+            if (stockFinal < 0) {
+                stockFinalElement.className = 'form-control is-invalid';
+                if (indicadorStock) {
+                    indicadorStock.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> ¡STOCK NEGATIVO!';
+                    indicadorStock.className = 'form-text text-danger';
+                }
+            } else if (stockFinal === 0) {
+                stockFinalElement.className = 'form-control is-invalid';
+                if (indicadorStock) {
+                    indicadorStock.innerHTML = '<i class="fas fa-times-circle me-1"></i> Stock crítico (sin unidades)';
+                    indicadorStock.className = 'form-text text-danger';
+                }
+            } else if (stockFinal <= 5) {
+                stockFinalElement.className = 'form-control is-warning';
+                if (indicadorStock) {
+                    indicadorStock.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Stock bajo';
+                    indicadorStock.className = 'form-text text-warning';
+                }
+            } else {
+                stockFinalElement.className = 'form-control is-valid';
+                if (indicadorStock) {
+                    indicadorStock.innerHTML = '<i class="fas fa-check-circle me-1"></i> Stock normal';
+                    indicadorStock.className = 'form-text text-success';
+                }
+            }
+        }
+        
+        console.log(`✅ Stock final calculado: ${stockFinal}`);
+    } else {
+        // Ocultar campo de stock final si no hay cantidad
+        if (campoStockFinal) {
+            campoStockFinal.style.display = 'none';
+        }
+        if (textoAyuda) {
+            textoAyuda.textContent = 'Ingrese la cantidad a sumar al stock actual';
+            textoAyuda.className = 'form-text';
+        }
+    }
+}
+
+// ========== FUNCIÓN PARA INICIALIZAR MODALES ==========
+
+function inicializarModalStockVariante(varianteId) {
+    console.log(`=== INICIALIZANDO MODAL PARA VARIANTE ${varianteId} ===`);
+    
+    // Obtener elementos del modal
+    const cantidadInput = document.getElementById(`cantidad_ajuste_variante${varianteId}`);
+    const tipoSelect = document.getElementById(`tipo_ajuste_variante${varianteId}`);
+    const stockFinalDiv = document.getElementById(`campo_stock_final_variante${varianteId}`);
+    const stockFinalInput = document.getElementById(`stock_final_variante${varianteId}`);
+    
+    // Resetear valores al abrir el modal
+    if (cantidadInput) {
+        cantidadInput.value = '';
+        // Agregar event listener para cálculo en tiempo real
+        cantidadInput.addEventListener('input', function() {
+            calcularStockFinalVariante(varianteId);
+        });
+    }
+    
+    if (tipoSelect) {
+        tipoSelect.value = 'entrada';
+        // Agregar event listener para cambio de tipo
+        tipoSelect.addEventListener('change', function() {
+            calcularStockFinalVariante(varianteId);
+        });
+    }
+    
+    if (stockFinalDiv) {
+        stockFinalDiv.style.display = 'none';
+    }
+    
+    if (stockFinalInput) {
+        stockFinalInput.value = '';
+    }
+    
+    // Configurar el formulario para validación
+    const form = document.getElementById(`formAjustarStockVariante${varianteId}`);
+    if (form) {
+        form.addEventListener('submit', function(event) {
+            // Validación básica
+            const cantidad = parseInt(cantidadInput.value) || 0;
+            const tipoAjuste = tipoSelect.value;
+            const stockActual = parseInt(document.getElementById(`stock_actual_variante${varianteId}`).value) || 0;
+            
+            if (cantidad <= 0) {
+                event.preventDefault();
+                alert('❌ Error: La cantidad debe ser mayor a 0');
+                cantidadInput.focus();
+                return false;
+            }
+            
+            // Calcular stock final para validación
+            let stockFinal;
+            if (tipoAjuste === 'entrada') {
+                stockFinal = stockActual + cantidad;
+            } else if (tipoAjuste === 'salida') {
+                stockFinal = stockActual - cantidad;
+            } else if (tipoAjuste === 'ajuste') {
+                stockFinal = cantidad;
+            }
+            
+            if (stockFinal < 0) {
+                event.preventDefault();
+                alert('❌ Error: No puedes tener stock negativo. Stock resultante: ' + stockFinal);
+                cantidadInput.focus();
+                return false;
+            }
+            
+            // Mostrar loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
+                submitBtn.disabled = true;
+            }
+            
+            console.log(`✅ Enviando ajuste de stock para variante ${varianteId}`);
+            return true;
+        });
+    }
+}
+
+// ========== CONFIGURAR TODOS LOS BOTONES DE AJUSTE DE STOCK ==========
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== CONFIGURANDO BOTONES DE AJUSTE DE STOCK ===');
+    
+    // Configurar todos los botones que abren modales de ajuste de stock
+    const botonesAjustarStock = document.querySelectorAll('[data-bs-target^="#modalAjustarStockVariante"]');
+    
+    botonesAjustarStock.forEach(boton => {
+        const target = boton.getAttribute('data-bs-target');
+        const varianteId = target.replace('#modalAjustarStockVariante', '');
+        
+        if (varianteId) {
+            // Agregar evento click al botón
+            boton.addEventListener('click', function() {
+                inicializarModalStockVariante(varianteId);
+            });
+        }
+    });
+    
+    // Configurar validación para botones rápidos (+/-)
+    const formsRapidos = document.querySelectorAll('form[action*="ajustar-stock"]');
+    formsRapidos.forEach(form => {
+        // Filtrar solo formularios de botones rápidos (no modales)
+        if (!form.id || !form.id.startsWith('formAjustarStockVariante')) {
+            form.addEventListener('submit', function(event) {
+                // Estos formularios ya tienen cantidad fija (1), solo validar
+                const tipoAjuste = this.querySelector('input[name="tipo_ajuste"]').value;
+                const varianteId = this.action.split('/').filter(part => part).pop();
+                
+                console.log(`✅ Enviando ajuste rápido (${tipoAjuste}) para variante: ${varianteId}`);
+                return true;
+            });
+        }
+    });
+    
+    console.log('✅ Botones de ajuste de stock configurados correctamente');
 });
 </script>
 {% endblock %}

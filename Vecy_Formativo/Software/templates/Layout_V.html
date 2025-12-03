@@ -13,57 +13,167 @@
     
     <!-- CSS adicional para el modal de editar perfil -->
     <style>
-        /* Estilos específicos para el modal de editar perfil */
+        /* ==================== MODAL EDITAR PERFIL - ESTILOS BASE ==================== */
         .modal-perfil .modal-content {
             border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: none;
         }
-        
+
         .modal-perfil .modal-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, var(--primary, #3598db) 0%, var(--primary-dark, #2c3e50) 100%);
             color: white;
             border-bottom: none;
             padding: 1.25rem 1.5rem;
+            display: flex;
+            justify-content: center;
         }
-        
+
         .modal-perfil .modal-title {
             font-weight: 700;
             font-size: 1.1rem;
+            margin: 0;
         }
-        
+
+        .modal-perfil .btn-close {
+            position: absolute;
+            right: 0;
+            top: 0;
+            margin: 1rem;
+        }
+
+        .modal-perfil .btn-close.btn-close-white {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
         .modal-perfil .modal-body {
-            padding: 1.5rem;
+            padding: 1.5rem !important;
         }
-        
+
+        /* Contenedor de foto de perfil */
+        .modal-perfil .profile-picture-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .modal-perfil .profile-picture {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .modal-perfil .profile-picture-placeholder {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary, #3598db), var(--secondary, #34495e));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid white;
+            color: white;
+            font-size: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            margin: 0 auto;
+        }
+
+        .modal-perfil .profile-picture-overlay {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.8), rgba(41, 128, 185, 0.9));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 3px solid white;
+        }
+
+        .modal-perfil .profile-picture-container:hover .profile-picture-overlay {
+            opacity: 1;
+        }
+
+        /* Secciones del formulario */
+        .modal-perfil .form-section {
+            padding: 1rem 0;
+            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-perfil .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .modal-perfil .form-section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.8rem;
+        }
+
+        .modal-perfil .form-section-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--primary, #3598db), var(--secondary, #34495e));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+
+        .modal-perfil .form-section-title {
+            font-weight: 600;
+            color: var(--dark, #2d3e50);
+            font-size: 1rem;
+            margin: 0;
+        }
+
+        /* Campos del formulario */
         .modal-perfil .form-label {
             font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 0.5rem;
+            color: var(--dark, #2d3e50);
+            margin-bottom: 0.4rem;
             font-size: 0.9rem;
         }
-        
+
         .modal-perfil .form-control {
-            border: 2px solid var(--gray-200);
-            border-radius: 6px;
-            padding: 0.6rem 0.75rem;
-            font-size: 0.9rem;
+            border: 2px solid #e8f0fe;
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
             transition: all 0.3s ease;
+            font-size: 0.9rem;
+            background: #fafbfc;
+            margin-bottom: 0.5rem;
         }
-        
+
         .modal-perfil .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(95, 133, 219, 0.1);
+            border-color: var(--primary, #3598db);
+            box-shadow: 0 0 0 0.2rem rgba(53, 152, 219, 0.15);
+            background: white;
         }
-        
+
         .modal-perfil .campo-clave {
             position: relative;
         }
-        
+
         .modal-perfil .campo-clave .form-control {
             padding-right: 2.5rem;
         }
-        
+
         .modal-perfil .btn-toggle-password {
             position: absolute;
             right: 10px;
@@ -71,122 +181,95 @@
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: var(--gray-500);
+            color: var(--gray-500, #6c757d);
             cursor: pointer;
             z-index: 2;
             font-size: 0.9rem;
+            padding: 5px;
         }
-        
+
         .modal-perfil .btn-toggle-password:hover {
-            color: var(--primary);
+            color: var(--primary, #3598db);
         }
-        
-        .modal-perfil .info-clave {
-            font-size: 0.75rem;
-            color: var(--gray-600);
-            margin-top: 0.25rem;
-        }
-        
-        .modal-perfil .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            border: none;
-            border-radius: 6px;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-        }
-        
-        .modal-perfil .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(95, 133, 219, 0.3);
-        }
-        
-        .modal-perfil .btn-secondary {
-            background: var(--gray-600);
-            border: none;
-            border-radius: 6px;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        
-        .modal-perfil .foto-perfil-container {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        
-        .modal-perfil .foto-perfil {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 3px solid var(--primary-light);
-            margin-bottom: 0.75rem;
-        }
-        
-        .modal-perfil .btn-cambiar-foto {
-            background: var(--gray-100);
-            border: 1px dashed var(--gray-300);
-            color: var(--gray-600);
-            border-radius: 6px;
-            padding: 0.4rem 0.8rem;
-            font-size: 0.8rem;
-            transition: all 0.3s ease;
-        }
-        
-        .modal-perfil .btn-cambiar-foto:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-        
-        .seccion-datos {
-            background: var(--gray-50);
+
+        /* Tarjeta de información de cuenta */
+        .modal-perfil .account-info-card {
+            background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+            border: 1px solid #e3e9ff;
             border-radius: 8px;
-            padding: 1.25rem;
-            margin-bottom: 1.25rem;
+            padding: 0.8rem;
+            margin-bottom: 0.8rem;
         }
-        
-        .seccion-datos h6 {
-            color: var(--primary);
+
+        .modal-perfil .account-info-label {
             font-weight: 600;
-            margin-bottom: 1rem;
-            font-size: 0.95rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .campo-deshabilitado {
-            background-color: var(--gray-100);
-            color: var(--gray-600);
-            cursor: not-allowed;
-        }
-        
-        .texto-deshabilitado {
+            color: var(--secondary, #34495e);
             font-size: 0.8rem;
-            color: var(--gray-500);
-            margin-top: 0.25rem;
+            margin-bottom: 0.2rem;
         }
-        
-        /* Modal más compacto */
+
+        .modal-perfil .account-info-value {
+            font-weight: 700;
+            color: var(--dark, #2d3e50);
+            font-size: 0.9rem;
+        }
+
+        /* Botones */
+        .modal-perfil .btn-change-photo {
+            background: white;
+            color: var(--primary, #3598db);
+            border: 2px solid var(--primary, #3598db);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .modal-perfil .btn-change-photo:hover {
+            background: var(--primary, #3598db);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .modal-perfil .btn-save {
+            background: linear-gradient(135deg, var(--primary, #3598db), var(--secondary, #34495e));
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-size: 0.95rem;
+        }
+
+        .modal-perfil .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(53, 152, 219, 0.3);
+        }
+
+        /* Modal más pequeño */
         .modal-perfil .modal-dialog {
             max-width: 500px;
         }
-        
+
         /* Responsive */
         @media (max-width: 576px) {
-            .modal-perfil .modal-body {
-                padding: 1.25rem;
-            }
-            
             .modal-perfil .modal-dialog {
                 margin: 0.5rem;
             }
             
-            .modal-perfil .foto-perfil {
-                width: 70px;
-                height: 70px;
+            .modal-perfil .modal-body {
+                padding: 1.25rem !important;
+            }
+            
+            .modal-perfil .profile-picture,
+            .modal-perfil .profile-picture-placeholder {
+                width: 80px;
+                height: 80px;
             }
         }
         .logo-vecy {
@@ -301,7 +384,7 @@
                         <i class="fas fa-store"></i>
                         Mis Negocios
                     </a>
-                    <a href="#" class="item-desplegable-personalizado" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil">
+                    <a href="#" class="item-desplegable-personalizado" data-bs-toggle="modal" data-bs-target="#modalEditarPerfil" onclick="cargarFormularioPerfil()">
                         <i class="fas fa-user-edit"></i>
                         Editar Perfil
                     </a>
@@ -382,97 +465,33 @@
 
     <!-- ==================== MODALES DEL LAYOUT ==================== -->
 
-    <!-- Modal para Editar Perfil - MEJORADO Y COMPACTO -->
+    <!-- Modal para Editar Perfil - VERSIÓN BASE -->
     <div class="modal fade modal-perfil" id="modalEditarPerfil" tabindex="-1"
         aria-labelledby="modalEditarPerfilLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditarPerfilLabel">
-                        <i class="fas fa-user-edit me-2"></i>Editar Perfil
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <!-- Header compacto -->
+                <div class="modal-header bg-gradient-primary text-white border-0 py-3">
+                    <div class="w-100 text-center">
+                        <h5 class="modal-title fw-bold mb-0" id="modalEditarPerfilLabel">
+                            <i class="fas fa-user-edit me-2"></i>Editar Perfil
+                        </h5>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white position-absolute end-0 top-0 m-2"
+                        data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="formEditarPerfil">
-                        <!-- Foto de Perfil -->
-                        <div class="foto-perfil-container">
-                            <img src="{% static 'img/default-avatar.png' %}" alt="Foto de perfil" class="foto-perfil" id="fotoPerfilPreview">
-                            <div>
-                                <button type="button" class="btn btn-cambiar-foto" id="btnCambiarFoto">
-                                    <i class="fas fa-camera me-1"></i>Cambiar Foto
-                                </button>
-                                <input type="file" id="inputFotoPerfil" accept="image/*" style="display: none;">
-                            </div>
-                        </div>
 
-                        <!-- Información Básica -->
-                        <div class="seccion-datos">
-                            <h6><i class="fas fa-user-circle"></i> Información Básica</h6>
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <div class="mb-2">
-                                        <label for="nombre" class="form-label">Nombre *</label>
-                                        <input type="text" class="form-control" id="nombre" name="nombre" 
-                                               value="{{ nombre }}" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-2">
-                                        <label for="apellido" class="form-label">Apellido *</label>
-                                        <input type="text" class="form-control" id="apellido" name="apellido" 
-                                               value="{{ perfil.apellido|default:'' }}" required>
-                                    </div>
-                                </div>
+                <!-- Body compacto -->
+                <div class="modal-body p-4">
+                    <div id="perfil-form-container">
+                        <!-- Spinner compacto -->
+                        <div class="text-center py-4">
+                            <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;" role="status">
+                                <span class="visually-hidden">Cargando...</span>
                             </div>
-                            <div class="mb-2">
-                                <label for="email" class="form-label">Correo Electrónico *</label>
-                                <input type="email" class="form-control" id="email" name="email"
-                                       value="{{ user.email }}" required>
-                            </div>
-                            <div class="mb-0">
-                                <label for="documento" class="form-label">Documento</label>
-                                <input type="text" class="form-control campo-deshabilitado" id="documento" 
-                                       value="{{ perfil.doc_user }}" disabled>
-                                <div class="texto-deshabilitado">No se puede modificar</div>
-                            </div>
+                            <p class="text-muted small mb-0">Cargando formulario...</p>
                         </div>
-
-                        <!-- Cambio de Contraseña (Opcional) -->
-                        <div class="seccion-datos">
-                            <h6><i class="fas fa-lock"></i> Cambio de Contraseña</h6>
-                            <div class="mb-2 campo-clave">
-                                <label for="claveActual" class="form-label">Contraseña Actual</label>
-                                <input type="password" class="form-control" id="claveActual" name="claveActual" placeholder="Opcional">
-                                <button type="button" class="btn-toggle-password" data-target="claveActual">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <div class="mb-2 campo-clave">
-                                <label for="nuevaClave" class="form-label">Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="nuevaClave" name="nuevaClave" placeholder="Opcional">
-                                <button type="button" class="btn-toggle-password" data-target="nuevaClave">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <div class="info-clave">
-                                    <small>Mínimo 8 caracteres (dejar vacío para no cambiar)</small>
-                                </div>
-                            </div>
-                            <div class="mb-0 campo-clave">
-                                <label for="confirmarClave" class="form-label">Confirmar Nueva Contraseña</label>
-                                <input type="password" class="form-control" id="confirmarClave" name="confirmarClave" placeholder="Opcional">
-                                <button type="button" class="btn-toggle-password" data-target="confirmarClave">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="guardarPerfil">
-                        <i class="fas fa-save me-1"></i>Guardar Cambios
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
