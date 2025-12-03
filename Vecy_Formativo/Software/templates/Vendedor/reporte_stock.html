@@ -1,4 +1,3 @@
-<!-- templates/Vendedor/reporte_stock.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 {% load tz %}
@@ -6,220 +5,7 @@
 {% block title %}Reporte de Movimientos de Stock - {{ negocio_activo.nom_neg }}{% endblock %}
 
 {% block extra_css %}
-<style>
-.reporte-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 15px;
-    color: white;
-}
-
-.stats-card {
-    border: none;
-    border-radius: 10px;
-    transition: transform 0.3s ease;
-}
-
-.stats-card:hover {
-    transform: translateY(-5px);
-}
-
-.movimiento-row.entrada {
-    border-left: 4px solid #28a745;
-    background-color: #f8fff9;
-}
-
-.movimiento-row.salida {
-    border-left: 4px solid #dc3545;
-    background-color: #fff5f5;
-}
-
-.movimiento-row.ajuste {
-    border-left: 4px solid #ffc107;
-    background-color: #fffbf0;
-}
-
-.movimiento-row.eliminacion {
-    border-left: 4px solid #6c757d;
-    background-color: #f8f9fa;
-}
-
-.movimiento-row.entrega {
-    border-left: 4px solid #17a2b8;
-    background-color: #e7f3ff;
-}
-
-.filtros-container {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-}
-
-.badge-entrada {
-    background-color: #28a745;
-}
-
-.badge-salida {
-    background-color: #dc3545;
-}
-
-.badge-ajuste {
-    background-color: #ffc107;
-    color: #000;
-}
-
-.badge-eliminacion {
-    background-color: #6c757d;
-}
-
-.badge-entrega {
-    background-color: #17a2b8;
-}
-
-/* ✅ ESTILOS PARA LA TABLA CON SCROLL */
-.table-container {
-    max-height: 600px;
-    overflow: auto;
-    border: 1px solid #e3e6f0;
-    border-radius: 8px;
-}
-
-.table-container table {
-    margin-bottom: 0;
-}
-
-.table-container thead th {
-    position: sticky;
-    top: 0;
-    background: #f8f9fc;
-    z-index: 10;
-    border-bottom: 2px solid #e3e6f0;
-}
-
-/* Personalizar scrollbar */
-.table-container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.table-container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.table-container::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Asegurar que las celdas tengan un tamaño adecuado */
-.table-container table th,
-.table-container table td {
-    white-space: nowrap;
-    min-width: 120px;
-}
-
-/* Columnas específicas con tamaños optimizados */
-.table-container table th:nth-child(1), /* Fecha/Hora */
-.table-container table td:nth-child(1) {
-    min-width: 150px;
-}
-
-.table-container table th:nth-child(2), /* Producto */
-.table-container table td:nth-child(2) {
-    min-width: 200px;
-    white-space: normal;
-}
-
-.table-container table th:nth-child(4), /* Motivo */
-.table-container table td:nth-child(4) {
-    min-width: 250px;
-    white-space: normal;
-}
-
-/* Estilos para la columna de stock */
-.stock-evolucion {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 0.9rem;
-}
-
-.stock-anterior {
-    color: #6c757d;
-    text-decoration: line-through;
-}
-
-.stock-flecha {
-    color: #6c757d;
-    font-weight: bold;
-}
-
-.stock-nuevo {
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.stock-positivo {
-    background-color: #d1fae5;
-    color: #065f46;
-}
-
-.stock-negativo {
-    background-color: #fee2e2;
-    color: #991b1b;
-}
-
-.stock-neutral {
-    background-color: #f3f4f6;
-    color: #374151;
-}
-
-/* Mejoras visuales para las fechas */
-.fecha-movimiento {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-/* Destacar movimientos recientes */
-.movimiento-reciente {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Badge para No Aplica */
-.badge-na {
-    background-color: #6c757d;
-    color: white;
-    font-size: 0.75rem;
-}
-
-/* Badge para Producto Principal */
-.badge-principal {
-    background-color: #4f46e5;
-    color: white;
-    font-size: 0.75rem;
-}
-
-/* Estilos para movimientos de entrega */
-.movimiento-entrega {
-    background: linear-gradient(135deg, #e7f3ff 0%, #d1ecf1 100%);
-}
-
-.badge-pedido {
-    background-color: #6f42c1;
-    color: white;
-}
-</style>
+<link rel="stylesheet" href="{% static 'vendedor/css/reporte_stock.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -233,8 +19,8 @@
                         <h2 class="mb-1">
                             <i class="fas fa-chart-line me-2"></i>Reporte de Movimientos de Stock
                         </h2>
-                        <p class="mb-0 opacity-75">{{ negocio_activo.nom_neg }}</p>
-                        <small class="opacity-75">
+                        <p class="mb-0">{{ negocio_activo.nom_neg }}</p>
+                        <small>
                             Generado el: 
                             {% now "d/m/Y" %} 
                             a las 
@@ -257,7 +43,7 @@
     <!-- Estadísticas Resumen -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stats-card border-start border-primary border-4">
+            <div class="card stats-card border-primary">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -273,7 +59,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stats-card border-start border-success border-4">
+            <div class="card stats-card border-success">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -289,7 +75,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stats-card border-start border-danger border-4">
+            <div class="card stats-card border-danger">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -305,7 +91,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card stats-card border-start border-info border-4">
+            <div class="card stats-card border-info">
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <div>
@@ -345,7 +131,6 @@
                             <option value="salida" {% if filtros.tipo_movimiento == 'salida' %}selected{% endif %}>Salidas</option>
                             <option value="ajuste" {% if filtros.tipo_movimiento == 'ajuste' %}selected{% endif %}>Ajustes</option>
                             <option value="eliminacion" {% if filtros.tipo_movimiento == 'eliminacion' %}selected{% endif %}>Eliminaciones</option>
-                            <!-- ✅ NUEVA OPCIÓN PARA FILTRAR SOLO ENTREGAS -->
                             <option value="entrega" {% if filtros.tipo_movimiento == 'entrega' %}selected{% endif %}>Entregas Realizadas</option>
                         </select>
                     </div>
@@ -362,7 +147,7 @@
         </div>
     </div>
 
-    <!-- Tabla de Movimientos CON SCROLL -->
+    <!-- Tabla de Movimientos -->
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -375,7 +160,7 @@
                 <div class="card-body p-0">
                     
                     {% if movimientos %}
-                    <!-- ✅ CONTENEDOR CON SCROLL -->
+                    <!-- Contenedor con Scroll -->
                     <div class="table-container">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
@@ -388,12 +173,10 @@
                                     <th>Cantidad</th>
                                     <th>Evolución del Stock</th>
                                     <th>Pedido</th>
-                                    
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for movimiento in movimientos %}
-                                {# ✅ MOSTRAR TODOS LOS MOVIMIENTOS - LA FILTRACIÓN SE HACE EN LA VISTA #}
                                 <tr class="movimiento-row 
                                     {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}entrega{% else %}{{ movimiento.tipo }}{% endif %} 
                                     {% if movimiento.es_reciente %}movimiento-reciente{% endif %}">
@@ -425,7 +208,6 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {# ✅ MOSTRAR "Entrega" SOLO PARA VENTAS DE PEDIDOS ENTREGADOS #}
                                         {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' %}
                                             {% if movimiento.estado_pedido == 'entregado' %}
                                                 <span class="badge badge-entrega">
@@ -456,7 +238,6 @@
                                     </td>
                                     <td>
                                         <small>
-                                            {# ✅ CAMBIAR EL TEXTO SEGÚN EL ESTADO DEL PEDIDO #}
                                             {% if movimiento.motivo == 'venta' or movimiento.motivo == 'venta_oferta' or movimiento.motivo == 'pedido_entregado' or movimiento.motivo == 'pedido_entregado_variante' %}
                                                 {% if movimiento.estado_pedido == 'entregado' or movimiento.motivo in 'pedido_entregado,pedido_entregado_variante' %}
                                                     🎉 <strong>PEDIDO ENTREGADO</strong>
@@ -488,7 +269,6 @@
                                             {% elif 'envio_pedido' in movimiento.motivo %}
                                                 🚚 Envío de Pedido
                                             {% else %}
-                                                {# Mostrar el motivo con emoji si es un texto simple #}
                                                 {% if 'pedido_entregado' in movimiento.motivo %}
                                                     🎉 Pedido Entregado
                                                 {% elif 'entrega' in movimiento.motivo %}
@@ -525,7 +305,6 @@
                                         <span class="badge badge-na">No Aplica</span>
                                         {% endif %}
                                     </td>
-                                    
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -565,6 +344,9 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Elimina todo el código complicado del botón y déjalo simple
+    console.log('✅ Reporte de movimientos cargado correctamente');
+    
     // Actualizar hora colombiana en tiempo real
     function actualizarHoraColombiana() {
         const ahora = new Date();
@@ -575,7 +357,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const horas = horaColombia.getHours().toString().padStart(2, '0');
         const minutos = horaColombia.getMinutes().toString().padStart(2, '0');
         
-        document.getElementById('hora-colombiana').textContent = `${horas}:${minutos}`;
+        const elementoHora = document.getElementById('hora-colombiana');
+        if (elementoHora) {
+            elementoHora.textContent = `${horas}:${minutos}`;
+        }
     }
     
     // Actualizar cada minuto
@@ -584,19 +369,22 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Establecer fecha máxima como hoy para los filtros
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('fecha_hasta').max = today;
+    const fechaHasta = document.getElementById('fecha_hasta');
+    if (fechaHasta) {
+        fechaHasta.max = today;
+    }
     
     // Validar que fecha desde no sea mayor a fecha hasta
     const fechaDesde = document.getElementById('fecha_desde');
-    const fechaHasta = document.getElementById('fecha_hasta');
-    
-    fechaDesde.addEventListener('change', function() {
-        fechaHasta.min = this.value;
-    });
-    
-    fechaHasta.addEventListener('change', function() {
-        fechaDesde.max = this.value;
-    });
+    if (fechaDesde && fechaHasta) {
+        fechaDesde.addEventListener('change', function() {
+            fechaHasta.min = this.value;
+        });
+        
+        fechaHasta.addEventListener('change', function() {
+            fechaDesde.max = this.value;
+        });
+    }
     
     // Resaltar movimientos recientes (últimas 24 horas)
     function resaltarMovimientosRecientes() {
@@ -604,7 +392,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const movimientos = document.querySelectorAll('.movimiento-row');
         
         movimientos.forEach(movimiento => {
-            const fechaTexto = movimiento.querySelector('.fecha-movimiento').textContent.trim();
+            const fechaElemento = movimiento.querySelector('.fecha-movimiento');
+            if (!fechaElemento) return;
+            
+            const fechaTexto = fechaElemento.textContent.trim();
             // Asumimos formato "d/m/Y H:i"
             const [fecha, hora] = fechaTexto.split(' ');
             const [dia, mes, año] = fecha.split('/');

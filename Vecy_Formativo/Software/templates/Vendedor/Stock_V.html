@@ -1,11 +1,645 @@
-<!-- templates/Vendedor/Stock_V.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
 {% block title %}Gestión de Stock - {{ negocio_activo.nom_neg }}{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'vendedor/css/Stock_V.css' %}">
+<style>
+/* ===== ESTILOS UNIFICADOS CON CRUD ===== */
+:root {
+    --primary-gradient: linear-gradient(135deg, #5F85DB, #90B8F8);
+    --success-gradient: linear-gradient(135deg, #10B981, #34D399);
+    --warning-gradient: linear-gradient(135deg, #F59E0B, #FBBF24);
+    --danger-gradient: linear-gradient(135deg, #EF4444, #F87171);
+    --info-gradient: linear-gradient(135deg, #0EA5E9, #38BDF8);
+    --purple-gradient: linear-gradient(135deg, #8B5CF6, #A78BFA);
+}
+
+/* ===== TARJETA DE BIENVENIDA ===== */
+.tarjeta-bienvenida {
+    background: linear-gradient(135deg, #26282B 0%, #353941 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.tarjeta-bienvenida::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 200%;
+    background: rgba(95, 133, 219, 0.1);
+    transform: rotate(30deg);
+}
+
+.tarjeta-bienvenida h2 {
+    color: white;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.tarjeta-bienvenida p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0;
+    position: relative;
+}
+
+/* ===== ESTADÍSTICAS EN HEADER ===== */
+.estadisticas-header-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.estadistica-header-card {
+    background: rgba(95, 133, 219, 0.15);
+    backdrop-filter: blur(10px);
+    padding: 1.25rem;
+    border-radius: 15px;
+    text-align: center;
+    border: 1px solid rgba(95, 133, 219, 0.25);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.estadistica-header-card:hover {
+    transform: translateY(-3px);
+    background: rgba(95, 133, 219, 0.25);
+    border-color: rgba(144, 184, 248, 0.4);
+}
+
+.estadistica-header-icono {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.estadistica-header-numero {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: white;
+}
+
+.estadistica-header-titulo {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Colores específicos para cada tarjeta */
+.estadistica-header-card:nth-child(1) .estadistica-header-icono { color: #90B8F8; } /* Total */
+.estadistica-header-card:nth-child(2) .estadistica-header-icono { color: #34D399; } /* Normal */
+.estadistica-header-card:nth-child(3) .estadistica-header-icono { color: #FBBF24; } /* Bajo */
+.estadistica-header-card:nth-child(4) .estadistica-header-icono { color: #F87171; } /* Sin Stock */
+.estadistica-header-card:nth-child(5) .estadistica-header-icono { color: #A78BFA; } /* En Oferta */
+.estadistica-header-card:nth-child(6) .estadistica-header-icono { color: #38BDF8; } /* Movimientos */
+
+/* ===== BARRA DE ACCESO RÁPIDO ===== */
+.barra-acceso-rapido {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.barra-acceso-rapido .grupo-botones-accion {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.boton-acceso-rapido {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-decoration: none;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.boton-acceso-rapido:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    text-decoration: none;
+}
+
+.boton-nuevo-producto {
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
+    color: white;
+}
+
+.boton-nuevo-producto:hover {
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
+    color: white;
+}
+
+.boton-ajuste-rapido {
+    background: linear-gradient(135deg, #10B981, #34D399);
+    color: white;
+}
+
+.boton-ajuste-rapido:hover {
+    background: linear-gradient(135deg, #0da271, #10B981);
+    color: white;
+}
+
+.boton-movimientos {
+    background: linear-gradient(135deg, #0EA5E9, #38BDF8);
+    color: white;
+}
+
+.boton-movimientos:hover {
+    background: linear-gradient(135deg, #0284c7, #0EA5E9);
+    color: white;
+}
+
+/* ===== CONTENIDO PRINCIPAL ===== */
+.seccion-grafica,
+.seccion-tabla,
+.seccion-movimientos,
+.seccion-ofertas,
+.seccion-acciones-rapidas {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.seccion-header {
+    background: #F8FAFC;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #E5E7EB;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.seccion-header h3 {
+    color: #1F2937;
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    font-size: 1.1rem;
+}
+
+/* ===== GRÁFICA ===== */
+.contenedor-grafica {
+    padding: 1.5rem;
+    height: 300px;
+    position: relative;
+}
+
+/* ===== TABLA ===== */
+.contenedor-tabla {
+    padding: 0;
+}
+
+.tabla-stock {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tabla-stock th {
+    background: #F8FAFC;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.tabla-stock td {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.producto-fila:hover {
+    background: #F9FAFB;
+}
+
+.fila-critica {
+    background: #FEF2F2 !important;
+}
+
+/* ===== ESTILOS DE PRODUCTO ===== */
+.producto-info-tabla {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.badge-oferta-tabla {
+    background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    align-self: flex-start;
+}
+
+.badge-variante-tabla {
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    align-self: flex-start;
+}
+
+.categoria-tabla {
+    color: #6B7280;
+    font-size: 0.85rem;
+}
+
+.stock-tabla {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.stock-total-tabla {
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.stock-normal {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.stock-bajo {
+    background: #FEF3C7;
+    color: #92400E;
+}
+
+.stock-critico {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.estado-stock {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.estado-critico {
+    color: #EF4444;
+}
+
+.estado-bajo {
+    color: #F59E0B;
+}
+
+.estado-normal {
+    color: #10B981;
+}
+
+/* ===== BOTONES DE ACCIÓN ===== */
+.acciones-tabla {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-accion {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.btn-entrada {
+    background: linear-gradient(135deg, #10B981, #34D399);
+    color: white;
+}
+
+.btn-entrada:hover {
+    background: linear-gradient(135deg, #0da271, #10B981);
+    transform: translateY(-2px);
+}
+
+.btn-editar {
+    background: linear-gradient(135deg, #5F85DB, #90B8F8);
+    color: white;
+}
+
+.btn-editar:hover {
+    background: linear-gradient(135deg, #4a6bb8, #5F85DB);
+    transform: translateY(-2px);
+}
+
+.btn-variante {
+    background: linear-gradient(135deg, #8B5CF6, #A78BFA);
+    color: white;
+}
+
+.btn-variante:hover {
+    background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+    transform: translateY(-2px);
+}
+
+/* ===== MOVIMIENTOS ===== */
+.contenedor-movimientos {
+    padding: 1rem 1.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.movimiento-item {
+    background: #F8FAFC;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid;
+    transition: all 0.2s ease;
+}
+
+.movimiento-item:hover {
+    transform: translateX(2px);
+}
+
+.movimiento-entrada {
+    border-left-color: #10B981;
+}
+
+.movimiento-salida {
+    border-left-color: #EF4444;
+}
+
+.movimiento-eliminacion {
+    border-left-color: #DC2626;
+    background: #FEF2F2;
+}
+
+.movimiento-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.movimiento-producto {
+    font-weight: 600;
+    color: #1F2937;
+    font-size: 0.9rem;
+}
+
+.movimiento-cantidad {
+    padding: 0.3rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.movimiento-cantidad.entrada {
+    background: #D1FAE5;
+    color: #065F46;
+}
+
+.movimiento-cantidad.salida {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.movimiento-cantidad.eliminacion {
+    background: #DC2626;
+    color: white;
+}
+
+.movimiento-detalle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #6B7280;
+}
+
+/* ===== OFERTAS ===== */
+.contenedor-ofertas {
+    padding: 1rem 1.5rem;
+}
+
+.oferta-item {
+    background: #F8FAFC;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid #8B5CF6;
+}
+
+.oferta-item:last-child {
+    margin-bottom: 0;
+}
+
+.oferta-info h6 {
+    color: #1F2937;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.precios-oferta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.precio-original {
+    text-decoration: line-through;
+    color: #6B7280;
+    font-size: 0.85rem;
+}
+
+.precio-actual {
+    color: #EF4444;
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.oferta-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+}
+
+.descuento {
+    background: #EF4444;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.stock-oferta {
+    color: #6B7280;
+}
+
+/* ===== ESTADOS VACÍO ===== */
+.estado-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+    color: #6B7280;
+}
+
+.estado-vacio i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    font-size: 3rem;
+}
+
+.estado-vacio h4 {
+    color: #6B7280;
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.estado-vacio p {
+    margin-bottom: 0;
+    font-size: 0.95rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1400px) {
+    .estadisticas-header-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1200px) {
+    .contenedor-grafica {
+        height: 250px;
+    }
+    
+    .boton-acceso-rapido {
+        min-width: 180px;
+        padding: 0.9rem 1.5rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .estadisticas-header-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .barra-acceso-rapido .grupo-botones-accion {
+        flex-direction: column;
+    }
+    
+    .boton-acceso-rapido {
+        width: 100%;
+    }
+    
+    .contenedor-grafica {
+        height: 220px;
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .tarjeta-bienvenida {
+        padding: 1.5rem;
+    }
+    
+    .estadisticas-header-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .estadistica-header-card {
+        padding: 1rem;
+    }
+    
+    .estadistica-header-numero {
+        font-size: 1.75rem;
+    }
+    
+    .seccion-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .tabla-stock th,
+    .tabla-stock td {
+        padding: 0.75rem 1rem;
+    }
+    
+    .contenedor-grafica {
+        height: 200px;
+    }
+}
+
+@media (max-width: 576px) {
+    .tarjeta-bienvenida {
+        padding: 1.25rem;
+    }
+    
+    .estadistica-header-card {
+        padding: 0.9rem;
+    }
+    
+    .estadistica-header-numero {
+        font-size: 1.5rem;
+    }
+    
+    .contenedor-grafica {
+        height: 180px;
+        padding: 0.75rem;
+    }
+    
+    .acciones-tabla {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-accion {
+        width: 100%;
+    }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -14,33 +648,57 @@
     <div class="tarjeta-bienvenida">
         <div class="row align-items-center">
             <div class="col-md-6">
-                <h2>Gestión de Stock</h2>
-                <p class="text-muted">{{ negocio_activo.nom_neg }} - Análisis completo de inventario</p>
+                <h2><i class="fas fa-boxes me-2"></i>Gestión de Stock</h2>
+                <p class="text-muted mb-0">{{ negocio_activo.nom_neg }} - Análisis completo de inventario</p>
             </div>
             <div class="col-md-6">
-                <div class="estadisticas-grid">
-                    <div class="estadistica-card total">
-                        <div class="estadistica-icono">
+                <div class="estadisticas-header-grid">
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
                             <i class="fas fa-cubes"></i>
                         </div>
-                        <div class="estadistica-numero">{{ total_productos }}</div>
-                        <div class="estadistica-titulo">Total Productos</div>
+                        <div class="estadistica-header-numero">{{ total_productos }}</div>
+                        <div class="estadistica-header-titulo">Total Productos</div>
                     </div>
                     
-                    <div class="estadistica-card disponibles">
-                        <div class="estadistica-icono">
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
                             <i class="fas fa-check-circle"></i>
                         </div>
-                        <div class="estadistica-numero">{{ stock_normal }}</div>
-                        <div class="estadistica-titulo">Stock Normal</div>
+                        <div class="estadistica-header-numero">{{ stock_normal }}</div>
+                        <div class="estadistica-header-titulo">Stock Normal</div>
                     </div>
                     
-                    <div class="estadistica-card oferta">
-                        <div class="estadistica-icono">
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
-                        <div class="estadistica-numero">{{ stock_bajo }}</div>
-                        <div class="estadistica-titulo">Stock Bajo</div>
+                        <div class="estadistica-header-numero">{{ stock_bajo }}</div>
+                        <div class="estadistica-header-titulo">Stock Bajo</div>
+                    </div>
+                    
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="estadistica-header-numero">{{ sin_stock }}</div>
+                        <div class="estadistica-header-titulo">Sin Stock</div>
+                    </div>
+                    
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
+                            <i class="fas fa-tag"></i>
+                        </div>
+                        <div class="estadistica-header-numero">{{ productos_oferta_count }}</div>
+                        <div class="estadistica-header-titulo">En Oferta</div>
+                    </div>
+                    
+                    <div class="estadistica-header-card">
+                        <div class="estadistica-header-icono">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="estadistica-header-numero">{{ movimientos_hoy }}</div>
+                        <div class="estadistica-header-titulo">Movimientos Hoy</div>
                     </div>
                 </div>
             </div>
@@ -60,113 +718,18 @@
     </div>
     {% endif %}
 
-    <!-- Barra de Herramientas Mejorada -->
-    <div class="barra-herramientas">
+    <!-- Barra de Acceso Rápido -->
+    <div class="barra-acceso-rapido">
         <div class="grupo-botones-accion">
-            <a href="{% url 'Crud_V' %}" class="boton-accion boton-primario">
+            <a href="{% url 'Crud_V' %}" class="boton-acceso-rapido boton-nuevo-producto">
                 <i class="fas fa-plus-circle"></i> Nuevo Producto
             </a>
-            <button class="boton-accion boton-secundario" data-bs-toggle="modal" data-bs-target="#modalAjusteRapido">
+                <!--<button class="boton-acceso-rapido boton-ajuste-rapido" data-bs-toggle="modal" data-bs-target="#modalAjusteRapido">
                 <i class="fas fa-bolt"></i> Ajuste Rápido
-            </button>
-        </div>
-
-        <div class="grupo-busqueda-filtros">
-            <div class="contenedor-busqueda">
-                <i class="fas fa-search icono-busqueda"></i>
-                <input type="text" class="input-busqueda" id="filtro-stock" placeholder="Buscar productos...">
-            </div>
-            
-            <div class="contenedor-filtros">
-                <select class="select-filtro" id="filtro-estado-stock">
-                    <option value="todos">Todos los productos</option>
-                    <option value="normal">Stock Normal</option>
-                    <option value="bajo">Stock Bajo</option>
-                    <option value="critico">Sin Stock</option>
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <!-- Métricas Extendidas -->
-    <div class="row g-3 mb-4">
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada total">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-cubes"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ total_productos }}</div>
-                        <div class="metric-label">Total Productos</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada normal">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ stock_normal }}</div>
-                        <div class="metric-label">Stock Normal</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada bajo">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ stock_bajo }}</div>
-                        <div class="metric-label">Stock Bajo</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada critico">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-times-circle"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ sin_stock }}</div>
-                        <div class="metric-label">Sin Stock</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada ofertas">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-tag"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ productos_oferta_count }}</div>
-                        <div class="metric-label">En Oferta</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-2 col-md-4 col-6">
-            <div class="metric-card-estilizada movimientos">
-                <div class="metric-content">
-                    <div class="metric-icon">
-                        <i class="fas fa-exchange-alt"></i>
-                    </div>
-                    <div class="metric-info">
-                        <div class="metric-value">{{ movimientos_hoy }}</div>
-                        <div class="metric-label">Movimientos Hoy</div>
-                    </div>
-                </div>
-            </div>
+            </button>-->
+            <a href="{% url 'reporte_movimientos_stock' %}" class="boton-acceso-rapido boton-movimientos">
+                <i class="fas fa-chart-line"></i> Ver Movimientos
+            </a>
         </div>
     </div>
 
@@ -174,7 +737,7 @@
     <div class="row g-4">
         <!-- Columna Izquierda - Gráficas y Tabla -->
         <div class="col-lg-8">
-            <!-- Gráfica de Distribución - BARRAS VERTICALES -->
+            <!-- Gráfica de Distribución -->
             <div class="seccion-grafica">
                 <div class="seccion-header">
                     <h3><i class="fas fa-chart-bar me-2"></i>Distribución de Stock</h3>
@@ -184,19 +747,14 @@
                 </div>
             </div>
 
-            <!-- Productos con Stock Bajo - CORREGIDO -->
+            <!-- Productos con Stock Bajo -->
             <div class="seccion-tabla">
                 <div class="seccion-header">
                     <h3><i class="fas fa-exclamation-triangle me-2"></i>Productos con Stock Bajo</h3>
-                    <a href="{% url 'Crud_V' %}" class="btn btn-primario btn-sm">Gestionar Todos</a>
+                    <a href="{% url 'Crud_V' %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-cog me-1"></i> Gestionar Todos
+                    </a>
                 </div>
-                
-                <!-- Debug: Mostrar información de productos_stock_bajo -->
-                {% if productos_stock_bajo %}
-                <div class="alert alert-info mb-3">
-                    <small><strong>DEBUG:</strong> Se encontraron {{ productos_stock_bajo|length }} productos con stock bajo</small>
-                </div>
-                {% endif %}
                 
                 {% if productos_stock_bajo %}
                 <div class="contenedor-tabla">
@@ -291,7 +849,9 @@
                     <i class="fas fa-check-circle fa-3x"></i>
                     <h4>¡Excelente! Stock Optimizado</h4>
                     <p>No hay productos con stock bajo en este momento</p>
-                    <a href="{% url 'Crud_V' %}" class="btn btn-primario mt-3">Gestionar Productos</a>
+                    <a href="{% url 'Crud_V' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-cog me-1"></i> Gestionar Productos
+                    </a>
                 </div>
                 {% endif %}
             </div>
@@ -303,7 +863,9 @@
             <div class="seccion-movimientos">
                 <div class="seccion-header">
                     <h3><i class="fas fa-history me-2"></i>Movimientos Recientes</h3>
-                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-secundario btn-sm">Ver Reportes</a>
+                    <a href="{% url 'reporte_movimientos_stock' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-bar me-1"></i> Ver Reportes
+                    </a>
                 </div>
                 <div class="contenedor-movimientos">
                     {% if movimientos_recientes %}
@@ -344,7 +906,9 @@
             <div class="seccion-ofertas">
                 <div class="seccion-header">
                     <h3><i class="fas fa-tag me-2"></i>Productos en Oferta</h3>
-                    <a href="{% url 'Ofertas_V' %}" class="btn btn-secundario btn-sm">Gestionar</a>
+                    <a href="{% url 'Ofertas_V' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-cog me-1"></i> Gestionar
+                    </a>
                 </div>
                 <div class="contenedor-ofertas">
                     {% if productos_oferta %}
@@ -373,29 +937,7 @@
             </div>
 
             <!-- Acciones Rápidas -->
-            <div class="seccion-acciones-rapidas">
-                <div class="seccion-header">
-                    <h3><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h3>
-                </div>
-                <div class="contenedor-acciones">
-                    <a href="{% url 'Crud_V' %}" class="accion-rapida">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Nuevo Producto</span>
-                    </a>
-                    <a href="{% url 'Ofertas_V' %}" class="accion-rapida">
-                        <i class="fas fa-tag"></i>
-                        <span>Gestionar Ofertas</span>
-                    </a>
-                    <a href="{% url 'reporte_movimientos_stock' %}" class="accion-rapida">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Ver Reportes</span>
-                    </a>
-                    <button class="accion-rapida" data-bs-toggle="modal" data-bs-target="#modalAjusteRapido">
-                        <i class="fas fa-exchange-alt"></i>
-                        <span>Ajuste Rápido</span>
-                    </button>
-                </div>
-            </div>
+            
         </div>
     </div>
 </div>
@@ -405,24 +947,24 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Entrada de Stock</h5>
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Entrada de Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'entrada_stock_producto' 0 %}" id="formEntradaStock">
                 {% csrf_token %}
                 <div class="modal-body">
                     <input type="hidden" id="producto_id_entrada" name="producto_id">
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Producto</label>
-                        <p class="valor-producto" id="nombre_producto_entrada"></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Producto</label>
+                        <p class="form-control bg-light" id="nombre_producto_entrada"></p>
                     </div>
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Cantidad *</label>
-                        <input type="number" class="control-formulario" name="cantidad_entrada" min="1" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cantidad *</label>
+                        <input type="number" class="form-control" name="cantidad_entrada" min="1" required>
                     </div>
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Motivo *</label>
-                        <select class="control-formulario" name="motivo_entrada">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo *</label>
+                        <select class="form-control" name="motivo_entrada">
                             <option value="compra_proveedor">Compra a Proveedor</option>
                             <option value="devolucion_cliente">Devolución de Cliente</option>
                             <option value="ajuste_inventario">Ajuste de Inventario</option>
@@ -431,8 +973,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secundario" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primario">Registrar Entrada</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Entrada</button>
                 </div>
             </form>
         </div>
@@ -444,40 +986,40 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Ajuste Rápido de Stock</h5>
+                <h5 class="modal-title"><i class="fas fa-exchange-alt me-2"></i>Ajuste Rápido de Stock</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="#">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Producto *</label>
-                        <select class="control-formulario" name="producto_id" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Producto *</label>
+                        <select class="form-control" name="producto_id" required>
                             <option value="">Seleccionar producto...</option>
                             {% for item in productos_stock_bajo %}
                             <option value="{{ item.producto.pkid_prod }}">{{ item.producto.nom_prod }} ({{ item.stock_total }} uds)</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Tipo de Ajuste *</label>
-                        <select class="control-formulario" name="tipo_ajuste">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tipo de Ajuste *</label>
+                        <select class="form-control" name="tipo_ajuste">
                             <option value="entrada">Entrada (+)</option>
                             <option value="salida">Salida (-)</option>
                         </select>
                     </div>
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Cantidad *</label>
-                        <input type="number" class="control-formulario" name="cantidad" min="1" required>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cantidad *</label>
+                        <input type="number" class="form-control" name="cantidad" min="1" required>
                     </div>
-                    <div class="campo-modal">
-                        <label class="etiqueta-campo">Motivo *</label>
-                        <input type="text" class="control-formulario" name="motivo" placeholder="Motivo del ajuste..." required>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo *</label>
+                        <input type="text" class="form-control" name="motivo" placeholder="Motivo del ajuste..." required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secundario" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primario">Aplicar Ajuste</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Aplicar Ajuste</button>
                 </div>
             </form>
         </div>
@@ -498,10 +1040,18 @@
                 datasets: [{
                     label: 'Cantidad de Productos',
                     data: [{{ stock_normal }}, {{ stock_bajo }}, {{ sin_stock }}],
-                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
-                    borderColor: ['#059669', '#D97706', '#DC2626'],
-                    borderWidth: 1,
-                    borderRadius: 6,
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(245, 158, 11, 0.8)',
+                        'rgba(239, 68, 68, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(16, 185, 129, 1)',
+                        'rgba(245, 158, 11, 1)',
+                        'rgba(239, 68, 68, 1)'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8,
                     barPercentage: 0.6,
                 }]
             },
@@ -513,6 +1063,11 @@
                         display: false
                     },
                     tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: 'white',
+                        bodyColor: 'white',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderWidth: 1,
                         callbacks: {
                             label: function(context) {
                                 return `${context.dataset.label}: ${context.parsed.y}`;
@@ -529,8 +1084,10 @@
                         },
                         ticks: {
                             font: {
-                                size: 11
-                            }
+                                size: 11,
+                                family: "'Segoe UI', Roboto, sans-serif"
+                            },
+                            color: '#6B7280'
                         }
                     },
                     x: {
@@ -540,15 +1097,17 @@
                         ticks: {
                             font: {
                                 size: 12,
-                                weight: 'bold'
-                            }
+                                weight: '600',
+                                family: "'Segoe UI', Roboto, sans-serif"
+                            },
+                            color: '#374151'
                         }
                     }
                 }
             }
         });
 
-        // Modal de entrada de stock - CORREGIDO
+        // Modal de entrada de stock
         const modalEntrada = document.getElementById('modalEntradaStock');
         if (modalEntrada) {
             modalEntrada.addEventListener('show.bs.modal', function(event) {
@@ -565,26 +1124,46 @@
             });
         }
 
-        // Filtros de búsqueda
-        const filtroStock = document.getElementById('filtro-stock');
-        const filtroEstado = document.getElementById('filtro-estado-stock');
-        
-        function aplicarFiltrosStock() {
-            const texto = filtroStock.value.toLowerCase();
-            const estado = filtroEstado.value;
+        // Efectos de hover en las tarjetas de estadísticas
+        const estadisticasCards = document.querySelectorAll('.estadistica-header-card');
+        estadisticasCards.forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+                this.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.15)';
+            });
             
-            // Aquí iría la lógica de filtrado para la tabla
-            console.log('Filtrando por:', texto, estado);
-        }
-        
-        if (filtroStock) {
-            filtroStock.addEventListener('input', aplicarFiltrosStock);
-        }
-        
-        if (filtroEstado) {
-            filtroEstado.addEventListener('change', aplicarFiltrosStock);
-        }
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = 'none';
+            });
+        });
+
+        // Efectos de hover en botones de acceso rápido
+        const botonesAcceso = document.querySelectorAll('.boton-acceso-rapido');
+        botonesAcceso.forEach(boton => {
+            boton.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+                this.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.15)';
+            });
+            
+            boton.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+            });
+        });
+
+        // Animación de entrada para las secciones
+        const sections = document.querySelectorAll('.seccion-grafica, .seccion-tabla, .seccion-movimientos, .seccion-ofertas');
+        sections.forEach((section, index) => {
+            section.style.opacity = '0';
+            section.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                section.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                section.style.opacity = '1';
+                section.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
     });
 </script>
-
 {% endblock %}
