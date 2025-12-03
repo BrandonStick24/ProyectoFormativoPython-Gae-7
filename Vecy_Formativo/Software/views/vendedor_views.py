@@ -1873,7 +1873,7 @@ def gestionar_ventas(request):
 
 @login_required(login_url='login')
 def ver_recibo_pedido(request, pedido_id):
-    """Vista para ver el recibo completo de un pedido"""
+    """Vista para ver el recibo completo de un pedido con variantes y ofertas"""
     try:
         datos = obtener_datos_vendedor(request)
         if not datos or not datos.get('negocio_activo'):
@@ -1881,6 +1881,10 @@ def ver_recibo_pedido(request, pedido_id):
             return redirect('principal')
         
         negocio = datos['negocio_activo']
+        
+        # Obtener la fecha actual en formato adecuado para MySQL
+        from datetime import datetime
+        fecha_actual = datetime.now().strftime('%Y-%m-%d')
         
         # Obtener información completa del pedido con pago
         with connection.cursor() as cursor:
@@ -1898,7 +1902,8 @@ def ver_recibo_pedido(request, pedido_id):
                     pg.metodo_pago,
                     pg.estado_pago,
                     pg.monto,
-                    pg.fecha_pago
+                    pg.fecha_pago,
+                    p.metodo_pago_texto
                 FROM pedidos p
                 JOIN usuario_perfil up ON p.fkusuario_pedido = up.id
                 JOIN auth_user u ON up.fkuser_id = u.id
@@ -1912,18 +1917,24 @@ def ver_recibo_pedido(request, pedido_id):
                 messages.error(request, "Pedido no encontrado")
                 return redirect('gestionar_ventas')
             
-            # Obtener detalles del pedido (productos)
+            # Obtener detalles del pedido con información de variantes
             cursor.execute("""
                 SELECT 
                     d.cantidad_detalle,
                     d.precio_unitario,
                     pr.nom_prod,
                     pr.desc_prod,
-                    c.desc_cp as categoria
+                    pr.precio_prod as precio_regular,
+                    c.desc_cp as categoria,
+                    d.variante_id,
+                    vp.nombre_variante,
+                    vp.precio_adicional
                 FROM detalles_pedido d
                 JOIN productos pr ON d.fkproducto_detalle = pr.pkid_prod
                 JOIN categoria_productos c ON pr.fkcategoria_prod = c.pkid_cp
+                LEFT JOIN variantes_producto vp ON d.variante_id = vp.id_variante
                 WHERE d.fkpedido_detalle = %s
+                ORDER BY d.pkid_detalle
             """, [pedido_id])
             
             detalles = cursor.fetchall()
@@ -1932,29 +1943,76 @@ def ver_recibo_pedido(request, pedido_id):
         pedido = {
             'id': pedido_info[0],
             'estado': pedido_info[1],
-            'total': pedido_info[2],
-            'fecha': pedido_info[3].strftime('%d/%m/%Y %H:%M'),
+            'total': float(pedido_info[2]) if pedido_info[2] else 0,
+            'fecha': pedido_info[3].strftime('%d/%m/%Y %H:%M') if pedido_info[3] else '',
             'cliente_nombre': pedido_info[4] or pedido_info[5] or f"Usuario {pedido_info[0]}",
             'cliente_email': pedido_info[6],
             'cliente_documento': pedido_info[7],
             'metodo_pago': pedido_info[8] or 'No especificado',
             'estado_pago': pedido_info[9] or 'pendiente',
-            'monto_pago': pedido_info[10] or pedido_info[2],
-            'fecha_pago': pedido_info[11].strftime('%d/%m/%Y %H:%M') if pedido_info[11] else 'No procesado'
+            'monto_pago': float(pedido_info[10]) if pedido_info[10] else 0,
+            'fecha_pago': pedido_info[11].strftime('%d/%m/%Y %H:%M') if pedido_info[11] else 'No procesado',
+            'metodo_pago_texto': pedido_info[12] or pedido_info[8]
         }
         
-        # Procesar detalles
+        # Procesar detalles con información de variantes
         productos = []
+        subtotal_total = 0
+        
         for detalle in detalles:
-            subtotal = detalle[0] * detalle[1]
-            productos.append({
-                'cantidad': detalle[0],
-                'precio_unitario': detalle[1],
-                'nombre': detalle[2],
+            cantidad = detalle[0]
+            precio_unitario = float(detalle[1]) if detalle[1] else 0
+            precio_regular = float(detalle[4]) if detalle[4] else precio_unitario
+            variante_id = detalle[6]
+            variante_nombre = detalle[7]
+            precio_adicional = float(detalle[8]) if detalle[8] else 0
+            
+            # Construir nombre del producto
+            nombre_producto = detalle[2] or 'Producto sin nombre'
+            
+            # Si hay variante, usar el nombre de la variante como nombre principal
+            if variante_nombre:
+                # Para variantes, el nombre principal es la variante
+                nombre_mostrar = variante_nombre
+                # Y mostramos el producto base como información adicional
+                producto_base = f"({nombre_producto})"
+            else:
+                nombre_mostrar = nombre_producto
+                producto_base = None
+            
+            # Calcular subtotal
+            subtotal = cantidad * precio_unitario
+            
+            # Verificar si hubo oferta (si el precio unitario es menor al precio regular)
+            oferta_activa = precio_unitario < precio_regular
+            porcentaje_oferta = 0
+            if oferta_activa and precio_regular > 0:
+                porcentaje_oferta = round(((precio_regular - precio_unitario) / precio_regular) * 100, 1)
+            
+            # Preparar información del producto
+            producto_data = {
+                'cantidad': cantidad,
+                'precio_unitario': precio_unitario,
+                'precio_regular': precio_regular,
+                'nombre': nombre_mostrar,  # Nombre principal (variante si existe)
+                'producto_base': nombre_producto,  # Producto base para mostrar como info
+                'producto_base_info': producto_base,  # Info del producto base para mostrar
                 'descripcion': detalle[3],
-                'categoria': detalle[4],
-                'subtotal': subtotal
-            })
+                'categoria': detalle[5] or 'Sin categoría',
+                'subtotal': subtotal,
+                'variante_id': variante_id,
+                'variante_nombre': variante_nombre,
+                'precio_adicional': precio_adicional,
+                'oferta_activa': oferta_activa,
+                'porcentaje_oferta': porcentaje_oferta,
+                'titulo_oferta': f"Oferta {porcentaje_oferta}% OFF" if oferta_activa else None
+            }
+            
+            productos.append(producto_data)
+            subtotal_total += subtotal
+        
+        # Actualizar información del pedido
+        pedido['subtotal'] = round(subtotal_total, 2)
         
         contexto = {
             'nombre': datos['nombre_usuario'],
@@ -1968,8 +2026,10 @@ def ver_recibo_pedido(request, pedido_id):
         return render(request, 'Vendedor/recibo_pedido.html', contexto)
         
     except Exception as e:
+        import traceback
         print(f"ERROR al cargar recibo: {str(e)}")
-        messages.error(request, "Error al cargar el recibo del pedido")
+        print(f"Traceback: {traceback.format_exc()}")
+        messages.error(request, f"Error al cargar el recibo del pedido: {str(e)}")
         return redirect('gestionar_ventas')
 
 @login_required(login_url='login')

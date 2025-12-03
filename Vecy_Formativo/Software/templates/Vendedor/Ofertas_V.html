@@ -1,3 +1,4 @@
+<!-- templates/Vendedor/Ofertas_V.html -->
 {% extends 'Layout_V.html' %}
 {% load static %}
 
@@ -5,6 +6,91 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'vendedor/css/Ofertas_V.css' %}">
+<style>
+    /* Estilos para notificaciones */
+    .notificacion-temporal {
+        position: fixed !important;
+        top: 100px !important;
+        right: 20px !important;
+        z-index: 1060 !important;
+        min-width: 300px !important;
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Animaciones para elementos */
+    .producto-card-oferta {
+        animation: fadeInUp 0.5s ease;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Mejoras visuales adicionales */
+    .estadistica-card.total {
+        background: rgba(95, 133, 219, 0.15);
+    }
+
+    .estadistica-card.disponibles {
+        background: rgba(16, 185, 129, 0.15);
+        border-color: rgba(16, 185, 129, 0.25);
+    }
+
+    .estadistica-card.disponibles .estadistica-icono {
+        color: #10B981;
+    }
+
+    .estadistica-card.oferta {
+        background: rgba(245, 158, 11, 0.15);
+        border-color: rgba(245, 158, 11, 0.25);
+    }
+
+    .estadistica-card.oferta .estadistica-icono {
+        color: #F59E0B;
+    }
+
+    /* Efectos de hover mejorados */
+    .producto-card-oferta:hover .producto-precio {
+        transform: scale(1.05);
+        transition: transform 0.3s ease;
+    }
+
+    /* Badges mejorados */
+    .badge-tipo-oferta {
+        transition: all 0.3s ease;
+    }
+
+    .badge-tipo-oferta:hover {
+        transform: scale(1.05);
+    }
+
+    /* Botones con íconos */
+    .btn i {
+        transition: transform 0.3s ease;
+    }
+
+    .btn:hover i {
+        transform: translateY(-1px);
+    }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -14,7 +100,7 @@
         <div class="row align-items-center">
             <div class="col-md-6">
                 <h2>Gestión de Ofertas</h2>
-                <p class="text-muted">Crea y administra promociones para tus productos y variantes.</p>
+                <p style="white">Crea y administra promociones para tus productos y variantes.</p>
             </div>
             <div class="col-md-6">
                 <div class="estadisticas-grid">
@@ -56,39 +142,6 @@
             </div>
         {% endfor %}
     {% endif %}
-
-    <!-- Información del Negocio Mejorada -->
-    <div class="info-negocio-card">
-        <div class="row">
-            <div class="col-md-4">
-                <div class="info-item">
-                    <i class="fas fa-store"></i>
-                    <div class="info-content">
-                        <span class="info-label">Negocio activo</span>
-                        <span class="info-value">{{ negocio_activo.nom_neg }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="info-item">
-                    <i class="fas fa-box-open"></i>
-                    <div class="info-content">
-                        <span class="info-label">Productos disponibles</span>
-                        <span class="info-value">{{ productos|length }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="info-item">
-                    <i class="fas fa-bolt"></i>
-                    <div class="info-content">
-                        <span class="info-label">Ofertas activas</span>
-                        <span class="info-value">{{ ofertas_activas|length }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Barra de Herramientas Mejorada -->
     <div class="barra-herramientas">
@@ -156,7 +209,6 @@
                             <span class="producto-categoria">{{ producto.categoria }}</span>
                         </div>
                         <div class="producto-stock-info">
-                            <!-- Stock total corregido que incluye variantes -->
                             <span class="badge-stock {% if producto.stock == 0 %}stock-critico{% elif producto.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
                                 <i class="fas fa-box"></i> Stock Total: {{ producto.stock }}
                             </span>
@@ -176,7 +228,7 @@
                 </div>
                 
                 <div class="producto-acciones-oferta">
-                    <!-- Botón principal para producto base - MOSTRAR SIEMPRE PERO VALIDAR STOCK -->
+                    <!-- Botón principal para producto base -->
                     <button type="button" class="btn btn-producto-base seleccionar-producto {% if producto.stock_principal == 0 %}sin-stock-principal{% endif %}"
                             data-producto-id="{{ producto.id }}"
                             data-producto-nombre="{{ producto.nombre }}"
@@ -222,7 +274,6 @@
                         </div>
                     </div>
                     {% else %}
-                    <!-- Indicador cuando no hay variantes -->
                     <div class="sin-variantes">
                         <small class="text-muted">
                             <i class="fas fa-info-circle"></i> No tiene variantes configuradas
@@ -231,7 +282,6 @@
                     {% endif %}
                 </div>
                 
-                <!-- Debug info (solo visible en desarrollo) -->
                 <div class="debug-info" style="display: none;">
                     <small class="text-muted">
                         Debug: Principal:{{ producto.stock_principal }} | 
@@ -254,14 +304,13 @@
         </div>
     </div>
 
-    <!-- Configuración de Ofertas - CORREGIDO CON SCROLL FUNCIONAL -->
+    <!-- Configuración de Ofertas -->
     <div class="seccion-configuracion">
         <div class="seccion-header">
             <h3><i class="fas fa-cog me-2"></i>Configurar Ofertas</h3>
             <span class="contador-seccion" id="contadorProductosSeleccionados">0</span>
         </div>
         
-        <!-- CONTENEDOR CORREGIDO CON SCROLL -->
         <div class="contenedor-configuraciones-scroll" id="configuracionesProductos">
             <div class="estado-vacio" id="mensajeVacio">
                 <i class="fas fa-tags fa-3x"></i>
@@ -272,7 +321,6 @@
                     Puedes seleccionar el producto base o variantes específicas
                 </small>
             </div>
-            <!-- Aquí se agregarán los formularios dinámicamente -->
         </div>
     </div>
 
@@ -374,6 +422,7 @@
     </div>
 </div>
 {% endblock %}
+
 
 {% block extra_js %}
 <script>
