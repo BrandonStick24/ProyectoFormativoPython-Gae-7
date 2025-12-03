@@ -8,6 +8,624 @@
 <!-- FONT AWESOME -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'cliente/css/cliente.css' %}">
+<style>
+    /* ===== NUEVO GRADIENTE PARA TECNOLOGÍA - COLOR TECNOLÓGICO MODERNO ===== */
+    .vecy-technology-section {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+        color: white;
+        position: relative;
+        overflow: hidden;
+        padding: 4rem 0 !important; /* Asegurar padding suficiente */
+    }
+    
+    .vecy-technology-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: 
+            radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+            radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+    }
+    
+    .vecy-technology-section .vecy-section-title {
+        background: linear-gradient(135deg, #60a5fa, #38bdf8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 2px 10px rgba(96, 165, 250, 0.3);
+    }
+    
+    .vecy-technology-section .vecy-section-subtitle {
+        color: rgba(203, 213, 225, 0.9);
+    }
+    
+    .vecy-technology-section .vecy-view-all {
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border-color: rgba(59, 130, 246, 0.3);
+        backdrop-filter: blur(10px);
+    }
+    
+    .vecy-technology-section .vecy-view-all:hover {
+        background: #3b82f6;
+        color: white;
+        transform: translateX(8px);
+    }
+    
+    /* ===== CARRUSEL ESPECIAL PARA TECNOLOGÍA ===== */
+    .vecy-tech-carousel-container {
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+        margin-bottom: 3rem; /* Reducido para dar más espacio */
+        position: relative;
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        padding: 0; /* Resetear padding interno */
+    }
+    
+    .vecy-tech-carousel {
+        border-radius: 20px;
+        min-height: 420px; /* Reducido ligeramente */
+        background: transparent;
+        padding: 25px; /* Reducido padding interno */
+    }
+    
+    .vecy-tech-slide {
+        position: relative;
+        min-height: 420px; /* Reducido para más espacio */
+        border-radius: 20px;
+        overflow: hidden;
+    }
+    
+    .vecy-tech-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    
+    .vecy-tech-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        filter: brightness(0.4) saturate(1.2);
+        animation: techPulse 20s infinite alternate;
+    }
+    
+    @keyframes techPulse {
+        0% {
+            transform: scale(1);
+        }
+        100% {
+            transform: scale(1.05);
+        }
+    }
+    
+    .vecy-tech-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.75) 100%);
+    }
+    
+    .vecy-tech-content {
+        position: relative;
+        z-index: 2;
+        padding: 2.5rem 2rem !important; /* PADDING AJUSTADO - menos arriba/abajo, igual a los lados */
+        color: white;
+        height: 420px; /* Ajustado al nuevo min-height */
+        display: flex;
+        align-items: center;
+        margin: 0; /* Eliminar márgenes */
+    }
+    
+    /* Asegurar que el contenido del carrusel use todo el espacio disponible */
+    .vecy-tech-content .row {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .vecy-tech-content .col-lg-6 {
+        padding: 0 15px; /* Padding interno de columnas */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .vecy-tech-badges {
+        margin-bottom: 1.2rem; /* Reducido */
+    }
+    
+    .vecy-tech-badge {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        padding: 0.5rem 1rem; /* Reducido */
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+        display: inline-block;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    }
+    
+    .vecy-tech-offer {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        padding: 0.5rem 1rem; /* Reducido */
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-right: 0.5rem;
+        display: inline-block;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .vecy-tech-title {
+        font-size: 2rem; /* Reducido */
+        font-weight: 800;
+        margin-bottom: 0.8rem; /* Reducido */
+        color: white;
+        text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(135deg, #fff, #60a5fa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        line-height: 1.2;
+    }
+    
+    .vecy-tech-description {
+        font-size: 1rem; /* Reducido */
+        margin-bottom: 1.2rem; /* Reducido */
+        color: #e2e8f0;
+        opacity: 0.9;
+        line-height: 1.5;
+        max-height: 4.5em; /* Limitar altura */
+        overflow: hidden;
+    }
+    
+    .vecy-tech-price {
+        margin-bottom: 1.5rem; /* Reducido */
+    }
+    
+    .vecy-price-display.tech {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem; /* Reducido */
+        margin-bottom: 0.6rem; /* Reducido */
+        flex-wrap: wrap;
+    }
+    
+    .vecy-final-price.tech {
+        font-size: 1.8rem; /* Reducido */
+        font-weight: 800;
+        color: #60a5fa;
+        text-shadow: 0 2px 8px rgba(96, 165, 250, 0.4);
+    }
+    
+    .vecy-original-price.tech {
+        font-size: 1.1rem; /* Reducido */
+        text-decoration: line-through;
+        color: #94a3b8;
+    }
+    
+    .vecy-discount-badge.tech {
+        background: linear-gradient(135deg, #8b5cf6, #a855f7);
+        color: white;
+        padding: 0.3rem 0.8rem; /* Reducido */
+        border-radius: 20px;
+        font-size: 0.85rem; /* Reducido */
+        font-weight: 600;
+        box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+    }
+    
+    .vecy-tech-savings {
+        font-size: 0.9rem; /* Reducido */
+        color: #60a5fa;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .vecy-tech-info {
+        display: flex;
+        gap: 1.5rem; /* Reducido */
+        margin-bottom: 1.5rem; /* Reducido */
+        flex-wrap: wrap;
+    }
+    
+    .vecy-info-item.tech {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem; /* Reducido */
+        color: #cbd5e1;
+    }
+    
+    .vecy-info-item.tech i {
+        color: #60a5fa;
+        font-size: 0.9rem; /* Reducido */
+    }
+    
+    .vecy-tech-actions {
+        display: flex;
+        gap: 0.8rem; /* Reducido */
+        flex-wrap: wrap;
+        margin-top: auto; /* Empujar botones hacia abajo */
+        padding-top: 1rem; /* Espacio arriba de los botones */
+    }
+    
+    .vecy-tech-btn {
+        padding: 0.75rem 1.5rem !important; /* PADDING REDUCIDO - más compacto */
+        border: none;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 0.9rem; /* Reducido */
+        position: relative;
+        overflow: hidden;
+        min-height: 44px; /* Altura mínima */
+    }
+    
+    .vecy-tech-btn.primary {
+        background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        color: white;
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    }
+    
+    .vecy-tech-btn.primary:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4);
+    }
+    
+    .vecy-tech-btn.secondary {
+        background: rgba(255, 255, 255, 0.15);
+        color: white;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .vecy-tech-btn.secondary:hover {
+        background: rgba(255, 255, 255, 0.25);
+        transform: translateY(-3px);
+    }
+    
+    .vecy-tech-product-image {
+        text-align: center;
+        position: relative;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem; /* Padding interno */
+    }
+    
+    .tech-product-img {
+        max-height: 280px; /* Reducido */
+        width: auto;
+        max-width: 100%;
+        border-radius: 15px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        transition: transform 0.5s ease;
+    }
+    
+    .vecy-tech-slide:hover .tech-product-img {
+        transform: scale(1.05);
+    }
+    
+    .vecy-tech-placeholder {
+        width: 220px; /* Reducido */
+        height: 220px; /* Reducido */
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem; /* Reducido */
+        color: #60a5fa;
+        margin: 0 auto;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Controles del carrusel tecnológico */
+    .vecy-tech-control {
+        width: 50px; /* Reducido */
+        height: 50px; /* Reducido */
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 50%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0 1rem; /* Reducido */
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .vecy-tech-control:hover {
+        background: rgba(59, 130, 246, 0.3);
+        transform: translateY(-50%) scale(1.1);
+    }
+    
+    .carousel-control-prev-icon.tech,
+    .carousel-control-next-icon.tech {
+        background-size: 1rem 1rem; /* Reducido */
+        filter: invert(1);
+    }
+    
+    .tech-indicators {
+        bottom: 20px; /* Ajustado */
+    }
+    
+    .tech-indicators button {
+        width: 10px; /* Reducido */
+        height: 10px; /* Reducido */
+        border-radius: 50%;
+        margin: 0 5px; /* Reducido */
+        background: rgba(255, 255, 255, 0.5);
+        border: none;
+        transition: all 0.3s ease;
+    }
+    
+    .tech-indicators button.active {
+        background: #3b82f6;
+        transform: scale(1.2); /* Reducido */
+    }
+    
+    /* PRODUCTOS DE TECNOLOGÍA EN GRILLA */
+    .vecy-technology-section .vecy-products-showcase {
+        margin-top: 2rem; /* Espacio después del carrusel */
+    }
+    
+    .vecy-technology-section .vecy-product-card {
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        color: white;
+        transition: all 0.3s ease;
+        height: 460px; /* Asegurar altura consistente */
+    }
+    
+    .vecy-technology-section .vecy-product-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(59, 130, 246, 0.4);
+        transform: translateY(-8px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .vecy-technology-section .vecy-product-name,
+    .vecy-technology-section .vecy-store-info,
+    .vecy-technology-section .vecy-stock-info {
+        color: white;
+    }
+    
+    .vecy-technology-section .vecy-image-placeholder {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .vecy-technology-section .vecy-product-overlay {
+        background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5));
+    }
+    
+    .vecy-technology-section .vecy-badge.vecy-tech-badge {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        border: none;
+    }
+    
+    .vecy-technology-section .vecy-badge.vecy-offer-badge {
+        background: linear-gradient(135deg, #f59e0b, #fbbf24);
+        color: white;
+        border: none;
+    }
+    
+    .vecy-technology-section .vecy-current-price {
+        color: #60a5fa;
+    }
+    
+    .vecy-technology-section .vecy-add-cart-btn {
+        background: linear-gradient(135deg, #3b82f6, #60a5fa);
+        color: white;
+        border: none;
+    }
+    
+    .vecy-technology-section .vecy-add-cart-btn:hover {
+        background: linear-gradient(135deg, #2563eb, #3b82f6);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+    }
+    
+    /* Responsive para carrusel tecnológico */
+    @media (max-width: 1200px) {
+        .vecy-tech-content {
+            padding: 2rem 1.5rem !important;
+        }
+        
+        .vecy-tech-title {
+            font-size: 1.8rem;
+        }
+        
+        .vecy-final-price.tech {
+            font-size: 1.6rem;
+        }
+        
+        .tech-product-img {
+            max-height: 240px;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .vecy-tech-carousel {
+            min-height: 380px;
+            padding: 20px;
+        }
+        
+        .vecy-tech-slide {
+            min-height: 380px;
+        }
+        
+        .vecy-tech-content {
+            height: 380px;
+            padding: 1.5rem !important;
+        }
+        
+        .vecy-tech-title {
+            font-size: 1.6rem;
+        }
+        
+        .vecy-tech-description {
+            font-size: 0.95rem;
+        }
+        
+        .vecy-final-price.tech {
+            font-size: 1.5rem;
+        }
+        
+        .tech-product-img {
+            max-height: 220px;
+        }
+        
+        .vecy-tech-actions {
+            justify-content: flex-start;
+        }
+        
+        .vecy-tech-btn {
+            padding: 0.65rem 1.2rem !important;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .vecy-tech-carousel-container {
+            margin-bottom: 2.5rem;
+        }
+        
+        .vecy-tech-carousel {
+            min-height: auto;
+            padding: 15px;
+        }
+        
+        .vecy-tech-slide {
+            min-height: auto;
+        }
+        
+        .vecy-tech-content {
+            height: auto;
+            padding: 1.5rem 1rem !important;
+            text-align: center;
+        }
+        
+        .vecy-tech-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.6rem;
+        }
+        
+        .vecy-tech-badges {
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .vecy-tech-description {
+            margin-bottom: 1rem;
+        }
+        
+        .vecy-tech-price {
+            margin-bottom: 1rem;
+        }
+        
+        .vecy-tech-info {
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        .vecy-tech-product-image {
+            margin-top: 1.5rem;
+            padding: 0;
+        }
+        
+        .tech-product-img {
+            max-height: 200px;
+        }
+        
+        .vecy-tech-placeholder {
+            width: 180px;
+            height: 180px;
+            font-size: 2.5rem;
+        }
+        
+        .vecy-tech-control {
+            width: 45px;
+            height: 45px;
+            margin: 0 0.5rem;
+        }
+        
+        .vecy-tech-actions {
+            justify-content: center;
+            gap: 0.6rem;
+        }
+        
+        .vecy-tech-btn {
+            padding: 0.6rem 1.2rem !important;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .vecy-tech-content {
+            padding: 1.2rem 0.8rem !important;
+        }
+        
+        .vecy-tech-title {
+            font-size: 1.3rem;
+        }
+        
+        .vecy-tech-description {
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .vecy-price-display.tech {
+            gap: 0.8rem;
+        }
+        
+        .vecy-final-price.tech {
+            font-size: 1.4rem;
+        }
+        
+        .vecy-original-price.tech {
+            font-size: 1rem;
+        }
+        
+        .tech-product-img {
+            max-height: 180px;
+        }
+        
+        .vecy-tech-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        .vecy-tech-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
 {% endblock %}
 
 {% block content %}
@@ -711,489 +1329,7 @@
     </section>
     {% endif %}
 
-<!-- SECCIÓN DE TECNOLOGÍA CORREGIDA -->
-{% if hay_tecnologia %}
-<section id="vecy-technology" class="vecy-section vecy-technology-section">
-    <div class="container">
-        <div class="vecy-section-header">
-            <div class="vecy-header-content">
-                <div class="vecy-icon-header">
-                    <i class="fas fa-laptop"></i>
-                </div>
-                <div>
-                    <h2 class="vecy-section-title">Tecnología</h2>
-                    <p class="vecy-section-subtitle">Lo último en tecnología y electrónica</p>
-                </div>
-            </div>
-            <a href="{% url 'productos_filtrados_logeado' %}?categoria=1" class="vecy-view-all">
-                Ver todos <i class="fas fa-arrow-right"></i>
-            </a>
-        </div>
-
-        <div class="vecy-products-showcase">
-            {% for producto_data in tecnologia|slice:":8" %}
-            {% with producto=producto_data.producto %}
-            {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
-
-            <!-- COMPONENTE CON VARIANTES - MISMA ESTRUCTURA QUE LAS OTRAS SECCIONES -->
-            {% if producto_data.tiene_variantes and producto_data.variantes %}
-            <div class="product-card-with-variants" data-aos="fade-up" 
-                 data-aos-delay="{{ forloop.counter0|add:1 }}00"
-                 data-product-id="{{ producto.pkid_prod }}">
-                
-                <!-- Indicador de selección -->
-                <div class="selection-indicator">
-                    <i class="fas fa-check"></i>
-                </div>
-
-                <div class="product-image-container">
-                    <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/2563eb/ffffff?text=TECNOLOGÍA{% endif %}" 
-                         alt="{{ producto.nom_prod }}" class="product-main-image" 
-                         id="mainProductImage-tech-{{ producto.pkid_prod }}">
-                </div>
-
-                <div class="product-info-container">
-                    <div>
-                        <!-- Título del producto -->
-                        <h3 class="vecy-product-title" id="productTitle-tech-{{ producto.pkid_prod }}">
-                            {{ producto.nom_prod }}
-                        </h3>
-
-                        <!-- Información de la tienda -->
-                        <div class="vecy-store-info">
-                            <i class="fas fa-store"></i>
-                            <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
-                        </div>
-
-                        <!-- Información de stock -->
-                        <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
-                            <i class="fas fa-box"></i>
-                            <span id="stockInfo-tech-{{ producto.pkid_prod }}">
-                                {% if producto_data.tiene_variantes %}
-                                Múltiples opciones disponibles
-                                {% else %}
-                                {{ producto_data.stock }} disponibles
-                                {% endif %}
-                            </span>
-                        </div>
-
-                        <!-- Descripción del producto -->
-                        <div class="product-description">
-                            <p class="product-description-text" id="description-tech-{{ producto.pkid_prod }}">
-                                {{ producto.desc_prod|default:"Producto tecnológico de alta calidad con múltiples opciones disponibles." }}
-                            </p>
-                        </div>
-
-                        <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
-                        {% if producto_data.variantes %}
-                        <div class="variants-container">
-                            <div class="variants-label">
-                                <i class="fas fa-list-alt me-2"></i>
-                                Opciones disponibles:
-                            </div>
-                            <div class="variants-grid" id="variantsGrid-tech-{{ producto.pkid_prod }}">
-                                <!-- Las miniaturas se generarán con JavaScript -->
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <!-- Sección de precio y botón -->
-                    <div class="product-price-section mt-3">
-                        <div class="vecy-price-section">
-                            <div class="vecy-price-main">
-                                <span class="vecy-current-price" id="price-tech-{{ producto.pkid_prod }}">
-                                    ${{ producto_data.precio_final_formateado }}
-                                </span>
-                                {% if producto_data.tiene_descuento %}
-                                <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
-                                {% endif %}
-                            </div>
-                            {% if producto_data.tiene_descuento %}
-                            <div class="vecy-savings-badge">
-                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="product-actions">
-                            <button class="vecy-add-cart-btn" 
-                                    onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
-                                    id="addToCartBtn-tech-{{ producto.pkid_prod }}">
-                                <i class="fas fa-cart-plus me-2"></i>
-                                Agregar al Carrito
-                            </button>
-                            <button class="vecy-favorite-variant-btn" 
-                                    onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
-                                <i class="far fa-heart"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DATOS OCULTOS DE VARIANTES -->
-                <div class="variantes-reales-data" style="display: none;">
-                    <!-- PRODUCTO BASE -->
-                    <div data-variant 
-                         data-variant-id="base"
-                         data-variant-name="{{ producto.nom_prod }} - Estándar"
-                         data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
-                         data-variant-price="{{ producto_data.precio_base_formateado }}"
-                         data-variant-stock="{{ producto_data.stock }}"
-                         data-variant-precio-adicional="0"
-                         data-variant-precio-final="{{ producto_data.precio_final_formateado }}"
-                         data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
-                         data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
-                         data-variant-ahorro="{{ producto_data.ahorro_formateado|default:0 }}"
-                         data-is-base="true">
-                    </div>
-                    
-                    <!-- VARIANTES ADICIONALES -->
-                    {% for variante in producto_data.variantes %}
-                    <div data-variant 
-                         data-variant-id="{{ variante.id_variante }}"
-                         data-variant-name="{{ variante.nombre_variante }}"
-                         data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
-                         data-variant-price="{{ variante.precio_base_calculado_formateado }}"
-                         data-variant-stock="{{ variante.stock_variante }}"
-                         data-variant-precio-adicional="{{ variante.precio_adicional_formateado|default:0 }}"
-                         data-variant-precio-final="{{ variante.precio_final_calculado_formateado }}"
-                         data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
-                         data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
-                         data-variant-ahorro="{{ variante.ahorro_calculado_formateado|default:0 }}"
-                         data-is-base="false">
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL) -->
-            {% else %}
-            <div class="vecy-product-card vecy-tech-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                <div class="vecy-product-media">
-                    <div class="vecy-image-container">
-                        {% if producto.img_prod %}
-                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
-                        {% else %}
-                        <div class="vecy-image-placeholder">
-                            <i class="fas fa-laptop"></i>
-                        </div>
-                        {% endif %}
-
-                        <div class="vecy-product-overlay">
-                            <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="vecy-favorite-btn" onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
-                                <i class="far fa-heart"></i>
-                            </button>
-                        </div>
-
-                        {% if producto_data.tiene_descuento %}
-                        <div class="vecy-discount-ribbon">
-                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="vecy-product-badges">
-                        <span class="vecy-badge vecy-tech-badge">
-                            <i class="fas fa-microchip me-1"></i>Tecnología
-                        </span>
-                    </div>
-                </div>
-
-                <div class="vecy-product-content">
-                    <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
-
-                    <div class="vecy-store-info">
-                        <i class="fas fa-store"></i>
-                        <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
-                    </div>
-
-                    <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
-                        <i class="fas fa-box"></i>
-                        <span>
-                            {% if producto_data.tiene_variantes %}
-                            Múltiples opciones
-                            {% else %}
-                            {{ producto_data.stock }} disponibles
-                            {% endif %}
-                        </span>
-                    </div>
-
-                    <div class="vecy-price-section">
-                        <div class="vecy-price-main">
-                            <span class="vecy-current-price">${{ producto_data.precio_final_formateado }}</span>
-                            {% if producto_data.tiene_descuento %}
-                            <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
-                            {% endif %}
-                        </div>
-                        {% if producto_data.tiene_descuento %}
-                        <div class="vecy-savings-badge">
-                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    {% if producto_data.tiene_variantes %}
-                    <button class="vecy-add-cart-btn" onclick="showVariantsModal('{{ producto.pkid_prod }}')">
-                        <i class="fas fa-list-alt me-2"></i>
-                        Ver Opciones
-                    </button>
-                    {% else %}
-                    <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
-                        <i class="fas fa-cart-plus me-2"></i>
-                        Agregar al Carrito
-                    </button>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% endif %}
-            {% endwith %}
-            {% endfor %}
-        </div>
-    </div>
-</section>
-{% endif %}
-
-    <!-- PRODUCTOS BARATOS CON VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
-    <section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
-        <div class="container">
-            <div class="vecy-section-header">
-                <div class="vecy-header-content">
-                    <div class="vecy-icon-header">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <div>
-                        <h2 class="vecy-section-title">Productos Baratos</h2>
-                        <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
-                    </div>
-                </div>
-                <a href="{% url 'productos_filtrados_logeado' %}?filtro=economicos" class="vecy-view-all">
-                    Ver todos <i class="fas fa-arrow-right"></i>
-                </a>
-            </div>
-
-            {% if productos_baratos %}
-            <div class="vecy-products-showcase">
-                {% for producto_data in productos_baratos|slice:":8" %}
-                {% with producto=producto_data.producto %}
-                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
-
-                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN CORREGIDA -->
-                {% if producto_data.tiene_variantes and producto_data.variantes %}
-                <div class="product-card-with-variants" data-aos="fade-up" 
-                     data-aos-delay="{{ forloop.counter0|add:1 }}00"
-                     data-product-id="{{ producto.pkid_prod }}">
-                    
-                    <!-- Indicador de selección -->
-                    <div class="selection-indicator">
-                        <i class="fas fa-check"></i>
-                    </div>
-
-                    <div class="product-image-container">
-                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
-                             alt="{{ producto.nom_prod }}" class="product-main-image" 
-                             id="mainProductImage-{{ producto.pkid_prod }}">
-                    </div>
-
-                    <div class="product-info-container">
-                        <div>
-                            <!-- Título del producto -->
-                            <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
-                                {{ producto.nom_prod }}
-                            </h3>
-
-                            <!-- Información de la tienda -->
-                            <div class="vecy-store-info">
-                                <i class="fas fa-store"></i>
-                                <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
-                            </div>
-
-                            <!-- Información de stock MEJORADA -->
-                            <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
-                                <i class="fas fa-box"></i>
-                                <span id="stockInfo-{{ producto.pkid_prod }}">
-                                    {% if producto_data.tiene_variantes %}
-                                    Múltiples opciones disponibles
-                                    {% else %}
-                                    {{ producto_data.stock }} disponibles
-                                    {% endif %}
-                                </span>
-                            </div>
-
-                            <!-- Descripción del producto -->
-                            <div class="product-description">
-                                <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
-                                    {{ producto.desc_prod|default:"Producto de alta calidad con múltiples opciones disponibles. Excelente relación calidad-precio." }}
-                                </p>
-                            </div>
-
-                            <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
-                            {% if producto_data.variantes %}
-                            <div class="variants-container">
-                                <div class="variants-label">
-                                    <i class="fas fa-list-alt me-2"></i>
-                                    Opciones disponibles:
-                                </div>
-                                <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
-                                    <!-- Las miniaturas se generarán con JavaScript -->
-                                </div>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <!-- Sección de precio y botón CORREGIDA -->
-                        <div class="product-price-section mt-3">
-                            <div class="vecy-price-section">
-                                <div class="vecy-price-main">
-                                    <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
-                                        ${{ producto_data.precio_final_formateado }}
-                                    </span>
-                                    {% if producto_data.tiene_descuento %}
-                                    <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
-                                    {% endif %}
-                                </div>
-                                {% if producto_data.tiene_descuento %}
-                                <div class="vecy-savings-badge">
-                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
-                                </div>
-                                {% endif %}
-                            </div>
-
-                            <div class="product-actions">
-                                <button class="vecy-add-cart-btn" 
-                                        onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
-                                        id="addToCartBtn-{{ producto.pkid_prod }}">
-                                    <i class="fas fa-cart-plus me-2"></i>
-                                    Agregar al Carrito
-                                </button>
-                                <button class="vecy-favorite-variant-btn" 
-                                        onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
-                                    <i class="far fa-heart"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- DATOS OCULTOS DE VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
-                    <div class="variantes-reales-data" style="display: none;">
-                        <!-- PRODUCTO BASE -->
-                        <div data-variant 
-                             data-variant-id="base"
-                             data-variant-name="{{ producto.nom_prod }} - Estándar"
-                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
-                             data-variant-price="{{ producto_data.precio_base_formateado }}"
-                             data-variant-stock="{{ producto_data.stock }}"
-                             data-variant-precio-adicional="0"
-                             data-variant-precio-final="{{ producto_data.precio_final_formateado }}"
-                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
-                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
-                             data-variant-ahorro="{{ producto_data.ahorro_formateado|default:0 }}"
-                             data-is-base="true">
-                        </div>
-                        
-                        <!-- VARIANTES ADICIONALES - DATOS ESPECÍFICOS CORREGIDOS -->
-                        {% for variante in producto_data.variantes %}
-                        <div data-variant 
-                             data-variant-id="{{ variante.id_variante }}"
-                             data-variant-name="{{ variante.nombre_variante }}"
-                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
-                             data-variant-price="{{ variante.precio_base_calculado_formateado }}"
-                             data-variant-stock="{{ variante.stock_variante }}"
-                             data-variant-precio-adicional="{{ variante.precio_adicional_formateado|default:0 }}"
-                             data-variant-precio-final="{{ variante.precio_final_calculado_formateado }}"
-                             data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
-                             data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
-                             data-variant-ahorro="{{ variante.ahorro_calculado_formateado|default:0 }}"
-                             data-is-base="false">
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL SIMPLIFICADA) -->
-                {% else %}
-                <div class="vecy-product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
-                    <div class="vecy-product-media">
-                        <div class="vecy-image-container">
-                            {% if producto.img_prod %}
-                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
-                            {% else %}
-                            <div class="vecy-image-placeholder">
-                                <i class="fas fa-coins"></i>
-                            </div>
-                            {% endif %}
-
-                            <div class="vecy-product-overlay">
-                                <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="vecy-favorite-btn" onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
-                                    <i class="far fa-heart"></i>
-                                </button>
-                            </div>
-
-                            {% if producto_data.tiene_descuento %}
-                            <div class="vecy-discount-ribbon">
-                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="vecy-product-badges">
-                            <span class="vecy-badge vecy-budget-badge">
-                                <i class="fas fa-coins me-1"></i>Buen Precio
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="vecy-product-content">
-                        <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
-
-                        <div class="vecy-store-info">
-                            <i class="fas fa-store"></i>
-                            <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
-                        </div>
-
-                        <!-- STOCK MEJORADO -->
-                        <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
-                            <i class="fas fa-box"></i>
-                            <span>{{ producto_data.stock }} disponibles</span>
-                        </div>
-
-                        <div class="vecy-price-section">
-                            <div class="vecy-price-main">
-                                <span class="vecy-current-price">${{ producto_data.precio_final_formateado }}</span>
-                                {% if producto_data.tiene_descuento %}
-                                <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
-                                {% endif %}
-                            </div>
-                            {% if producto_data.tiene_descuento %}
-                            <div class="vecy-savings-badge">
-                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
-                            <i class="fas fa-cart-plus me-2"></i>
-                            Agregar al Carrito
-                        </button>
-                    </div>
-                </div>
-                {% endif %}
-                {% endif %}
-                {% endwith %}
-                {% endfor %}
-            </div>
-            {% endif %}
-        </div>
-    </section>
-
-    <!-- PRODUCTOS DESTACADOS - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
+        <!-- PRODUCTOS DESTACADOS - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
     <section id="vecy-featured" class="vecy-section vecy-gradient-bg-2">
         <div class="container">
             <div class="vecy-section-header">
@@ -1476,6 +1612,509 @@
         </div>
     </section>
 
+<!-- SECCIÓN DE TECNOLOGÍA CON CARRUSEL ESPECIAL -->
+{% if hay_tecnologia %}
+<section id="vecy-technology" class="vecy-section vecy-technology-section">
+    <div class="container">
+        <div class="vecy-section-header">
+            <div class="vecy-header-content">
+                <div class="vecy-icon-header">
+                    <i class="fas fa-laptop"></i>
+                </div>
+                <div>
+                    <h2 class="vecy-section-title">Tecnología</h2>
+                    <p class="vecy-section-subtitle">Lo último en tecnología y electrónica</p>
+                </div>
+            </div>
+            <a href="{% url 'productos_filtrados_logeado' %}?categoria=3" class="vecy-view-all">
+                Ver todos <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+
+        <!-- CARRUSEL ESPECIAL PARA TECNOLOGÍA - SOLO OFERTAS -->
+        {% with tecnologia_con_ofertas=tecnologia|slice:":5" %}
+        {% if tecnologia_con_ofertas %}
+        <div class="vecy-tech-carousel-container mb-5">
+            <div id="vecyTechCarousel" class="carousel slide vecy-tech-carousel" data-bs-ride="carousel">
+                <div class="carousel-indicators tech-indicators">
+                    {% for producto_data in tecnologia_con_ofertas %}
+                        {% if producto_data.tiene_descuento %}
+                            <button type="button" data-bs-target="#vecyTechCarousel" data-bs-slide-to="{{ forloop.counter0 }}"
+                                {% if forloop.first %}class="active" {% endif %}></button>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div class="carousel-inner vecy-tech-inner">
+                    {% for producto_data in tecnologia_con_ofertas %}
+                        {% if producto_data.tiene_descuento %}
+                            {% with producto=producto_data.producto %}
+                            <div class="carousel-item vecy-tech-slide {% if forloop.first %}active{% endif %}">
+                                <div class="vecy-tech-background">
+                                    <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80{% endif %}"
+                                        class="vecy-tech-image" alt="{{ producto.nom_prod }}">
+                                    <div class="vecy-tech-overlay"></div>
+                                </div>
+
+                                <div class="vecy-tech-content">
+                                    <div class="row align-items-center">
+                                        <div class="col-lg-6" data-aos="fade-right">
+                                            <div class="vecy-tech-badges">
+                                                <span class="vecy-tech-badge">
+                                                    <i class="fas fa-microchip me-2"></i>TECNOLOGÍA AVANZADA
+                                                </span>
+                                                <span class="vecy-tech-offer">
+                                                    <i class="fas fa-bolt me-2"></i>Oferta Exclusiva
+                                                </span>
+                                            </div>
+
+                                            <h3 class="vecy-tech-title">{{ producto.nom_prod }}</h3>
+                                            <p class="vecy-tech-description">
+                                                {{ producto.desc_prod|default:"Tecnología de vanguardia con las mejores especificaciones del mercado. ¡No te quedes atrás!"|truncatewords:20 }}
+                                            </p>
+
+                                            <div class="vecy-tech-price">
+                                                <div class="vecy-price-display tech">
+                                                    <span class="vecy-final-price tech">${{ producto_data.precio_final_formateado }}</span>
+                                                    <span class="vecy-original-price tech">${{ producto_data.precio_base_formateado }}</span>
+                                                    <span class="vecy-discount-badge tech">
+                                                        -{{ producto_data.descuento_porcentaje|floatformat:0 }}% OFF
+                                                    </span>
+                                                </div>
+                                                <div class="vecy-tech-savings">
+                                                    <i class="fas fa-piggy-bank me-2"></i>
+                                                    Ahorras ${{ producto_data.ahorro_formateado }}
+                                                </div>
+                                            </div>
+
+                                            <div class="vecy-tech-info">
+                                                <div class="vecy-info-item tech">
+                                                    <i class="fas fa-store"></i>
+                                                    <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                                                </div>
+                                                <div class="vecy-info-item tech">
+                                                    <i class="fas fa-box"></i>
+                                                    <span>
+                                                        {% if producto_data.tiene_variantes %}
+                                                        Múltiples configuraciones
+                                                        {% else %}
+                                                        {{ producto_data.stock }} disponibles
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                                <div class="vecy-info-item tech">
+                                                    <i class="fas fa-star"></i>
+                                                    <span>Producto destacado</span>
+                                                </div>
+                                            </div>
+
+                                            <div class="vecy-tech-actions">
+                                                <!-- BOTÓN MODIFICADO: SIEMPRE MUESTRA "AÑADIR AL CARRITO" -->
+                                                <button class="vecy-tech-btn primary" onclick="addToCart('{{ producto.pkid_prod }}')">
+                                                    <i class="fas fa-shopping-cart me-2"></i>
+                                                    Añadir al Carrito
+                                                </button>
+                                                <button class="vecy-tech-btn secondary" onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
+                                                    <i class="fas fa-heart me-2"></i>
+                                                    Favorito
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-lg-6" data-aos="fade-left">
+                                            <div class="vecy-tech-product-image">
+                                                {% if producto.img_prod %}
+                                                <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" 
+                                                     class="img-fluid tech-product-img">
+                                                {% else %}
+                                                <div class="vecy-tech-placeholder">
+                                                    <i class="fas fa-laptop-code"></i>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endwith %}
+                        {% endif %}
+                    {% empty %}
+                    <!-- SI NO HAY OFERTAS EN TECNOLOGÍA, MOSTRAR UN MENSAJE -->
+                    <div class="carousel-item vecy-tech-slide active">
+                        <div class="vecy-tech-background">
+                            <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80"
+                                class="vecy-tech-image" alt="Tecnología">
+                            <div class="vecy-tech-overlay"></div>
+                        </div>
+                        <div class="vecy-tech-content">
+                            <div class="row align-items-center">
+                                <div class="col-lg-12 text-center">
+                                    <div class="vecy-tech-badges">
+                                        <span class="vecy-tech-badge">
+                                            <i class="fas fa-microchip me-2"></i>TECNOLOGÍA DE VANGUARDIA
+                                        </span>
+                                    </div>
+                                    <h3 class="vecy-tech-title">Próximas Novedades Tecnológicas</h3>
+                                    <p class="vecy-tech-description">
+                                        Estamos preparando las últimas novedades en tecnología. ¡Vuelve pronto para descubrir los productos más innovadores!
+                                    </p>
+                                    <div class="vecy-tech-actions">
+                                        <button class="vecy-tech-btn primary" onclick="window.location.href='{% url 'productos_filtrados_logeado' %}?categoria=1'">
+                                            <i class="fas fa-shopping-bag me-2"></i>
+                                            Explorar Tecnología
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <button class="carousel-control-prev vecy-tech-control" type="button"
+                    data-bs-target="#vecyTechCarousel" data-bs-slide="prev">
+                    <span class="carousel-control-prev-icon tech" aria-hidden="true"></span>
+                    <span class="visually-hidden">Anterior</span>
+                </button>
+                <button class="carousel-control-next vecy-tech-control" type="button"
+                    data-bs-target="#vecyTechCarousel" data-bs-slide="next">
+                    <span class="carousel-control-next-icon tech" aria-hidden="true"></span>
+                    <span class="visually-hidden">Siguiente</span>
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- GRILLA DE PRODUCTOS DE TECNOLOGÍA (SOLO PRODUCTOS NORMALES) -->
+        <div class="vecy-products-showcase">
+            {% for producto_data in tecnologia|slice:":8" %}
+            {% with producto=producto_data.producto %}
+            {% if producto_data.stock > 0 %}
+            <!-- PRODUCTO NORMAL SIN VARIANTES - SOLO PRODUCTOS BASE -->
+            <div class="vecy-product-card vecy-tech-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                <div class="vecy-product-media">
+                    <div class="vecy-image-container">
+                        {% if producto.img_prod %}
+                        <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
+                        {% else %}
+                        <div class="vecy-image-placeholder">
+                            <i class="fas fa-laptop"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="vecy-product-overlay">
+                            <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="vecy-favorite-btn" onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+
+                        {% if producto_data.tiene_descuento %}
+                        <div class="vecy-discount-ribbon">
+                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="vecy-product-badges">
+                        <span class="vecy-badge vecy-tech-badge">
+                            <i class="fas fa-microchip me-1"></i>Tecnología
+                        </span>
+                        {% if producto_data.tiene_descuento %}
+                        <span class="vecy-badge vecy-offer-badge">
+                            <i class="fas fa-bolt me-1"></i>Oferta
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="vecy-product-content">
+                    <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
+
+                    <div class="vecy-store-info">
+                        <i class="fas fa-store"></i>
+                        <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                    </div>
+
+                    <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                        <i class="fas fa-box"></i>
+                        <span>{{ producto_data.stock }} disponibles</span>
+                    </div>
+
+                    <div class="vecy-price-section">
+                        <div class="vecy-price-main">
+                            <span class="vecy-current-price">${{ producto_data.precio_final_formateado }}</span>
+                            {% if producto_data.tiene_descuento %}
+                            <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
+                            {% endif %}
+                        </div>
+                        {% if producto_data.tiene_descuento %}
+                        <div class="vecy-savings-badge">
+                            -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
+                        <i class="fas fa-cart-plus me-2"></i>
+                        Agregar al Carrito
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+            {% endfor %}
+        </div>
+
+        {% if tecnologia|length > 8 %}
+        <div class="vecy-show-more-container">
+            <a href="{% url 'productos_filtrados_logeado' %}?categoria=1" class="vecy-show-more-btn">
+                Ver Más Tecnología <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+    <!-- PRODUCTOS BARATOS CON VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
+    <section id="vecy-budget" class="vecy-section vecy-gradient-bg-1">
+        <div class="container">
+            <div class="vecy-section-header">
+                <div class="vecy-header-content">
+                    <div class="vecy-icon-header">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div>
+                        <h2 class="vecy-section-title">Productos Baratos</h2>
+                        <p class="vecy-section-subtitle">Los mejores precios para tu economía diaria</p>
+                    </div>
+                </div>
+                <a href="{% url 'productos_filtrados_logeado' %}?filtro=economicos" class="vecy-view-all">
+                    Ver todos <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            {% if productos_baratos %}
+            <div class="vecy-products-showcase">
+                {% for producto_data in productos_baratos|slice:":8" %}
+                {% with producto=producto_data.producto %}
+                {% if producto_data.stock > 0 or producto_data.tiene_variantes %}
+
+                <!-- COMPONENTE CON VARIANTES REALES - VERSIÓN CORREGIDA -->
+                {% if producto_data.tiene_variantes and producto_data.variantes %}
+                <div class="product-card-with-variants" data-aos="fade-up" 
+                     data-aos-delay="{{ forloop.counter0|add:1 }}00"
+                     data-product-id="{{ producto.pkid_prod }}">
+                    
+                    <!-- Indicador de selección -->
+                    <div class="selection-indicator">
+                        <i class="fas fa-check"></i>
+                    </div>
+
+                    <div class="product-image-container">
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}https://via.placeholder.com/300x200/3598db/ffffff?text=VECY{% endif %}" 
+                             alt="{{ producto.nom_prod }}" class="product-main-image" 
+                             id="mainProductImage-{{ producto.pkid_prod }}">
+                    </div>
+
+                    <div class="product-info-container">
+                        <div>
+                            <!-- Título del producto -->
+                            <h3 class="vecy-product-title" id="productTitle-{{ producto.pkid_prod }}">
+                                {{ producto.nom_prod }}
+                            </h3>
+
+                            <!-- Información de la tienda -->
+                            <div class="vecy-store-info">
+                                <i class="fas fa-store"></i>
+                                <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                            </div>
+
+                            <!-- Información de stock MEJORADA -->
+                            <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                                <i class="fas fa-box"></i>
+                                <span id="stockInfo-{{ producto.pkid_prod }}">
+                                    {% if producto_data.tiene_variantes %}
+                                    Múltiples opciones disponibles
+                                    {% else %}
+                                    {{ producto_data.stock }} disponibles
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <!-- Descripción del producto -->
+                            <div class="product-description">
+                                <p class="product-description-text" id="description-{{ producto.pkid_prod }}">
+                                    {{ producto.desc_prod|default:"Producto de alta calidad con múltiples opciones disponibles. Excelente relación calidad-precio." }}
+                                </p>
+                            </div>
+
+                            <!-- Selector de variantes - SOLO SI HAY VARIANTES -->
+                            {% if producto_data.variantes %}
+                            <div class="variants-container">
+                                <div class="variants-label">
+                                    <i class="fas fa-list-alt me-2"></i>
+                                    Opciones disponibles:
+                                </div>
+                                <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
+                                    <!-- Las miniaturas se generarán con JavaScript -->
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Sección de precio y botón CORREGIDA -->
+                        <div class="product-price-section mt-3">
+                            <div class="vecy-price-section">
+                                <div class="vecy-price-main">
+                                    <span class="vecy-current-price" id="price-{{ producto.pkid_prod }}">
+                                        ${{ producto_data.precio_final_formateado }}
+                                    </span>
+                                    {% if producto_data.tiene_descuento %}
+                                    <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
+                                    {% endif %}
+                                </div>
+                                {% if producto_data.tiene_descuento %}
+                                <div class="vecy-savings-badge">
+                                    -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="product-actions">
+                                <button class="vecy-add-cart-btn" 
+                                        onclick="addToCartWithVariant('{{ producto.pkid_prod }}')"
+                                        id="addToCartBtn-{{ producto.pkid_prod }}">
+                                    <i class="fas fa-cart-plus me-2"></i>
+                                    Agregar al Carrito
+                                </button>
+                                <button class="vecy-favorite-variant-btn" 
+                                        onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- DATOS OCULTOS DE VARIANTES - VERSIÓN DEFINITIVAMENTE CORREGIDA -->
+                    <div class="variantes-reales-data" style="display: none;">
+                        <!-- PRODUCTO BASE -->
+                        <div data-variant 
+                             data-variant-id="base"
+                             data-variant-name="{{ producto.nom_prod }} - Estándar"
+                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_base_formateado }}"
+                             data-variant-stock="{{ producto_data.stock }}"
+                             data-variant-precio-adicional="0"
+                             data-variant-precio-final="{{ producto_data.precio_final_formateado }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
+                             data-variant-ahorro="{{ producto_data.ahorro_formateado|default:0 }}"
+                             data-is-base="true">
+                        </div>
+                        
+                        <!-- VARIANTES ADICIONALES - DATOS ESPECÍFICOS CORREGIDOS -->
+                        {% for variante in producto_data.variantes %}
+                        <div data-variant 
+                             data-variant-id="{{ variante.id_variante }}"
+                             data-variant-name="{{ variante.nombre_variante }}"
+                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
+                             data-variant-price="{{ variante.precio_base_calculado_formateado }}"
+                             data-variant-stock="{{ variante.stock_variante }}"
+                             data-variant-precio-adicional="{{ variante.precio_adicional_formateado|default:0 }}"
+                             data-variant-precio-final="{{ variante.precio_final_calculado_formateado }}"
+                             data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
+                             data-variant-ahorro="{{ variante.ahorro_calculado_formateado|default:0 }}"
+                             data-is-base="false">
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- PRODUCTO SIN VARIANTES (TARJETA ORIGINAL SIMPLIFICADA) -->
+                {% else %}
+                <div class="vecy-product-card" data-aos="fade-up" data-aos-delay="{{ forloop.counter0|add:1 }}00">
+                    <div class="vecy-product-media">
+                        <div class="vecy-image-container">
+                            {% if producto.img_prod %}
+                            <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" class="vecy-product-image">
+                            {% else %}
+                            <div class="vecy-image-placeholder">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            {% endif %}
+
+                            <div class="vecy-product-overlay">
+                                <button class="vecy-quick-view" onclick="quickView('{{ producto.pkid_prod }}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="vecy-favorite-btn" onclick="toggleFavorite('{{ producto.pkid_prod }}', this)">
+                                    <i class="far fa-heart"></i>
+                                </button>
+                            </div>
+
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-discount-ribbon">
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}%
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="vecy-product-badges">
+                            <span class="vecy-badge vecy-budget-badge">
+                                <i class="fas fa-coins me-1"></i>Buen Precio
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="vecy-product-content">
+                        <h3 class="vecy-product-name">{{ producto.nom_prod }}</h3>
+
+                        <div class="vecy-store-info">
+                            <i class="fas fa-store"></i>
+                            <span>{{ producto.fknegocioasociado_prod.nom_neg }}</span>
+                        </div>
+
+                        <!-- STOCK MEJORADO -->
+                        <div class="vecy-stock-info {% if producto_data.stock < 10 %}vecy-low-stock{% endif %}">
+                            <i class="fas fa-box"></i>
+                            <span>{{ producto_data.stock }} disponibles</span>
+                        </div>
+
+                        <div class="vecy-price-section">
+                            <div class="vecy-price-main">
+                                <span class="vecy-current-price">${{ producto_data.precio_final_formateado }}</span>
+                                {% if producto_data.tiene_descuento %}
+                                <span class="vecy-original-price">${{ producto_data.precio_base_formateado }}</span>
+                                {% endif %}
+                            </div>
+                            {% if producto_data.tiene_descuento %}
+                            <div class="vecy-savings-badge">
+                                -{{ producto_data.descuento_porcentaje|floatformat:0 }}% • Ahorras ${{ producto_data.ahorro_formateado }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <button class="vecy-add-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')">
+                            <i class="fas fa-cart-plus me-2"></i>
+                            Agregar al Carrito
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+                {% endif %}
+                {% endwith %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
     <!-- NEGOCIOS DESTACADOS -->
     <section id="vecy-businesses" class="vecy-section vecy-gradient-bg-4">
         <div class="container">
@@ -1666,7 +2305,7 @@
 <script>
     // ==================== INICIALIZACIÓN DE LA PÁGINA ====================
 
-    console.log("🎯 VECY CLIENTE INICIADO");
+    console.log("🎯 VECY CLIENTE INICIADO - CONECTADO AL SISTEMA CENTRAL");
 
     // Inicializar AOS
     function initAOS() {
@@ -1697,138 +2336,18 @@
         console.log("✅ Scroll suave configurado");
     }
 
-    // ==================== MANEJO DE FAVORITOS ====================
-
-    // Verificar estado de favoritos al cargar la página
-    async function checkFavoritesStatus() {
-        console.log("🔍 Verificando estado de favoritos...");
-        
-        // Obtener todos los botones de favorito
-        const favoriteButtons = document.querySelectorAll('.vecy-favorite-btn, .vecy-favorite-offer-btn, .vecy-favorite-variant-btn');
-        
-        for (const button of favoriteButtons) {
-            const onclickAttr = button.getAttribute('onclick');
-            if (!onclickAttr) continue;
-            
-            const match = onclickAttr.match(/'([^']+)'/);
-            if (!match) continue;
-            
-            const productId = match[1];
-            
-            try {
-                const response = await fetch(`/verificar_favorito/?producto_id=${productId}`);
-                const data = await response.json();
-                
-                if (data.success && data.es_favorito) {
-                    // Actualizar icono a corazón lleno
-                    const icon = button.querySelector('i');
-                    if (icon) {
-                        icon.className = 'fas fa-heart';
-                        icon.style.color = '#ef4444'; // Rojo para favorito
-                    }
-                    button.setAttribute('data-is-favorite', 'true');
-                }
-            } catch (error) {
-                console.error('Error verificando favorito:', error);
-            }
-        }
-        
-        // Actualizar contador de favoritos
-        updateFavoritesCount();
-    }
-
-    // Función principal para alternar favoritos
-    async function toggleFavorite(productId, buttonElement) {
-        console.log(`❤️ Alternando favorito para producto: ${productId}`);
-        
-        const isCurrentlyFavorite = buttonElement.getAttribute('data-is-favorite') === 'true';
-        const icon = buttonElement.querySelector('i');
-        
-        try {
-            const url = isCurrentlyFavorite ? '{% url "eliminar_favorito" %}' : '{% url "agregar_favorito" %}';
-            const method = 'POST';
-            
-            const response = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({
-                    producto_id: productId
-                })
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                // Actualizar estado visual
-                if (isCurrentlyFavorite) {
-                    // Quitar de favoritos
-                    if (icon) {
-                        icon.className = 'far fa-heart';
-                        icon.style.color = '';
-                    }
-                    buttonElement.setAttribute('data-is-favorite', 'false');
-                    vecyShowNotification(data.message, 'info');
-                } else {
-                    // Agregar a favoritos
-                    if (icon) {
-                        icon.className = 'fas fa-heart';
-                        icon.style.color = '#ef4444';
-                    }
-                    buttonElement.setAttribute('data-is-favorite', 'true');
-                    vecyShowNotification(data.message, 'success');
-                }
-                
-                // Actualizar contador
-                if (data.favoritos_count !== undefined) {
-                    updateFavoritesCount(data.favoritos_count);
-                } else {
-                    updateFavoritesCount();
-                }
-                
-            } else {
-                vecyShowNotification(data.message, 'error');
-            }
-            
-        } catch (error) {
-            console.error('Error al alternar favorito:', error);
-            vecyShowNotification('Error al procesar la solicitud', 'error');
-        }
-    }
-
-    // Actualizar contador de favoritos
-    async function updateFavoritesCount(count = null) {
-        try {
-            if (count === null) {
-                const response = await fetch('{% url "contar_favoritos" %}');
-                const data = await response.json();
-                if (data.success) {
-                    count = data.favoritos_count;
-                }
-            }
-            
-            // Actualizar elementos del contador
-            const favoriteCountElements = document.querySelectorAll('.favorite-count, .vecy-favorite-count');
-            favoriteCountElements.forEach(element => {
-                element.textContent = count;
-                element.style.display = count > 0 ? 'flex' : 'none';
-            });
-            
-            console.log(`✅ Contador de favoritos actualizado: ${count}`);
-            
-        } catch (error) {
-            console.error('Error actualizando contador de favoritos:', error);
-        }
-    }
-
-    // ==================== MANEJO DE VARIANTES COMPLETAMENTE CORREGIDO ====================
+    // ==================== SISTEMA DE VARIANTES - CONECTADO AL SISTEMA CENTRAL ====================
 
     function initVariantsHandling() {
-        console.log("🔄 Inicializando manejo de variantes...");
+        console.log("🔄 Inicializando manejo de variantes CONECTADO...");
         
-        // Buscar TODAS las tarjetas con variantes en TODAS las secciones
+        // Esperar a que el sistema central esté disponible
+        if (!window.vecyCarritoSystem) {
+            console.warn("⚠️ VecyCarritoSystem no disponible, reintentando...");
+            setTimeout(initVariantsHandling, 500);
+            return;
+        }
+        
         document.querySelectorAll('.product-card-with-variants').forEach(card => {
             const productId = card.getAttribute('data-product-id');
             const variantsContainer = card.querySelector('.variantes-reales-data');
@@ -1842,29 +2361,65 @@
             console.log(`📦 Producto ${productId} tiene ${variants.length} variantes`);
             
             if (variants.length > 0) {
-                generateVariantThumbnails(card, variants);
-                selectFirstAvailableVariant(card, variants);
-            } else {
-                console.warn(`⚠️ No hay variantes para producto: ${productId}`);
+                // Registrar variantes en el sistema central
+                registerVariantsInSystem(card, variants);
+                
+                // Generar miniaturas usando el sistema central
+                generateVariantThumbnailsWithSystem(card, variants);
+                
+                // Seleccionar primera variante disponible
+                selectFirstAvailableVariantWithSystem(card, variants);
             }
         });
         
-        console.log("✅ Manejo de variantes inicializado");
+        console.log("✅ Manejo de variantes inicializado y CONECTADO");
     }
 
-    function generateVariantThumbnails(card, variants) {
+    function registerVariantsInSystem(card, variants) {
+        const productId = card.getAttribute('data-product-id');
+        const variantsData = [];
+        
+        variants.forEach(variant => {
+            const variantId = variant.getAttribute('data-variant-id');
+            const variantName = variant.getAttribute('data-variant-name');
+            const variantImage = variant.getAttribute('data-variant-image');
+            const variantPrice = variant.getAttribute('data-variant-precio-final') || variant.getAttribute('data-variant-price');
+            const variantStock = parseInt(variant.getAttribute('data-variant-stock')) || 0;
+            const isBase = variant.getAttribute('data-is-base') === 'true';
+            
+            variantsData.push({
+                id: variantId,
+                name: variantName,
+                image: variantImage || '{% static "img/placeholder-producto.jpg" %}',
+                price: variantPrice || '0',
+                stock: variantStock,
+                isBase: isBase,
+                selected: false
+            });
+        });
+        
+        // Registrar en el sistema central
+        if (window.vecyCarritoSystem) {
+            window.vecyCarritoSystem.productVariantsData[productId] = variantsData;
+            
+            // Seleccionar variante base
+            const baseVariant = variantsData.find(v => v.isBase);
+            if (baseVariant) {
+                window.vecyCarritoSystem.selectedVariants[productId] = baseVariant.id;
+                console.log(`✅ Variante base registrada: ${productId} -> ${baseVariant.id}`);
+            }
+        }
+    }
+
+    function generateVariantThumbnailsWithSystem(card, variants) {
         const productId = card.getAttribute('data-product-id');
         
-        // Buscar el grid de variantes - puede tener diferentes IDs según la sección
+        // Buscar el grid de variantes
         let variantsGrid = card.querySelector(`#variantsGrid-${productId}`);
-        if (!variantsGrid) {
-            variantsGrid = card.querySelector(`#variantsGrid-tech-${productId}`);
-        }
         if (!variantsGrid) {
             variantsGrid = card.querySelector(`#variantsGrid-featured-${productId}`);
         }
         if (!variantsGrid) {
-            // Buscar por selector genérico como último recurso
             variantsGrid = card.querySelector('.variants-grid');
         }
         if (!variantsGrid) {
@@ -1879,284 +2434,164 @@
             const variantName = variant.getAttribute('data-variant-name');
             const variantStock = parseInt(variant.getAttribute('data-variant-stock'));
             const variantImage = variant.getAttribute('data-variant-image');
+            const variantPrice = variant.getAttribute('data-variant-precio-final') || variant.getAttribute('data-variant-price');
             const tieneDescuento = variant.getAttribute('data-variant-tiene-descuento') === 'true';
             const descuentoPorcentaje = variant.getAttribute('data-variant-descuento-porcentaje');
             
-            // Solo mostrar variantes con stock
             if (variantStock > 0) {
                 const variantThumb = document.createElement('div');
                 variantThumb.className = 'variant-thumb';
                 variantThumb.setAttribute('data-variant-id', variantId);
                 variantThumb.setAttribute('data-product-id', productId);
                 
-                let thumbContent = `
-                    <div class="variant-thumb-content">
-                        <div class="variant-image">
-                            <img src="${variantImage}" alt="${variantName}" onerror="this.src='{% static 'img/placeholder-producto.jpg' %}'">
-                        </div>
-                        <div class="variant-info">
-                            <span class="variant-name">${variantName}</span>
-                `;
-                
-                if (tieneDescuento && descuentoPorcentaje > 0) {
-                    thumbContent += `<span class="variant-discount">-${descuentoPorcentaje}%</span>`;
+                // Usar el método del sistema central para crear la miniatura
+                if (window.vecyCarritoSystem && window.vecyCarritoSystem.createVariantThumbElement) {
+                    const variantData = window.vecyCarritoSystem.productVariantsData[productId]?.find(v => v.id === variantId);
+                    if (variantData) {
+                        const thumbElement = window.vecyCarritoSystem.createVariantThumbElement(variantData);
+                        variantThumb.innerHTML = thumbElement.innerHTML;
+                        
+                        // Añadir eventos usando el sistema central
+                        variantThumb.addEventListener('click', () => {
+                            const variants = window.vecyCarritoSystem.productVariantsData[productId];
+                            if (variants && variantStock > 0) {
+                                window.vecyCarritoSystem.selectVariant(productId, variantId, variants);
+                            } else {
+                                vecyShowNotification('Esta variante no tiene stock disponible', 'error');
+                            }
+                        });
+                        
+                        variantsGrid.appendChild(variantThumb);
+                        console.log(`✅ Miniatura CONECTADA para variante: ${variantName}`);
+                    }
                 }
-                
-                thumbContent += `
-                        </div>
-                    </div>
-                `;
-                
-                variantThumb.innerHTML = thumbContent;
-                
-                variantThumb.addEventListener('click', function() {
-                    selectVariant(this, variants);
-                });
-                
-                variantsGrid.appendChild(variantThumb);
-                
-                console.log(`✅ Miniatura creada para variante: ${variantName}`);
             }
         });
     }
 
-    function selectFirstAvailableVariant(card, variants) {
+    function selectFirstAvailableVariantWithSystem(card, variants) {
         const productId = card.getAttribute('data-product-id');
         
-        // Buscar primera variante con stock
-        for (let variant of variants) {
-            const variantStock = parseInt(variant.getAttribute('data-variant-stock'));
-            if (variantStock > 0) {
-                const variantId = variant.getAttribute('data-variant-id');
-                const variantThumb = card.querySelector(`[data-variant-id="${variantId}"]`);
+        // Usar el sistema central para encontrar la primera variante disponible
+        if (window.vecyCarritoSystem && window.vecyCarritoSystem.productVariantsData[productId]) {
+            const availableVariants = window.vecyCarritoSystem.productVariantsData[productId].filter(v => v.stock > 0);
+            
+            if (availableVariants.length > 0) {
+                const firstVariant = availableVariants[0];
+                const variantThumb = card.querySelector(`[data-variant-id="${firstVariant.id}"]`);
+                
                 if (variantThumb) {
-                    selectVariant(variantThumb, variants);
-                    console.log(`🎯 Variante seleccionada por defecto: ${variantId} para producto: ${productId}`);
-                    break;
+                    // Seleccionar usando el sistema central
+                    window.vecyCarritoSystem.selectVariant(productId, firstVariant.id, window.vecyCarritoSystem.productVariantsData[productId]);
+                    console.log(`🎯 Variante CONECTADA seleccionada: ${firstVariant.id} para producto: ${productId}`);
                 }
             }
         }
     }
 
-    function selectVariant(selectedThumb, variants) {
-        const productId = selectedThumb.getAttribute('data-product-id');
-        const variantId = selectedThumb.getAttribute('data-variant-id');
-        
-        console.log(`🔘 Seleccionando variante: ${variantId} para producto: ${productId}`);
-        
-        // Remover selección anterior
-        const variantsGrid = selectedThumb.closest('.variants-grid');
-        if (variantsGrid) {
-            variantsGrid.querySelectorAll('.variant-thumb').forEach(thumb => {
-                thumb.classList.remove('selected');
-            });
-        }
-        
-        // Agregar selección actual
-        selectedThumb.classList.add('selected');
-        
-        // Encontrar datos de la variante seleccionada
-        const selectedVariant = Array.from(variants).find(v => 
-            v.getAttribute('data-variant-id') === variantId
-        );
-        
-        if (selectedVariant) {
-            updateProductDisplay(productId, selectedVariant);
-        }
-    }
-
-    function updateProductDisplay(productId, variant) {
-        const variantName = variant.getAttribute('data-variant-name');
-        const variantImage = variant.getAttribute('data-variant-image');
-        const variantPrice = variant.getAttribute('data-variant-price');
-        const variantFinalPrice = variant.getAttribute('data-variant-precio-final');
-        const variantStock = variant.getAttribute('data-variant-stock');
-        const tieneDescuento = variant.getAttribute('data-variant-tiene-descuento') === 'true';
-        const descuentoPorcentaje = variant.getAttribute('data-variant-descuento-porcentaje');
-        const ahorro = variant.getAttribute('data-variant-ahorro');
-        
-        console.log(`🔄 Actualizando display para producto ${productId}: ${variantName}`);
-        
-        // Buscar y actualizar TODOS los elementos posibles para este producto
-        updateProductElement(`mainProductImage-${productId}`, 'src', variantImage);
-        updateProductElement(`mainProductImage-tech-${productId}`, 'src', variantImage);
-        updateProductElement(`mainProductImage-featured-${productId}`, 'src', variantImage);
-        
-        // Actualizar títulos
-        updateProductElement(`productTitle-${productId}`, 'textContent', variantName);
-        updateProductElement(`productTitle-tech-${productId}`, 'textContent', variantName);
-        updateProductElement(`productTitle-featured-${productId}`, 'textContent', variantName);
-        
-        // Actualizar precios
-        updateProductElement(`price-${productId}`, 'textContent', `$${variantFinalPrice}`);
-        updateProductElement(`price-tech-${productId}`, 'textContent', `$${variantFinalPrice}`);
-        updateProductElement(`price-featured-${productId}`, 'textContent', `$${variantFinalPrice}`);
-        
-        // Actualizar stock
-        updateProductElement(`stockInfo-${productId}`, 'textContent', `${variantStock} disponibles`);
-        updateProductElement(`stockInfo-tech-${productId}`, 'textContent', `${variantStock} disponibles`);
-        updateProductElement(`stockInfo-featured-${productId}`, 'textContent', `${variantStock} disponibles`);
-        
-        // Actualizar precios originales (descuentos)
-        updateOriginalPrice(`price-${productId}`, tieneDescuento, variantPrice);
-        updateOriginalPrice(`price-tech-${productId}`, tieneDescuento, variantPrice);
-        updateOriginalPrice(`price-featured-${productId}`, tieneDescuento, variantPrice);
-        
-        // Actualizar badges de ahorro
-        updateSavingsBadge(`price-${productId}`, tieneDescuento, descuentoPorcentaje, ahorro);
-        updateSavingsBadge(`price-tech-${productId}`, tieneDescuento, descuentoPorcentaje, ahorro);
-        updateSavingsBadge(`price-featured-${productId}`, tieneDescuento, descuentoPorcentaje, ahorro);
-        
-        // Actualizar botones de carrito
-        updateCartButton(`addToCartBtn-${productId}`, variantId);
-        updateCartButton(`addToCartBtn-tech-${productId}`, variantId);
-        updateCartButton(`addToCartBtn-featured-${productId}`, variantId);
-        
-        console.log(`✅ Display actualizado: ${variantName} - $${variantFinalPrice}`);
-    }
-
-    // Función auxiliar para actualizar elementos del producto
-    function updateProductElement(elementId, property, value) {
-        const element = document.getElementById(elementId);
-        if (element && element[property] !== undefined) {
-            element[property] = value;
-        }
-    }
-
-    // Función auxiliar para actualizar precio original
-    function updateOriginalPrice(priceElementId, tieneDescuento, variantPrice) {
-        const priceElement = document.getElementById(priceElementId);
-        if (!priceElement) return;
-        
-        const originalPriceElement = priceElement.nextElementSibling;
-        if (originalPriceElement && originalPriceElement.classList.contains('vecy-original-price')) {
-            if (tieneDescuento) {
-                originalPriceElement.textContent = `$${variantPrice}`;
-                originalPriceElement.style.display = 'inline';
-            } else {
-                originalPriceElement.style.display = 'none';
-            }
-        }
-    }
-
-    // Función auxiliar para actualizar badge de ahorro
-    function updateSavingsBadge(priceElementId, tieneDescuento, descuentoPorcentaje, ahorro) {
-        const priceElement = document.getElementById(priceElementId);
-        if (!priceElement) return;
-        
-        const priceSection = priceElement.closest('.vecy-price-section');
-        if (!priceSection) return;
-        
-        const savingsBadge = priceSection.querySelector('.vecy-savings-badge');
-        if (savingsBadge) {
-            if (tieneDescuento && descuentoPorcentaje > 0) {
-                savingsBadge.innerHTML = `-${parseFloat(descuentoPorcentaje).toFixed(0)}% • Ahorras $${ahorro}`;
-                savingsBadge.style.display = 'block';
-            } else {
-                savingsBadge.style.display = 'none';
-            }
-        }
-    }
-
-    // Función auxiliar para actualizar botón de carrito
-    function updateCartButton(buttonId, variantId) {
-        const button = document.getElementById(buttonId);
-        if (button) {
-            button.setAttribute('data-selected-variant', variantId);
-        }
-    }
-
-    // ==================== FUNCIONES DE CARRITO CORREGIDAS ====================
+    // ==================== FUNCIONES DE CARRITO - CONECTADAS AL SISTEMA CENTRAL ====================
 
     function addToCartWithVariant(productId) {
-        console.log(`🛒 Agregando al carrito con variante para producto: ${productId}`);
+        console.log(`🛒 [CONECTADO] Agregando al carrito con variante para producto: ${productId}`);
         
-        const card = document.querySelector(`[data-product-id="${productId}"]`);
-        if (!card) {
-            console.warn(`❌ No se encontró tarjeta para producto: ${productId}`);
-            addToCart(productId);
-            return;
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return false;
         }
         
-        const selectedThumb = card.querySelector('.variant-thumb.selected');
-        if (!selectedThumb) {
-            vecyShowNotification('Por favor selecciona una opción', 'warning');
-            return;
-        }
-        
-        const variantId = selectedThumb.getAttribute('data-variant-id');
-        addToCartWithSpecificVariant(productId, variantId);
-    }
-
-    function addToCartWithSpecificVariant(productId, variantId) {
-        console.log(`🛒 Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
-        
-        fetch('{% url "agregar_carrito" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                producto_id: productId,
-                variante_id: variantId,
-                cantidad: 1
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                vecyShowNotification(data.message, 'success');
-                if (data.carrito_count !== undefined) {
-                    updateCartCount(data.carrito_count);
-                }
-            } else {
-                vecyShowNotification(data.message, 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            vecyShowNotification('Error al agregar al carrito', 'error');
-        });
+        return window.vecyCarritoSystem.addToCartWithVariant(productId);
     }
 
     function addToCart(productId) {
-        console.log(`🛒 Agregando producto base al carrito: ${productId}`);
+        console.log(`🛒 [CONECTADO] Agregando producto base al carrito: ${productId}`);
         
-        fetch('{% url "agregar_carrito" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                producto_id: productId,
-                cantidad: 1
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                vecyShowNotification(data.message, 'success');
-                if (data.carrito_count !== undefined) {
-                    updateCartCount(data.carrito_count);
-                }
-            } else {
-                vecyShowNotification(data.message, 'error');
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return false;
+        }
+        
+        return window.vecyCarritoSystem.addToCart(productId);
+    }
+
+    function addToCartWithSpecificVariant(productId, variantId) {
+        console.log(`🛒 [CONECTADO] Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
+        
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return false;
+        }
+        
+        return window.vecyCarritoSystem.addToCart(productId, variantId);
+    }
+
+    // ==================== FUNCIONES DE FAVORITOS - CONECTADAS AL SISTEMA CENTRAL ====================
+
+    async function checkFavoritesStatus() {
+        console.log("🔍 [CONECTADO] Verificando estado de favoritos...");
+        
+        if (!window.vecyCarritoSystem) {
+            console.warn('⚠️ VecyCarritoSystem no disponible para verificar favoritos');
+            return;
+        }
+        
+        const favoriteButtons = document.querySelectorAll('.vecy-favorite-btn, .vecy-favorite-offer-btn, .vecy-favorite-variant-btn');
+        
+        for (const button of favoriteButtons) {
+            const onclickAttr = button.getAttribute('onclick');
+            if (!onclickAttr) continue;
+            
+            const match = onclickAttr.match(/'([^']+)'/);
+            if (!match) continue;
+            
+            const productId = match[1];
+            
+            try {
+                // Usar el sistema central para verificar favoritos
+                await window.vecyCarritoSystem.verificarFavorito(productId);
+            } catch (error) {
+                console.error('Error verificando favorito:', error);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            vecyShowNotification('Error al agregar al carrito', 'error');
-        });
+        }
+        
+        // Actualizar contador usando el sistema central
+        if (window.vecyCarritoSystem.updateAllCountsFromServer) {
+            await window.vecyCarritoSystem.updateAllCountsFromServer();
+        }
     }
 
-    function quickView(productId) {
-        vecyShowNotification('Función de vista rápida para producto: ' + productId, 'info');
-    }
-
-    function showVariantsModal(productId) {
-        vecyShowNotification('Mostrando modal de variantes para: ' + productId, 'info');
+    async function toggleFavorite(productId, buttonElement) {
+        console.log(`❤️ [CONECTADO] Alternando favorito para producto: ${productId}`);
+        
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return;
+        }
+        
+        const isCurrentlyFavorite = buttonElement.getAttribute('data-is-favorite') === 'true';
+        
+        try {
+            let success;
+            
+            if (isCurrentlyFavorite) {
+                success = await window.vecyCarritoSystem.eliminarFavorito(productId);
+            } else {
+                success = await window.vecyCarritoSystem.agregarFavorito(productId);
+            }
+            
+            if (success) {
+                // La actualización visual ya la hace el sistema central
+                const action = isCurrentlyFavorite ? 'eliminado de' : 'agregado a';
+                vecyShowNotification(`Producto ${action} favoritos`, 'success');
+            }
+            
+        } catch (error) {
+            console.error('Error al alternar favorito:', error);
+            vecyShowNotification('Error al procesar la solicitud', 'error');
+        }
     }
 
     // ==================== FUNCIONES DE UTILIDAD ====================
@@ -2180,33 +2615,182 @@
         });
     }
 
-    function updateCartCount(count) {
-        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count');
-        cartCountElements.forEach(element => {
-            element.textContent = count;
-            element.style.display = count > 0 ? 'flex' : 'none';
+    function quickView(productId) {
+        vecyShowNotification('Función de vista rápida para producto: ' + productId, 'info');
+    }
+
+    function showVariantsModal(productId) {
+        vecyShowNotification('Mostrando modal de variantes para: ' + productId, 'info');
+    }
+
+    // ==================== SISTEMA DE CONEXIÓN Y SINCRONIZACIÓN ====================
+
+    function connectToVecySystem() {
+        console.log("🔗 Conectando al sistema VecyCarritoSystem...");
+        
+        // Esperar a que el sistema central se cargue
+        const checkInterval = setInterval(() => {
+            if (window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.log("✅ CONECTADO al sistema VecyCarritoSystem");
+                
+                // Configurar eventos de sincronización
+                setupSyncEvents();
+                
+                // Inicializar componentes que dependen del sistema
+                initConnectedComponents();
+            }
+        }, 100);
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+            if (!window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.error('❌ No se pudo conectar al sistema VecyCarritoSystem');
+                vecyShowNotification('Error al cargar el sistema de compras. Recarga la página.', 'error');
+            }
+        }, 5000);
+    }
+
+    function setupSyncEvents() {
+        // Sincronizar cuando se actualizan los contadores
+        document.addEventListener('cartCountUpdated', (event) => {
+            console.log('🔄 Evento de actualización de carrito recibido:', event.detail);
+            updateCartCount(event.detail);
+        });
+        
+        document.addEventListener('favoritesCountUpdated', (event) => {
+            console.log('🔄 Evento de actualización de favoritos recibido:', event.detail);
+            updateFavoritesCount(event.detail);
         });
     }
 
-    // ==================== INICIALIZACIÓN COMPLETA ====================
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            }
+        });
+    }
+
+    function updateFavoritesCount(count) {
+        const favoriteCountElements = document.querySelectorAll('.favorite-count, .vecy-favorite-count, #favoritos-count');
+        favoriteCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            }
+        });
+    }
+
+    function initConnectedComponents() {
+        console.log("🔄 Inicializando componentes conectados...");
+        
+        // Inicializar variantes usando el sistema central
+        initVariantsHandling();
+        
+        // Verificar estado de favoritos
+        checkFavoritesStatus();
+        
+        // Configurar botones para usar el sistema central
+        setupConnectedButtons();
+        
+        console.log("✅ Componentes conectados inicializados");
+    }
+
+    function setupConnectedButtons() {
+        // Reconfigurar botones de "Agregar al carrito" para usar el sistema central
+        document.querySelectorAll('[onclick*="addToCart"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/addToCart\(['"]?(\d+)['"]?\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `return addToCart('${productId}')`);
+                console.log(`✅ Botón reconectado: producto ${productId}`);
+            }
+        });
+        
+        // Reconfigurar botones de "Agregar al carrito con variante"
+        document.querySelectorAll('[onclick*="addToCartWithVariant"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/addToCartWithVariant\(['"]?(\d+)['"]?\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `return addToCartWithVariant('${productId}')`);
+                console.log(`✅ Botón con variante reconectado: producto ${productId}`);
+            }
+        });
+        
+        // Reconfigurar botones de favoritos
+        document.querySelectorAll('[onclick*="toggleFavorite"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/toggleFavorite\(['"]?(\d+)['"]?, this\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `toggleFavorite('${productId}', this)`);
+                console.log(`✅ Botón de favorito reconectado: producto ${productId}`);
+            }
+        });
+    }
+
+    // ==================== INICIALIZACIÓN COMPLETA CONECTADA ====================
 
     function initVecyCliente() {
-        console.log("🚀 INICIANDO VECY CLIENTE");
+        console.log("🚀 INICIANDO VECY CLIENTE CONECTADO");
         
         initAOS();
         initSmoothScroll();
         
-        // Inicializar variantes después de un pequeño delay para asegurar que el DOM esté listo
-        setTimeout(() => {
-            initVariantsHandling();
-            checkFavoritesStatus();
-        }, 100);
+        // Conectar al sistema central
+        connectToVecySystem();
         
-        console.log("✅ VECY CLIENTE INICIALIZADO COMPLETAMENTE");
+        console.log("✅ VECY CLIENTE INICIALIZADO Y CONECTADO");
+    }
+
+    // Añadir CSS para animaciones
+    function addSyncStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .pulse-animation {
+                animation: pulse 0.6s ease-in-out;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+            
+            .cart-added {
+                animation: cartAdd 1s ease;
+            }
+            
+            @keyframes cartAdd {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        console.log("✅ Estilos de sincronización añadidos");
     }
 
     // Ejecutar inicialización
-    document.addEventListener('DOMContentLoaded', initVecyCliente);
+    document.addEventListener('DOMContentLoaded', function() {
+        addSyncStyles();
+        initVecyCliente();
+    });
+    
+    // También ejecutar cuando la ventana se carga completamente
     window.addEventListener('load', initVecyCliente);
 
 </script>

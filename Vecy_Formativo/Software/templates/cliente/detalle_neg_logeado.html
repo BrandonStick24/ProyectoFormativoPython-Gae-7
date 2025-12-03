@@ -1391,6 +1391,7 @@
                              data-variant-id="base"
                              data-variant-name="{{ producto.nom_prod }} - Estándar"
                              data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}"
+                             data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
                              data-variant-price="{{ producto_data.precio_final|floatformat:0 }}"
                              data-variant-stock="{{ producto_data.stock }}"
                              data-is-base="true">
@@ -1402,6 +1403,7 @@
                              data-variant-id="{{ variante.id_variante }}"
                              data-variant-name="{{ variante.nombre_variante }}"
                              data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}{% endif %}"
+                             data-variant-precio-final="{{ producto_data.precio_base|add:variante.precio_adicional|floatformat:0 }}"
                              data-variant-price="{{ producto_data.precio_base|add:variante.precio_adicional|floatformat:0 }}"
                              data-variant-stock="{{ variante.stock_variante }}"
                              data-is-base="false">
@@ -1945,27 +1947,54 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- AOS JS -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<!-- AOS Animation -->
-<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-<!-- Leaflet Maps -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
+    // ==================== INICIALIZACIÓN DE LA PÁGINA ====================
 
-    console.log("🎯 VECY DETALLE NEGOCIO - Script inicializado");
+    console.log("🎯 VECY CLIENTE INICIADO - SISTEMA COMPLETO CON VARIANTES");
 
-    // Variables globales
+    // Inicializar AOS
+    function initAOS() {
+        if (typeof AOS !== 'undefined') {
+            AOS.init({ 
+                duration: 800, 
+                once: true, 
+                offset: 100 
+            });
+            console.log("✅ AOS inicializado");
+        }
+    }
+
+    // Configurar scroll suave
+    function initSmoothScroll() {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                }
+            });
+        });
+        console.log("✅ Scroll suave configurado");
+    }
+
+    // ==================== SISTEMA DE VARIANTES COMPLETO ====================
+
+    // Variables globales para variantes (LOCALES como backup)
     let productVariantsData = {};
     let selectedVariants = {};
 
-    // ==================== SISTEMA DE VARIANTES MEJORADO ====================
-
-    // Función MEJORADA para inicializar datos de variantes
+    // Función COMPLETA para inicializar datos de variantes
     function initializeVariantsData() {
-        console.log("🔄 Inicializando datos de variantes...");
+        console.log("🔄 Inicializando datos de variantes (sistema local)...");
 
         // Limpiar datos anteriores
         productVariantsData = {};
@@ -1978,8 +2007,6 @@
             const productId = productCard.getAttribute('data-product-id');
             if (!productId) return;
 
-            console.log(`🔍 Procesando producto con variantes: ${productId}`);
-
             // Buscar datos de variantes en el contenedor oculto
             const variantesDataContainer = productCard.querySelector('.variantes-reales-data');
             if (!variantesDataContainer) {
@@ -1988,17 +2015,19 @@
             }
 
             const variantElements = variantesDataContainer.querySelectorAll('[data-variant]');
-            console.log(`📊 Variantes encontradas para producto ${productId}: ${variantElements.length}`);
+            console.log(`📦 Producto ${productId} tiene ${variantElements.length} variantes`);
 
             if (variantElements.length > 0) {
                 const variants = [];
                 
                 variantElements.forEach((element, index) => {
-                    // Obtener datos de cada variante
+                    // Obtener datos de cada variante - IMPORTANTE: Buscar ambos atributos de precio
                     const variantId = element.getAttribute('data-variant-id');
                     const variantName = element.getAttribute('data-variant-name');
                     const variantImage = element.getAttribute('data-variant-image');
-                    const variantPrice = element.getAttribute('data-variant-price');
+                    const variantPrice = element.getAttribute('data-variant-precio-final') || 
+                                        element.getAttribute('data-variant-price') || 
+                                        '0';
                     const variantStock = parseInt(element.getAttribute('data-variant-stock')) || 0;
                     const isBase = element.getAttribute('data-is-base') === 'true';
 
@@ -2008,17 +2037,18 @@
                         return;
                     }
 
+                    console.log(`📊 Variante ${index + 1}: ID=${variantId}, Precio=${variantPrice}, Stock=${variantStock}`);
+
                     const variant = {
                         id: variantId,
                         name: variantName,
                         image: variantImage || '{% static "images/placeholder-producto.png" %}',
-                        selected: isBase,
-                        price: variantPrice || '0',
+                        price: variantPrice,
                         stock: variantStock,
-                        isBase: isBase
+                        isBase: isBase,
+                        selected: isBase // La base está seleccionada por defecto
                     };
 
-                    console.log(`  📦 Variante ${index + 1}: ID=${variantId}, Nombre=${variantName}, Precio=$${variant.price}, Stock=${variant.stock}, Base=${variant.isBase}`);
                     variants.push(variant);
                 });
 
@@ -2031,185 +2061,150 @@
                 const baseVariant = variants.find(v => v.isBase);
                 if (baseVariant) {
                     selectedVariants[productId] = baseVariant.id;
-                    console.log(`✅ Variante base seleccionada por defecto: ${baseVariant.id}`);
+                    console.log(`✅ Variante base registrada: ${productId} -> ${baseVariant.id} (Precio: $${baseVariant.price})`);
                 }
             }
         });
 
-        console.log("📦 Datos de variantes inicializados:", productVariantsData);
-        console.log("🎯 Variantes seleccionadas:", selectedVariants);
+        console.log("📦 Datos de variantes inicializados (local):", productVariantsData);
     }
 
-    // Función MEJORADA para crear las miniaturas de variantes
+    // Función para crear miniaturas de variantes (LOCAL)
     function createVariantThumbnails(productId, variants) {
-        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
+        const productCard = document.querySelector(`[data-product-id="${productId}"]`);
+        if (!productCard) return;
+
+        // Buscar el grid de variantes
+        let variantsGrid = productCard.querySelector(`#variantsGrid-${productId}`);
         if (!variantsGrid) {
-            console.log(`❌ No se encontró variantsGrid-${productId}`);
+            variantsGrid = productCard.querySelector(`#variantsGrid-featured-${productId}`);
+        }
+        if (!variantsGrid) {
+            variantsGrid = productCard.querySelector('.variants-grid');
+        }
+        if (!variantsGrid) {
+            console.warn(`❌ No se encontró variantsGrid para producto: ${productId}`);
+            return;
+        }
+        
+        variantsGrid.innerHTML = '';
+        
+        variants.forEach(variant => {
+            const variantId = variant.id;
+            const variantName = variant.name;
+            const variantStock = variant.stock;
+            const variantImage = variant.image;
+            const variantPrice = variant.price && variant.price !== '0' ? variant.price : '0';
+            
+            console.log(`🎨 Creando miniatura: ${variantName} - Precio: $${variantPrice}`);
+            
+            if (variantStock > 0) {
+                const variantThumb = document.createElement('div');
+                variantThumb.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
+                variantThumb.setAttribute('data-variant-id', variantId);
+                variantThumb.setAttribute('data-product-id', productId);
+                variantThumb.setAttribute('title', variantName);
+
+                // Crear miniatura HTML
+                variantThumb.innerHTML = `
+                    <div class="variant-image-container">
+                        ${variant.isBase ? '<div class="base-badge">Base</div>' : ''}
+                        ${variant.selected ? '<div class="variant-selection-indicator"><i class="fas fa-check"></i></div>' : ''}
+                        <img src="${variantImage}" alt="${variantName}" loading="lazy"
+                             onerror="this.src='{% static "images/placeholder-producto.png" %}'">
+                    </div>
+                    <div class="variant-info">
+                        <div class="variant-name">${variantName}</div>
+                        <div class="variant-price">$${variantPrice}</div>
+                        <div class="variant-stock-info ${variantStock > 10 ? 'stock-available' : variantStock > 0 ? 'stock-low' : 'stock-unavailable'}">
+                            ${variantStock > 0 ? `${variantStock} disp` : 'Agotado'}
+                        </div>
+                    </div>
+                `;
+
+                // Añadir evento de clic
+                variantThumb.addEventListener('click', () => {
+                    if (variantStock > 0) {
+                        selectVariant(productId, variantId, variants);
+                    } else {
+                        vecyShowNotification('Esta variante no tiene stock disponible', 'error');
+                    }
+                });
+                
+                variantsGrid.appendChild(variantThumb);
+                console.log(`✅ Miniatura creada para variante: ${variantName} - $${variantPrice}`);
+            }
+        });
+    }
+
+    // Función para seleccionar una variante (LOCAL)
+    function selectVariant(productId, variantId, variants) {
+        console.log(`🎯 Seleccionando variante LOCAL: ${productId} -> ${variantId}`);
+
+        const selectedVariant = variants.find(v => v.id === variantId);
+        if (!selectedVariant) {
+            console.log(`❌ No se encontró la variante ${variantId}`);
             return;
         }
 
-        variantsGrid.innerHTML = '';
+        console.log(`📊 Variante seleccionada: ${selectedVariant.name} - Precio: $${selectedVariant.price}`);
 
-        variants.forEach(variant => {
-            // Validar que la variante tenga datos mínimos
-            if (!variant.id || !variant.name) {
-                console.log(`❌ Variante inválida:`, variant);
-                return;
-            }
+        // Actualizar la variante seleccionada
+        selectedVariants[productId] = variantId;
 
-            const thumbElement = document.createElement('div');
-            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''} ${variant.stock === 0 ? 'variant-disabled' : ''}`;
-            thumbElement.setAttribute('data-variant-id', variant.id);
-            thumbElement.setAttribute('data-product-id', productId);
+        // Actualizar estado de selección en todas las variantes
+        variants.forEach(v => {
+            v.selected = v.id === variantId;
+        });
 
-            // Determinar estado de stock
-            let stockClass = 'stock-available';
-            let stockText = 'Disponible';
-            
-            if (variant.stock === 0) {
-                stockClass = 'stock-unavailable';
-                stockText = 'Agotado';
-            } else if (variant.stock < 10) {
-                stockClass = 'stock-low';
-                stockText = `${variant.stock} disp`;
+        // Recrear miniaturas con nueva selección
+        createVariantThumbnails(productId, variants);
+
+        // Actualizar título del producto
+        const titleElement = document.getElementById(`productTitle-${productId}`) || 
+                            document.querySelector(`[data-product-id="${productId}"] .vecy-product-title`);
+        if (titleElement && selectedVariant) {
+            if (selectedVariant.isBase) {
+                const originalName = selectedVariant.name.replace(' - Estándar', '');
+                titleElement.textContent = originalName;
             } else {
-                stockText = `${variant.stock} disp`;
+                titleElement.textContent = selectedVariant.name;
             }
-
-            thumbElement.innerHTML = `
-                <div class="variant-image-container">
-                    ${variant.isBase ? `<div class="base-badge">Base</div>` : ''}
-                    ${variant.selected ? `<div class="variant-selection-indicator"><i class="fas fa-check"></i></div>` : ''}
-                    <img src="${variant.image}" alt="${variant.name}" loading="lazy"
-                         onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
-                </div>
-                <div class="variant-info">
-                    <div class="variant-name">${variant.name}</div>
-                    <div class="variant-price">$${variant.price}</div>
-                    <div class="variant-stock-info ${stockClass}">${stockText}</div>
-                </div>
-            `;
-
-            thumbElement.addEventListener('click', () => {
-                if (variant.stock > 0) {
-                    selectVariant(productId, variant.id, variants);
-                } else {
-                    showVariantNotification('Esta variante no tiene stock disponible', 'error');
-                }
-            });
-            
-            variantsGrid.appendChild(thumbElement);
-        });
-
-        console.log(`✅ Miniaturas creadas para producto ${productId} (${variants.length} variantes)`);
-    }
-
-    // Función MEJORADA para seleccionar una variante
-    function selectVariant(productId, variantId, variants) {
-        console.log(`🔄 Seleccionando variante: ${productId} -> ${variantId}`);
-
-        const selectedVariant = variants.find(v => v.id === variantId);
-
-        if (selectedVariant) {
-            // Actualizar la variante seleccionada globalmente
-            selectedVariants[productId] = variantId;
-
-            // Actualizar título
-            const titleElement = document.getElementById(`productTitle-${productId}`);
-            if (titleElement) {
-                // Si es el producto base, mostrar nombre original, sino mostrar nombre completo
-                if (selectedVariant.isBase) {
-                    const originalName = selectedVariant.name.replace(' - Estándar', '');
-                    titleElement.textContent = originalName;
-                } else {
-                    titleElement.textContent = selectedVariant.name;
-                }
-            }
-
-            // Actualizar imagen principal
-            const mainImage = document.getElementById(`mainProductImage-${productId}`);
-            if (mainImage && selectedVariant.image) {
-                mainImage.src = selectedVariant.image;
-                mainImage.alt = selectedVariant.name;
-            }
-
-            // Actualizar precio
-            const priceElement = document.getElementById(`price-${productId}`);
-            if (priceElement && selectedVariant.price) {
-                priceElement.textContent = `$${selectedVariant.price}`;
-            }
-
-            // Actualizar stock
-            const stockElement = document.getElementById(`stockInfo-${productId}`);
-            if (stockElement) {
-                let stockText = 'Múltiples opciones disponibles';
-                if (selectedVariant.stock === 0) {
-                    stockText = 'Agotado';
-                } else if (selectedVariant.stock < 10) {
-                    stockText = `${selectedVariant.stock} disponibles`;
-                }
-                stockElement.textContent = stockText;
-            }
-
-            // Actualizar estado de selección en todas las variantes
-            variants.forEach(v => {
-                v.selected = v.id === variantId;
-            });
-
-            // Recrear miniaturas con nueva selección
-            createVariantThumbnails(productId, variants);
-
-            // Mostrar notificación
-            const variantType = selectedVariant.isBase ? 'Producto estándar' : 'Variante especial';
-            showVariantNotification(`${variantType} seleccionado: ${selectedVariant.name}`, 'success');
-
-            console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
+            console.log(`✅ Título actualizado: ${titleElement.textContent}`);
         }
-    }
 
-    // Función para notificaciones de variantes
-    function showVariantNotification(message, type = 'info') {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true,
-        });
-
-        Toast.fire({
-            icon: type,
-            title: message
-        });
-    }
-
-    // Función MEJORADA para inicializar sistema de variantes
-    function initializeVariantsSystem() {
-        console.log("🚀 Inicializando sistema de variantes...");
-
-        try {
-            initializeVariantsData();
-
-            // Crear miniaturas para todos los productos con variantes
-            for (const [productId, variants] of Object.entries(productVariantsData)) {
-                createVariantThumbnails(productId, variants);
-                
-                // Aplicar selección inicial (base)
-                const baseVariant = variants.find(v => v.isBase);
-                if (baseVariant) {
-                    selectVariant(productId, baseVariant.id, variants);
-                }
-            }
-
-            console.log("✅ Sistema de variantes inicializado correctamente");
-        } catch (error) {
-            console.error("❌ Error inicializando sistema de variantes:", error);
+        // Actualizar precio
+        const priceElement = document.getElementById(`price-${productId}`) ||
+                            document.querySelector(`[data-product-id="${productId}"] .vecy-current-price`);
+        if (priceElement && selectedVariant.price) {
+            priceElement.textContent = `$${selectedVariant.price}`;
+            console.log(`✅ Precio actualizado: $${selectedVariant.price}`);
         }
+
+        // Actualizar imagen principal
+        const mainImage = document.getElementById(`mainProductImage-${productId}`) ||
+                         document.querySelector(`[data-product-id="${productId}"] .product-main-image`);
+        if (mainImage && selectedVariant.image) {
+            mainImage.src = selectedVariant.image;
+            mainImage.alt = selectedVariant.name;
+        }
+
+        console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
     }
 
-    // Función para agregar al carrito considerando variantes
+    // ==================== FUNCIONES DE CARRITO - SISTEMA HÍBRIDO ====================
+
     function addToCartWithVariant(productId) {
-        console.log(`🛒 Agregando producto con variante: ${productId}`);
+        console.log(`🛒 [SISTEMA HÍBRIDO] Agregando al carrito con variante para producto: ${productId}`);
+        
+        // PRIMERO intentar con el sistema central
+        if (window.vecyCarritoSystem && window.vecyCarritoSystem.addToCartWithVariant) {
+            console.log(`🔄 Usando sistema CENTRAL para producto ${productId}`);
+            return window.vecyCarritoSystem.addToCartWithVariant(productId);
+        }
+        
+        // SEGUNDO: usar sistema local si no hay sistema central
+        console.log(`🔄 Usando sistema LOCAL para producto ${productId}`);
         
         // Obtener la variante seleccionada para este producto
         const selectedVariantId = selectedVariants[productId];
@@ -2217,85 +2212,95 @@
         if (!selectedVariantId) {
             console.log(`❌ No hay variante seleccionada para producto ${productId}`);
             vecyShowNotification('Por favor selecciona una opción', 'error');
-            return;
+            return false;
         }
         
-        console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
+        console.log(`📦 Variante seleccionada LOCAL: ${selectedVariantId}`);
         
         // Si es la variante base, usar addToCart normal
-        if (selectedVariantId === 'base') {
-            addToCart(productId);
+        const variants = productVariantsData[productId];
+        const selectedVariant = variants?.find(v => v.id === selectedVariantId);
+        
+        if (!selectedVariant) {
+            console.log(`❌ No se encontró la variante seleccionada`);
+            vecyShowNotification('Error al obtener la variante seleccionada', 'error');
+            return false;
+        }
+        
+        if (selectedVariant.isBase) {
+            return addToCart(productId);
         } else {
             // Si es una variante específica, usar addToCart con variante_id
-            addToCart(productId, selectedVariantId);
+            return addToCart(productId, selectedVariantId);
         }
     }
 
-    // ==================== FUNCIONES DEL CARRITO ====================
-
-    // Función para agregar al carrito (usará el sistema de carrito_sistema.html)
     function addToCart(productId, varianteId = null) {
-        console.log(`🛒 Intentando agregar producto ${productId} al carrito con variante: ${varianteId}`);
+        console.log(`🛒 Agregando producto ${productId} al carrito con variante: ${varianteId}`);
 
-        // Usar la función del sistema de carrito
+        // PRIMERO: intentar con sistema central
+        if (window.vecyCarritoSystem && window.vecyCarritoSystem.addToCart) {
+            console.log(`🔄 Usando addToCart del sistema CENTRAL`);
+            return window.vecyCarritoSystem.addToCart(productId, varianteId);
+        }
+
+        // SEGUNDO: usar función local de carrito si existe
         if (typeof agregarAlCarrito === 'function') {
+            console.log(`🔄 Usando función agregarAlCarrito local`);
             agregarAlCarrito(productId, 1, varianteId);
+            return true;
+        }
+
+        // TERCERO: AJAX directo (FALLBACK)
+        console.log(`🔄 Usando AJAX directo (fallback)`);
+        
+        const datosEnvio = {
+            producto_id: productId,
+            cantidad: 1
+        };
+
+        if (varianteId && varianteId !== 'base') {
+            datosEnvio.variante_id = varianteId;
+            console.log(`📦 Enviando variante_id: ${varianteId}`);
         } else {
-            // Fallback si no existe la función
-            const datosEnvio = {
-                producto_id: productId,
-                cantidad: 1
-            };
+            console.log(`📦 Producto base, sin variante_id`);
+        }
 
-            if (varianteId && varianteId !== 'base') {
-                datosEnvio.variante_id = varianteId;
-                console.log(`📦 Enviando variante_id: ${varianteId}`);
+        fetch('{% url "agregar_carrito" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(datosEnvio)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                vecyShowNotification('Producto agregado al carrito', 'success');
+                
+                // Actualizar contador del carrito
+                if (data.carrito_count !== undefined) {
+                    updateCartCount(data.carrito_count);
+                }
+                
+                return true;
             } else {
-                console.log(`📦 Producto base, sin variante_id`);
+                vecyShowNotification(data.message || 'Error al agregar al carrito', 'error');
+                return false;
             }
-
-            fetch('{% url "agregar_carrito" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(datosEnvio)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    vecyShowNotification('Producto agregado al carrito', 'success');
-                } else {
-                    vecyShowNotification(data.message || 'Error al agregar al carrito', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                vecyShowNotification('Error al agregar al carrito', 'error');
-            });
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            vecyShowNotification('Error al agregar al carrito', 'error');
+            return false;
+        });
+        
+        return false;
     }
 
-    // ==================== FUNCIONES UTILITARIAS ====================
+    // ==================== FUNCIONES DE UTILIDAD ====================
 
-    // Función para obtener cookie CSRF
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Función para notificaciones
     function vecyShowNotification(message, type = 'info') {
         const Toast = Swal.mixin({
             toast: true,
@@ -2315,353 +2320,194 @@
         });
     }
 
-    // ==================== SISTEMA DE MAPAS ====================
-    function initMap() {
-        // Coordenadas exactas de Fosca, Cundinamarca, Colombia
-        const foscaLat = 4.3392;
-        const foscaLon = -73.9389;
-        
-        // Mapa centrado exclusivamente en Fosca
-        const map = L.map('leaflet-map', {
-            zoomControl: true,
-            scrollWheelZoom: false,
-            dragging: true,
-            tap: true,
-            maxBounds: [
-                [4.2392, -74.0389], // Suroeste
-                [4.4392, -73.8389]  // Noreste
-            ],
-            maxBoundsViscosity: 1.0
-        }).setView([foscaLat, foscaLon], 14);
-        
-        // Tile layer con estilo mejorado
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18,
-            minZoom: 12,
-            detectRetina: true
-        }).addTo(map);
-        
-        // Icono personalizado para Fosca
-        const customIcon = L.divIcon({
-            html: `
-                <div style="
-                    background: linear-gradient(135deg, #3598db 0%, #4aa8e8 100%);
-                    width: 50px;
-                    height: 50px;
-                    border-radius: 50%;
-                    border: 4px solid white;
-                    box-shadow: 0 4px 20px rgba(53, 152, 219, 0.4);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-size: 16px;
-                ">
-                    <i class="fas fa-store"></i>
-                </div>
-            `,
-            className: 'leaflet-custom-icon',
-            iconSize: [50, 50],
-            iconAnchor: [25, 50],
-            popupAnchor: [0, -50]
-        });
-        
-        // Marcador en el centro de Fosca
-        const marker = L.marker([foscaLat, foscaLon], {icon: customIcon}).addTo(map);
-        
-        const popupContent = `
-            <div style="min-width: 250px; padding: 12px;">
-                <div class="d-flex align-items-center mb-2">
-                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3598db 0%, #4aa8e8 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 12px;">
-                        <i class="fas fa-store"></i>
-                    </div>
-                    <div>
-                        <h6 style="margin: 0; color: #3598db; font-weight: 700;">{{ negocio.nom_neg }}</h6>
-                        <small style="color: #7f8c8d;">Ubicado en Fosca, Cundinamarca</small>
-                    </div>
-                </div>
-                <p style="margin: 8px 0 0 0; color: #34495e; font-size: 13px; line-height: 1.4;">
-                    <i class="fas fa-map-marker-alt me-2" style="color: #3598db;"></i>
-                    {{ negocio.direcc_neg }}, Fosca, Cundinamarca
-                </p>
-                <p style="margin: 4px 0 0 0; color: #7f8c8d; font-size: 12px;">
-                    <i class="fas fa-mountains me-2"></i>
-                    Municipio de la región oriente de Cundinamarca
-                </p>
-            </div>
-        `;
-        
-        marker.bindPopup(popupContent, {
-            className: 'custom-popup',
-            maxWidth: 300
-        }).openPopup();
-        
-        // Evitar que el usuario se aleje de Fosca
-        map.setMaxBounds(map.getBounds());
-    }
-    
-    function openInGoogleMaps() {
-        const address = encodeURIComponent("{{ negocio.direcc_neg }}, Fosca, Cundinamarca, Colombia");
-        window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
-    }
-
-    // ==================== SISTEMA DE PAGINACIÓN DE RESEÑAS ====================
-    function cargarSiguientePagina() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const currentPage = parseInt(urlParams.get('page')) || 1;
-        const nextPage = currentPage + 1;
-        
-        urlParams.set('page', nextPage);
-        window.location.href = `${window.location.pathname}?${urlParams.toString()}#reviewsContainer`;
-    }
-
-    function cargarPaginaEspecifica(pagina) {
-        const urlParams = new URLSearchParams(window.location.search);
-        urlParams.set('page', pagina);
-        window.location.href = `${window.location.pathname}?${urlParams.toString()}#reviewsContainer`;
-    }
-
-    // ==================== SISTEMA DE BARRAS DE RATING ====================
-    function animarBarrasRating() {
-        const ratingBars = document.querySelectorAll('.rating-progress');
-        
-        ratingBars.forEach((bar) => {
-            bar.style.cssText = '';
-            bar.style.width = '0%';
-            bar.style.height = '10px';
-            bar.style.background = 'linear-gradient(90deg, #ffc107, #fd7e14)';
-            bar.style.borderRadius = '10px';
-            bar.style.transition = 'width 1.5s cubic-bezier(0.4, 0, 0.2, 1)';
-            bar.style.display = 'block';
-            bar.style.visibility = 'visible';
-            bar.style.opacity = '1';
-        });
-        
-        void ratingBars[0]?.offsetHeight;
-        
-        ratingBars.forEach((bar, index) => {
-            const percentage = parseFloat(bar.getAttribute('data-percentage')) || 0;
-            
-            setTimeout(() => {
-                bar.style.width = percentage + '%';
-            }, 400 + (index * 300));
-        });
-    }
-
-    function inicializarSistemaRating() {
-        setTimeout(() => {
-            const ratingBars = document.querySelectorAll('.rating-progress');
-            
-            if (ratingBars.length > 0) {
-                animarBarrasRating();
-            }
-        }, 500);
-    }
-
-    // ==================== SISTEMA DE ESTRELLAS INTERACTIVO ====================
-    function inicializarSistemaEstrellas() {
-        const starLabels = document.querySelectorAll('.star-label');
-        const starInputs = document.querySelectorAll('input[name="estrellas"]');
-        
-        function updateStarDisplay(selectedValue) {
-            starLabels.forEach(label => {
-                const labelValue = parseInt(label.htmlFor.replace('star', ''));
-                if (labelValue <= selectedValue) {
-                    label.classList.add('active');
-                } else {
-                    label.classList.remove('active');
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
-            });
+            }
+        }
+        return cookieValue;
+    }
+
+    // ==================== SISTEMA DE CONEXIÓN Y SINCRONIZACIÓN ====================
+
+    function connectToVecySystem() {
+        console.log("🔗 Conectando al sistema VecyCarritoSystem...");
+        
+        // Esperar a que el sistema central se cargue
+        const checkInterval = setInterval(() => {
+            if (window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.log("✅ CONECTADO al sistema VecyCarritoSystem");
+                
+                // Sincronizar datos de variantes con el sistema central
+                syncVariantsWithCentralSystem();
+                
+                // Configurar eventos de sincronización
+                setupSyncEvents();
+                
+                // Inicializar componentes
+                initConnectedComponents();
+            }
+        }, 100);
+        
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+            if (!window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.log("ℹ️ No se encontró sistema central, usando sistema LOCAL completo");
+                initLocalSystem();
+            }
+        }, 5000);
+    }
+
+    function syncVariantsWithCentralSystem() {
+        console.log("🔄 Sincronizando variantes con sistema central...");
+        
+        // Si el sistema central ya tiene datos, usarlos
+        if (window.vecyCarritoSystem.productVariantsData) {
+            productVariantsData = window.vecyCarritoSystem.productVariantsData;
         }
         
-        const defaultSelected = document.querySelector('input[name="estrellas"]:checked');
-        if (defaultSelected) {
-            updateStarDisplay(parseInt(defaultSelected.value));
+        if (window.vecyCarritoSystem.selectedVariants) {
+            selectedVariants = window.vecyCarritoSystem.selectedVariants;
         }
-        
-        starLabels.forEach((label) => {
-            label.addEventListener('mouseenter', function() {
-                const hoverValue = parseInt(this.htmlFor.replace('star', ''));
-                
-                starLabels.forEach((l) => {
-                    const labelValue = parseInt(l.htmlFor.replace('star', ''));
-                    if (labelValue <= hoverValue) {
-                        l.classList.add('hover');
-                    } else {
-                        l.classList.remove('hover');
-                    }
-                });
-            });
-            
-            label.addEventListener('click', function() {
-                const starId = this.htmlFor;
-                const starValue = parseInt(starId.replace('star', ''));
-                
-                starInputs.forEach(input => {
-                    input.checked = false;
-                });
-                
-                document.getElementById(starId).checked = true;
-                updateStarDisplay(starValue);
-            });
+    }
+
+    function setupSyncEvents() {
+        // Sincronizar cuando se actualizan los contadores
+        document.addEventListener('cartCountUpdated', (event) => {
+            console.log('🔄 Evento de actualización de carrito recibido:', event.detail);
+            updateCartCount(event.detail);
         });
-        
-        starInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                const value = parseInt(this.value);
-                updateStarDisplay(value);
-            });
-        });
-        
-        document.querySelector('.star-rating')?.addEventListener('mouseleave', function() {
-            starLabels.forEach(l => l.classList.remove('hover'));
-            
-            const checkedInput = document.querySelector('input[name="estrellas"]:checked');
-            if (checkedInput) {
-                updateStarDisplay(parseInt(checkedInput.value));
+    }
+
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
             }
         });
     }
 
-    // ==================== FUNCIONES DEL NEGOCIO ====================
-    function seguirNegocio(negocioId) {
-        const button = event.target;
-        const originalText = button.innerHTML;
+    function initLocalSystem() {
+        console.log("🚀 INICIANDO SISTEMA LOCAL COMPLETO");
         
-        button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
-        button.disabled = true;
+        // 1. Inicializar datos de variantes
+        initializeVariantsData();
         
-        setTimeout(() => {
-            vecyShowNotification('Ahora sigues este negocio', 'success');
-            button.innerHTML = '<i class="fas fa-heart me-1"></i> Siguiendo';
-            button.classList.add('btn-following');
-            button.disabled = false;
-        }, 1000);
-    }
-
-    function addToFavorites(productId) {
-        vecyShowNotification('Producto agregado a favoritos', 'success');
-    }
-
-    function abrirModalReporte(tipo, negocioId, reseñaId = null) {
-        const titulo = tipo === 'resena' ? 'Reportar Reseña' : 'Reportar Negocio';
-        document.getElementById('modalReporteTitulo').textContent = titulo;
-        
-        document.getElementById('formReporte').reset();
-        document.getElementById('negocioId').value = negocioId;
-        document.getElementById('reseñaId').value = reseñaId || '';
-        document.getElementById('tipoReporte').value = tipo;
-        
-        // Simular carga de opciones
-        const selectMotivo = document.getElementById('motivoReporte');
-        selectMotivo.innerHTML = '<option value="">Selecciona un motivo</option>';
-        
-        const opciones = tipo === 'resena' ? [
-            {value: 'contenido_inapropiado', text: 'Contenido inapropiado'},
-            {value: 'lenguaje_ofensivo', text: 'Lenguaje ofensivo'},
-            {value: 'informacion_falsa', text: 'Información falsa'},
-            {value: 'spam', text: 'Spam o publicidad'},
-            {value: 'acoso', text: 'Acoso o bullying'}
-        ] : [
-            {value: 'informacion_falsa', text: 'Información falsa del negocio'},
-            {value: 'practicas_engañosas', text: 'Prácticas engañosas'},
-            {value: 'productos_ilegales', text: 'Venta de productos ilegales'},
-            {value: 'mal_servicio', text: 'Mal servicio al cliente'},
-            {value: 'otro', text: 'Otro motivo'}
-        ];
-        
-        opciones.forEach(opcion => {
-            const option = document.createElement('option');
-            option.value = opcion.value;
-            option.textContent = opcion.text;
-            selectMotivo.appendChild(option);
-        });
-        
-        const modal = new bootstrap.Modal(document.getElementById('modalReporte'));
-        modal.show();
-    }
-
-    function enviarReporte() {
-        const form = document.getElementById('formReporte');
-        const btnEnviar = document.getElementById('btnEnviarReporte');
-        
-        const asunto = document.getElementById('asuntoReporte').value.trim();
-        const motivo = document.getElementById('motivoReporte').value;
-        
-        if (!asunto || !motivo) {
-            vecyShowNotification('Por favor completa todos los campos obligatorios', 'error');
-            return;
+        // 2. Crear miniaturas para todos los productos
+        for (const [productId, variants] of Object.entries(productVariantsData)) {
+            createVariantThumbnails(productId, variants);
+            
+            // Aplicar selección inicial (base)
+            const baseVariant = variants.find(v => v.isBase);
+            if (baseVariant) {
+                selectVariant(productId, baseVariant.id, variants);
+            }
         }
         
-        const formData = new FormData(form);
-        const datos = {
-            negocio_id: formData.get('negocio_id'),
-            reseña_id: formData.get('reseña_id'),
-            asunto: asunto,
-            motivo: motivo,
-            descripcion: document.getElementById('descripcionReporte').value.trim()
-        };
+        // 3. Configurar botones
+        setupConnectedButtons();
         
-        const originalText = btnEnviar.innerHTML;
-        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
-        btnEnviar.disabled = true;
+        console.log("✅ Sistema LOCAL inicializado correctamente");
+    }
+
+    function initConnectedComponents() {
+        console.log("🔄 Inicializando componentes...");
         
-        // Simular envío del reporte
-        setTimeout(() => {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalReporte'));
-            modal.hide();
-            vecyShowNotification('Reporte enviado correctamente. Lo revisaremos en 48 horas.', 'success');
-            btnEnviar.innerHTML = originalText;
-            btnEnviar.disabled = false;
-        }, 2000);
+        // Configurar botones
+        setupConnectedButtons();
+        
+        console.log("✅ Componentes inicializados");
+    }
+
+    function setupConnectedButtons() {
+        // Reconfigurar botones de "Agregar al carrito" para usar el sistema híbrido
+        document.querySelectorAll('[onclick*="addToCart"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            
+            // Buscar addToCart(productId)
+            const matchSimple = onclick.match(/addToCart\(['"]?(\d+)['"]?\)/);
+            if (matchSimple) {
+                const productId = matchSimple[1];
+                button.setAttribute('onclick', `return addToCart('${productId}')`);
+                console.log(`✅ Botón simple configurado: producto ${productId}`);
+            }
+            
+            // Buscar addToCartWithVariant(productId)
+            const matchVariant = onclick.match(/addToCartWithVariant\(['"]?(\d+)['"]?\)/);
+            if (matchVariant) {
+                const productId = matchVariant[1];
+                button.setAttribute('onclick', `return addToCartWithVariant('${productId}')`);
+                console.log(`✅ Botón con variante configurado: producto ${productId}`);
+            }
+        });
     }
 
     // ==================== INICIALIZACIÓN COMPLETA ====================
 
-    // Inicializar inmediatamente
-    function initVecy() {
-        console.log("🚀 INICIANDO VECY DETALLE NEGOCIO");
+    function initVecyCliente() {
+        console.log("🚀 INICIANDO VECY CLIENTE COMPLETO");
         
-        // 1. AOS
-        if (typeof AOS !== 'undefined') {
-            AOS.init({ duration: 800, once: true, offset: 100 });
-            console.log("✅ AOS inicializado");
-        }
+        initAOS();
+        initSmoothScroll();
         
-        // 2. SISTEMA DE VARIANTES - CON RETRASO PARA GARANTIZAR QUE EL DOM ESTÉ LISTO
-        setTimeout(() => {
-            console.log("🔄 INICIANDO SISTEMA DE VARIANTES...");
-            try {
-                initializeVariantsSystem();
-                console.log("✅ Sistema de variantes inicializado exitosamente");
-            } catch (error) {
-                console.error("❌ Error inicializando sistema de variantes:", error);
-            }
-        }, 500);
-
-        // 3. SISTEMA DE MAPAS
-        setTimeout(() => {
-            if (document.getElementById('leaflet-map')) {
-                initMap();
-                console.log("✅ Mapa inicializado");
-            }
-        }, 1000);
-
-        // 4. SISTEMA DE RATING Y ESTRELLAS
-        inicializarSistemaRating();
-        inicializarSistemaEstrellas();
+        // Conectar al sistema central (si existe)
+        connectToVecySystem();
         
-        console.log("✅ VECY DETALLE NEGOCIO INICIALIZADO");
+        console.log("✅ VECY CLIENTE INICIALIZADO");
     }
 
-    // Ejecutar inmediatamente
-    initVecy();
+    // Añadir CSS para animaciones
+    function addSyncStyles() {
+        if (document.querySelector('style[data-vecy-sync]')) return;
+        
+        const style = document.createElement('style');
+        style.setAttribute('data-vecy-sync', 'true');
+        style.textContent = `
+            .pulse-animation {
+                animation: pulse 0.6s ease-in-out;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+            
+            .cart-added {
+                animation: cartAdd 1s ease;
+            }
+            
+            @keyframes cartAdd {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        console.log("✅ Estilos completos añadidos");
+    }
 
-    // También ejecutar cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', initVecy);
+    // Ejecutar inicialización
+    document.addEventListener('DOMContentLoaded', function() {
+        addSyncStyles();
+        initVecyCliente();
+    });
+    
+    // También ejecutar cuando la ventana se carga completamente
+    window.addEventListener('load', initVecyCliente);
 
-    // Y ejecutar cuando la ventana se cargue
-    window.addEventListener('load', initVecy);
 </script>
 {% endblock %}

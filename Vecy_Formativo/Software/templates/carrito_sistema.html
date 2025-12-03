@@ -1788,6 +1788,7 @@ class VecyCarritoSystem {
         this.totalPedido = 0;
         this.porcentajeAnticipo = 20; // 20% de anticipo
         this.currentOpenOffcanvas = null;
+        this.primerProductoAgregado = false; // NUEVA VARIABLE PARA CONTROLAR EL PRIMER PRODUCTO
         
         this.init();
     }
@@ -2175,7 +2176,7 @@ class VecyCarritoSystem {
         });
     }
 
-    // ==================== AGREGAR AL CARRITO CON ACTUALIZACIÓN INMEDIATA ====================
+    // ==================== AGREGAR AL CARRITO CON ACTUALIZACIÓN INMEDIATA Y RECARGA DE PÁGINA ====================
     async addToCartWithVariant(productId) {
         console.log(`🛒 Agregando producto ${productId} al carrito con variante...`);
         
@@ -2229,6 +2230,17 @@ class VecyCarritoSystem {
                 // Recargar contenido del carrito si está abierto
                 if (this.currentOpenOffcanvas === 'vecyCartOffcanvas') {
                     await this.loadCartContent();
+                }
+                
+                // MODIFICACIÓN: Recargar la página solo si es el PRIMER producto agregado
+                if (!this.primerProductoAgregado) {
+                    console.log("🔄 Es el primer producto agregado, recargando página...");
+                    this.primerProductoAgregado = true;
+                    
+                    // Pequeño delay para mostrar la notificación antes de recargar
+                    setTimeout(() => {
+                        location.reload();
+                    }, 100);
                 }
                 
                 return true;
@@ -2455,7 +2467,7 @@ class VecyCarritoSystem {
         }
     }
 
-    // ==================== SISTEMA DE FAVORITOS CON ACTUALIZACIÓN INMEDIATA ====================
+    // ==================== SISTEMA DE FAVORITOS CON ACTUALIZACIÓN INMEDIATA Y RECARGA DE PÁGINA ====================
     async toggleFavorites() {
         console.log("❤️ Abriendo favoritos...");
         const favoritosOffcanvas = new bootstrap.Offcanvas(document.getElementById('vecyFavoritosOffcanvas'));
@@ -2713,6 +2725,17 @@ class VecyCarritoSystem {
                 // Recargar favoritos si está abierto
                 if (this.currentOpenOffcanvas === 'vecyFavoritosOffcanvas') {
                     await this.loadFavoritosContent();
+                }
+                
+                // MODIFICACIÓN: Recargar la página solo si es el PRIMER producto agregado a favoritos
+                if (!this.primerProductoAgregado) {
+                    console.log("🔄 Es el primer producto agregado a favoritos, recargando página...");
+                    this.primerProductoAgregado = true;
+                    
+                    // Pequeño delay para mostrar la notificación antes de recargar
+                    setTimeout(() => {
+                        location.reload();
+                    }, 100);
                 }
                 
                 return true;

@@ -1532,9 +1532,7 @@ body {
 .product-description {
     margin-bottom: 0.8rem;
 }
-.vecy-technology-section {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
-}
+
 .product-description-text {
     color: var(--vecy-secondary);
     line-height: 1.5;
@@ -2568,7 +2566,451 @@ body {
         border: 1px solid #000 !important;
     }
 }
-/* ===== ESTILOS ESPECIALES PARA CARRUSEL DE TEMPORADA ===== */
+
+/* ==================== */
+/* ESTILOS ESPECIALES PARA TECNOLOGÍA - CORREGIDOS */
+/* ==================== */
+.vecy-technology-section {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+    padding: 4rem 0 !important;
+}
+
+.vecy-technology-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.1) 0%, transparent 60%);
+}
+
+.vecy-technology-section .vecy-section-title {
+    background: linear-gradient(135deg, #60a5fa, #38bdf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 10px rgba(96, 165, 250, 0.3);
+}
+
+.vecy-technology-section .vecy-section-subtitle {
+    color: rgba(203, 213, 225, 0.9);
+}
+
+.vecy-technology-section .vecy-view-all {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(59, 130, 246, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+.vecy-technology-section .vecy-view-all:hover {
+    background: #3b82f6;
+    color: white;
+    transform: translateX(8px);
+}
+
+/* CARRUSEL ESPECIAL PARA TECNOLOGÍA */
+.vecy-tech-carousel-container {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    margin-bottom: 3rem;
+    position: relative;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    padding: 0;
+}
+
+.vecy-tech-carousel {
+    border-radius: 20px;
+    min-height: 400px; /* MISMA ALTURA QUE CARRUSEL ESPECIAL */
+    background: transparent;
+    padding: 30px;
+}
+
+.vecy-tech-slide {
+    position: relative;
+    min-height: 400px; /* MISMA ALTURA QUE CARRUSEL ESPECIAL */
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.vecy-tech-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.vecy-tech-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.4) saturate(1.2);
+    animation: techPulse 20s infinite alternate;
+}
+
+@keyframes techPulse {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1.05);
+    }
+}
+
+.vecy-tech-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.75) 100%);
+}
+
+.vecy-tech-content {
+    position: relative;
+    z-index: 2;
+    padding: 3rem;
+    color: white;
+    height: 400px; /* MISMA ALTURA QUE CARRUSEL ESPECIAL */
+    display: flex;
+    align-items: center;
+}
+
+.vecy-tech-content .row {
+    width: 100%;
+    margin: 0;
+}
+
+.vecy-tech-content .col-lg-6 {
+    padding: 0 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* ETIQUETAS CORREGIDAS - AHORA NO SE SOLAPAN */
+.vecy-tech-badges {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.vecy-tech-badge {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.vecy-tech-offer {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+    z-index: 2;
+    margin-bottom: 1rem !important;
+}
+
+.vecy-tech-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(135deg, #fff, #60a5fa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.2;
+}
+
+.vecy-tech-description {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: #e8f5e8;
+    opacity: 0.9;
+}
+
+.vecy-tech-price {
+    margin-bottom: 1.5rem;
+}
+
+.vecy-price-display.tech {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.vecy-final-price.tech {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #60a5fa;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.vecy-original-price.tech {
+    font-size: 1.2rem;
+    text-decoration: line-through;
+    color: #ccc;
+}
+
+.vecy-discount-badge.tech {
+    background: linear-gradient(135deg, #8b5cf6, #a855f7);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+.vecy-tech-savings {
+    font-size: 0.9rem;
+    color: #60a5fa;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.vecy-tech-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.vecy-info-item.tech {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #e8f5e8;
+}
+
+.vecy-info-item.tech i {
+    color: #60a5fa;
+}
+
+.vecy-tech-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.vecy-tech-btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-size: 0.9rem;
+    position: relative;
+    overflow: hidden;
+    min-height: 44px;
+}
+
+.vecy-tech-btn.primary {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+.vecy-tech-btn.primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(59, 130, 246, 0.4);
+}
+
+.vecy-tech-btn.secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vecy-tech-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
+}
+
+.vecy-tech-product-image {
+    text-align: center;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.tech-product-img {
+    max-height: 300px; /* MISMA ALTURA QUE ESPECIAL */
+    width: auto;
+    max-width: 100%;
+    border-radius: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    transition: transform 0.5s ease;
+}
+
+.vecy-tech-slide:hover .tech-product-img {
+    transform: scale(1.05);
+}
+
+.vecy-tech-placeholder {
+    width: 200px; /* MISMO TAMAÑO QUE ESPECIAL */
+    height: 200px; /* MISMO TAMAÑO QUE ESPECIAL */
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem; /* MISMO TAMAÑO QUE ESPECIAL */
+    color: #60a5fa;
+    margin: 0 auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* CONTROLES DEL CARRUSEL TECNOLÓGICO */
+.vecy-tech-control {
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0 1rem;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: var(--vecy-transition);
+}
+
+.vecy-tech-control:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-control-prev-icon.tech,
+.carousel-control-next-icon.tech {
+    width: 1.5rem;
+    height: 1.5rem;
+    filter: invert(1);
+}
+
+.tech-indicators {
+    bottom: 20px;
+}
+
+.tech-indicators button {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin: 0 5px;
+    background: rgba(255, 255, 255, 0.5);
+    border: none;
+    transition: var(--vecy-transition);
+}
+
+.tech-indicators button.active {
+    background: #3b82f6;
+    transform: scale(1.2);
+}
+
+/* PRODUCTOS DE TECNOLOGÍA EN GRILLA - MISMO TAMAÑO QUE ESPECIAL */
+.vecy-technology-section .vecy-products-showcase {
+    margin-top: 2rem;
+}
+
+.vecy-technology-section .vecy-product-card {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: white;
+    transition: var(--vecy-transition);
+    height: 500px !important; /* MISMA ALTURA QUE ESPECIAL */
+}
+
+.vecy-technology-section .vecy-product-card:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(59, 130, 246, 0.4);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.vecy-technology-section .vecy-product-name,
+.vecy-technology-section .vecy-store-info,
+.vecy-technology-section .vecy-stock-info {
+    color: white;
+}
+
+.vecy-technology-section .vecy-image-placeholder {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.vecy-technology-section .vecy-product-overlay {
+    background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.5));
+}
+
+.vecy-technology-section .vecy-badge.vecy-tech-badge {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    border: none;
+}
+
+.vecy-technology-section .vecy-badge.vecy-offer-badge {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: white;
+    border: none;
+}
+
+.vecy-technology-section .vecy-current-price {
+    color: #60a5fa;
+}
+
+.vecy-technology-section .vecy-add-cart-btn {
+    background: linear-gradient(135deg, #3b82f6, #60a5fa);
+    color: white;
+    border: none;
+}
+
+.vecy-technology-section .vecy-add-cart-btn:hover {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* ESTILOS ESPECIALES PARA CARRUSEL DE TEMPORADA */
 .vecy-special-carousel-container {
     border-radius: 20px;
     overflow: hidden;
@@ -2625,7 +3067,9 @@ body {
 
 .vecy-special-badges {
     margin-bottom: 1rem;
-
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
 }
 
 .vecy-special-badge {
@@ -2635,8 +3079,10 @@ body {
     border-radius: 25px;
     font-size: 0.8rem;
     font-weight: 600;
-    margin-right: 0.5rem;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+    z-index: 2;
 }
 
 .vecy-special-offer {
@@ -2646,9 +3092,11 @@ body {
     border-radius: 25px;
     font-size: 0.8rem;
     font-weight: 600;
-    margin-right: 0.5rem;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     backdrop-filter: blur(10px);
+    white-space: nowrap;
+    z-index: 2;
 }
 
 .vecy-special-title {
@@ -2708,6 +3156,7 @@ body {
     display: flex;
     gap: 1.5rem;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
 }
 
 .vecy-info-item.special {
@@ -2725,6 +3174,7 @@ body {
 .vecy-special-actions {
     display: flex;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .vecy-special-btn {
@@ -2785,7 +3235,7 @@ body {
     margin: 0 auto;
 }
 
-/* Controles del carrusel especial */
+/* CONTROLES DEL CARRUSEL ESPECIAL */
 .vecy-special-control {
     width: 50px;
     height: 50px;
@@ -2795,11 +3245,19 @@ body {
     transform: translateY(-50%);
     margin: 0 1rem;
     backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: var(--vecy-transition);
+}
+
+.vecy-special-control:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .carousel-control-prev-icon.special,
 .carousel-control-next-icon.special {
-    background-size: 1rem 1rem;
+    width: 1.5rem;
+    height: 1.5rem;
     filter: invert(1);
 }
 
@@ -2814,13 +3272,192 @@ body {
     margin: 0 5px;
     background: rgba(255, 255, 255, 0.5);
     border: none;
+    transition: var(--vecy-transition);
 }
 
 .special-indicators button.active {
     background: #ffd700;
+    transform: scale(1.2);
 }
 
-/* Responsive */
+/* RESPONSIVE PARA TECNOLOGÍA */
+@media (max-width: 1200px) {
+    .vecy-tech-content {
+        padding: 2rem 1.5rem !important;
+    }
+    
+    .vecy-tech-title {
+        font-size: 1.8rem;
+    }
+    
+    .vecy-final-price.tech {
+        font-size: 1.8rem;
+    }
+    
+    .tech-product-img {
+        max-height: 250px;
+    }
+}
+
+@media (max-width: 992px) {
+    .vecy-tech-carousel {
+        min-height: 380px;
+        padding: 20px;
+    }
+    
+    .vecy-tech-slide {
+        min-height: 380px;
+    }
+    
+    .vecy-tech-content {
+        height: 380px;
+        padding: 1.5rem !important;
+    }
+    
+    .vecy-tech-title {
+        font-size: 1.6rem;
+    }
+    
+    .vecy-tech-description {
+        font-size: 1rem;
+    }
+    
+    .vecy-final-price.tech {
+        font-size: 1.6rem;
+    }
+    
+    .tech-product-img {
+        max-height: 220px;
+    }
+    
+    .vecy-tech-actions {
+        justify-content: flex-start;
+    }
+    
+    .vecy-tech-btn {
+        padding: 0.65rem 1.2rem !important;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .vecy-tech-carousel-container {
+        margin-bottom: 2.5rem;
+    }
+    
+    .vecy-tech-carousel {
+        min-height: auto;
+        padding: 15px;
+    }
+    
+    .vecy-tech-slide {
+        min-height: auto;
+    }
+    
+    .vecy-tech-content {
+        height: auto;
+        padding: 1.5rem 1rem !important;
+        text-align: center;
+    }
+    
+    .vecy-tech-title {
+        font-size: 1.5rem;
+        margin-bottom: 0.6rem;
+    }
+    
+    .vecy-tech-badges {
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    
+    .vecy-tech-description {
+        margin-bottom: 1rem;
+    }
+    
+    .vecy-tech-price {
+        margin-bottom: 1rem;
+    }
+    
+    .vecy-tech-info {
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+    }
+    
+    .vecy-tech-product-image {
+        margin-top: 1.5rem;
+        padding: 0;
+    }
+    
+    .tech-product-img {
+        max-height: 200px;
+    }
+    
+    .vecy-tech-placeholder {
+        width: 180px;
+        height: 180px;
+        font-size: 2.5rem;
+    }
+    
+    .vecy-tech-control {
+        width: 45px;
+        height: 45px;
+        margin: 0 0.5rem;
+    }
+    
+    .vecy-tech-actions {
+        justify-content: center;
+        gap: 0.6rem;
+    }
+    
+    .vecy-tech-btn {
+        padding: 0.6rem 1.2rem !important;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .vecy-tech-content {
+        padding: 1.2rem 0.8rem !important;
+    }
+    
+    .vecy-tech-title {
+        font-size: 1.3rem;
+    }
+    
+    .vecy-tech-description {
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
+    
+    .vecy-price-display.tech {
+        gap: 0.8rem;
+    }
+    
+    .vecy-final-price.tech {
+        font-size: 1.4rem;
+    }
+    
+    .vecy-original-price.tech {
+        font-size: 1rem;
+    }
+    
+    .tech-product-img {
+        max-height: 180px;
+    }
+    
+    .vecy-tech-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .vecy-tech-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* RESPONSIVE PARA CARRUSEL ESPECIAL */
 @media (max-width: 768px) {
     .vecy-special-content {
         padding: 2rem 1rem;

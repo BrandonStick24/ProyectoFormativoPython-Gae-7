@@ -3,7 +3,9 @@ import json
 import os
 from pathlib import Path
 from django.apps import apps
-from django.db.models import Count, Q
+from django.utils import timezone
+from urllib.parse import urlencode
+from difflib import SequenceMatcher
 
 class GeminiAssistant:
     def __init__(self):
@@ -11,12 +13,19 @@ class GeminiAssistant:
         self.api_key = os.getenv('GEMINI_API_KEY')
         
         if not self.api_key:
-            raise ValueError("GEMINI_API_KEY no encontrada")
-        
-        self.client = genai.Client(api_key=self.api_key)
-        print("Asistente Gemini iniciado")
+            print("⚠️ GEMINI_API_KEY no encontrada - Modo limitado")
+            self.client = None
+        else:
+            try:
+                self.client = genai.Client(api_key=self.api_key)
+                print("🚀 Gemini Asistente iniciado")
+            except Exception as e:
+                print(f"⚠️ Error iniciando Gemini: {e}")
+                self.client = None
         
         self.conversacion_historial = []
+        self.cache_productos = None
+        self.cache_timestamp = None
     
     def _cargar_variables_entorno(self):
         try:
@@ -29,362 +38,488 @@ class GeminiAssistant:
                             key, value = linea.split('=', 1)
                             os.environ[key.strip()] = value.strip()
         except Exception as e:
-            print(f"Error .env: {e}")
+            print(f"⚠️ Error .env: {e}")
     
     def _convertir_markdown_a_html(self, texto):
         if not texto:
             return texto
         
-        texto = texto.replace('**', '<strong>')
-        strong_count = texto.count('<strong>')
-        for i in range(strong_count):
-            texto = texto.replace('<strong>', '</strong>', 1)
-            texto = texto.replace('</strong>', '<strong>', 1)
-        
-        texto = texto.replace('*', '<em>')
-        em_count = texto.count('<em>')
-        for i in range(em_count):
-            texto = texto.replace('<em>', '</em>', 1)
-            texto = texto.replace('</em>', '<em>', 1)
-        
-        texto = texto.replace('`', '<code>')
-        code_count = texto.count('<code>')
-        for i in range(code_count):
-            texto = texto.replace('<code>', '</code>', 1)
-            texto = texto.replace('</code>', '<code>', 1)
-        
+        import re
+        texto = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', texto)
+        texto = re.sub(r'\*(.*?)\*', r'<em>\1</em>', texto)
         texto = texto.replace('\n', '<br>')
-        
         return texto
     
+    def _calcular_similitud(self, palabra1, palabra2):
+        """Calcula similitud entre dos palabras (0-1)"""
+        return SequenceMatcher(None, palabra1.lower(), palabra2.lower()).ratio()
+    
+    def _buscar_palabra_en_texto(self, palabra, texto):
+        """Busca palabra en texto considerando errores ortográficos"""
+        if not texto:
+            return 0
+        
+        palabras_texto = texto.lower().split()
+        mejor_similitud = 0
+        
+        for palabra_texto in palabras_texto:
+            similitud = self._calcular_similitud(palabra, palabra_texto)
+            if similitud > mejor_similitud:
+                mejor_similitud = similitud
+        
+        return mejor_similitud
+    
     def _buscar_productos_inteligente(self, consulta, productos):
-        consulta_lower = consulta.lower()
+        """Búsqueda ultra-tolerante a errores"""
+        consulta_lower = consulta.lower().strip()
         productos_encontrados = []
         
-        palabras_clave = {
-            'audifonos': ['audífonos', 'audifonos', 'headphones', 'auriculares', 'sonido', 'audio'],
-            'helados': ['helado', 'heladería', 'postre', 'crema'],
-            'electronica': ['electrónica', 'tecnología', 'tecnologia', 'gadgets'],
-            'ropa': ['vestuario', 'moda', 'camisa', 'pantalon'],
-            'comida': ['alimento', 'comestible', 'restaurante', 'cocina']
+        # Diccionario de sinónimos y errores comunes - MÁS EXTENSO
+        sinonimos = {
+            'audifonos': ['audífonos', 'audifono', 'audífono', 'headphones', 'auriculares', 
+                         'sonido', 'audio', 'gamer', 'bluetooth', 'inalambricos', 
+                         'inalámbricos', 'headset', 'manos libres', 'earbuds', 'cascos', 
+                         'diadema', 'adifonos', 'audifon', 'oudifonos', 'odifonos', 
+                         'audifonos bluetooth', 'auriculares bluetooth', 'headphones gamer',
+                         'audifonos inalambricos', 'audifono bluetooth', 'audifonos gamer',
+                         'adifono', 'odifono', 'aud', 'audiofono', 'adufono'],
+            
+            'iphone': ['iphone', 'iphones', 'iphonex', 'iphone11', 'iphone12', 'iphone13', 
+                      'iphone14', 'iphone15', 'ifon', 'ifone', 'i phone', 'i-phone', 
+                      'celular apple', 'smartphone apple', 'apple', 'celular ios',
+                      'apple iphone', 'iphone pro', 'iphone max', 'iphone plus',
+                      'ifon pro', 'ifone max', 'aifon', 'aifone', 'celular iphone',
+                      'celular ifon', 'movil iphone'],
+            
+            'helados': ['helado', 'heladería', 'postre', 'crema', 'nieve', 'sorbete', 
+                       'cremolada', 'gelato', 'paleta', 'cono', 'tarrina', 'postre frío',
+                       'gelado', 'elado', 'heldaos', 'hela2', 'helaos', 'hela', 'ice cream',
+                       'helado de crema', 'helado chocolate', 'helado vainilla', 'helado fresa',
+                       'heldo', 'hela', 'hela', 'heladito', 'helados artesanales'],
+            
+            'tecnologia': ['tecnología', 'tecnologia', 'electronica', 'electrónica', 
+                          'gadgets', 'electrodomésticos', 'dispositivos', 'smart', 
+                          'inteligente', 'digital', 'tecno', 'tecnologias', 'tech',
+                          'tecnologico', 'tecnológica', 'electronic', 'electrónicos',
+                          'tec', 'tecn', 'gadget', 'dispositivo'],
+            
+            'ropa': ['vestuario', 'moda', 'camisa', 'pantalon', 'zapatos', 'calzado', 
+                    'vestido', 'falda', 'blusa', 'chaqueta', 'abrigo', 'accesorio',
+                    'ropa', 'ropas', 'prenda', 'prendas', 'ropa mujer', 'ropa hombre',
+                    'moda mujer', 'moda hombre', 'camiseta', 'jeans', 'short', 'suéter',
+                    'sweater', 'blus', 'pantal', 'chaquet', 'abrig', 'vestid'],
+            
+            'comida': ['alimento', 'comestible', 'restaurante', 'cocina', 'comestibles', 
+                      'alimentos', 'hamburguesa', 'pizza', 'sushi', 'ensalada', 'sandwich', 
+                      'comida rápida', 'almuerzo', 'cena', 'desayuno', 'comid', 'comi',
+                      'fast food', 'comida rapida', 'comida mexicana', 'comida china',
+                      'comida italiana', 'comi', 'com', 'comi', 'almuer', 'cena', 'desayun'],
+            
+            'zapatos': ['zapatos', 'calzado', 'tenis', 'sneakers', 'zapatillas', 'zapato',
+                       'zapat', 'zapatito', 'zapatillas deportivas', 'zapatos deportivos',
+                       'tennis', 'zapas', 'zapatillas running', 'zapatos casual',
+                       'zapatos formales', 'zapat', 'zapat', 'teni', 'sneaker', 'calzad'],
+            
+            'computadora': ['computador', 'laptop', 'portatil', 'pc', 'ordenador', 'notebook',
+                           'desktop', 'computadora', 'computadoras', 'comput', 'pc gamer',
+                           'laptop gamer', 'portátil', 'notebook', 'computadora portatil',
+                           'comput', 'lapto', 'porta', 'ordenad', 'notebok', 'deskt', 'pcgam'],
+            
+            'telefono': ['teléfono', 'celular', 'smartphone', 'móvil', 'mobile', 'movil',
+                        'telefono', 'telefonos', 'celulares', 'móviles', 'cel', 'celu',
+                        'smartphone', 'celular gamer', 'telefon', 'celula', 'smartphon',
+                        'mobi', 'mov', 'celu', 'smart', 'phone', 'telef'],
+            
+            'libro': ['libros', 'lectura', 'novela', 'cuento', 'texto', 'literatura',
+                     'lib', 'libr', 'libritos', 'libros novelas', 'novelas', 'cuentos',
+                     'lib', 'libr', 'novel', 'cuent', 'lectur', 'text', 'literatur'],
+            
+            'mueble': ['muebles', 'muebleria', 'silla', 'mesa', 'sofá', 'sofa', 'cama',
+                      'estante', 'rack', 'escritorio', 'mueble de sala', 'mueble cocina',
+                      'muebl', 'sill', 'mes', 'sof', 'cam', 'estant', 'rack', 'escritori'],
+            
+            'deporte': ['deportes', 'deportivo', 'gimnasio', 'ejercicio', 'fitness',
+                       'deport', 'deporte', 'equipo deportivo', 'accesorios deportivos',
+                       'deport', 'gimnasi', 'ejercici', 'fitnes', 'equipo deport'],
         }
+        
+        # Procesar consulta
+        palabras_consulta = consulta_lower.split()
         
         for producto in productos:
             nombre_lower = producto['nombre'].lower()
             descripcion_lower = (producto['descripcion'] or '').lower()
             categoria_lower = producto['categoria'].lower()
-            negocio_lower = producto['negocio'].lower()
             
-            encontrado = False
+            puntuacion = 0
+            coincidencia_exacta = False
             
-            if consulta_lower in nombre_lower or consulta_lower in descripcion_lower:
-                encontrado = True
+            # 1. COINCIDENCIA EXACTA (máxima prioridad)
+            if consulta_lower == nombre_lower:
+                puntuacion += 100
+                coincidencia_exacta = True
             
-            for palabra_principal, sinonimos in palabras_clave.items():
-                if (consulta_lower in palabra_principal or 
-                    any(sinonimo in consulta_lower for sinonimo in sinonimos)):
+            # 2. CONSULTA CONTENIDA EN NOMBRE
+            elif consulta_lower in nombre_lower:
+                puntuacion += 80
+                coincidencia_exacta = True
+            
+            # 3. CADA PALABRA DE LA CONSULTA EN NOMBRE
+            for palabra in palabras_consulta:
+                if len(palabra) <= 2:
+                    continue  # Ignorar palabras muy cortas
                     
-                    if (palabra_principal in nombre_lower or 
-                        any(sinonimo in nombre_lower for sinonimo in sinonimos) or
-                        palabra_principal in categoria_lower or
-                        any(sinonimo in categoria_lower for sinonimo in sinonimos)):
-                        encontrado = True
+                # En nombre directamente
+                if palabra in nombre_lower:
+                    puntuacion += 40
+                
+                # Con similitud en nombre (errores tipográficos)
+                sim_nombre = self._buscar_palabra_en_texto(palabra, nombre_lower)
+                if sim_nombre > 0.7:  # 70% de similitud
+                    puntuacion += int(35 * sim_nombre)
+                
+                # En descripción
+                if palabra in descripcion_lower:
+                    puntuacion += 20
+                
+                # Con similitud en descripción
+                sim_desc = self._buscar_palabra_en_texto(palabra, descripcion_lower)
+                if sim_desc > 0.7:
+                    puntuacion += int(15 * sim_desc)
             
-            if consulta_lower in negocio_lower:
-                encontrado = True
+            # 4. VERIFICAR SINÓNIMOS
+            for palabra_consulta in palabras_consulta:
+                for categoria, lista_sinonimos in sinonimos.items():
+                    # Si la palabra de consulta está en sinónimos
+                    if palabra_consulta in lista_sinonimos or palabra_consulta == categoria:
+                        # Verificar si el producto tiene palabras de esta categoría
+                        for sinonimo in lista_sinonimos:
+                            if sinonimo in nombre_lower:
+                                puntuacion += 50
+                                break
+                            elif sinonimo in descripcion_lower:
+                                puntuacion += 30
+                                break
             
-            if encontrado:
+            # 5. BONUS POR MÚLTIPLES COINCIDENCIAS
+            coincidencias = 0
+            for palabra in palabras_consulta:
+                if len(palabra) <= 2:
+                    continue
+                    
+                if (palabra in nombre_lower or 
+                    self._buscar_palabra_en_texto(palabra, nombre_lower) > 0.7 or
+                    palabra in descripcion_lower or
+                    self._buscar_palabra_en_texto(palabra, descripcion_lower) > 0.7):
+                    coincidencias += 1
+            
+            if coincidencias >= 2:
+                puntuacion += coincidencias * 15
+            
+            # 6. INCLUIR SI TIENE ALGUNA PUNTUACIÓN
+            if puntuacion > 0:
+                producto['puntuacion_relevancia'] = puntuacion
+                producto['es_exacto'] = coincidencia_exacta
                 productos_encontrados.append(producto)
+        
+        # Ordenar por relevancia
+        productos_encontrados.sort(key=lambda x: x.get('puntuacion_relevancia', 0), reverse=True)
+        
+        print(f"🔍 Búsqueda '{consulta_lower}':")
+        print(f"   Encontrados: {len(productos_encontrados)} productos")
+        
+        if productos_encontrados:
+            for i, p in enumerate(productos_encontrados[:3]):
+                print(f"   {i+1}. {p['nombre'][:40]}... (punt: {p['puntuacion_relevancia']})")
         
         return productos_encontrados
     
     def _obtener_datos_reales_bd(self, user_id=None):
+        """Obtiene datos de la base de datos"""
         try:
+            ahora = timezone.now()
+            
+            # Cache por 2 minutos
+            if (self.cache_productos and 
+                self.cache_timestamp and 
+                (ahora - self.cache_timestamp).seconds < 120):
+                return self.cache_productos
+            
             Productos = apps.get_model('Software', 'Productos')
             CategoriaProductos = apps.get_model('Software', 'CategoriaProductos')
-            Negocios = apps.get_model('Software', 'Negocios')
-            Carrito = apps.get_model('Software', 'Carrito')
-            CarritoItem = apps.get_model('Software', 'CarritoItem')
-            Pedidos = apps.get_model('Software', 'Pedidos')
-            Promociones = apps.get_model('Software', 'Promociones')
-            Favoritos = apps.get_model('Software', 'Favoritos')
-            VariantesProducto = apps.get_model('Software', 'VariantesProducto')
             
             datos_reales = {
                 "productos": [],
                 "categorias": [],
                 "negocios": [],
-                "ofertas_activas": [],
-                "carrito_usuario": {},
-                "pedidos_recientes": [],
-                "favoritos_usuario": [],
-                "variantes_productos": {}
+                "ofertas_activas": []
             }
             
-            productos = Productos.objects.select_related(
-                'fkcategoria_prod', 'fknegocioasociado_prod'
-            ).filter(estado_prod='disponible')
+            # Obtener categorías
+            categorias = CategoriaProductos.objects.all()
+            mapa_categorias = {}
+            for cat in categorias:
+                datos_reales["categorias"].append({
+                    "id": cat.pkid_cp,
+                    "nombre": cat.desc_cp,
+                    "slug": cat.desc_cp.lower().replace(' ', '-')
+                })
+                mapa_categorias[cat.pkid_cp] = cat.desc_cp
+            
+            # Obtener productos activos
+            productos = Productos.objects.filter(
+                estado_prod='disponible'
+            ).select_related('fkcategoria_prod', 'fknegocioasociado_prod')[:250]  # Más productos
             
             for p in productos:
-                producto_data = {
-                    "id": p.pkid_prod,
-                    "nombre": p.nom_prod,
-                    "precio": float(p.precio_prod),
-                    "categoria": p.fkcategoria_prod.desc_cp if p.fkcategoria_prod else "Sin categoría",
-                    "categoria_id": p.fkcategoria_prod.pkid_cp if p.fkcategoria_prod else None,
-                    "negocio": p.fknegocioasociado_prod.nom_neg if p.fknegocioasociado_prod else "Sin negocio",
-                    "negocio_id": p.fknegocioasociado_prod.pkid_neg if p.fknegocioasociado_prod else None,
-                    "descripcion": p.desc_prod or "",
-                    "stock": p.stock_prod or 0,
-                    "imagen": p.img_prod.url if p.img_prod else None,
-                    "estado": p.estado_prod,
-                    "tiene_variantes": False
-                }
-                
-                variantes = VariantesProducto.objects.filter(
-                    producto_id=p.pkid_prod, 
-                    estado_variante='activa'
-                )
-                
-                if variantes.exists():
-                    producto_data["tiene_variantes"] = True
-                    variantes_data = []
-                    for v in variantes:
-                        variante_info = {
-                            "id": v.id_variante,
-                            "nombre": v.nombre_variante,
-                            "precio_adicional": float(v.precio_adicional),
-                            "precio_total": float(p.precio_prod) + float(v.precio_adicional),
-                            "stock": v.stock_variante,
-                            "sku": v.sku_variante,
-                            "imagen": v.imagen_variante.url if v.imagen_variante else None
-                        }
-                        variantes_data.append(variante_info)
-                    
-                    datos_reales["variantes_productos"][str(p.pkid_prod)] = variantes_data
-                
-                datos_reales["productos"].append(producto_data)
-            
-            categorias = CategoriaProductos.objects.all()
-            for c in categorias:
-                datos_reales["categorias"].append({
-                    "id": c.pkid_cp,
-                    "nombre": c.desc_cp
-                })
-            
-            negocios = Negocios.objects.filter(estado_neg='activo')
-            for n in negocios:
-                datos_reales["negocios"].append({
-                    "id": n.pkid_neg,
-                    "nombre": n.nom_neg,
-                    "categoria": n.fktiponeg_neg.desc_tiponeg if n.fktiponeg_neg else "Sin categoría",
-                    "direccion": n.direcc_neg,
-                    "imagen": n.img_neg.url if n.img_neg else None
-                })
-            
-            from django.utils import timezone
-            hoy = timezone.now().date()
-            ofertas = Promociones.objects.filter(
-                estado_promo='activa',
-                fecha_inicio__lte=hoy,
-                fecha_fin__gte=hoy
-            ).select_related('fkproducto')
-            
-            for o in ofertas:
-                if o.fkproducto:
-                    datos_reales["ofertas_activas"].append({
-                        "producto": o.fkproducto.nom_prod,
-                        "titulo": o.titulo_promo,
-                        "descuento": float(o.porcentaje_descuento) if o.porcentaje_descuento else 0,
-                        "precio_original": float(o.fkproducto.precio_prod),
-                        "precio_final": float(o.fkproducto.precio_prod) * (1 - (float(o.porcentaje_descuento) / 100)) if o.porcentaje_descuento else float(o.fkproducto.precio_prod)
-                    })
-            
-            if user_id:
                 try:
-                    carrito = Carrito.objects.filter(fkusuario_carrito_id=user_id).first()
-                    if carrito:
-                        items_carrito = CarritoItem.objects.filter(fkcarrito=carrito).select_related('fkproducto')
-                        total_items = 0
-                        total_precio = 0
-                        items_detalle = []
-                        
-                        for item in items_carrito:
-                            total_items += item.cantidad
-                            total_precio += float(item.precio_unitario) * item.cantidad
-                            items_detalle.append({
-                                "producto": item.fkproducto.nom_prod,
-                                "cantidad": item.cantidad,
-                                "precio_unitario": float(item.precio_unitario),
-                                "subtotal": float(item.precio_unitario) * item.cantidad,
-                                "variante_seleccionada": item.variante_seleccionada,
-                                "variante_id": item.variante_id
-                            })
-                        
-                        datos_reales["carrito_usuario"] = {
-                            "total_items": total_items,
-                            "total_precio": total_precio,
-                            "items": items_detalle
-                        }
-                except Exception as e:
-                    print(f"Error obteniendo carrito: {e}")
-            
-            if user_id:
-                try:
-                    pedidos = Pedidos.objects.filter(
-                        fkusuario_pedido_id=user_id
-                    ).order_by('-fecha_pedido')
+                    categoria_nombre = p.fkcategoria_prod.desc_cp if p.fkcategoria_prod else "General"
+                    categoria_id = p.fkcategoria_prod.pkid_cp if p.fkcategoria_prod else None
                     
-                    for ped in pedidos:
-                        datos_reales["pedidos_recientes"].append({
-                            "id": ped.pkid_pedido,
-                            "estado": ped.estado_pedido,
-                            "total": float(ped.total_pedido),
-                            "fecha": ped.fecha_pedido.strftime("%d/%m/%Y"),
-                            "negocio": ped.fknegocio_pedido.nom_neg if ped.fknegocio_pedido else "Sin negocio"
-                        })
+                    producto_data = {
+                        "id": p.pkid_prod,
+                        "nombre": p.nom_prod,
+                        "precio": float(p.precio_prod) if p.precio_prod else 0.0,
+                        "precio_final": float(p.precio_prod) if p.precio_prod else 0.0,
+                        "categoria": categoria_nombre,
+                        "categoria_id": categoria_id,
+                        "categoria_slug": mapa_categorias.get(categoria_id, ""),
+                        "negocio": p.fknegocioasociado_prod.nom_neg if p.fknegocioasociado_prod else "Vecy",
+                        "negocio_id": p.fknegocioasociado_prod.pkid_neg if p.fknegocioasociado_prod else None,
+                        "descripcion": p.desc_prod or "",
+                        "stock": p.stock_prod or 0,
+                        "imagen": p.img_prod.url if p.img_prod and hasattr(p.img_prod, 'url') else None
+                    }
+                    datos_reales["productos"].append(producto_data)
                 except Exception as e:
-                    print(f"Error obteniendo pedidos: {e}")
+                    continue
             
-            if user_id:
-                try:
-                    favoritos = Favoritos.objects.filter(
-                        fkusuario_id=user_id
-                    ).select_related('fkproducto')
-                    
-                    for fav in favoritos:
-                        datos_reales["favoritos_usuario"].append({
-                            "producto_id": fav.fkproducto.pkid_prod,
-                            "nombre": fav.fkproducto.nom_prod,
-                            "precio": float(fav.fkproducto.precio_prod),
-                            "fecha_agregado": fav.fecha_agregado.strftime("%d/%m/%Y")
-                        })
-                except Exception as e:
-                    print(f"Error obteniendo favoritos: {e}")
+            self.cache_productos = datos_reales
+            self.cache_timestamp = ahora
             
-            print(f"Datos BD: {len(datos_reales['productos'])} productos, {len(datos_reales['favoritos_usuario'])} favoritos")
+            print(f"📊 Datos cargados: {len(datos_reales['productos'])} productos")
             return datos_reales
             
         except Exception as e:
-            print(f"Error obteniendo datos BD: {e}")
-            return {"productos": [], "categorias": [], "negocios": [], "ofertas_activas": [], "favoritos_usuario": [], "variantes_productos": {}}
+            print(f"❌ Error BD: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                "productos": [],
+                "categorias": [],
+                "negocios": [],
+                "ofertas_activas": []
+            }
+    
+    def _crear_url_productos_filtrados(self, consulta, productos_encontrados):
+        """Crea URL para /productos-filtrados/ con parámetros inteligentes"""
+        
+        params = {
+            'buscar': consulta,
+            'ordenar': 'recientes'
+        }
+        
+        # Si hay productos encontrados, agregar filtros inteligentes
+        if productos_encontrados:
+            # Obtener rango de precios de los productos encontrados
+            precios = [p.get('precio', 0) for p in productos_encontrados if p.get('precio', 0) > 0]
+            if precios:
+                precio_min = min(precios)
+                precio_max = max(precios)
+                # Ampliar un poco el rango
+                params['precio_min'] = int(precio_min * 0.9)
+                params['precio_max'] = int(precio_max * 1.1)
+            
+            # Verificar si hay categoría predominante
+            categorias_count = {}
+            for producto in productos_encontrados[:20]:
+                cat_id = producto.get('categoria_id')
+                if cat_id:
+                    categorias_count[cat_id] = categorias_count.get(cat_id, 0) + 1
+            
+            if categorias_count:
+                mejor_categoria = max(categorias_count, key=categorias_count.get)
+                params['categoria'] = str(mejor_categoria)
+        
+        # Filtrar valores vacíos
+        params_filtrados = {k: v for k, v in params.items() if v not in ['', None]}
+        
+        url = "/productos-filtrados/?" + urlencode(params_filtrados)
+        print(f"🔗 URL generada: {url}")
+        
+        return url
     
     def obtener_respuesta_interactiva(self, consulta_usuario, user_id=None):
+        """Método principal - SOLO usa /productos-filtrados/"""
         try:
-            print(f"Procesando: {consulta_usuario}")
+            print(f"\n" + "="*60)
+            print(f"🤖 ASISTENTE - Consulta: '{consulta_usuario}'")
+            print(f"👤 Usuario ID: {user_id}")
             
+            # Obtener datos de BD
             datos_reales = self._obtener_datos_reales_bd(user_id)
             
-            productos_encontrados = self._buscar_productos_inteligente(consulta_usuario, datos_reales["productos"])
+            # Buscar productos (con máxima tolerancia)
+            productos_encontrados = self._buscar_productos_inteligente(
+                consulta_usuario, datos_reales["productos"]
+            )
             
-            datos_reales["productos_encontrados"] = productos_encontrados
+            # Crear URL para /productos-filtrados/ (ÚNICA RUTA VÁLIDA)
+            url_filtros = self._crear_url_productos_filtrados(consulta_usuario, productos_encontrados)
             
-            self.conversacion_historial.append(f"Usuario: {consulta_usuario}")
-            if len(self.conversacion_historial) > 8:
-                self.conversacion_historial = self.conversacion_historial[-8:]
+            # Si no hay Gemini, respuesta directa
+            if not self.client:
+                print("⚠️ Modo sin Gemini - respuesta directa")
+                return self._respuesta_directa_simple(consulta_usuario, productos_encontrados, url_filtros)
             
-            historial_contexto = "\n".join(self.conversacion_historial[-4:])
+            # Preparar información para Gemini
+            productos_destacados_info = []
+            for p in productos_encontrados[:4]:
+                precio = p.get('precio_final', p.get('precio', 0))
+                productos_destacados_info.append(f"- {p['nombre']} (${precio:,.0f})")
             
+            # PROMPT SIMPLIFICADO Y DIRECTO
             prompt = f"""
-            Eres VECY_ASISTENTE, un asistente VIRTUAL para la plataforma de compras Vecy.
-            Tienes acceso a DATOS REALES EN TIEMPO REAL de la base de datos.
+            Eres VECY_ASISTENTE, asistente de compras de Vecy.
             
-            DATOS REALES ACTUALES:
-            {json.dumps(datos_reales, indent=2, ensure_ascii=False)}
+            El usuario busca: "{consulta_usuario}"
             
-            CONTEXTO:
-            - Usuario: {"LOGEADO" if user_id else "No logueado"}
-            - Conversación reciente: {historial_contexto}
-            - Productos encontrados para "{consulta_usuario}": {len(productos_encontrados)} productos
+            Resultados encontrados: {len(productos_encontrados)} productos
             
-            INSTRUCCIONES CRÍTICAS:
-            - SI hay productos en "productos_encontrados", MENCIONALOS específicamente en tu respuesta
-            - Usa los NOMBRES REALES de los productos encontrados
-            - Menciona los PRECIOS REALES de los productos encontrados
-            - Si hay productos del negocio "El Rincón", destácalos específicamente
-            - NO digas "no tenemos productos" si hay productos en "productos_encontrados"
+            Productos destacados:
+            {chr(10).join(productos_destacados_info) if productos_destacados_info else "No se encontraron productos específicos"}
             
-            INSTRUCCIONES DE FORMATEO:
-            - Usa **negritas SOLO para lo MÁS importante**: precios finales, totales, números clave
-            - Usa *cursivas* para énfasis suave y tono amigable
-            - MÁXIMO 2-3 negritas por mensaje - no abuses
-            - Prioriza negritas en: precios, totales, números, acciones principales
-            - Evita negritas en: saludos, preguntas, textos descriptivos normales
-            - Usa emojis estratégicamente para hacerlo más amigable
-            - Sé natural y conversacional
+            URL de filtros: {url_filtros}
             
-            RESPUESTA EN JSON:
+            INSTRUCCIONES IMPORTANTES:
+            1. Tu respuesta debe ser natural y conversacional
+            2. Si hay productos, menciona 1-2 específicos
+            3. Siempre invita a hacer clic en el botón para ver los filtros
+            4. La URL debe ser exactamente: {url_filtros}
+            
+            Formato de respuesta JSON:
             {{
-                "respuesta_chat": "Texto conversacional con negritas MEDIDAS y estratégicas",
-                "tipo_respuesta": "productos|carrito|pedidos|ofertas|favoritos|variantes|navegacion|conversacional",
+                "respuesta_chat": "Texto amigable aquí (máximo 2 oraciones)",
+                "tipo_respuesta": "productos|sugerencia",
                 "datos_interactivos": {{
                     "mostrar_productos": true/false,
-                    "productos_destacados": [lista de IDs de productos_encontrados],
-                    "mostrar_categorias": true/false,
-                    "categorias_sugeridas": [lista de IDs],
-                    "mostrar_ofertas": true/false,
-                    "mostrar_favoritos": true/false,
-                    "mostrar_variantes": true/false,
-                    "producto_con_variantes": id_producto,
-                    "accion_recomendada": "buscar|filtrar|agregar_carrito|ver_pedidos|ver_ofertas|ver_favoritos|elegir_variante",
-                    "filtros_sugeridos": ["categoria:X", "precio_min:Y", "precio_max:Z", "negocio:W"]
+                    "productos_destacados": [IDs de productos],
+                    "url_filtros": "{url_filtros}",
+                    "texto_boton_filtro": "Ver productos encontrados"
                 }},
                 "sugerencia_navegacion": {{
-                    "pagina_recomendada": "productos_filtrados|carrito|mis_pedidos|dashboard|favoritos",
-                    "url_destino": "/productos-filtrados/|/carrito/|/mis-pedidos-data/|/dashboard/|/favoritos/",
-                    "confianza": 1-10,
-                    "razon": "Texto corto y natural para el botón - MÁXIMO 5 palabras"
+                    "pagina_recomendada": "productos_filtrados_logeado",
+                    "url_destino": "{url_filtros}",
+                    "confianza": 8,
+                    "razon": "Ver productos filtrados"
                 }}
             }}
             
-            INSTRUCCIÓN IMPORTANTE: 
-            - En "razon" escribe SOLO el texto que aparecerá en el botón
-            - NO expliques tu razonamiento lógico
-            - NO pongas "El usuario solicitó" o "siguiente paso lógico"
-            - Usa textos cortos como: "Explorar categorías", "Ver productos", "Ir al carrito", "Ver favoritos"
-            
-            EJEMPLOS DE RESPUESTAS CUANDO HAY PRODUCTOS ENCONTRADOS:
-            
-            CON PRODUCTOS:
-            "¡Perfecto! Encontré {len(productos_encontrados)} productos relacionados con '{consulta_usuario}'. Te recomiendo ver *Audífonos Gamer Pro* de **El Rincón** por **$85,000** 🎧. ¿Te gustaría que te muestre más detalles?"
-            
-            SIN PRODUCTOS:
-            "No encontré productos exactos para '{consulta_usuario}', pero te sugiero explorar la categoría de electrónica en *El Rincón* donde suelen tener productos similares. ¿Quieres ver todos los productos disponibles?"
+            Respuesta JSON:
             """
             
+            # Llamar a Gemini
             response = self.client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-2.0-flash",
                 contents=prompt
             )
             
+            # Parsear respuesta
             texto_limpio = response.text.replace('```json', '').replace('```', '').strip()
             resultado = json.loads(texto_limpio)
             
+            # GARANTIZAR QUE TODO USE LA RUTA CORRECTA
+            resultado["datos_interactivos"]["url_filtros"] = url_filtros
+            resultado["sugerencia_navegacion"]["url_destino"] = url_filtros
+            resultado["sugerencia_navegacion"]["pagina_recomendada"] = "productos_filtrados_logeado"
+            
+            # Configurar productos destacados
+            if productos_encontrados:
+                resultado["datos_interactivos"]["mostrar_productos"] = True
+                resultado["datos_interactivos"]["productos_destacados"] = [
+                    str(p['id']) for p in productos_encontrados[:3]
+                ]
+                resultado["datos_interactivos"]["texto_boton_filtro"] = f"Ver {len(productos_encontrados)} productos"
+                resultado["sugerencia_navegacion"]["confianza"] = 9
+            else:
+                resultado["datos_interactivos"]["mostrar_productos"] = False
+                resultado["datos_interactivos"]["texto_boton_filtro"] = "Explorar productos"
+                resultado["sugerencia_navegacion"]["confianza"] = 6
+            
+            # Convertir markdown
             resultado["respuesta_chat"] = self._convertir_markdown_a_html(resultado["respuesta_chat"])
             
-            self.conversacion_historial.append(f"Asistente: {resultado['respuesta_chat']}")
+            print(f"✅ Respuesta generada")
+            print(f"   URL: {url_filtros}")
+            print(f"   Productos: {len(productos_encontrados)} encontrados")
+            print("="*60 + "\n")
             
-            print(f"Respuesta interactiva: {resultado['tipo_respuesta']}, Productos encontrados: {len(productos_encontrados)}")
             return resultado
             
+        except json.JSONDecodeError as e:
+            print(f"❌ Error JSON: {e}")
+            print(f"   Respuesta Gemini: {response.text[:200] if 'response' in locals() else 'N/A'}")
+            return self._respuesta_directa_simple(consulta_usuario, productos_encontrados, url_filtros)
+            
         except Exception as e:
-            print(f"Error: {e}")
-            return self._respuesta_emergencia(consulta_usuario)
+            print(f"❌ Error general: {e}")
+            import traceback
+            traceback.print_exc()
+            url_fallback = f"/productos-filtrados/?buscar={consulta_usuario}&ordenar=recientes"
+            return self._respuesta_directa_simple(consulta_usuario, productos_encontrados, url_fallback)
     
-    def _respuesta_emergencia(self, consulta):
-        return {
-            "respuesta_chat": "¡Hola! 👋 Estoy teniendo problemas técnicos momentáneos. Mientras tanto, puedes explorar nuestras secciones principales.",
-            "tipo_respuesta": "conversacional",
-            "datos_interactivos": {
-                "mostrar_productos": False,
-                "accion_recomendada": "navegar"
-            },
-            "sugerencia_navegacion": {
-                "pagina_recomendada": "dashboard",
-                "url_destino": "/dashboard/",
-                "confianza": 5,
-                "razon": "Página principal"
+    def _respuesta_directa_simple(self, consulta, productos_encontrados, url_filtros):
+        """Respuesta directa que SIEMPRE usa /productos-filtrados/"""
+        
+        if productos_encontrados:
+            primer_producto = productos_encontrados[0]
+            precio = primer_producto.get('precio_final', primer_producto.get('precio', 0))
+            
+            respuesta = f"🎯 ¡Perfecto! Encontré <strong>{len(productos_encontrados)} productos</strong> para '<em>{consulta}</em>'. Te recomiendo <strong>{primer_producto['nombre']}</strong> por <strong>${precio:,.0f}</strong>. ¡Haz clic para ver todos con filtros aplicados!"
+            
+            return {
+                "respuesta_chat": respuesta,
+                "tipo_respuesta": "productos",
+                "datos_interactivos": {
+                    "mostrar_productos": True,
+                    "productos_destacados": [str(p['id']) for p in productos_encontrados[:3]],
+                    "url_filtros": url_filtros,
+                    "texto_boton_filtro": f"Ver {len(productos_encontrados)} productos"
+                },
+                "sugerencia_navegacion": {
+                    "pagina_recomendada": "productos_filtrados_logeado",
+                    "url_destino": url_filtros,
+                    "confianza": 9,
+                    "razon": f"{len(productos_encontrados)} productos encontrados para '{consulta}'"
+                }
             }
-        }
+        else:
+            respuesta = f"🔍 No encontré productos específicos para '<em>{consulta}</em>'. ¿Quieres <strong>explorar todos nuestros productos</strong> o intentar con otra búsqueda?"
+            
+            # URL de respaldo SIEMPRE a /productos-filtrados/
+            url_respaldo = f"/productos-filtrados/?buscar={consulta}&ordenar=recientes"
+            
+            return {
+                "respuesta_chat": respuesta,
+                "tipo_respuesta": "sugerencia",
+                "datos_interactivos": {
+                    "mostrar_productos": False,
+                    "url_filtros": url_respaldo,
+                    "texto_boton_filtro": "Explorar productos",
+                    "sugerencias": ["audífonos", "iphone", "helados", "ropa", "zapatos", "comida", "tecnología"]
+                },
+                "sugerencia_navegacion": {
+                    "pagina_recomendada": "productos_filtrados_logeado",
+                    "url_destino": url_respaldo,
+                    "confianza": 6,
+                    "razon": "Explorar todos los productos disponibles"
+                }
+            }
+    
+    def limpiar_cache(self):
+        self.cache_productos = None
+        self.cache_timestamp = None
+        print("🔄 Cache limpiado")
 
+# Instancia global
 asistente_gemini = GeminiAssistant()

@@ -546,6 +546,39 @@
         transform: none;
     }
 
+    /* BOTONES DE FAVORITOS */
+    .vecy-favorite-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 36px;
+        height: 36px;
+        background: var(--vecy-white);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    .vecy-favorite-btn:hover {
+        transform: scale(1.1);
+        background: var(--vecy-lighter);
+    }
+
+    .vecy-favorite-btn i {
+        color: var(--vecy-secondary-light);
+        font-size: 1rem;
+    }
+
+    .vecy-favorite-btn[data-is-favorite="true"] i {
+        color: #ef4444;
+    }
+
     /* TARJETA DE PRODUCTO SIN VARIANTES */
     .vecy-product-card {
         background: var(--vecy-white);
@@ -554,6 +587,7 @@
         box-shadow: 0 10px 40px rgba(30, 41, 59, 0.08);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         border: 1px solid rgba(255, 255, 255, 0.8);
+        position: relative;
     }
 
     .vecy-product-card:hover {
@@ -708,6 +742,21 @@
         box-shadow: 0 8px 25px rgba(37, 99, 235, 0.3);
         color: var(--vecy-white);
         text-decoration: none;
+    }
+
+    /* ANIMACIONES PARA SINCRONIZACIÓN */
+    .pulse-animation {
+        animation: pulse 0.6s ease-in-out;
+    }
+    
+    .cart-added {
+        animation: cartAdd 1s ease;
+    }
+    
+    @keyframes cartAdd {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
     }
 
     /* RESPONSIVE */
@@ -914,16 +963,21 @@
                 <!-- COMPONENTE CON VARIANTES - DISEÑO HORIZONTAL -->
                 {% if producto_data.tiene_variantes and producto_data.variantes %}
                 <div class="product-card-with-variants" data-aos="fade-up" data-product-id="{{ producto.pkid_prod }}">
+                    <!-- BOTÓN DE FAVORITOS -->
+                    <button class="vecy-favorite-btn" onclick="toggleFavoriteConnected('{{ producto.pkid_prod }}', this)" data-is-favorite="false">
+                        <i class="far fa-heart"></i>
+                    </button>
+                    
                     <div class="selection-indicator">
                         <i class="fas fa-check"></i>
                     </div>
                     
                     <div class="product-image-container">
-                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}" 
+                        <img src="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}" 
                              alt="{{ producto.nom_prod }}" 
                              class="product-main-image" 
                              id="mainProductImage-{{ producto.pkid_prod }}"
-                             onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
+                             onerror="this.src='{% static 'img/placeholder-producto.jpg' %}'">
                     </div>
                     
                     <div class="product-info-container">
@@ -955,7 +1009,7 @@
                             <div class="variants-container">
                                 <div class="variants-label">Selecciona una variante:</div>
                                 <div class="variants-grid" id="variantsGrid-{{ producto.pkid_prod }}">
-                                    <!-- Las miniaturas se generarán con JavaScript -->
+                                    <!-- LAS MINIATURAS SE GENERARÁN CON JAVASCRIPT -->
                                 </div>
                             </div>
                         </div>
@@ -968,30 +1022,39 @@
                                 {% endif %}
                             </div>
                             
-                            <button class="vecy-add-to-cart-btn" onclick="addToCartWithVariant('{{ producto.pkid_prod }}')">
+                            <button class="vecy-add-to-cart-btn" onclick="addToCartWithVariantConnected('{{ producto.pkid_prod }}')">
                                 <i class="fas fa-cart-plus"></i>
                                 Agregar al Carrito
                             </button>
                         </div>
                     </div>
 
-                    <!-- DATOS OCULTOS DE VARIANTES -->
+                    <!-- CORRECCIÓN CRÍTICA: USAR EXACTAMENTE LA MISMA ESTRUCTURA QUE EL TEMPLATE 1 -->
                     <div class="variantes-reales-data" style="display: none;">
+                        <!-- PRODUCTO BASE -->
                         <div data-variant 
                              data-variant-id="base"
                              data-variant-name="{{ producto.nom_prod }} - Estándar"
-                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}"
-                             data-variant-price="{{ producto_data.precio_final|floatformat:0 }}"
+                             data-variant-image="{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}"
+                             data-variant-price="{{ producto_data.precio_base|floatformat:0 }}"
+                             data-variant-precio-final="{{ producto_data.precio_final|floatformat:0 }}"
                              data-variant-stock="{{ producto_data.stock }}"
+                             data-variant-tiene-descuento="{{ producto_data.tiene_descuento|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ producto_data.descuento_porcentaje|default:0 }}"
                              data-is-base="true">
                         </div>
+                        
+                        <!-- VARIANTES ADICIONALES -->
                         {% for variante in producto_data.variantes %}
                         <div data-variant 
                              data-variant-id="{{ variante.id_variante }}"
                              data-variant-name="{{ variante.nombre_variante }}"
-                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'images/placeholder-producto.png' %}{% endif %}{% endif %}"
-                             data-variant-price="{{ producto_data.precio_base|add:variante.precio_adicional|floatformat:0 }}"
+                             data-variant-image="{% if variante.imagen_variante %}{{ variante.imagen_variante.url }}{% else %}{% if producto.img_prod %}{{ producto.img_prod.url }}{% else %}{% static 'img/placeholder-producto.jpg' %}{% endif %}{% endif %}"
+                             data-variant-price="{{ variante.precio_base_calculado|floatformat:0 }}"
+                             data-variant-precio-final="{{ variante.precio_final_calculado|floatformat:0 }}"
                              data-variant-stock="{{ variante.stock_variante }}"
+                             data-variant-tiene-descuento="{{ variante.tiene_descuento_calculado|yesno:'true,false' }}"
+                             data-variant-descuento-porcentaje="{{ variante.descuento_porcentaje_calculado|default:0 }}"
                              data-is-base="false">
                         </div>
                         {% endfor %}
@@ -1000,11 +1063,16 @@
                 
                 <!-- PRODUCTO SIN VARIANTES -->
                 {% else %}
-                <div class="vecy-product-card" data-aos="fade-up">
+                <div class="vecy-product-card" data-aos="fade-up" data-product-id="{{ producto.pkid_prod }}">
+                    <!-- BOTÓN DE FAVORITOS -->
+                    <button class="vecy-favorite-btn" onclick="toggleFavoriteConnected('{{ producto.pkid_prod }}', this)" data-is-favorite="false">
+                        <i class="far fa-heart"></i>
+                    </button>
+                    
                     <div class="vecy-product-image">
                         {% if producto.img_prod %}
                         <img src="{{ producto.img_prod.url }}" alt="{{ producto.nom_prod }}" loading="lazy"
-                             onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
+                             onerror="this.src='{% static 'img/placeholder-producto.jpg' %}'">
                         {% else %}
                         <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background: var(--vecy-gradient-light);">
                             <i class="fas fa-tag fa-2x text-white opacity-75"></i>
@@ -1052,7 +1120,7 @@
                             {% endif %}
                         </div>
                         
-                        <button class="vecy-add-to-cart-btn" onclick="addToCart('{{ producto.pkid_prod }}')" {% if producto_data.stock == 0 %}disabled{% endif %}>
+                        <button class="vecy-add-to-cart-btn" onclick="addToCartConnected('{{ producto.pkid_prod }}')" {% if producto_data.stock == 0 %}disabled{% endif %}>
                             <i class="fas fa-cart-plus"></i>
                             {% if producto_data.stock > 0 %}Agregar al Carrito{% else %}Sin Stock{% endif %}
                         </button>
@@ -1111,7 +1179,7 @@
     </div>
 </div>
 
-<!-- INCLUIR EL SISTEMA DE CARRITO QUE YA TIENES -->
+<!-- INCLUIR EL SISTEMA DE CARRITO CENTRAL -->
 {% include 'carrito_sistema.html' %}
 
 {% endblock %}
@@ -1123,325 +1191,263 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // ==================== SISTEMA DE VARIANTES CORREGIDO ====================
+    // ==================== INICIALIZACIÓN DE LA PÁGINA ====================
 
-    console.log("🎯 VECY PRODUCTOS FILTRADOS - Script inicializado");
+    console.log("🎯 VECY PRODUCTOS FILTRADOS - INICIANDO CONEXIÓN AL SISTEMA");
 
-    // Variables globales
-    let productVariantsData = {};
-    let selectedVariants = {};
-
-    // ==================== SISTEMA DE VARIANTES MEJORADO ====================
-
-    // Función MEJORADA para inicializar datos de variantes
-    function initializeVariantsData() {
-        console.log("🔄 Inicializando datos de variantes...");
-
-        // Limpiar datos anteriores
-        productVariantsData = {};
-        selectedVariants = {};
-
-        // Buscar todos los productos con variantes en la página
-        const productCards = document.querySelectorAll('.product-card-with-variants');
-
-        productCards.forEach(productCard => {
-            const productId = productCard.getAttribute('data-product-id');
-            if (!productId) return;
-
-            console.log(`🔍 Procesando producto con variantes: ${productId}`);
-
-            // Buscar datos de variantes en el contenedor oculto
-            const variantesDataContainer = productCard.querySelector('.variantes-reales-data');
-            if (!variantesDataContainer) {
-                console.log(`❌ No se encontraron datos de variantes para producto ${productId}`);
-                return;
-            }
-
-            const variantElements = variantesDataContainer.querySelectorAll('[data-variant]');
-            console.log(`📊 Variantes encontradas para producto ${productId}: ${variantElements.length}`);
-
-            if (variantElements.length > 0) {
-                const variants = [];
-                
-                variantElements.forEach((element, index) => {
-                    // Obtener datos de cada variante
-                    const variantId = element.getAttribute('data-variant-id');
-                    const variantName = element.getAttribute('data-variant-name');
-                    const variantImage = element.getAttribute('data-variant-image');
-                    const variantPrice = element.getAttribute('data-variant-price');
-                    const variantStock = parseInt(element.getAttribute('data-variant-stock')) || 0;
-                    const isBase = element.getAttribute('data-is-base') === 'true';
-
-                    // Validar que los datos sean correctos
-                    if (!variantId || !variantName) {
-                        console.log(`❌ Datos incompletos para variante ${index + 1}`);
-                        return;
-                    }
-
-                    const variant = {
-                        id: variantId,
-                        name: variantName,
-                        image: variantImage || '{% static "images/placeholder-producto.png" %}',
-                        selected: isBase,
-                        price: variantPrice || '0',
-                        stock: variantStock,
-                        isBase: isBase
-                    };
-
-                    console.log(`  📦 Variante ${index + 1}: ID=${variantId}, Nombre=${variantName}, Precio=$${variant.price}, Stock=${variant.stock}, Base=${variant.isBase}`);
-                    variants.push(variant);
-                });
-
-                // Ordenar variantes: base primero
-                variants.sort((a, b) => b.isBase - a.isBase);
-                
-                productVariantsData[productId] = variants;
-                
-                // Establecer la variante base como seleccionada por defecto
-                const baseVariant = variants.find(v => v.isBase);
-                if (baseVariant) {
-                    selectedVariants[productId] = baseVariant.id;
-                    console.log(`✅ Variante base seleccionada por defecto: ${baseVariant.id}`);
-                }
-            }
-        });
-
-        console.log("📦 Datos de variantes inicializados:", productVariantsData);
-        console.log("🎯 Variantes seleccionadas:", selectedVariants);
+    // Inicializar AOS
+    function initAOS() {
+        if (typeof AOS !== 'undefined') {
+            AOS.init({ 
+                duration: 800, 
+                once: true, 
+                offset: 100 
+            });
+            console.log("✅ AOS inicializado");
+        }
     }
 
-    // Función MEJORADA para crear las miniaturas de variantes
-    function createVariantThumbnails(productId, variants) {
-        const variantsGrid = document.getElementById(`variantsGrid-${productId}`);
-        if (!variantsGrid) {
-            console.log(`❌ No se encontró variantsGrid-${productId}`);
+    // ==================== SISTEMA DE VARIANTES - IDÉNTICO AL TEMPLATE 1 ====================
+
+    function initVariantsHandling() {
+        console.log("🔄 Inicializando manejo de variantes CONECTADO...");
+        
+        // Esperar a que el sistema central esté disponible
+        if (!window.vecyCarritoSystem) {
+            console.warn("⚠️ VecyCarritoSystem no disponible, reintentando...");
+            setTimeout(initVariantsHandling, 500);
             return;
         }
-
-        variantsGrid.innerHTML = '';
-
-        variants.forEach(variant => {
-            // Validar que la variante tenga datos mínimos
-            if (!variant.id || !variant.name) {
-                console.log(`❌ Variante inválida:`, variant);
-                return;
-            }
-
-            const thumbElement = document.createElement('div');
-            thumbElement.className = `variant-thumb ${variant.selected ? 'selected' : ''}`;
-            thumbElement.setAttribute('data-variant-id', variant.id);
-            thumbElement.setAttribute('title', variant.name);
-
-            // Mostrar badge especial para producto base
-            const baseBadge = variant.isBase ? 
-                '<div class="base-badge">Base</div>' : '';
-
-            // Mostrar información de stock
-            const stockInfo = variant.stock > 0 ? 
-                `<span style="color: #28a745;">(${variant.stock} disp)</span>` : 
-                `<span style="color: #dc3545;">(Sin stock)</span>`;
-
-            thumbElement.innerHTML = `
-                ${baseBadge}
-                <img src="${variant.image}" alt="${variant.name}" loading="lazy"
-                     onerror="this.src='{% static 'images/placeholder-producto.png' %}'">
-                <div class="variant-name">${variant.name} - $${variant.price} ${stockInfo}</div>
-            `;
-
-            thumbElement.addEventListener('click', () => {
-                if (variant.stock > 0) {
-                    selectVariant(productId, variant.id, variants);
-                } else {
-                    showVariantNotification('Esta variante no tiene stock disponible', 'error');
-                }
-            });
+        
+        document.querySelectorAll('.product-card-with-variants').forEach(card => {
+            const productId = card.getAttribute('data-product-id');
+            const variantsContainer = card.querySelector('.variantes-reales-data');
             
-            variantsGrid.appendChild(thumbElement);
-        });
-
-        console.log(`✅ Miniaturas creadas para producto ${productId} (${variants.length} variantes)`);
-    }
-
-    // Función MEJORADA para seleccionar una variante
-    function selectVariant(productId, variantId, variants) {
-        console.log(`🔄 Seleccionando variante: ${productId} -> ${variantId}`);
-
-        const selectedVariant = variants.find(v => v.id === variantId);
-
-        if (selectedVariant) {
-            // Actualizar la variante seleccionada globalmente
-            selectedVariants[productId] = variantId;
-
-            // Actualizar título
-            const titleElement = document.getElementById(`productTitle-${productId}`);
-            if (titleElement) {
-                // Si es el producto base, mostrar nombre original, sino mostrar nombre completo
-                if (selectedVariant.isBase) {
-                    const originalName = selectedVariant.name.replace(' - Estándar', '');
-                    titleElement.textContent = originalName;
-                } else {
-                    titleElement.textContent = selectedVariant.name;
-                }
+            if (!variantsContainer) {
+                console.warn(`❌ No se encontró contenedor de variantes para producto: ${productId}`);
+                return;
             }
-
-            // Actualizar imagen principal
-            const mainImage = document.getElementById(`mainProductImage-${productId}`);
-            if (mainImage && selectedVariant.image) {
-                mainImage.src = selectedVariant.image;
-                mainImage.alt = selectedVariant.name;
-            }
-
-            // Actualizar precio
-            const priceElement = document.getElementById(`price-${productId}`);
-            if (priceElement && selectedVariant.price) {
-                priceElement.textContent = `$${selectedVariant.price}`;
-            }
-
-            // Actualizar estado de selección en todas las variantes
-            variants.forEach(v => {
-                v.selected = v.id === variantId;
-            });
-
-            // Recrear miniaturas con nueva selección
-            createVariantThumbnails(productId, variants);
-
-            // Mostrar notificación
-            const variantType = selectedVariant.isBase ? 'Producto estándar' : 'Variante especial';
-            showVariantNotification(`${variantType} seleccionado: ${selectedVariant.name}`, 'success');
-
-            console.log(`✅ Variante ${variantId} seleccionada para producto ${productId}`);
-        }
-    }
-
-    // Función para notificaciones de variantes
-    function showVariantNotification(message, type = 'info') {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true,
-        });
-
-        Toast.fire({
-            icon: type,
-            title: message
-        });
-    }
-
-    // Función MEJORADA para inicializar sistema de variantes
-    function initializeVariantsSystem() {
-        console.log("🚀 Inicializando sistema de variantes...");
-
-        try {
-            initializeVariantsData();
-
-            // Crear miniaturas para todos los productos con variantes
-            for (const [productId, variants] of Object.entries(productVariantsData)) {
-                createVariantThumbnails(productId, variants);
+            
+            const variants = variantsContainer.querySelectorAll('[data-variant]');
+            console.log(`📦 Producto ${productId} tiene ${variants.length} variantes`);
+            
+            if (variants.length > 0) {
+                // Registrar variantes en el sistema central
+                registerVariantsInSystem(card, variants);
                 
-                // Aplicar selección inicial (base)
-                const baseVariant = variants.find(v => v.isBase);
-                if (baseVariant) {
-                    selectVariant(productId, baseVariant.id, variants);
-                }
+                // Generar miniaturas usando el sistema central
+                generateVariantThumbnailsWithSystem(card, variants);
+                
+                // Seleccionar primera variante disponible
+                selectFirstAvailableVariantWithSystem(card, variants);
             }
+        });
+        
+        console.log("✅ Manejo de variantes inicializado y CONECTADO");
+    }
 
-            console.log("✅ Sistema de variantes inicializado correctamente");
-        } catch (error) {
-            console.error("❌ Error inicializando sistema de variantes:", error);
+    function registerVariantsInSystem(card, variants) {
+        const productId = card.getAttribute('data-product-id');
+        const variantsData = [];
+        
+        variants.forEach(variant => {
+            const variantId = variant.getAttribute('data-variant-id');
+            const variantName = variant.getAttribute('data-variant-name');
+            const variantImage = variant.getAttribute('data-variant-image');
+            const variantPrice = variant.getAttribute('data-variant-precio-final') || variant.getAttribute('data-variant-price');
+            const variantStock = parseInt(variant.getAttribute('data-variant-stock')) || 0;
+            const isBase = variant.getAttribute('data-is-base') === 'true';
+            
+            variantsData.push({
+                id: variantId,
+                name: variantName,
+                image: variantImage || '{% static "img/placeholder-producto.jpg" %}',
+                price: variantPrice || '0',
+                stock: variantStock,
+                isBase: isBase,
+                selected: false
+            });
+        });
+        
+        // Registrar en el sistema central
+        if (window.vecyCarritoSystem) {
+            window.vecyCarritoSystem.productVariantsData[productId] = variantsData;
+            
+            // Seleccionar variante base
+            const baseVariant = variantsData.find(v => v.isBase);
+            if (baseVariant) {
+                window.vecyCarritoSystem.selectedVariants[productId] = baseVariant.id;
+                console.log(`✅ Variante base registrada: ${productId} -> ${baseVariant.id}`);
+            }
         }
     }
 
-    // Función para agregar al carrito considerando variantes
-    function addToCartWithVariant(productId) {
-        console.log(`🛒 Agregando producto con variante: ${productId}`);
+    function generateVariantThumbnailsWithSystem(card, variants) {
+        const productId = card.getAttribute('data-product-id');
         
-        // Obtener la variante seleccionada para este producto
-        const selectedVariantId = selectedVariants[productId];
-        
-        if (!selectedVariantId) {
-            console.log(`❌ No hay variante seleccionada para producto ${productId}`);
-            vecyShowNotification('Por favor selecciona una opción', 'error');
+        // Buscar el grid de variantes
+        let variantsGrid = card.querySelector(`#variantsGrid-${productId}`);
+        if (!variantsGrid) {
+            variantsGrid = card.querySelector('.variants-grid');
+        }
+        if (!variantsGrid) {
+            console.warn(`❌ No se encontró variantsGrid para producto: ${productId}`);
             return;
         }
         
-        console.log(`📦 Variante seleccionada: ${selectedVariantId}`);
+        variantsGrid.innerHTML = '';
         
-        // Si es la variante base, usar addToCart normal
-        if (selectedVariantId === 'base') {
-            addToCart(productId);
-        } else {
-            // Si es una variante específica, usar addToCart con variante_id
-            addToCart(productId, selectedVariantId);
-        }
+        variants.forEach(variant => {
+            const variantId = variant.getAttribute('data-variant-id');
+            const variantName = variant.getAttribute('data-variant-name');
+            const variantStock = parseInt(variant.getAttribute('data-variant-stock'));
+            const variantImage = variant.getAttribute('data-variant-image');
+            const variantPrice = variant.getAttribute('data-variant-precio-final') || variant.getAttribute('data-variant-price');
+            
+            if (variantStock > 0) {
+                const variantThumb = document.createElement('div');
+                variantThumb.className = 'variant-thumb';
+                variantThumb.setAttribute('data-variant-id', variantId);
+                variantThumb.setAttribute('data-product-id', productId);
+                
+                // Crear miniatura similar al template 1
+                variantThumb.innerHTML = `
+                    <img src="${variantImage}" alt="${variantName}" 
+                         onerror="this.onerror=null; this.src='{% static 'img/placeholder-producto.jpg' %}'">
+                    <div class="variant-name">$${variantPrice}</div>
+                `;
+                
+                // Añadir eventos usando el sistema central
+                variantThumb.addEventListener('click', () => {
+                    const variants = window.vecyCarritoSystem.productVariantsData[productId];
+                    if (variants && variantStock > 0) {
+                        window.vecyCarritoSystem.selectVariant(productId, variantId, variants);
+                    } else {
+                        vecyShowNotification('Esta variante no tiene stock disponible', 'error');
+                    }
+                });
+                
+                variantsGrid.appendChild(variantThumb);
+                console.log(`✅ Miniatura CONECTADA para variante: ${variantName}`);
+            }
+        });
     }
 
-    // ==================== FUNCIONES DEL CARRITO ====================
-
-    // Función para agregar al carrito (usará el sistema de carrito_sistema.html)
-    function addToCart(productId, varianteId = null) {
-        console.log(`🛒 Intentando agregar producto ${productId} al carrito con variante: ${varianteId}`);
-
-        const datosEnvio = {
-            producto_id: productId,
-            cantidad: 1
-        };
-
-        if (varianteId && varianteId !== 'base') {
-            datosEnvio.variante_id = varianteId;
-            console.log(`📦 Enviando variante_id: ${varianteId}`);
-        } else {
-            console.log(`📦 Producto base, sin variante_id`);
-        }
-
-        // Usar la función del sistema de carrito
-        if (typeof agregarAlCarrito === 'function') {
-            agregarAlCarrito(productId, 1, varianteId);
-        } else {
-            // Fallback si no existe la función
-            fetch('{% url "agregar_carrito" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(datosEnvio)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    vecyShowNotification('Producto agregado al carrito', 'success');
-                } else {
-                    vecyShowNotification(data.message || 'Error al agregar al carrito', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                vecyShowNotification('Error al agregar al carrito', 'error');
-            });
-        }
-    }
-
-    // ==================== FUNCIONES UTILITARIAS ====================
-
-    // Función para obtener cookie CSRF
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+    function selectFirstAvailableVariantWithSystem(card, variants) {
+        const productId = card.getAttribute('data-product-id');
+        
+        // Usar el sistema central para encontrar la primera variante disponible
+        if (window.vecyCarritoSystem && window.vecyCarritoSystem.productVariantsData[productId]) {
+            const availableVariants = window.vecyCarritoSystem.productVariantsData[productId].filter(v => v.stock > 0);
+            
+            if (availableVariants.length > 0) {
+                const firstVariant = availableVariants[0];
+                const variantThumb = card.querySelector(`[data-variant-id="${firstVariant.id}"]`);
+                
+                if (variantThumb) {
+                    // Seleccionar usando el sistema central
+                    window.vecyCarritoSystem.selectVariant(productId, firstVariant.id, window.vecyCarritoSystem.productVariantsData[productId]);
+                    console.log(`🎯 Variante CONECTADA seleccionada: ${firstVariant.id} para producto: ${productId}`);
                 }
             }
         }
-        return cookieValue;
     }
 
-    // Función para notificaciones
+    // ==================== FUNCIONES DE CARRITO - IDÉNTICAS AL TEMPLATE 1 ====================
+
+    function addToCartWithVariantConnected(productId) {
+        console.log(`🛒 [CONECTADO] Agregando al carrito con variante para producto: ${productId}`);
+        
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return false;
+        }
+        
+        return window.vecyCarritoSystem.addToCartWithVariant(productId);
+    }
+
+    function addToCartConnected(productId) {
+        console.log(`🛒 [CONECTADO] Agregando producto base al carrito: ${productId}`);
+        
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return false;
+        }
+        
+        return window.vecyCarritoSystem.addToCart(productId);
+    }
+
+    // ==================== FUNCIONES DE FAVORITOS - IDÉNTICAS AL TEMPLATE 1 ====================
+
+    async function checkFavoritesStatus() {
+        console.log("🔍 [CONECTADO] Verificando estado de favoritos...");
+        
+        if (!window.vecyCarritoSystem) {
+            console.warn('⚠️ VecyCarritoSystem no disponible para verificar favoritos');
+            return;
+        }
+        
+        const favoriteButtons = document.querySelectorAll('.vecy-favorite-btn');
+        
+        for (const button of favoriteButtons) {
+            const onclickAttr = button.getAttribute('onclick');
+            if (!onclickAttr) continue;
+            
+            const match = onclickAttr.match(/toggleFavoriteConnected\(['"]?(\d+)['"]?,\s*this\)/);
+            if (!match) continue;
+            
+            const productId = match[1];
+            
+            try {
+                // Usar el sistema central para verificar favoritos
+                await window.vecyCarritoSystem.verificarFavorito(productId);
+            } catch (error) {
+                console.error('Error verificando favorito:', error);
+            }
+        }
+        
+        // Actualizar contador usando el sistema central
+        if (window.vecyCarritoSystem.updateAllCountsFromServer) {
+            await window.vecyCarritoSystem.updateAllCountsFromServer();
+        }
+    }
+
+    async function toggleFavoriteConnected(productId, buttonElement) {
+        console.log(`❤️ [CONECTADO] Alternando favorito para producto: ${productId}`);
+        
+        if (!window.vecyCarritoSystem) {
+            console.error('❌ VecyCarritoSystem no disponible');
+            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
+            return;
+        }
+        
+        const isCurrentlyFavorite = buttonElement.getAttribute('data-is-favorite') === 'true';
+        
+        try {
+            let success;
+            
+            if (isCurrentlyFavorite) {
+                success = await window.vecyCarritoSystem.eliminarFavorito(productId);
+            } else {
+                success = await window.vecyCarritoSystem.agregarFavorito(productId);
+            }
+            
+            if (success) {
+                // La actualización visual ya la hace el sistema central
+                const action = isCurrentlyFavorite ? 'eliminado de' : 'agregado a';
+                vecyShowNotification(`Producto ${action} favoritos`, 'success');
+            }
+            
+        } catch (error) {
+            console.error('Error al alternar favorito:', error);
+            vecyShowNotification('Error al procesar la solicitud', 'error');
+        }
+    }
+
+    // ==================== FUNCIONES DE UTILIDAD ====================
+
     function vecyShowNotification(message, type = 'info') {
         const Toast = Swal.mixin({
             toast: true,
@@ -1461,39 +1467,174 @@
         });
     }
 
-    // ==================== INICIALIZACIÓN COMPLETA ====================
+    // ==================== SISTEMA DE CONEXIÓN Y SINCRONIZACIÓN - IDÉNTICO AL TEMPLATE 1 ====================
 
-    // Inicializar inmediatamente
-    function initVecy() {
-        console.log("🚀 INICIANDO VECY PRODUCTOS FILTRADOS");
+    function connectToVecySystem() {
+        console.log("🔗 Conectando al sistema VecyCarritoSystem...");
         
-        // 1. AOS
-        if (typeof AOS !== 'undefined') {
-            AOS.init({ duration: 800, once: true, offset: 100 });
-            console.log("✅ AOS inicializado");
-        }
-        
-        // 2. SISTEMA DE VARIANTES - CON RETRASO PARA GARANTIZAR QUE EL DOM ESTÉ LISTO
-        setTimeout(() => {
-            console.log("🔄 INICIANDO SISTEMA DE VARIANTES...");
-            try {
-                initializeVariantsSystem();
-                console.log("✅ Sistema de variantes inicializado exitosamente");
-            } catch (error) {
-                console.error("❌ Error inicializando sistema de variantes:", error);
+        // Esperar a que el sistema central se cargue
+        const checkInterval = setInterval(() => {
+            if (window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.log("✅ CONECTADO al sistema VecyCarritoSystem");
+                
+                // Configurar eventos de sincronización
+                setupSyncEvents();
+                
+                // Inicializar componentes que dependen del sistema
+                initConnectedComponents();
             }
-        }, 500);
+        }, 100);
         
-        console.log("✅ VECY PRODUCTOS FILTRADOS INICIALIZADO");
+        // Timeout después de 5 segundos
+        setTimeout(() => {
+            if (!window.vecyCarritoSystem) {
+                clearInterval(checkInterval);
+                console.error('❌ No se pudo conectar al sistema VecyCarritoSystem');
+                vecyShowNotification('Error al cargar el sistema de compras. Recarga la página.', 'error');
+            }
+        }, 5000);
     }
 
-    // Ejecutar inmediatamente
-    initVecy();
+    function setupSyncEvents() {
+        // Sincronizar cuando se actualizan los contadores
+        document.addEventListener('cartCountUpdated', (event) => {
+            console.log('🔄 Evento de actualización de carrito recibido:', event.detail);
+            updateCartCount(event.detail);
+        });
+        
+        document.addEventListener('favoritesCountUpdated', (event) => {
+            console.log('🔄 Evento de actualización de favoritos recibido:', event.detail);
+            updateFavoritesCount(event.detail);
+        });
+    }
 
-    // También ejecutar cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', initVecy);
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            }
+        });
+    }
 
-    // Y ejecutar cuando la ventana se cargue
-    window.addEventListener('load', initVecy);
+    function updateFavoritesCount(count) {
+        const favoriteCountElements = document.querySelectorAll('.favorite-count, .vecy-favorite-count, #favoritos-count');
+        favoriteCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            }
+        });
+    }
+
+    function initConnectedComponents() {
+        console.log("🔄 Inicializando componentes conectados...");
+        
+        // Inicializar variantes usando el sistema central
+        initVariantsHandling();
+        
+        // Verificar estado de favoritos
+        checkFavoritesStatus();
+        
+        // Configurar botones para usar el sistema central
+        setupConnectedButtons();
+        
+        console.log("✅ Componentes conectados inicializados");
+    }
+
+    function setupConnectedButtons() {
+        // Reconfigurar botones de "Agregar al carrito" para usar el sistema central
+        document.querySelectorAll('[onclick*="addToCartConnected"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/addToCartConnected\(['"]?(\d+)['"]?\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `return addToCartConnected('${productId}')`);
+                console.log(`✅ Botón reconectado: producto ${productId}`);
+            }
+        });
+        
+        // Reconfigurar botones de "Agregar al carrito con variante"
+        document.querySelectorAll('[onclick*="addToCartWithVariantConnected"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/addToCartWithVariantConnected\(['"]?(\d+)['"]?\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `return addToCartWithVariantConnected('${productId}')`);
+                console.log(`✅ Botón con variante reconectado: producto ${productId}`);
+            }
+        });
+        
+        // Reconfigurar botones de favoritos
+        document.querySelectorAll('[onclick*="toggleFavoriteConnected"]').forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            const match = onclick.match(/toggleFavoriteConnected\(['"]?(\d+)['"]?,\s*this\)/);
+            
+            if (match) {
+                const productId = match[1];
+                button.setAttribute('onclick', `toggleFavoriteConnected('${productId}', this)`);
+                console.log(`✅ Botón de favorito reconectado: producto ${productId}`);
+            }
+        });
+    }
+
+    // ==================== INICIALIZACIÓN COMPLETA CONECTADA ====================
+
+    function initVecyProductosFiltrados() {
+        console.log("🚀 INICIANDO VECY PRODUCTOS FILTRADOS CONECTADO");
+        
+        initAOS();
+        
+        // Conectar al sistema central
+        connectToVecySystem();
+        
+        console.log("✅ VECY PRODUCTOS FILTRADOS INICIALIZADO Y CONECTADO");
+    }
+
+    // Añadir CSS para animaciones
+    function addSyncStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+            .pulse-animation {
+                animation: pulse 0.6s ease-in-out;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1); }
+            }
+            
+            .cart-added {
+                animation: cartAdd 1s ease;
+            }
+            
+            @keyframes cartAdd {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+        console.log("✅ Estilos de sincronización añadidos");
+    }
+
+    // Ejecutar inicialización
+    document.addEventListener('DOMContentLoaded', function() {
+        addSyncStyles();
+        initVecyProductosFiltrados();
+    });
+    
+    // También ejecutar cuando la ventana se carga completamente
+    window.addEventListener('load', initVecyProductosFiltrados);
+
 </script>
 {% endblock %}
