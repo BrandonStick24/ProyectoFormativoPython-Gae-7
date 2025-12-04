@@ -19,7 +19,7 @@
     </div>
 
     <!-- Filtros (inicialmente ocultos) -->
-    <div class="card mb-4 card-filtros" id="panelFiltros">
+    <div class="card mb-4 card-filtros d-none" id="panelFiltros">
         <div class="card-header bg-corporate-light">
             <h5 class="mb-0 text-corporate"><i class="fas fa-sliders-h me-2"></i>Filtros de Búsqueda</h5>
         </div>
@@ -237,137 +237,6 @@
                                 </div>
                             </td>
                         </tr>
-
-                        <!-- Modal para detalles -->
-                        <div class="modal fade" id="modalDetalle{{ reporte.id }}" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content border-0 shadow-lg">
-                                    <div class="modal-header bg-corporate text-white">
-                                        <h5 class="modal-title">
-                                            <i class="fas fa-info-circle me-2"></i>Detalles del Reporte
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <div class="info-section">
-                                                    <h6 class="section-title text-corporate">
-                                                        <i class="fas fa-comment me-2"></i>Información de la Reseña
-                                                    </h6>
-                                                    <div class="info-item">
-                                                        <strong>Usuario:</strong> {{ reporte.usuario_nombre }}
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Email:</strong> {{ reporte.usuario_email }}
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Calificación:</strong> 
-                                                        <span class="text-warning">
-                                                            {% for i in "12345" %}
-                                                                {% if forloop.counter <= reporte.estrellas %}
-                                                                    <i class="fas fa-star"></i>
-                                                                {% else %}
-                                                                    <i class="far fa-star"></i>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                        </span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Comentario:</strong>
-                                                        <div class="comment-box">{{ reporte.comentario }}</div>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Fecha Reseña:</strong> {{ reporte.fecha_resena|date:"d/m/Y H:i" }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <div class="info-section">
-                                                    <h6 class="section-title text-corporate">
-                                                        <i class="fas fa-store me-2"></i>Información del Negocio
-                                                    </h6>
-                                                    <div class="info-item">
-                                                        <strong>Negocio:</strong> {{ reporte.negocio_nombre }}
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Categoría:</strong> {{ reporte.negocio_categoria }}
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Dirección:</strong> {{ reporte.negocio_direccion }}
-                                                    </div>
-                                                </div>
-
-                                                <div class="info-section mt-4">
-                                                    <h6 class="section-title text-corporate">
-                                                        <i class="fas fa-flag me-2"></i>Información de Reportes
-                                                    </h6>
-                                                    <div class="info-item">
-                                                        <strong>Total Reportes:</strong> 
-                                                        <span class="badge report-count">{{ reporte.total_reportes }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Gravedad:</strong> 
-                                                        {% if reporte.gravedad == 'alta' %}
-                                                            <span class="badge gravedad-alta">Alta</span>
-                                                        {% elif reporte.gravedad == 'media' %}
-                                                            <span class="badge gravedad-media">Media</span>
-                                                        {% else %}
-                                                            <span class="badge gravedad-baja">Baja</span>
-                                                        {% endif %}
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <strong>Motivos:</strong>
-                                                        <div class="motivos-list">
-                                                            {% for motivo in reporte.motivos_reportes %}
-                                                            <span class="badge motivo-badge">{{ motivo }}</span>
-                                                            {% endfor %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div class="info-section mt-4">
-                                                    <h6 class="section-title text-corporate">
-                                                        <i class="fas fa-users me-2"></i>Usuarios que Reportaron
-                                                    </h6>
-                                                    <div class="users-list">
-                                                        {% for usuario in reporte.usuarios_reportan %}
-                                                        <div class="user-report-item">
-                                                            <strong>{{ usuario.nombre }}</strong>
-                                                            <div class="user-details">
-                                                                <small>Email: {{ usuario.email }}</small><br>
-                                                                <small>Motivo: {{ usuario.motivo }}</small><br>
-                                                                <small>Fecha: {{ usuario.fecha|date:"d/m/Y H:i" }}</small>
-                                                                {% if usuario.descripcion %}
-                                                                <br><small>Descripción: {{ usuario.descripcion }}</small>
-                                                                {% endif %}
-                                                            </div>
-                                                        </div>
-                                                        {% endfor %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer bg-light">
-                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                                            <i class="fas fa-times me-1"></i>Cerrar
-                                        </button>
-                                        {% if reporte.estado_db == 'activa' %}
-                                        <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="resena_id" value="{{ reporte.id }}">
-                                            <input type="hidden" name="accion" value="eliminar">
-                                            <button type="submit" class="btn btn-danger" 
-                                                    onclick="return confirm('¿Estás seguro de que deseas eliminar esta reseña?')">
-                                                <i class="fas fa-trash me-1"></i>Eliminar Reseña
-                                            </button>
-                                        </form>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -413,20 +282,228 @@
     </div>
 </div>
 
+<!-- MODALES PARA CADA REPORTE (FUERA DE LA TABLA) -->
+{% for reporte in reseñas_reportadas %}
+<!-- Modal Detalles -->
+<div class="modal fade" id="modalDetalle{{ reporte.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-corporate text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Detalles del Reporte #{{ reporte.id }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Resumen del Reporte -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="info-card mb-3">
+                            <h6 class="info-title"><i class="fas fa-chart-bar me-2"></i>Resumen</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Reportes:</span>
+                                <strong class="text-corporate">{{ reporte.total_reportes }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Gravedad:</span>
+                                <strong>
+                                    {% if reporte.gravedad == 'alta' %}
+                                        <span class="badge bg-danger">Alta</span>
+                                    {% elif reporte.gravedad == 'media' %}
+                                        <span class="badge bg-warning">Media</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Baja</span>
+                                    {% endif %}
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Estado:</span>
+                                <strong>
+                                    {% if reporte.estado_db == 'activa' %}
+                                        <span class="badge bg-success">Activa</span>
+                                    {% elif reporte.estado_db == 'eliminada' %}
+                                        <span class="badge bg-danger">Eliminada</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ reporte.estado }}</span>
+                                    {% endif %}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-card">
+                            <h6 class="info-title"><i class="fas fa-calendar-alt me-2"></i>Fechas</h6>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Fecha Reseña:</span>
+                                <strong>{{ reporte.fecha_resena|date:"d/m/Y H:i" }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Último Reporte:</span>
+                                <strong>{{ reporte.ultimo_reporte|date:"d/m/Y H:i" }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información de la Reseña -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-comment me-2"></i>Reseña Reportada</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex align-items-start mb-3">
+                                    <img src="{% if reporte.usuario_imagen %}{{ reporte.usuario_imagen }}{% else %}{% static 'img/default-avatar.png' %}{% endif %}" 
+                                         class="rounded-circle me-3" width="60" height="60" alt="Usuario">
+                                    <div>
+                                        <h6 class="mb-1">{{ reporte.usuario_nombre }}</h6>
+                                        <p class="text-muted small mb-2">{{ reporte.usuario_email }}</p>
+                                        <div class="text-warning">
+                                            {% for i in "12345" %}
+                                                {% if forloop.counter <= reporte.estrellas %}
+                                                    <i class="fas fa-star"></i>
+                                                {% else %}
+                                                    <i class="far fa-star"></i>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Comentario:</label>
+                                    <div class="p-3 bg-light rounded">
+                                        <p class="mb-0">{{ reporte.comentario }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-card">
+                                    <h6 class="info-title"><i class="fas fa-store me-2"></i>Negocio</h6>
+                                    <p class="mb-1"><strong>{{ reporte.negocio_nombre }}</strong></p>
+                                    <p class="text-muted small mb-2">{{ reporte.negocio_categoria }}</p>
+                                    <p class="small mb-0">
+                                        <i class="fas fa-map-marker-alt me-1"></i>
+                                        {{ reporte.negocio_direccion }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Motivos de Reporte -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Motivos de Reporte</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            {% for motivo in reporte.motivos_reportes %}
+                            <span class="badge bg-corporate">{{ motivo }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Usuarios que Reportaron -->
+                <div class="card">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Usuarios que Reportaron</h6>
+                        <span class="badge bg-secondary">{{ reporte.usuarios_reportan|length }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Usuario</th>
+                                        <th>Email</th>
+                                        <th>Motivo</th>
+                                        <th>Fecha</th>
+                                        <th>Descripción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for usuario in reporte.usuarios_reportan %}
+                                    <tr>
+                                        <td>{{ usuario.nombre }}</td>
+                                        <td>{{ usuario.email }}</td>
+                                        <td><span class="badge bg-info">{{ usuario.motivo }}</span></td>
+                                        <td>{{ usuario.fecha|date:"d/m/Y H:i" }}</td>
+                                        <td>{{ usuario.descripcion|default:"-" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cerrar
+                </button>
+                {% if reporte.estado_db == 'activa' %}
+                <div class="btn-group">
+                    <form method="POST" action="{% url 'gestion_resenas_reportadas' %}" class="me-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="resena_id" value="{{ reporte.id }}">
+                        <input type="hidden" name="accion" value="aprobar">
+                        <button type="submit" class="btn btn-success" 
+                                onclick="return confirm('¿Estás seguro de que deseas aprobar esta reseña?')">
+                            <i class="fas fa-check me-1"></i> Aprobar
+                        </button>
+                    </form>
+                    <form method="POST" action="{% url 'gestion_resenas_reportadas' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="resena_id" value="{{ reporte.id }}">
+                        <input type="hidden" name="accion" value="eliminar">
+                        <button type="submit" class="btn btn-danger" 
+                                onclick="return confirm('¿Estás seguro de que deseas eliminar esta reseña?')">
+                            <i class="fas fa-trash me-1"></i> Eliminar
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 <!-- Scripts específicos para esta página -->
 <script>
-    // Toggle filtros
-    document.getElementById('btnFiltros').addEventListener('click', function() {
-        const panel = document.getElementById('panelFiltros');
-        panel.classList.toggle('d-none');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle filtros
+        document.getElementById('btnFiltros').addEventListener('click', function() {
+            const panel = document.getElementById('panelFiltros');
+            panel.classList.toggle('d-none');
+            
+            // Cambiar ícono
+            const icon = this.querySelector('i');
+            if (panel.classList.contains('d-none')) {
+                icon.className = 'fas fa-filter me-2';
+            } else {
+                icon.className = 'fas fa-times me-2';
+            }
+        });
         
-        // Cambiar ícono
-        const icon = this.querySelector('i');
-        if (panel.classList.contains('d-none')) {
-            icon.className = 'fas fa-filter me-2';
-        } else {
-            icon.className = 'fas fa-times me-2';
-        }
+        // Inicializar tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Limpiar filtros
+        document.querySelectorAll('.btn-outline-secondary').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                document.getElementById('filtroEstado').value = '';
+                document.getElementById('filtroGravedad').value = '';
+                document.getElementById('filtroFecha').value = '';
+            });
+        });
     });
 </script>
 
@@ -436,20 +513,37 @@
         --corporate-light: #EFF6FF;
         --corporate-dark: #1D4ED8;
         --border-color: #E5E7EB;
-        --border-radius: 12px;
-        --box-shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
-        --transition: all 0.3s ease;
+        --border-radius: 8px;
+        --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
 
-    .text-corporate { color: var(--corporate-blue) !important; }
+    .text-corporate { 
+        color: var(--corporate-blue) !important; 
+    }
     
-    .bg-corporate { background-color: var(--corporate-blue) !important; }
-    .bg-corporate-light { background-color: var(--corporate-light) !important; }
+    .bg-corporate { 
+        background-color: var(--corporate-blue) !important; 
+    }
+    
+    .bg-corporate-light { 
+        background-color: var(--corporate-light) !important; 
+    }
 
-    .border-corporate { border-left: 4px solid var(--corporate-blue) !important; }
-    .border-warning { border-left: 4px solid #F59E0B !important; }
-    .border-success { border-left: 4px solid #10B981 !important; }
-    .border-danger { border-left: 4px solid #EF4444 !important; }
+    .border-corporate { 
+        border-left: 4px solid var(--corporate-blue) !important; 
+    }
+    
+    .border-warning { 
+        border-left: 4px solid #F59E0B !important; 
+    }
+    
+    .border-success { 
+        border-left: 4px solid #10B981 !important; 
+    }
+    
+    .border-danger { 
+        border-left: 4px solid #EF4444 !important; 
+    }
 
     .btn-corporate {
         background-color: var(--corporate-blue);
@@ -462,8 +556,6 @@
         background-color: var(--corporate-dark);
         border-color: var(--corporate-dark);
         color: white;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
     }
 
     .btn-outline-corporate {
@@ -476,183 +568,181 @@
         background-color: var(--corporate-blue);
         border-color: var(--corporate-blue);
         color: white;
-        transform: translateY(-1px);
     }
 
     .container-fluid {
         background-color: #F9FAFB;
         min-height: 100vh;
-        padding: 24px;
+        padding: 20px;
     }
 
+    /* Cards */
     .card {
         border: none;
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
-        transition: var(--transition);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         background: white;
-    }
-
-    .card:hover {
-        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.12);
-        transform: translateY(-2px);
     }
 
     .card-header {
         border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
         border-bottom: 1px solid var(--border-color);
-        padding: 1.25rem 1.5rem;
+        padding: 1rem 1.25rem;
     }
 
     .card-statistic {
         border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
-        position: relative;
-        overflow: hidden;
-        transition: var(--transition);
-    }
-
-    .card-statistic:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(59, 130, 246, 0.15);
+        height: 100%;
     }
 
     .card-statistic .card-body {
-        padding: 1.5rem;
+        padding: 1.25rem;
     }
 
     .card-statistic h3 {
         font-weight: 700;
         margin-bottom: 0.5rem;
-        font-size: 2rem;
+        font-size: 1.75rem;
     }
 
     .card-statistic p {
         margin-bottom: 0;
         font-size: 0.9rem;
-        font-weight: 500;
         color: #6B7280 !important;
     }
 
-    .card-statistic i {
-        opacity: 0.9;
-    }
-
+    /* Table */
     .table {
         margin-bottom: 0;
-        background: white;
-        border-radius: var(--border-radius);
     }
 
     .table thead th {
         background-color: #F9FAFB;
         color: #374151;
-        border: none;
-        padding: 1.25rem 0.75rem;
-        font-weight: 600;
-        text-transform: none;
-        font-size: 0.9rem;
-        letter-spacing: 0;
         border-bottom: 2px solid var(--border-color);
+        padding: 1rem;
+        font-weight: 600;
+        font-size: 0.9rem;
     }
 
     .table tbody td {
-        padding: 1.25rem 0.75rem;
+        padding: 1rem;
         border-bottom: 1px solid #F3F4F6;
         vertical-align: middle;
-        transition: var(--transition);
     }
 
     .table-hover tbody tr:hover {
         background-color: #F9FAFB;
-        transform: scale(1.002);
     }
 
     .avatar-img {
-        border: 3px solid #EFF6FF;
+        border: 2px solid #EFF6FF;
         object-fit: cover;
-        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
     }
 
+    /* Badges */
     .badge {
         font-size: 0.75em;
-        font-weight: 600;
-        padding: 0.5em 0.75em;
-        border-radius: 8px;
-        border: 1px solid transparent;
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+        border-radius: 6px;
     }
 
     .motivo-badge {
         background-color: #EFF6FF;
         color: var(--corporate-blue);
-        border-color: #BFDBFE;
     }
 
     .report-count {
         background-color: #FEF3C7;
         color: #D97706;
-        border-color: #FCD34D;
     }
 
     .gravedad-alta {
         background-color: #FEE2E2;
         color: #DC2626;
-        border-color: #FCA5A5;
     }
 
     .gravedad-media {
         background-color: #FEF3C7;
         color: #D97706;
-        border-color: #FCD34D;
     }
 
     .gravedad-baja {
         background-color: #EFF6FF;
         color: var(--corporate-blue);
-        border-color: #BFDBFE;
     }
 
     .estado-activa {
         background-color: #D1FAE5;
         color: #065F46;
-        border-color: #A7F3D0;
     }
 
     .estado-eliminada {
         background-color: #FEE2E2;
         color: #DC2626;
-        border-color: #FCA5A5;
     }
 
     .estado-pendiente {
         background-color: #FEF3C7;
         color: #D97706;
-        border-color: #FCD34D;
     }
 
+    /* Buttons */
     .btn-action {
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        transition: var(--transition);
-        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 0.375rem 0.75rem;
         font-size: 0.875rem;
-        font-weight: 500;
-    }
-
-    .btn-action:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(59, 130, 246, 0.2);
     }
 
     .btn-group .btn {
-        margin-right: 0.4rem;
+        margin-right: 0.25rem;
     }
 
     .btn-group .btn:last-child {
         margin-right: 0;
     }
 
+    /* Modal Styles */
+    .modal-content {
+        border-radius: var(--border-radius);
+        border: none;
+    }
+
+    .modal-header {
+        border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
+        padding: 1.25rem;
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    /* Info Cards dentro del modal */
+    .info-card {
+        background-color: #F9FAFB;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 1rem;
+    }
+
+    .info-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    /* Comment preview */
     .comment-preview {
         line-height: 1.4;
         display: -webkit-box;
@@ -661,111 +751,16 @@
         overflow: hidden;
     }
 
-    .fecha-text {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #6B7280;
-    }
-
-    /* Modal Styles */
-    .modal-content {
-        border-radius: var(--border-radius);
-        border: none;
-        box-shadow: 0 20px 40px rgba(59, 130, 246, 0.15);
-    }
-
-    .modal-header {
-        border-radius: var(--border-radius) var(--border-radius) 0 0 !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 1.5rem;
-    }
-
-    .info-section {
-        margin-bottom: 2rem;
-    }
-
-    .section-title {
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid var(--corporate-light);
-        font-size: 1.1rem;
-    }
-
-    .info-item {
-        margin-bottom: 1rem;
-        padding: 0.5rem 0;
-    }
-
-    .info-item strong {
-        color: #374151;
-        font-weight: 600;
-    }
-
-    .comment-box {
-        background-color: var(--corporate-light);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 0.5rem;
-        line-height: 1.5;
-        font-size: 0.95rem;
-        color: #374151;
-    }
-
-    .motivos-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-
-    .users-list {
-        max-height: 200px;
-        overflow-y: auto;
-        padding-right: 0.5rem;
-    }
-
-    .users-list::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .users-list::-webkit-scrollbar-thumb {
-        background: var(--corporate-blue);
-        border-radius: 3px;
-    }
-
-    .user-report-item {
-        background-color: #F9FAFB;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        transition: var(--transition);
-    }
-
-    .user-report-item:hover {
-        background-color: var(--corporate-light);
-        border-color: var(--corporate-blue);
-    }
-
-    .user-report-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .user-details {
-        margin-top: 0.5rem;
-        font-size: 0.875rem;
-        color: #6B7280;
+    /* Empty State */
+    .empty-state {
+        padding: 3rem 1rem;
     }
 
     /* Pagination */
     .pagination .page-link {
         border: 1px solid var(--border-color);
-        margin: 0 0.25rem;
-        border-radius: 8px;
-        transition: var(--transition);
-        font-weight: 500;
+        margin: 0 0.125rem;
+        border-radius: 6px;
         color: #6B7280;
     }
 
@@ -773,21 +768,6 @@
         background-color: var(--corporate-blue);
         border-color: var(--corporate-blue);
         color: white;
-    }
-
-    .pagination .page-link:hover {
-        background-color: var(--corporate-light);
-        border-color: var(--corporate-blue);
-        color: var(--corporate-blue);
-    }
-
-    /* Empty State */
-    .empty-state {
-        padding: 4rem 1rem;
-    }
-
-    .empty-state i {
-        opacity: 0.4;
     }
 
     /* Card Filtros */
@@ -803,29 +783,19 @@
     }
 
     .form-select, .form-control {
-        border-radius: 8px;
+        border-radius: 6px;
         border: 1px solid var(--border-color);
-        transition: var(--transition);
         font-size: 0.9rem;
-    }
-
-    .form-select:focus, .form-control:focus {
-        border-color: var(--corporate-blue);
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
 
     /* Responsive */
     @media (max-width: 768px) {
         .container-fluid {
-            padding: 16px;
+            padding: 15px;
         }
         
         .card-statistic .card-body {
-            padding: 1.25rem;
-        }
-        
-        .card-statistic h3 {
-            font-size: 1.75rem;
+            padding: 1rem;
         }
         
         .table-responsive {
@@ -833,18 +803,26 @@
         }
         
         .btn-group {
-            display: flex;
             flex-direction: column;
-            gap: 0.3rem;
+            gap: 0.25rem;
         }
         
         .btn-group .btn {
             margin-right: 0;
+            width: 100%;
         }
         
         .table thead th,
         .table tbody td {
-            padding: 1rem 0.5rem;
+            padding: 0.75rem 0.5rem;
+        }
+        
+        .modal-dialog {
+            margin: 0.5rem;
+        }
+        
+        .modal-body {
+            padding: 1rem;
         }
     }
 </style>

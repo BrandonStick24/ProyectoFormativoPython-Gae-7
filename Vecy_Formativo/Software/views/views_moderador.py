@@ -126,7 +126,6 @@ def moderador_dash(request):
         # 4. ACTIVIDAD DE MODERACIÓN
         acciones_moderacion = [
             {'tipo_accion': 'Negocios Aprobados', 'total': Negocios.objects.filter(estado_neg='activo').count()},
-            {'tipo_accion': 'Negocios Rechazados', 'total': Negocios.objects.filter(estado_neg='inactivo').count()},
             {'tipo_accion': 'Negocios Suspendidos', 'total': Negocios.objects.filter(estado_neg='suspendido').count()},
             {'tipo_accion': 'Reportes Atendidos', 'total': Reportes.objects.filter(estado_reporte='atendido').count()},
             {'tipo_accion': 'Reseñas Moderadas', 'total': ResenasNegocios.objects.filter(~Q(estado_resena='pendiente')).count()},
@@ -141,7 +140,6 @@ def moderador_dash(request):
         total_negocios = Negocios.objects.count()
         negocios_activos = Negocios.objects.filter(estado_neg='activo').count()
         negocios_suspendidos = Negocios.objects.filter(estado_neg='suspendido').count()
-        negocios_inactivos = Negocios.objects.filter(estado_neg='inactivo').count()
         total_resenas = ResenasNegocios.objects.count()
         
         resenas_activas = ResenasNegocios.objects.filter(estado_resena='activa').count()
@@ -161,7 +159,6 @@ def moderador_dash(request):
             'total_negocios': total_negocios,
             'negocios_activos': negocios_activos,
             'negocios_suspendidos': negocios_suspendidos,
-            'negocios_inactivos': negocios_inactivos,
             'total_resenas': total_resenas,
             'resenas_activas': resenas_activas,
             'promedio_estrellas': round(promedio_estrellas, 1),
@@ -431,7 +428,7 @@ def gestion_usuarios(request):
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
-# GESTIÓN DE NEGOCIOS - CORREGIDA
+# GESTIÓN DE NEGOCIOS - CORREGIDA Y MEJORADA CON CORREOS
 @login_required(login_url='/auth/login/')
 def gestion_negocios(request):
     """Vista principal de gestión de negocios para moderadores - CORREGIDA"""    
@@ -443,7 +440,6 @@ def gestion_negocios(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Usar UsuarioPerfil directamente
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
@@ -464,13 +460,16 @@ def gestion_negocios(request):
             negocio_id = request.POST.get('negocio_id')
             accion = request.POST.get('accion')
             nuevo_estado = request.POST.get('nuevo_estado')
+            razon_suspension = request.POST.get('razon_suspension', '')
+            detalles_suspension = request.POST.get('detalles_suspension', '')
             
             try:
                 negocio = Negocios.objects.get(pkid_neg=negocio_id)
+                propietario_user = negocio.fkpropietario_neg.fkuser
                 
                 if accion == 'cambiar_estado' and nuevo_estado:
-                    # Validar estado
-                    if nuevo_estado in ['activo', 'inactivo', 'suspendido']:
+                    # Validar estado (solo permitir activo y suspendido, NO inactivo/rechazado)
+                    if nuevo_estado in ['activo', 'suspendido']:
                         estado_anterior = negocio.estado_neg
                         negocio.estado_neg = nuevo_estado
                         negocio.save()
@@ -478,23 +477,67 @@ def gestion_negocios(request):
                         # Mapear estados para mensaje
                         estado_map = {
                             'activo': 'Activo',
-                            'inactivo': 'Rechazado', 
                             'suspendido': 'Suspendido'
                         }
                         
-                        messages.success(
-                            request, 
-                            f'Estado del negocio "{negocio.nom_neg}" cambiado de ' 
-                            f'{estado_map.get(estado_anterior, estado_anterior)} a '
-                            f'{estado_map.get(nuevo_estado, nuevo_estado)}'
-                        )
+                        # ENVIAR CORREO DE NOTIFICACIÓN
+                        if nuevo_estado != estado_anterior:
+                            # Preparar datos para el correo
+                            datos_negocio = {
+                                'nombre': negocio.nom_neg,
+                                'nit': negocio.nit_neg,
+                                'direccion': negocio.direcc_neg,
+                                'categoria': negocio.fktiponeg_neg.desc_tiponeg,
+                                'propietario': f"{propietario_user.first_name} {propietario_user.last_name}".strip() or propietario_user.username,
+                                'email_propietario': propietario_user.email,
+                                'fecha_registro': negocio.fechacreacion_neg.strftime("%d/%m/%Y"),
+                                'estado_anterior': estado_map.get(estado_anterior, estado_anterior),
+                                'estado_nuevo': estado_map.get(nuevo_estado, nuevo_estado),
+                                'razon': razon_suspension,
+                                'detalles': detalles_suspension,
+                                'moderador': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
+                            }
+                            
+                            # Enviar correo al propietario
+                            resultado = enviar_notificacion_negocio(propietario_user, nuevo_estado, datos_negocio)
+                        
+                        mensaje = f'Estado del negocio "{negocio.nom_neg}" cambiado de ' 
+                        f'{estado_map.get(estado_anterior, estado_anterior)} a '
+                        f'{estado_map.get(nuevo_estado, nuevo_estado)}'
+                        
+                        if nuevo_estado != estado_anterior and resultado.get('success'):
+                            mensaje += f' - Notificación enviada al propietario'
+                        elif nuevo_estado != estado_anterior and not resultado.get('success'):
+                            mensaje += f' - Error enviando notificación: {resultado.get("error", "Error desconocido")}'
+                        
+                        messages.success(request, mensaje)
                     else:
                         messages.error(request, 'Estado inválido')
                 
                 elif accion == 'eliminar':
                     nombre_negocio = negocio.nom_neg
+                    
+                    # Enviar notificación antes de eliminar
+                    datos_negocio = {
+                        'nombre': negocio.nom_neg,
+                        'nit': negocio.nit_neg,
+                        'propietario': f"{propietario_user.first_name} {propietario_user.last_name}".strip() or propietario_user.username,
+                        'fecha_registro': negocio.fechacreacion_neg.strftime("%d/%m/%Y"),
+                        'moderador': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
+                    }
+                    
+                    resultado = enviar_notificacion_negocio(propietario_user, 'eliminado', datos_negocio)
+                    
+                    # Eliminar el negocio
                     negocio.delete()
-                    messages.success(request, f'Negocios "{nombre_negocio}" eliminado correctamente')
+                    
+                    mensaje = f'Negocio "{nombre_negocio}" eliminado correctamente'
+                    if resultado.get('success'):
+                        mensaje += f' - Notificación enviada al propietario'
+                    else:
+                        mensaje += f' - Error enviando notificación: {resultado.get("error", "Error desconocido")}'
+                    
+                    messages.success(request, mensaje)
                 
                 else:
                     messages.error(request, 'Acción no válida')
@@ -529,7 +572,6 @@ def gestion_negocios(request):
             # Mapeo inverso de estados del frontend a estados de la BD
             status_map = {
                 'Activo': 'activo',
-                'Rechazado': 'inactivo',
                 'Suspendido': 'suspendido'
             }
             estado_db = status_map.get(status_filter)
@@ -556,7 +598,6 @@ def gestion_negocios(request):
             # Mapear estados de la base de datos a los estados del frontend
             estado_map = {
                 'activo': 'Activo',
-                'inactivo': 'Rechazado', 
                 'suspendido': 'Suspendido'
             }
             
@@ -636,7 +677,6 @@ def detalle_negocio_json(request, negocio_id):
         # Mapear estados
         estado_map = {
             'activo': 'Activo',
-            'inactivo': 'Rechazado', 
             'suspendido': 'Suspendido'
         }
         
@@ -779,8 +819,8 @@ def cambiar_estado_negocio(request, negocio_id):
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         
-        # Validar estado
-        if nuevo_estado not in ['activo', 'inactivo', 'suspendido']:
+        # Validar estado (solo permitir activo y suspendido)
+        if nuevo_estado not in ['activo', 'suspendido']:
             return JsonResponse({'error': 'Estado inválido'}, status=400)
         
         negocio = Negocios.objects.get(pkid_neg=negocio_id)
@@ -790,7 +830,6 @@ def cambiar_estado_negocio(request, negocio_id):
         # Mapear estado para respuesta
         estado_map = {
             'activo': 'Activo',
-            'inactivo': 'Rechazado', 
             'suspendido': 'Suspendido'
         }
         
@@ -1073,6 +1112,304 @@ def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_ad
         
     except Exception as e:
         print(f"❌ ERROR enviando correo simple: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def enviar_notificacion_negocio(user, accion, datos_negocio):
+    """
+    Envía correo de notificación cuando se cambia el estado de un negocio
+    Versión mejorada con diseño profesional
+    """
+    try:
+        print(f"🔍 DEBUG - Enviando notificación para negocio: {datos_negocio.get('nombre', 'Desconocido')}")
+        print(f"🔍 DEBUG - Acción: {accion}")
+        print(f"🔍 DEBUG - Usuario: {user.email}")
+        
+        # Verificar que el usuario tenga email
+        if not user.email or '@' not in user.email:
+            print(f"⚠️ DEBUG - Email inválido: {user.email}")
+            return {'success': False, 'error': 'Email inválido', 'enviado_a': None}
+        
+        # Determinar asunto según la acción
+        asunto_map = {
+            'activo': '✅ Tu negocio ha sido activado en Vecy',
+            'suspendido': '⚠️ Actualización sobre el estado de tu negocio en Vecy',
+            'eliminado': '🗑️ Tu negocio ha sido eliminado de Vecy'
+        }
+        
+        asunto = asunto_map.get(accion, f'Actualización de estado de tu negocio en Vecy')
+        
+        # Mapear razones de suspensión
+        razon_map = {
+            'informacion_falsa': 'Información falsa o incompleta',
+            'productos_prohibidos': 'Venta de productos no permitidos',
+            'malas_practicas': 'Malas prácticas comerciales',
+            'quejas_clientes': 'Múltiples quejas de clientes',
+            'incumplimiento_normas': 'Incumplimiento de normas de la plataforma',
+            'inactividad_prolongada': 'Inactividad prolongada',
+            'solicitud_usuario': 'Solicitud del propietario',
+            'otra': 'Otra razón'
+        }
+        
+        razon_texto = razon_map.get(datos_negocio.get('razon', ''), datos_negocio.get('razon', 'No especificada'))
+        
+        # Determinar colores según la acción
+        color_primario_map = {
+            'activo': '#28a745',
+            'suspendido': '#ffc107',
+            'eliminado': '#dc3545'
+        }
+        
+        color_secundario_map = {
+            'activo': '#d4edda',
+            'suspendido': '#fff3cd',
+            'eliminado': '#f8d7da'
+        }
+        
+        color_primario = color_primario_map.get(accion, '#007bff')
+        color_secundario = color_secundario_map.get(accion, '#e9ecef')
+        
+        # Determinar icono según la acción
+        icono_map = {
+            'activo': '✅',
+            'suspendido': '⚠️',
+            'eliminado': '🗑️'
+        }
+        
+        icono = icono_map.get(accion, '📋')
+        
+        # Crear mensaje HTML con diseño profesional
+        mensaje_html = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{asunto}</title>
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f8f9fa;
+                }}
+                .email-container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }}
+                .email-header {{
+                    background-color: {color_primario};
+                    color: white;
+                    padding: 30px 20px;
+                    text-align: center;
+                }}
+                .email-header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }}
+                .email-header .icon {{
+                    font-size: 48px;
+                    margin-bottom: 15px;
+                }}
+                .email-body {{
+                    padding: 30px;
+                }}
+                .status-card {{
+                    background-color: {color_secundario};
+                    border-left: 4px solid {color_primario};
+                    padding: 20px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                }}
+                .info-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                .info-table td {{
+                    padding: 12px 0;
+                    border-bottom: 1px solid #dee2e6;
+                }}
+                .info-table td:first-child {{
+                    font-weight: 600;
+                    color: #495057;
+                    width: 35%;
+                }}
+                .info-table tr:last-child td {{
+                    border-bottom: none;
+                }}
+                .action-buttons {{
+                    text-align: center;
+                    margin: 30px 0;
+                }}
+                .btn {{
+                    display: inline-block;
+                    padding: 12px 30px;
+                    background-color: {color_primario};
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    font-weight: 600;
+                    margin: 0 10px;
+                }}
+                .email-footer {{
+                    background-color: #f8f9fa;
+                    padding: 20px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 12px;
+                    border-top: 1px solid #dee2e6;
+                }}
+                .logo {{
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: {color_primario};
+                    margin-bottom: 10px;
+                }}
+                .contact-info {{
+                    background-color: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                    font-size: 14px;
+                }}
+                .highlight {{
+                    color: {color_primario};
+                    font-weight: 600;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="email-header">
+                    <div class="icon">{icono}</div>
+                    <h1>{asunto}</h1>
+                </div>
+                
+                <div class="email-body">
+                    <div class="logo">VECY</div>
+                    
+                    <p>Hola <span class="highlight">{datos_negocio.get('propietario', 'Usuario')}</span>,</p>
+                    
+                    <p>Te informamos sobre una actualización en el estado de tu negocio registrado en nuestra plataforma:</p>
+                    
+                    <div class="status-card">
+                        <h3 style="margin-top: 0; color: {color_primario};">{datos_negocio.get('estado_nuevo', 'Nuevo estado')}</h3>
+                        <p style="margin-bottom: 0;">
+                            { '¡Excelente noticia! Tu negocio está ahora activo y visible para todos los clientes.' if accion == 'activo' else 
+                              'Tu negocio ha sido suspendido temporalmente. Para más información o para solicitar la reactivación, contacta a nuestro equipo de soporte.' if accion == 'suspendido' else
+                              'Tu negocio ha sido eliminado permanentemente de la plataforma.' }
+                        </p>
+                    </div>
+                    
+                    <h3>Detalles del Negocio</h3>
+                    <table class="info-table">
+                        <tr>
+                            <td>Nombre del negocio:</td>
+                            <td class="highlight">{datos_negocio.get('nombre', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>NIT:</td>
+                            <td>{datos_negocio.get('nit', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Dirección:</td>
+                            <td>{datos_negocio.get('direccion', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Categoría:</td>
+                            <td>{datos_negocio.get('categoria', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Fecha de registro:</td>
+                            <td>{datos_negocio.get('fecha_registro', 'No disponible')}</td>
+                        </tr>
+        """
+        
+        # Agregar razón si existe para suspensión
+        if accion == 'suspendido' and razon_texto:
+            mensaje_html += f"""
+                        <tr>
+                            <td>Razón de suspensión:</td>
+                            <td class="highlight">{razon_texto}</td>
+                        </tr>
+            """
+        
+        # Agregar detalles adicionales si existen
+        if datos_negocio.get('detalles'):
+            mensaje_html += f"""
+                        <tr>
+                            <td>Detalles adicionales:</td>
+                            <td>{datos_negocio.get('detalles', '')}</td>
+                        </tr>
+            """
+        
+        mensaje_html += f"""
+                    </table>
+                    
+                    <div class="contact-info">
+                        <p><strong>Moderador responsable:</strong> {datos_negocio.get('moderador', 'Equipo de Moderación Vecy')}</p>
+                        <p><strong>Fecha de la acción:</strong> {timezone.now().strftime("%d/%m/%Y %H:%M")}</p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        { '<a href="#" class="btn" style="background-color: #28a745;">Ver mi negocio</a>' if accion == 'activo' else 
+                          '<a href="#" class="btn" style="background-color: #6c757d;">Contactar soporte</a>' if accion == 'suspendido' else 
+                          '<a href="#" class="btn" style="background-color: #6c757d;">Contactar soporte</a>' }
+                    </div>
+                    
+                    <p>Si tienes preguntas o necesitas más información, no dudes en contactar a nuestro equipo de soporte.</p>
+                    
+                    <p>Atentamente,<br>
+                    <strong>El equipo de Vecy</strong><br>
+                    Plataforma de Comercio Local</p>
+                </div>
+                
+                <div class="email-footer">
+                    <p>© {timezone.now().year} Vecy - Todos los derechos reservados.</p>
+                    <p>Este es un correo automático, por favor no responder a este mensaje.</p>
+                    <p>Si recibiste este correo por error, por favor ignóralo.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Enviar correo usando la función existente
+        destinatarios = [user.email]
+        
+        resultado = enviar_correo_simple_masivo(
+            destinatarios=destinatarios,
+            asunto=asunto,
+            mensaje_html=mensaje_html,
+            es_test=False  # Cambiar a True para pruebas
+        )
+        
+        print(f"✅ DEBUG - Resultado envío correo negocio: {resultado}")
+        
+        if resultado['success']:
+            return {
+                'success': True,
+                'enviado_a': destinatarios,
+                'total': len(destinatarios)
+            }
+        else:
+            return {
+                'success': False,
+                'error': resultado.get('error', 'Error desconocido al enviar correo')
+            }
+        
+    except Exception as e:
+        print(f"❌ ERROR en enviar_notificacion_negocio: {str(e)}")
         return {
             'success': False,
             'error': str(e)
