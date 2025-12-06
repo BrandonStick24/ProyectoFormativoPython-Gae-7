@@ -20,7 +20,7 @@ from django.utils.html import strip_tags
 import os
 from django.contrib.auth.models import User
 from django.views.decorators.http import require_http_methods
-from django.db.models import Sum, Avg, Count, Q, Min, Max
+from django.db.models import Sum, Avg, Count, Q
 from django.utils import timezone
 from django.db import connection
 from django.shortcuts import render
@@ -3818,10 +3818,9 @@ def guardar_resena(request):
 @never_cache
 @login_required(login_url='/auth/login/')
 def productos_filtrados_logeado(request):
+    # Importar connection aquí para evitar el error
     from django.db import connection
-    from django.db.models import Count, Sum, Q, F
     from datetime import date
-    import json
     
     # Obtener todos los parámetros de filtro
     filtro_tipo = request.GET.get('filtro', '')
@@ -3829,51 +3828,38 @@ def productos_filtrados_logeado(request):
     negocio_id = request.GET.get('negocio', '')
     precio_min = request.GET.get('precio_min', '')
     precio_max = request.GET.get('precio_max', '')
-    ordenar = request.GET.get('ordenar', 'recientes')
+    ordenar = request.GET.get('ordenar', 'recientes')  # Valor por defecto
     buscar = request.GET.get('buscar', '')
     
-    # Debug: Mostrar parámetros recibidos
-    print(f"DEBUG - Parámetros recibidos:")
-    print(f"  filtro_tipo: {filtro_tipo}")
-    print(f"  categoria_id: {categoria_id}")
-    print(f"  negocio_id: {negocio_id}")
-    print(f"  precio_min: {precio_min}")
-    print(f"  precio_max: {precio_max}")
-    print(f"  ordenar: {ordenar}")
-    print(f"  buscar: '{buscar}'")
-    
     # Iniciar con todos los productos disponibles
-    productos = Productos.objects.filter(
-        estado_prod='disponible',
-        stock_prod__gt=0  # Solo productos con stock
-    ).select_related(
-        'fkcategoria_prod', 
-        'fknegocioasociado_prod'
-    )
-    
-    titulo_filtro = "🛍️ Todos los Productos"
+    productos = Productos.objects.filter(estado_prod='disponible')
     
     # Aplicar filtro por tipo
     if filtro_tipo == 'ofertas':
         hoy = date.today()
         
-        # OPTIMIZADO: Usar ORM en lugar de SQL raw
-        productos_con_ofertas_ids = Promociones.objects.filter(
-            estado_promo='activa',
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-            porcentaje_descuento__gt=0,
-            fkproducto__isnull=False
-        ).values_list('fkproducto_id', flat=True).distinct()
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT DISTINCT fkproducto_id 
+                FROM promociones 
+                WHERE estado_promo = 'activa' 
+                AND fecha_inicio <= %s 
+                AND fecha_fin >= %s
+                AND porcentaje_descuento > 0
+            """, [hoy, hoy])
+            
+            resultados = cursor.fetchall()
+            productos_con_ofertas_ids = [row[0] for row in resultados if row[0] is not None]
         
-        productos = productos.filter(pkid_prod__in=productos_con_ofertas_ids)
+        if productos_con_ofertas_ids:
+            productos = productos.filter(pkid_prod__in=productos_con_ofertas_ids)
+        else:
+            productos = productos.none()
+        
         titulo_filtro = "🎯 Ofertas Especiales"
     
     elif filtro_tipo == 'destacados':
-        # Productos con mejor calificación o más vendidos
-        productos = productos.annotate(
-            ventas_totales=Coalesce(Sum('detallespedido__cantidad_detalle'), 0)
-        ).filter(ventas_totales__gt=0).order_by('-ventas_totales')
+        productos = productos.filter(stock_prod__gt=0).order_by('?')
         titulo_filtro = "⭐ Productos Destacados"
     
     elif filtro_tipo == 'economicos':
@@ -3881,71 +3867,43 @@ def productos_filtrados_logeado(request):
         titulo_filtro = "💰 Productos Económicos"
     
     elif filtro_tipo == 'nuevos':
-        # Últimos 30 días
-        desde_fecha = timezone.now() - timedelta(days=30)
-        productos = productos.filter(fecha_creacion__gte=desde_fecha).order_by('-fecha_creacion')
+        productos = productos.order_by('-fecha_creacion')
         titulo_filtro = "🆕 Nuevos Productos"
     
     elif filtro_tipo == 'mas-vendidos':
         # Productos con más ventas
         productos = productos.annotate(
-            total_vendido=Coalesce(Sum('detallespedido__cantidad_detalle'), 0)
+            total_vendido=Sum('detallespedido__cantidad_detalle')
         ).filter(total_vendido__gt=0).order_by('-total_vendido')
         titulo_filtro = "🔥 Más Vendidos"
     
+    else:
+        titulo_filtro = "🛍️ Todos los Productos"
+
     # Aplicar filtro de búsqueda
     if buscar and buscar.strip():
-        buscar_term = buscar.strip()
         productos = productos.filter(
-            Q(nom_prod__icontains=buscar_term) |
-            Q(desc_prod__icontains=buscar_term) |
-            Q(fknegocioasociado_prod__nom_neg__icontains=buscar_term) |
-            Q(fkcategoria_prod__desc_cp__icontains=buscar_term)
+            models.Q(nom_prod__icontains=buscar) |
+            models.Q(desc_prod__icontains=buscar) |
+            models.Q(fknegocioasociado_prod__nom_neg__icontains=buscar) |
+            models.Q(fkcategoria_prod__desc_cp__icontains=buscar)
         )
-        titulo_filtro = f"🔍 Resultados para: '{buscar_term}'"
-    
+
     # Aplicar filtro por categoría
     if categoria_id and categoria_id.isdigit():
-        categoria_id_int = int(categoria_id)
-        productos = productos.filter(fkcategoria_prod_id=categoria_id_int)
-        
-        # Obtener nombre de categoría para el título
-        try:
-            categoria = CategoriaProductos.objects.get(pkid_cp=categoria_id_int)
-            titulo_filtro = f"📁 {categoria.desc_cp}"
-        except CategoriaProductos.DoesNotExist:
-            pass
+        productos = productos.filter(fkcategoria_prod_id=int(categoria_id))
     
     # Aplicar filtro por negocio
     if negocio_id and negocio_id.isdigit():
-        negocio_id_int = int(negocio_id)
-        productos = productos.filter(fknegocioasociado_prod_id=negocio_id_int)
-        
-        # Obtener nombre del negocio para el título
-        try:
-            negocio = Negocios.objects.get(pkid_neg=negocio_id_int)
-            titulo_filtro = f"🏪 {negocio.nom_neg}"
-        except Negocios.DoesNotExist:
-            pass
+        productos = productos.filter(fknegocioasociado_prod_id=int(negocio_id))
     
     # Aplicar filtro por precio mínimo
-    if precio_min:
-        try:
-            precio_min_float = float(precio_min)
-            productos = productos.filter(precio_prod__gte=precio_min_float)
-        except (ValueError, TypeError):
-            pass
+    if precio_min and precio_min.isdigit():
+        productos = productos.filter(precio_prod__gte=float(precio_min))
     
     # Aplicar filtro por precio máximo
-    if precio_max:
-        try:
-            precio_max_float = float(precio_max)
-            productos = productos.filter(precio_prod__lte=precio_max_float)
-        except (ValueError, TypeError):
-            pass
-    
-    # Debug: Mostrar query antes de ordenar
-    print(f"DEBUG - Query SQL antes de ordenar: {str(productos.query)}")
+    if precio_max and precio_max.isdigit():
+        productos = productos.filter(precio_prod__lte=float(precio_max))
     
     # Aplicar ordenamiento
     if ordenar == 'precio_asc':
@@ -3960,109 +3918,85 @@ def productos_filtrados_logeado(request):
         productos = productos.order_by('-stock_prod')
     elif ordenar == 'recientes':
         productos = productos.order_by('-fecha_creacion')
-    elif ordenar == 'ventas':
-        productos = productos.annotate(
-            ventas=Coalesce(Sum('detallespedido__cantidad_detalle'), 0)
-        ).order_by('-ventas')
     else:
-        productos = productos.order_by('-fecha_creacion')
+        productos = productos.order_by('-fecha_creacion')  # Orden por defecto
     
-    # Debug: Contar productos después de filtros
-    total_productos = productos.count()
-    print(f"DEBUG - Total productos después de filtros: {total_productos}")
-    
-    # Obtener categorías y negocios para los filtros (optimizado)
+    # Obtener categorías y negocios para los filtros
     categorias = CategoriaProductos.objects.annotate(
-        num_productos=Count('productos', filter=Q(productos__estado_prod='disponible', productos__stock_prod__gt=0))
-    ).filter(num_productos__gt=0).order_by('desc_cp')
+        num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
+    ).order_by('desc_cp')
     
     negocios = Negocios.objects.annotate(
-        num_productos=Count('productos', filter=Q(productos__estado_prod='disponible', productos__stock_prod__gt=0))
-    ).filter(estado_neg='activo', num_productos__gt=0).order_by('nom_neg')
+        num_productos=models.Count('productos', filter=models.Q(productos__estado_prod='disponible'))
+    ).filter(estado_neg='activo').order_by('nom_neg')
     
-    # Procesar productos con variantes y ofertas (optimizado)
+    # Procesar productos con variantes y ofertas
     productos_data = []
     hoy = date.today()
     
-    # Obtener todas las promociones activas de una vez (optimización)
-    promociones_activas = {}
-    if productos.exists():
-        promociones_query = Promociones.objects.filter(
-            estado_promo='activa',
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-            porcentaje_descuento__gt=0,
-            fkproducto_id__in=productos.values_list('pkid_prod', flat=True)
-        ).values('fkproducto_id', 'porcentaje_descuento', 'titulo_promo')
-        
-        for promo in promociones_query:
-            producto_id = promo['fkproducto_id']
-            descuento = float(promo['porcentaje_descuento']) if promo['porcentaje_descuento'] else 0
-            if descuento > 0:
-                promociones_activas[producto_id] = {
-                    'descuento': descuento,
-                    'titulo': promo['titulo_promo']
-                }
-    
-    # Obtener variantes de todos los productos de una vez (optimización)
-    variantes_por_producto = {}
-    if productos.exists():
-        variantes = VariantesProducto.objects.filter(
-            producto_id__in=productos.values_list('pkid_prod', flat=True),
-            estado_variante='activa'
-        ).select_related('producto')
-        
-        for variante in variantes:
-            producto_id = variante.producto_id
-            if producto_id not in variantes_por_producto:
-                variantes_por_producto[producto_id] = []
-            
-            variantes_por_producto[producto_id].append({
-                'id_variante': variante.id_variante,
-                'nombre_variante': variante.nombre_variante,
-                'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
-                'stock_variante': variante.stock_variante or 0,
-                'imagen_variante': variante.imagen_variante.url if variante.imagen_variante and hasattr(variante.imagen_variante, 'url') else None,
-                'sku_variante': variante.sku_variante
-            })
-    
-    # Procesar cada producto
     for producto in productos:
-        producto_id = producto.pkid_prod
-        
         producto_data = {
             'producto': producto,
-            'precio_base': float(producto.precio_prod) if producto.precio_prod else 0.0,
-            'precio_final': float(producto.precio_prod) if producto.precio_prod else 0.0,
+            'precio_base': float(producto.precio_prod),
+            'precio_final': float(producto.precio_prod),
             'tiene_descuento': False,
             'descuento_porcentaje': 0,
             'ahorro': 0,
             'stock': producto.stock_prod or 0,
             'tiene_variantes': False,
-            'variantes': [],
-            'negocio_nombre': producto.fknegocioasociado_prod.nom_neg if producto.fknegocioasociado_prod else "",
-            'categoria_nombre': producto.fkcategoria_prod.desc_cp if producto.fkcategoria_prod else "",
-            'imagen_url': producto.img_prod.url if producto.img_prod and hasattr(producto.img_prod, 'url') else None,
-            'descripcion_corta': (producto.desc_prod[:100] + '...') if producto.desc_prod and len(producto.desc_prod) > 100 else producto.desc_prod
+            'variantes': []
         }
         
         # Verificar variantes
-        if producto_id in variantes_por_producto:
+        variantes = VariantesProducto.objects.filter(
+            producto=producto, 
+            estado_variante='activa'
+        )
+        
+        if variantes.exists():
             producto_data['tiene_variantes'] = True
-            producto_data['variantes'] = variantes_por_producto[producto_id]
+            
+            variantes_detalladas = []
+            for variante in variantes:
+                variante_data = {
+                    'id_variante': variante.id_variante,
+                    'nombre_variante': variante.nombre_variante,
+                    'precio_adicional': float(variante.precio_adicional) if variante.precio_adicional else 0,
+                    'stock_variante': variante.stock_variante or 0,
+                    'imagen_variante': variante.imagen_variante,
+                    'sku_variante': variante.sku_variante
+                }
+                variantes_detalladas.append(variante_data)
+            
+            producto_data['variantes'] = variantes_detalladas
         
         # Verificar ofertas activas
-        if producto_id in promociones_activas:
-            descuento_info = promociones_activas[producto_id]
-            descuento = descuento_info['descuento']
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT porcentaje_descuento, titulo_promo 
+                FROM promociones 
+                WHERE fkproducto_id = %s 
+                AND estado_promo = 'activa' 
+                AND fecha_inicio <= %s 
+                AND fecha_fin >= %s
+                LIMIT 1
+            """, [producto.pkid_prod, hoy, hoy])
             
-            if descuento > 0:
-                precio_base = float(producto.precio_prod) if producto.precio_prod else 0.0
-                producto_data['precio_final'] = precio_base * (1 - descuento / 100)
-                producto_data['tiene_descuento'] = True
-                producto_data['descuento_porcentaje'] = descuento
-                producto_data['ahorro'] = precio_base - producto_data['precio_final']
-                producto_data['titulo_promo'] = descuento_info['titulo']
+            resultado = cursor.fetchone()
+        
+        if resultado:
+            porcentaje_descuento, titulo_promo = resultado
+            
+            try:
+                descuento = float(porcentaje_descuento) if porcentaje_descuento else 0
+                
+                if descuento > 0:
+                    producto_data['precio_final'] = float(producto.precio_prod) * (1 - descuento / 100)
+                    producto_data['tiene_descuento'] = True
+                    producto_data['descuento_porcentaje'] = descuento
+                    producto_data['ahorro'] = float(producto.precio_prod) - producto_data['precio_final']
+            except (ValueError, TypeError):
+                pass
         
         productos_data.append(producto_data)
     
@@ -4071,31 +4005,24 @@ def productos_filtrados_logeado(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Obtener contador del carrito (optimizado)
+    # Obtener contador del carrito
     carrito_count = 0
     try:
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-        carrito = Carrito.objects.filter(fkusuario_carrito=perfil_cliente).first()
-        if carrito:
+        try:
+            carrito = Carrito.objects.get(fkusuario_carrito=perfil_cliente)
             carrito_count = CarritoItem.objects.filter(fkcarrito=carrito).count()
-    except (UsuarioPerfil.DoesNotExist, Exception) as e:
-        print(f"Error obteniendo carrito: {e}")
+        except Carrito.DoesNotExist:
+            carrito_count = 0
+    except Exception:
         carrito_count = 0
-    
-    # Calcular rango de precios disponibles (para el filtro de precio)
-    if productos.exists():
-        precio_min_disponible = productos.aggregate(min_precio=Min('precio_prod'))['min_precio'] or 0
-        precio_max_disponible = productos.aggregate(max_precio=Max('precio_prod'))['max_precio'] or 100000
-    else:
-        precio_min_disponible = 0
-        precio_max_disponible = 100000
     
     # Preparar contexto
     context = {
         'productos_data': page_obj,
         'categorias': categorias,
         'negocios': negocios,
-        'total_productos': total_productos,
+        'total_productos': paginator.count,
         'filtros_aplicados': {
             'buscar': buscar,
             'categoria': categoria_id,
@@ -4103,7 +4030,6 @@ def productos_filtrados_logeado(request):
             'precio_min': precio_min,
             'precio_max': precio_max,
             'ordenar': ordenar,
-            'filtro': filtro_tipo,
         },
         'filtro_actual': filtro_tipo,
         'categoria_actual': categoria_id,
@@ -4114,61 +4040,10 @@ def productos_filtrados_logeado(request):
         'buscar_actual': buscar,
         'titulo_filtro': titulo_filtro,
         'carrito_count': carrito_count,
-        'precio_min_disponible': float(precio_min_disponible),
-        'precio_max_disponible': float(precio_max_disponible),
-        'page_obj': page_obj,
-        'debug_info': {
-            'total_productos': total_productos,
-            'productos_por_pagina': len(page_obj) if page_obj else 0,
-            'filtros': {
-                'buscar': buscar,
-                'categoria': categoria_id,
-                'negocio': negocio_id,
-                'precio_min': precio_min,
-                'precio_max': precio_max
-            }
-        }
     }
     
-    # Debug: Mostrar información en consola
-    print(f"DEBUG - Contexto enviado:")
-    print(f"  Total productos: {total_productos}")
-    print(f"  Productos en página: {len(page_obj) if page_obj else 0}")
-    print(f"  Título filtro: {titulo_filtro}")
-    
-    # Si es una petición AJAX, devolver JSON
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        from django.http import JsonResponse
-        
-        # Serializar datos para AJAX
-        productos_json = []
-        for producto_data in page_obj:
-            producto = producto_data['producto']
-            productos_json.append({
-                'id': producto.pkid_prod,
-                'nombre': producto.nom_prod,
-                'precio': float(producto.precio_prod) if producto.precio_prod else 0.0,
-                'precio_final': producto_data['precio_final'],
-                'tiene_descuento': producto_data['tiene_descuento'],
-                'descuento_porcentaje': producto_data['descuento_porcentaje'],
-                'stock': producto_data['stock'],
-                'negocio': producto_data['negocio_nombre'],
-                'categoria': producto_data['categoria_nombre'],
-                'imagen': producto_data['imagen_url'],
-                'descripcion': producto_data['descripcion_corta'],
-                'tiene_variantes': producto_data['tiene_variantes']
-            })
-        
-        return JsonResponse({
-            'productos': productos_json,
-            'total': total_productos,
-            'pagina_actual': page_obj.number,
-            'total_paginas': paginator.num_pages,
-            'titulo': titulo_filtro,
-            'filtros': context['filtros_aplicados']
-        })
-    
     return render(request, 'Cliente/productos_filtros_logeado.html', context)
+
 @never_cache
 @login_required(login_url='/auth/login/')
 def mis_pedidos_data(request):
