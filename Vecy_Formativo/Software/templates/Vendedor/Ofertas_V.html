@@ -8,6 +8,71 @@
 <link rel="stylesheet" href="{% static 'vendedor/css/Ofertas_V.css' %}">
 <style>
     /* Estilos para notificaciones */
+    /* Estilos para el acordeón de productos */
+    .accordion-button:not(.collapsed) {
+        background-color: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: rgba(37, 99, 235, 0.25);
+    }
+
+    /* Botones para agregar productos */
+    .btn-sm.agregar-producto-base,
+    .btn-sm.agregar-variante {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .btn-sm.agregar-producto-base:hover,
+    .btn-sm.agregar-variante:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Scroll personalizado */
+    #productosSeleccionadosCombo::-webkit-scrollbar,
+    .productos-disponibles-combo::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    #productosSeleccionadosCombo::-webkit-scrollbar-track,
+    .productos-disponibles-combo::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    #productosSeleccionadosCombo::-webkit-scrollbar-thumb,
+    .productos-disponibles-combo::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+
+    #productosSeleccionadosCombo::-webkit-scrollbar-thumb:hover,
+    .productos-disponibles-combo::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .col-lg-8, .col-lg-4 {
+            width: 100%;
+            border: none !important;
+        }
+        
+        .col-lg-4 {
+            border-top: 1px solid #dee2e6 !important;
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+        }
+    }
+
+    /* Estilos para badges de stock */
+    .badge-stock-combo {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.4rem;
+    }
     .notificacion-temporal {
         position: fixed !important;
         top: 100px !important;
@@ -90,6 +155,245 @@
     .btn:hover i {
         transform: translateY(-1px);
     }
+
+    /* Estilos para combos y 2x1 */
+    .combo-item {
+        background: rgba(59, 130, 246, 0.05);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+
+    .combo-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .combo-item-cantidad {
+        width: 60px;
+    }
+
+    /* Nuevos estilos para tabs */
+    .nav-tabs-combos {
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .nav-tabs-combos .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+        margin-right: 0.5rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+    }
+
+    .nav-tabs-combos .nav-link:hover {
+        color: #4b5563;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .nav-tabs-combos .nav-link.active {
+        color: #2563eb;
+        background-color: rgba(37, 99, 235, 0.1);
+        border-bottom: 2px solid #2563eb;
+    }
+
+    /* Cards para combos y 2x1 */
+    .combo-card, .promo-2x1-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+        border: 1px solid #e5e7eb;
+    }
+
+    .combo-card:hover, .promo-2x1-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Badges especiales */
+    .badge-combo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .badge-2x1 {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    /* Estilos para productos en combo */
+    .producto-combo-seleccionado {
+        background: rgba(59, 130, 246, 0.08);
+        border-left: 3px solid #3b82f6;
+    }
+
+    .producto-combo-seleccionado:hover {
+        background: rgba(59, 130, 246, 0.12);
+    }
+
+    /* Modal específicos - ELIMINAR ESTOS ESTILOS DE MODAL DE COMBOS */
+    .modal-2x1 .modal-header {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+    }
+
+    /* Estilos para lista de combos y 2x1 */
+    .lista-combo-item {
+        border-left: 4px solid #667eea;
+        margin-bottom: 15px;
+    }
+
+    .lista-2x1-item {
+        border-left: 4px solid #f5576c;
+        margin-bottom: 15px;
+    }
+
+    /* Estilos para botones especiales */
+    .btn-combo {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-combo:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-2x1 {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        color: white;
+        border: none;
+    }
+
+    .btn-2x1:hover {
+        background: linear-gradient(135deg, #e879f9 0%, #e11d48 100%);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(240, 147, 251, 0.3);
+    }
+
+    /* Ajustes responsive */
+    @media (max-width: 768px) {
+        .nav-tabs-combos .nav-link {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .combo-item {
+            padding: 8px;
+        }
+    }
+
+    /* Estilos para la configuración de ofertas */
+    .configuracion-oferta-item {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .configuracion-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .configuracion-titulo {
+        margin: 0;
+        font-size: 1rem;
+        color: #374151;
+    }
+
+    .configuracion-meta {
+        display: flex;
+        gap: 12px;
+        margin-top: 8px;
+        font-size: 0.875rem;
+        color: #6b7280;
+    }
+
+    .configuracion-meta span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .precio-original {
+        font-weight: 600;
+        color: #059669;
+    }
+
+    .btn-crear-oferta {
+        min-width: 150px;
+    }
+
+    .quitar-producto-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+
+    /* Estilos para variantes */
+    .variantes-lista {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .variantes-lista.activo {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .variantes-lista .btn-variante {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 4px;
+        padding: 8px 12px;
+        border: 1px solid #e5e7eb;
+        background: #f9fafb;
+    }
+
+    .variantes-lista .btn-variante:hover {
+        background: #f3f4f6;
+    }
+
+    .fa-chevron-down.rotado {
+        transform: rotate(180deg);
+        transition: transform 0.3s ease;
+    }
+
+    /* Estilos para productos seleccionados */
+    .seleccionar-producto.seleccionado {
+        background-color: #10b981 !important;
+        color: white !important;
+        border-color: #10b981 !important;
+    }
+
+    /* Animación para nuevos elementos */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -100,7 +404,7 @@
         <div class="row align-items-center">
             <div class="col-md-6">
                 <h2>Gestión de Ofertas</h2>
-                <p style="white">Crea y administra promociones para tus productos y variantes.</p>
+                <p style="white">Crea y administra promociones, combos y ofertas especiales para tus productos.</p>
             </div>
             <div class="col-md-6">
                 <div class="estadisticas-grid">
@@ -122,10 +426,18 @@
                     
                     <div class="estadistica-card oferta">
                         <div class="estadistica-icono">
-                            <i class="fas fa-percentage"></i>
+                            <i class="fas fa-layer-group"></i>
                         </div>
-                        <div class="estadistica-numero" id="contadorVariantes">0</div>
-                        <div class="estadistica-titulo">Con Variantes</div>
+                        <div class="estadistica-numero">{{ combos_activos|length }}</div>
+                        <div class="estadistica-titulo">Combos</div>
+                    </div>
+                    
+                    <div class="estadistica-card oferta">
+                        <div class="estadistica-icono">
+                            <i class="fas fa-gift"></i>
+                        </div>
+                        <div class="estadistica-numero">{{ promociones_2x1|length }}</div>
+                        <div class="estadistica-titulo">2x1</div>
                     </div>
                 </div>
             </div>
@@ -143,7 +455,7 @@
         {% endfor %}
     {% endif %}
 
-    <!-- Barra de Herramientas Mejorada -->
+    <!-- Barra de Herramientas Mejorada con Botones para Combos y 2x1 -->
     <div class="barra-herramientas">
         <div class="grupo-botones-accion">
             <button class="boton-accion boton-secundario" onclick="limpiarSeleccion()">
@@ -152,6 +464,17 @@
             <a href="{% url 'verificar_estado_ofertas' %}" class="boton-accion boton-primario">
                 <i class="fas fa-sync-alt"></i> Actualizar Estado
             </a>
+            
+            <!-- Botón para crear combo - MODIFICADO: Ahora navega al tab de combos -->
+            <button type="button" class="boton-accion btn-combo" onclick="mostrarTabCombos()">
+                <i class="fas fa-box-open me-1"></i> Crear Combo
+            </button>
+            
+            <!-- Botón para crear 2x1 -->
+            <button type="button" class="boton-accion btn-2x1" data-bs-toggle="modal" data-bs-target="#modalCrear2x1">
+                <i class="fas fa-gift me-1"></i> Crear 2x1
+            </button>
+            
             <button class="boton-accion boton-info" onclick="mostrarDebugInfo()">
                 <i class="fas fa-bug"></i> Info Debug
             </button>
@@ -185,249 +508,830 @@
         </div>
     </div>
 
-    <!-- Productos Disponibles - Diseño Mejorado -->
-    <div class="seccion-productos">
-        <div class="seccion-header">
-            <h3><i class="fas fa-boxes me-2"></i>Productos Disponibles</h3>
-            <span class="contador-seccion" id="totalProductos">{{ productos|length }}</span>
+    <!-- Tabs para diferentes tipos de promociones -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-3">
+            <ul class="nav nav-tabs nav-tabs-combos" id="ofertasTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="productos-tab" data-bs-toggle="tab" data-bs-target="#productos" type="button" role="tab">
+                        <i class="fas fa-boxes me-2"></i>Productos Disponibles
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="ofertas-tab" data-bs-toggle="tab" data-bs-target="#ofertas" type="button" role="tab">
+                        <i class="fas fa-tags me-2"></i>Ofertas Activas
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="combos-tab" data-bs-toggle="tab" data-bs-target="#combos" type="button" role="tab">
+                        <i class="fas fa-box-open me-2"></i>Combos/Paquetes
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="promo2x1-tab" data-bs-toggle="tab" data-bs-target="#promo2x1" type="button" role="tab">
+                        <i class="fas fa-gift me-2"></i>Promociones 2x1
+                    </button>
+                </li>
+            </ul>
         </div>
+    </div>
+
+    <!-- Contenido de los tabs -->
+    <div class="tab-content" id="ofertasTabsContent">
         
-        <div class="contenedor-cards-grid">
-            {% for producto in productos %}
-            <div class="producto-card-oferta producto-item" 
-                 data-nombre="{{ producto.nombre|lower }}" 
-                 data-categoria="{{ producto.categoria }}"
-                 data-stock="{{ producto.stock }}"
-                 data-stock-principal="{{ producto.stock_principal }}"
-                 data-tiene-variantes="{{ producto.tiene_variantes_activas|yesno:'true,false' }}"
-                 data-stock-variantes="{{ producto.stock_variantes_total }}">
-                <div class="producto-header-oferta">
-                    <div class="producto-info-basica">
-                        <h5 class="producto-nombre">{{ producto.nombre }}</h5>
-                        <div class="producto-meta-oferta">
-                            <span class="producto-precio">${{ producto.precio }}</span>
-                            <span class="producto-categoria">{{ producto.categoria }}</span>
-                        </div>
-                        <div class="producto-stock-info">
-                            <span class="badge-stock {% if producto.stock == 0 %}stock-critico{% elif producto.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                <i class="fas fa-box"></i> Stock Total: {{ producto.stock }}
-                            </span>
-                            {% if producto.stock_principal == 0 and producto.tiene_variantes_activas %}
-                                <small class="text-info">
-                                    <i class="fas fa-layer-group"></i> Stock en variantes: {{ producto.stock_variantes_total }}
-                                </small>
-                            {% elif producto.stock_principal > 0 and producto.tiene_variantes_activas %}
-                                <small class="text-muted">
-                                    <i class="fas fa-box"></i> Principal: {{ producto.stock_principal }} | 
-                                    <i class="fas fa-layer-group"></i> Variantes: {{ producto.stock_variantes_total }}
-                                </small>
-                            {% endif %}
-                            <small class="producto-id">ID: {{ producto.id }}</small>
-                        </div>
-                    </div>
+        <!-- Tab 1: Productos Disponibles -->
+        <div class="tab-pane fade show active" id="productos" role="tabpanel">
+            <div class="seccion-productos">
+                <div class="seccion-header">
+                    <h3><i class="fas fa-boxes me-2"></i>Selecciona Productos para Ofertas</h3>
+                    <span class="contador-seccion" id="totalProductos">{{ productos|length }}</span>
                 </div>
                 
-                <div class="producto-acciones-oferta">
-                    <!-- Botón principal para producto base -->
-                    <button type="button" class="btn btn-producto-base seleccionar-producto {% if producto.stock_principal == 0 %}sin-stock-principal{% endif %}"
-                            data-producto-id="{{ producto.id }}"
-                            data-producto-nombre="{{ producto.nombre }}"
-                            data-producto-precio="{{ producto.precio }}"
-                            data-producto-stock="{{ producto.stock_principal }}"
-                            data-producto-categoria="{{ producto.categoria }}"
-                            data-variante-id=""
-                            {% if producto.stock_principal == 0 %}disabled title="Producto base sin stock"{% endif %}>
-                        <i class="fas fa-tag"></i>
-                        <span>Producto Base</span>
-                        <span class="stock-badge {% if producto.stock_principal == 0 %}stock-critico{% elif producto.stock_principal <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                            {{ producto.stock_principal }} disp.
-                        </span>
-                    </button>
-                    
-                    <!-- Botón desplegable para variantes -->
-                    {% if producto.variantes %}
-                    <div class="variantes-accordion">
-                        <button class="btn btn-variantes-toggle" type="button">
-                            <i class="fas fa-layer-group"></i>
-                            <span>Variantes ({{ producto.variantes|length }})</span>
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
+                <div class="contenedor-cards-grid">
+                    {% for producto in productos %}
+                    <div class="producto-card-oferta producto-item" 
+                         data-nombre="{{ producto.nombre|lower }}" 
+                         data-categoria="{{ producto.categoria }}"
+                         data-stock="{{ producto.stock }}"
+                         data-stock-principal="{{ producto.stock_principal }}"
+                         data-tiene-variantes="{{ producto.tiene_variantes_activas|yesno:'true,false' }}"
+                         data-stock-variantes="{{ producto.stock_variantes_total }}">
+                        <div class="producto-header-oferta">
+                            <div class="producto-info-basica">
+                                <h5 class="producto-nombre">{{ producto.nombre }}</h5>
+                                <div class="producto-meta-oferta">
+                                    <span class="producto-precio">${{ producto.precio }}</span>
+                                    <span class="producto-categoria">{{ producto.categoria }}</span>
+                                </div>
+                                <div class="producto-stock-info">
+                                    <span class="badge-stock {% if producto.stock == 0 %}stock-critico{% elif producto.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                        <i class="fas fa-box"></i> Stock Total: {{ producto.stock }}
+                                    </span>
+                                    {% if producto.stock_principal == 0 and producto.tiene_variantes_activas %}
+                                        <small class="text-info">
+                                            <i class="fas fa-layer-group"></i> Stock en variantes: {{ producto.stock_variantes_total }}
+                                        </small>
+                                    {% elif producto.stock_principal > 0 and producto.tiene_variantes_activas %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-box"></i> Principal: {{ producto.stock_principal }} | 
+                                            <i class="fas fa-layer-group"></i> Variantes: {{ producto.stock_variantes_total }}
+                                        </small>
+                                    {% endif %}
+                                    <small class="producto-id">ID: {{ producto.id }}</small>
+                                </div>
+                            </div>
+                        </div>
                         
-                        <div class="variantes-lista">
-                            {% for variante in producto.variantes %}
-                            <button type="button" class="btn btn-variante seleccionar-producto {% if variante.stock == 0 %}sin-stock-variante{% endif %}"
+                        <div class="producto-acciones-oferta">
+                            <!-- Botón principal para producto base -->
+                            <button type="button" class="btn btn-producto-base seleccionar-producto {% if producto.stock_principal == 0 %}sin-stock-principal{% endif %}"
                                     data-producto-id="{{ producto.id }}"
-                                    data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
-                                    data-producto-precio="{{ variante.precio_total }}"
-                                    data-producto-stock="{{ variante.stock }}"
+                                    data-producto-nombre="{{ producto.nombre }}"
+                                    data-producto-precio="{{ producto.precio }}"
+                                    data-producto-stock="{{ producto.stock_principal }}"
                                     data-producto-categoria="{{ producto.categoria }}"
-                                    data-variante-id="{{ variante.id }}"
-                                    {% if variante.stock == 0 %}disabled title="Variante sin stock"{% endif %}>
-                                <i class="fas fa-cube"></i>
-                                <span class="variante-nombre">{{ variante.nombre }}</span>
-                                <span class="variante-precio">${{ variante.precio_total }}</span>
-                                <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
-                                    {{ variante.stock }} disp.
+                                    data-variante-id=""
+                                    {% if producto.stock_principal == 0 %}disabled title="Producto base sin stock"{% endif %}>
+                                <i class="fas fa-tag"></i>
+                                <span>Producto Base</span>
+                                <span class="stock-badge {% if producto.stock_principal == 0 %}stock-critico{% elif producto.stock_principal <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                    {{ producto.stock_principal }} disp.
                                 </span>
                             </button>
-                            {% endfor %}
+                            
+                            <!-- Botón desplegable para variantes -->
+                            {% if producto.variantes %}
+                            <div class="variantes-accordion">
+                                <button class="btn btn-variantes-toggle" type="button">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>Variantes ({{ producto.variantes|length }})</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </button>
+                                
+                                <div class="variantes-lista">
+                                    {% for variante in producto.variantes %}
+                                    <button type="button" class="btn btn-variante seleccionar-producto {% if variante.stock == 0 %}sin-stock-variante{% endif %}"
+                                            data-producto-id="{{ producto.id }}"
+                                            data-producto-nombre="{{ producto.nombre }} - {{ variante.nombre }}"
+                                            data-producto-precio="{{ variante.precio_total }}"
+                                            data-producto-stock="{{ variante.stock }}"
+                                            data-producto-categoria="{{ producto.categoria }}"
+                                            data-variante-id="{{ variante.id }}"
+                                            {% if variante.stock == 0 %}disabled title="Variante sin stock"{% endif %}>
+                                        <i class="fas fa-cube"></i>
+                                        <span class="variante-nombre">{{ variante.nombre }}</span>
+                                        <span class="variante-precio">${{ variante.precio_total }}</span>
+                                        <span class="stock-badge {% if variante.stock == 0 %}stock-critico{% elif variante.stock <= 5 %}stock-bajo{% else %}stock-normal{% endif %}">
+                                            {{ variante.stock }} disp.
+                                        </span>
+                                    </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="sin-variantes">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle"></i> No tiene variantes configuradas
+                                </small>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Botón para agregar a combo (solo para selección rápida) -->
+                            <button type="button" class="btn btn-sm btn-outline-info mt-2 agregar-a-combo"
+                                    data-producto-id="{{ producto.id }}"
+                                    data-producto-nombre="{{ producto.nombre }}"
+                                    data-producto-precio="{{ producto.precio }}"
+                                    title="Agregar a combo rápido">
+                                <i class="fas fa-plus-circle"></i> A Combo
+                            </button>
                         </div>
                     </div>
-                    {% else %}
-                    <div class="sin-variantes">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle"></i> No tiene variantes configuradas
+                    {% empty %}
+                    <div class="estado-vacio">
+                        <i class="fas fa-box-open fa-3x"></i>
+                        <h4>No hay productos disponibles</h4>
+                        <p>No hay productos disponibles para crear ofertas en este momento.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Configuración de Ofertas (solo para ofertas individuales) -->
+            <div class="seccion-configuracion mt-4">
+                <div class="seccion-header">
+                    <h3><i class="fas fa-cog me-2"></i>Configurar Ofertas Individuales</h3>
+                    <span class="contador-seccion" id="contadorProductosSeleccionados">0</span>
+                </div>
+                
+                <div class="contenedor-configuraciones-scroll" id="configuracionesProductos">
+                    <div class="estado-vacio" id="mensajeVacio">
+                        <i class="fas fa-tags fa-3x"></i>
+                        <h4>Sin productos seleccionados</h4>
+                        <p>Selecciona productos de arriba para configurar sus ofertas</p>
+                        <small class="texto-ayuda">
+                            <i class="fas fa-lightbulb"></i>
+                            Puedes seleccionar el producto base o variantes específicas
                         </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Ofertas Activas -->
+        <div class="tab-pane fade" id="ofertas" role="tabpanel">
+            <div class="seccion-ofertas-activas">
+                <div class="seccion-header">
+                    <h3><i class="fas fa-bolt me-2"></i>Ofertas Activas</h3>
+                    <span class="contador-seccion">{{ ofertas_activas|length }}</span>
+                </div>
+                
+                <div class="contenedor-ofertas-activas">
+                    {% if ofertas_activas %}
+                        {% for oferta in ofertas_activas %}
+                        <div class="oferta-activa-card {% if not oferta.esta_activa_real %}oferta-inactiva{% endif %}">
+                            <div class="oferta-header">
+                                <div class="oferta-info-principal">
+                                    <h5 class="oferta-producto">{{ oferta.producto_nombre }}</h5>
+                                    <p class="oferta-titulo">{{ oferta.titulo }}</p>
+                                    <div class="oferta-meta">
+                                        <span class="oferta-fecha">Creada: {{ oferta.fecha_creacion }}</span>
+                                        <span class="badge-tipo-oferta">{{ oferta.tipo_oferta|title }}</span>
+                                        {% if oferta.variante_id %}
+                                        <span class="badge-variante">Variante</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="oferta-descuento">
+                                    <span class="porcentaje-descuento">{{ oferta.descuento }}% OFF</span>
+                                </div>
+                            </div>
+                            
+                            <div class="oferta-detalles">
+                                <div class="detalle-precios">
+                                    <div class="precio-original">
+                                        <small>Precio original</small>
+                                        <span class="precio-tachado">${{ oferta.precio_original|floatformat:0 }}</span>
+                                    </div>
+                                    <div class="precio-oferta">
+                                        <small>Precio oferta</small>
+                                        <span class="precio-final">${{ oferta.precio_oferta|floatformat:0 }}</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="detalle-stock">
+                                    <div class="progreso-stock">
+                                        {% if oferta.stock_oferta > 0 %}
+                                        <div class="progreso-bar" style="width: {{ oferta.stock_actual_oferta|floatformat:0|default:0|divisibleby:oferta.stock_oferta }}%"></div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="stock-info">
+                                        <span>Stock: {{ oferta.stock_actual_oferta }}/{{ oferta.stock_oferta }}</span>
+                                        {% if oferta.tipo_oferta == 'stock' %}
+                                        <small>Disponible: {{ oferta.stock_disponible }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="detalle-tiempo">
+                                    <div class="tiempo-info">
+                                        <small>Inicio: {{ oferta.fecha_inicio }}</small>
+                                        <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
+                                    </div>
+                                    <span class="badge-estado {% if oferta.esta_activa_real %}estado-activo{% else %}estado-inactivo{% endif %}">
+                                        {% if oferta.esta_activa_real %}Activa{% else %}Inactiva{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="oferta-acciones">
+                                <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-accion btn-eliminar" 
+                                            onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% if oferta.esta_activa_real %}
+                                <form method="POST" action="{% url 'finalizar_oferta_manual' oferta.id %}" class="d-inline finalizar-oferta-form">
+                                    {% csrf_token %}
+                                    <button type="button" class="btn btn-accion btn-detener finalizar-oferta-btn" 
+                                            data-oferta-id="{{ oferta.id }}"
+                                            data-oferta-nombre="{{ oferta.producto_nombre }}">
+                                        <i class="fas fa-stop"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="estado-vacio">
+                        <i class="fas fa-tags fa-3x"></i>
+                        <h4>No hay ofertas activas</h4>
+                        <p>Crea tu primera oferta seleccionando productos en la pestaña anterior</p>
                     </div>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Combos/Paquetes -->
+        <div class="tab-pane fade" id="combos" role="tabpanel">
+            <div class="seccion-combos">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h3><i class="fas fa-box-open me-2"></i>Combos y Paquetes</h3>
+                        <p class="text-muted mb-0">Crea y gestiona combos con productos y variantes</p>
+                    </div>
+                    <div class="contador-seccion">{{ combos_activos|length }}</div>
+                </div>
                 
-                <div class="debug-info" style="display: none;">
-                    <small class="text-muted">
-                        Debug: Principal:{{ producto.stock_principal }} | 
-                        Variantes:{{ producto.stock_variantes_total }} | 
-                        Total:{{ producto.stock }} | 
-                        TieneVar:{{ producto.tiene_variantes_activas }}
-                    </small>
+                <!-- Formulario para crear combos (directo en el tab) -->
+                <div class="card shadow-sm mb-5">
+                    <div class="card-header bg-gradient-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-plus-circle me-2"></i>Crear Nuevo Combo/Paquete
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="formCrearCombo" method="POST" action="{% url 'crear_combo' %}">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-lg-8">
+                                    <!-- Información básica del combo -->
+                                    <div class="mb-3">
+                                        <label for="nombreCombo" class="form-label">Nombre del Combo *</label>
+                                        <input type="text" class="form-control" id="nombreCombo" name="nombre_combo" required 
+                                            placeholder="Ej: Ancheta Navideña, Paquete Familiar, etc.">
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label for="descripcionCombo" class="form-label">Descripción</label>
+                                        <textarea class="form-control" id="descripcionCombo" name="descripcion_combo" 
+                                                rows="2" placeholder="Describe los productos incluidos en este combo..."></textarea>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="precioCombo" class="form-label">Precio del Combo *</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" class="form-control" id="precioCombo" name="precio_combo" 
+                                                    min="1" step="0.01" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="stockCombo" class="form-label">Stock del Combo</label>
+                                            <input type="number" class="form-control" id="stockCombo" name="stock_combo" 
+                                                min="0" value="0">
+                                            <small class="text-muted">0 = Sin límite de stock</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Fechas del combo -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="fechaInicioCombo" class="form-label">Fecha de inicio</label>
+                                            <input type="date" class="form-control" id="fechaInicioCombo" name="fecha_inicio" 
+                                                value="{{ today }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="fechaFinCombo" class="form-label">Fecha de fin</label>
+                                            <input type="date" class="form-control" id="fechaFinCombo" name="fecha_fin" 
+                                                value="{{ tomorrow }}">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Productos seleccionados para el combo -->
+                                    <div class="mb-3">
+                                        <label class="form-label">Productos en el Combo</label>
+                                        <div id="productosSeleccionadosCombo" class="border rounded p-3 bg-light" style="min-height: 150px; max-height: 300px; overflow-y: auto;">
+                                            <div class="text-center text-muted py-5" id="sinProductosCombo">
+                                                <i class="fas fa-box-open fa-3x mb-3"></i>
+                                                <p>No hay productos agregados al combo</p>
+                                                <small>Selecciona productos de la lista de la derecha</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-lg-4 border-start">
+                                    <!-- Lista de productos disponibles para agregar -->
+                                    <label class="form-label">Agregar Productos</label>
+                                    <div class="mb-3">
+                                        <input type="text" class="form-control mb-2" id="buscarProductosCombo" 
+                                            placeholder="Buscar productos...">
+                                    </div>
+                                    
+                                    <div class="productos-disponibles-combo" style="max-height: 400px; overflow-y: auto;">
+                                        {% for producto in productos %}
+                                        <div class="accordion mb-2" id="accordionProducto{{ producto.id }}">
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseProducto{{ producto.id }}" 
+                                                            aria-expanded="false" aria-controls="collapseProducto{{ producto.id }}">
+                                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                                            <div>
+                                                                <strong>{{ producto.nombre }}</strong>
+                                                                <small class="text-muted d-block">${{ producto.precio }}</small>
+                                                            </div>
+                                                            <span class="badge bg-secondary">{{ producto.variantes|length }} variantes</span>
+                                                        </div>
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseProducto{{ producto.id }}" class="accordion-collapse collapse" 
+                                                    data-bs-parent="#accordionProducto{{ producto.id }}">
+                                                    <div class="accordion-body p-2">
+                                                        <!-- Botón para agregar producto base -->
+                                                        <button type="button" class="btn btn-sm btn-outline-primary w-100 mb-2 agregar-producto-base" 
+                                                                data-producto-id="{{ producto.id }}"
+                                                                data-producto-nombre="{{ producto.nombre }}"
+                                                                data-producto-precio="{{ producto.precio }}"
+                                                                {% if producto.stock_principal == 0 %}disabled title="Sin stock principal"{% endif %}>
+                                                            <i class="fas fa-box me-1"></i> Producto Base
+                                                            <span class="badge bg-{% if producto.stock_principal > 0 %}success{% else %}danger{% endif %} ms-1">
+                                                                {{ producto.stock_principal }}
+                                                            </span>
+                                                        </button>
+                                                        
+                                                        <!-- Lista de variantes -->
+                                                        {% if producto.variantes %}
+                                                        <div class="mt-2">
+                                                            <small class="text-muted d-block mb-2">Variantes:</small>
+                                                            {% for variante in producto.variantes %}
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary w-100 mb-1 agregar-variante" 
+                                                                    data-producto-id="{{ producto.id }}"
+                                                                    data-producto-nombre="{{ producto.nombre }}"
+                                                                    data-variante-id="{{ variante.id }}"
+                                                                    data-variante-nombre="{{ variante.nombre }}"
+                                                                    data-precio-total="{{ variante.precio_total }}"
+                                                                    {% if variante.stock == 0 %}disabled title="Variante sin stock"{% endif %}>
+                                                                <i class="fas fa-cube me-1"></i> {{ variante.nombre }}
+                                                                <span class="badge bg-{% if variante.stock > 0 %}success{% else %}danger{% endif %} ms-1">
+                                                                    {{ variante.stock }}
+                                                                </span>
+                                                            </button>
+                                                            {% endfor %}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    <!-- Resumen del combo -->
+                                    <div class="mt-4 border-top pt-3">
+                                        <h6><i class="fas fa-chart-bar me-2"></i>Resumen del Combo</h6>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-muted">Productos:</span>
+                                            <strong id="contadorProductosCombo">0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-muted">Precio regular:</span>
+                                            <strong id="precioRegularCombo">$0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="text-muted">Precio combo:</span>
+                                            <strong class="text-primary" id="precioFinalCombo">$0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span class="text-muted">Ahorro:</span>
+                                            <strong class="text-success" id="ahorroCombo">$0</strong>
+                                        </div>
+                                        
+                                        <!-- Botón de crear combo -->
+                                        <button type="submit" class="btn btn-combo w-100">
+                                            <i class="fas fa-save me-1"></i> Crear Combo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Inputs ocultos para productos del combo -->
+                            <div id="inputsProductosCombo"></div>
+                        </form>
+                    </div>
                 </div>
-            </div>
-            {% empty %}
-            <div class="estado-vacio">
-                <i class="fas fa-box-open fa-3x"></i>
-                <h4>No hay productos disponibles</h4>
-                <p>No hay productos disponibles para crear ofertas en este momento.</p>
-                <button class="btn btn-primary mt-2" onclick="recargarPagina()">
-                    <i class="fas fa-sync-alt"></i> Recargar Página
-                </button>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Configuración de Ofertas -->
-    <div class="seccion-configuracion">
-        <div class="seccion-header">
-            <h3><i class="fas fa-cog me-2"></i>Configurar Ofertas</h3>
-            <span class="contador-seccion" id="contadorProductosSeleccionados">0</span>
-        </div>
-        
-        <div class="contenedor-configuraciones-scroll" id="configuracionesProductos">
-            <div class="estado-vacio" id="mensajeVacio">
-                <i class="fas fa-tags fa-3x"></i>
-                <h4>Sin productos seleccionados</h4>
-                <p>Selecciona productos de arriba para configurar sus ofertas</p>
-                <small class="texto-ayuda">
-                    <i class="fas fa-lightbulb"></i>
-                    Puedes seleccionar el producto base o variantes específicas
-                </small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Ofertas Activas - Diseño Mejorado -->
-    <div class="seccion-ofertas-activas">
-        <div class="seccion-header">
-            <h3><i class="fas fa-bolt me-2"></i>Ofertas Activas</h3>
-            <span class="contador-seccion">{{ ofertas_activas|length }}</span>
-        </div>
-        
-        <div class="contenedor-ofertas-activas">
-            {% if ofertas_activas %}
-                {% for oferta in ofertas_activas %}
-                <div class="oferta-activa-card {% if not oferta.esta_activa_real %}oferta-inactiva{% endif %}">
-                    <div class="oferta-header">
-                        <div class="oferta-info-principal">
-                            <h5 class="oferta-producto">{{ oferta.producto_nombre }}</h5>
-                            <p class="oferta-titulo">{{ oferta.titulo }}</p>
-                            <div class="oferta-meta">
-                                <span class="oferta-fecha">Creada: {{ oferta.fecha_creacion }}</span>
-                                <span class="badge-tipo-oferta">{{ oferta.tipo_oferta|title }}</span>
-                                {% if oferta.variante_id %}
-                                <span class="badge-variante">Variante</span>
-                                {% endif %}
+                
+                <!-- Combos existentes -->
+                <h4 class="mb-4"><i class="fas fa-list me-2"></i>Combos Activos</h4>
+                <div class="contenedor-combos">
+                    {% if combos_activos %}
+                        {% for combo in combos_activos %}
+                        <div class="combo-card card mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h5 class="card-title mb-1">
+                                                    {{ combo.nombre }}
+                                                    <span class="badge bg-{% if combo.estado == 'activo' %}success{% elif combo.estado == 'inactivo' %}secondary{% else %}warning{% endif %} ms-2">
+                                                        {{ combo.estado|title }}
+                                                    </span>
+                                                </h5>
+                                                {% if combo.descripcion %}
+                                                <p class="text-muted mb-2">{{ combo.descripcion }}</p>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                {% if combo.tiene_ahorro %}
+                                                <div class="text-success">
+                                                    <small class="text-decoration-line-through text-muted">${{ combo.precio_regular|floatformat:0 }}</small>
+                                                    <h4 class="mb-0">${{ combo.precio|floatformat:0 }}</h4>
+                                                    <small class="text-success">
+                                                        <i class="fas fa-money-bill-wave"></i> Ahorra ${{ combo.ahorro|floatformat:0 }}
+                                                    </small>
+                                                </div>
+                                                {% else %}
+                                                <h4 class="mb-0">${{ combo.precio|floatformat:0 }}</h4>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <h6><i class="fas fa-box me-2"></i>Productos incluidos:</h6>
+                                            <div class="row">
+                                                {% for item in combo.items %}
+                                                <div class="col-md-6 mb-2">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <span class="text-muted">
+                                                            <i class="fas fa-cube me-1"></i>{{ item.nombre_completo }}
+                                                        </span>
+                                                        <span class="badge bg-light text-dark">
+                                                            x{{ item.cantidad }}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-box me-1"></i> Stock: 
+                                                        <strong>{{ combo.stock }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-alt me-1"></i> Inicio: 
+                                                        <strong>{{ combo.fecha_inicio|default:"Indefinido" }}</strong>
+                                                    </small>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-calendar-times me-1"></i> Fin: 
+                                                        <strong>{{ combo.fecha_fin|default:"Indefinido" }}</strong>
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 border-start">
+                                        <div class="d-flex flex-column h-100">
+                                            <div class="mb-auto">
+                                                <div class="text-center mb-3">
+                                                    {% if combo.imagen %}
+                                                    <img src="{{ combo.imagen.url }}" alt="{{ combo.nombre }}" class="img-fluid rounded" style="max-height: 150px;">
+                                                    {% else %}
+                                                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 150px;">
+                                                        <i class="fas fa-box-open fa-3x text-muted"></i>
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="mt-auto">
+                                                <div class="btn-group w-100" role="group">
+                                                    {% if combo.estado == 'activo' %}
+                                                    <form method="POST" action="{% url 'finalizar_combo_manual' combo.id %}" class="w-100">
+                                                        {% csrf_token %}
+                                                        <button type="button" class="btn btn-warning btn-sm finalizar-combo-btn w-100" 
+                                                                data-combo-id="{{ combo.id }}"
+                                                                data-combo-nombre="{{ combo.nombre }}">
+                                                            <i class="fas fa-stop me-1"></i> Finalizar
+                                                        </button>
+                                                    </form>
+                                                    {% endif %}
+                                                    <form method="POST" action="{% url 'eliminar_combo' combo.id %}" class="w-100">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-danger btn-sm w-100" 
+                                                                onclick="return confirm('¿Estás seguro de eliminar este combo?')">
+                                                            <i class="fas fa-trash me-1"></i> Eliminar
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        
-                        <div class="oferta-descuento">
-                            <span class="porcentaje-descuento">{{ oferta.descuento }}% OFF</span>
+                        {% endfor %}
+                    {% else %}
+                    <div class="estado-vacio">
+                        <i class="fas fa-box-open fa-3x"></i>
+                        <h4>No hay combos creados</h4>
+                        <p>Crea tu primer combo usando el formulario de arriba</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Promociones 2x1 -->
+        <div class="tab-pane fade" id="promo2x1" role="tabpanel">
+            <div class="seccion-2x1">
+                <div class="seccion-header">
+                    <h3><i class="fas fa-gift me-2"></i>Promociones 2x1</h3>
+                    <span class="contador-seccion">{{ promociones_2x1|length }}</span>
+                </div>
+                
+                <div class="contenedor-2x1">
+                    {% if promociones_2x1 %}
+                        {% for promo in promociones_2x1 %}
+                        <div class="promo-2x1-card card mb-3 {% if not promo.esta_activa %}opacity-50{% endif %}">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-8">
+                                        <h5 class="card-title mb-2">
+                                            <i class="fas fa-gift text-danger me-2"></i>
+                                            {{ promo.producto_nombre }}
+                                            <span class="badge bg-danger ms-2">2x1</span>
+                                            {% if promo.aplica_variantes %}
+                                            <span class="badge bg-info ms-1">Incluye variantes</span>
+                                            {% endif %}
+                                        </h5>
+                                        
+                                        <div class="row mt-3">
+                                            <div class="col-md-4">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-calendar-start text-primary me-2"></i>
+                                                    <div>
+                                                        <small class="text-muted">Inicio</small>
+                                                        <div class="fw-bold">{{ promo.fecha_inicio }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-calendar-times text-primary me-2"></i>
+                                                    <div>
+                                                        <small class="text-muted">Fin</small>
+                                                        <div class="fw-bold">{{ promo.fecha_fin }}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-info-circle text-primary me-2"></i>
+                                                    <div>
+                                                        <small class="text-muted">Estado</small>
+                                                        <div>
+                                                            <span class="badge bg-{% if promo.esta_activa %}success{% else %}secondary{% endif %}">
+                                                                {{ promo.estado|title }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Creada: {{ promo.fecha_creacion }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4 border-start">
+                                        <div class="d-flex flex-column h-100 justify-content-center align-items-center">
+                                            <div class="text-center mb-3">
+                                                <div class="display-4 text-danger mb-2">2x1</div>
+                                                <p class="text-muted mb-0">Lleva 2 por el precio de 1</p>
+                                            </div>
+                                            
+                                            <div class="btn-group w-100" role="group">
+                                                {% if promo.esta_activa %}
+                                                <form method="POST" action="{% url 'finalizar_promocion_2x1_manual' promo.id %}" class="w-100">
+                                                    {% csrf_token %}
+                                                    <button type="button" class="btn btn-warning btn-sm finalizar-2x1-btn w-100"
+                                                            data-promo-id="{{ promo.id }}"
+                                                            data-producto-nombre="{{ promo.producto_nombre }}">
+                                                        <i class="fas fa-stop me-1"></i> Finalizar
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                <form method="POST" action="{% url 'eliminar_promocion_2x1' promo.id %}" class="w-100">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger btn-sm w-100"
+                                                            onclick="return confirm('¿Estás seguro de eliminar esta promoción 2x1?')">
+                                                        <i class="fas fa-trash me-1"></i> Eliminar
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                    <div class="estado-vacio">
+                        <i class="fas fa-gift fa-3x"></i>
+                        <h4>No hay promociones 2x1</h4>
+                        <p>Crea tu primera promoción 2x1 haciendo clic en el botón "Crear 2x1"</p>
+                        <button type="button" class="btn btn-2x1 mt-2" data-bs-toggle="modal" data-bs-target="#modalCrear2x1">
+                            <i class="fas fa-gift me-1"></i> Crear Primer 2x1
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL DE COMBOS ELIMINADO - AHORA ESTÁ DENTRO DEL TAB DE COMBOS -->
+
+<!-- Modal para crear promociones 2x1 -->
+<div class="modal fade modal-2x1" id="modalCrear2x1" tabindex="-1" aria-labelledby="modalCrear2x1Label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCrear2x1Label">
+                    <i class="fas fa-gift me-2"></i>Crear Promoción 2x1
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formCrear2x1" method="POST" action="{% url 'crear_promocion_2x1' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="producto2x1" class="form-label">Seleccionar Producto *</label>
+                        <select class="form-select" id="producto2x1" name="producto_id_2x1" required>
+                            <option value="">Selecciona un producto</option>
+                            {% for producto in productos %}
+                            <option value="{{ producto.id }}">{{ producto.nombre }} - ${{ producto.precio }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="variante2x1" class="form-label">Variante específica (opcional)</label>
+                        <select class="form-select" id="variante2x1" name="variante_id_2x1">
+                            <option value="">Seleccionar variante (opcional)</option>
+                            <!-- Las opciones se cargarán dinámicamente -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="aplicaVariantes2x1" name="aplica_variantes" value="1">
+                        <label class="form-check-label" for="aplicaVariantes2x1">
+                            Aplicar a todas las variantes de este producto
+                        </label>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="fechaInicio2x1" class="form-label">Fecha de inicio *</label>
+                            <input type="date" class="form-control" id="fechaInicio2x1" name="fecha_inicio_2x1" 
+                                   value="{{ today }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="fechaFin2x1" class="form-label">Fecha de fin *</label>
+                            <input type="date" class="form-control" id="fechaFin2x1" name="fecha_fin_2x1" 
+                                   value="{{ tomorrow }}" required>
                         </div>
                     </div>
                     
-                    <div class="oferta-detalles">
-                        <div class="detalle-precios">
-                            <div class="precio-original">
-                                <small>Precio original</small>
-                                <span class="precio-tachado">${{ oferta.precio_original|floatformat:0 }}</span>
-                            </div>
-                            <div class="precio-oferta">
-                                <small>Precio oferta</small>
-                                <span class="precio-final">${{ oferta.precio_oferta|floatformat:0 }}</span>
-                            </div>
-                        </div>
-                        
-                        <div class="detalle-stock">
-                            <div class="progreso-stock">
-                                {% if oferta.stock_oferta > 0 %}
-                                <div class="progreso-bar" style="width: {{ oferta.stock_actual_oferta|floatformat:0|default:0|divisibleby:oferta.stock_oferta }}%"></div>
-                                {% endif %}
-                            </div>
-                            <div class="stock-info">
-                                <span>Stock: {{ oferta.stock_actual_oferta }}/{{ oferta.stock_oferta }}</span>
-                                {% if oferta.tipo_oferta == 'stock' %}
-                                <small>Disponible: {{ oferta.stock_disponible }}</small>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="detalle-tiempo">
-                            <div class="tiempo-info">
-                                <small>Inicio: {{ oferta.fecha_inicio }}</small>
-                                <small>Fin: {{ oferta.fecha_fin|default:"Sin fecha" }}</small>
-                            </div>
-                            <span class="badge-estado {% if oferta.esta_activa_real %}estado-activo{% else %}estado-inactivo{% endif %}">
-                                {% if oferta.esta_activa_real %}Activa{% else %}Inactiva{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="oferta-acciones">
-                        <form method="POST" action="{% url 'eliminar_oferta' oferta.id %}" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-accion btn-eliminar" 
-                                    onclick="return confirm('¿Estás seguro de eliminar esta oferta?')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </form>
-                        {% if oferta.esta_activa_real %}
-                        <form method="POST" action="{% url 'finalizar_oferta_manual' oferta.id %}" class="d-inline finalizar-oferta-form">
-                            {% csrf_token %}
-                            <button type="button" class="btn btn-accion btn-detener finalizar-oferta-btn" 
-                                    data-oferta-id="{{ oferta.id }}"
-                                    data-oferta-nombre="{{ oferta.producto_nombre }}">
-                                <i class="fas fa-stop"></i>
-                            </button>
-                        </form>
-                        {% endif %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>
+                            <strong>Promoción 2x1:</strong> Los clientes podrán llevar 2 unidades de este producto 
+                            pagando solo el precio de 1. La promoción se aplica automáticamente al añadir al carrito.
+                        </small>
                     </div>
                 </div>
-                {% endfor %}
-            {% else %}
-            <div class="estado-vacio">
-                <i class="fas fa-tags fa-3x"></i>
-                <h4>No hay ofertas activas</h4>
-                <p>Crea tu primera oferta seleccionando productos de arriba</p>
-            </div>
-            {% endif %}
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-2x1">
+                        <i class="fas fa-gift me-1"></i> Crear Promoción 2x1
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 {% endblock %}
 
-
 {% block extra_js %}
+<script src="{% static 'Javascript_V/Ofertas_V.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sistema de ofertas con pestañas cargado correctamente');
+    
+    // ==================== VARIABLES GLOBALES ====================
     let productosSeleccionados = [];
+    let productosSeleccionadosCombo = [];
+    
+    // ==================== FUNCIONES GENERALES ====================
+    
+    // Mostrar notificación
+    function mostrarNotificacion(mensaje, tipo = 'info') {
+        const alertClass = {
+            'success': 'alert-success',
+            'error': 'alert-danger',
+            'warning': 'alert-warning',
+            'info': 'alert-info'
+        }[tipo] || 'alert-info';
+
+        const iconClass = {
+            'success': 'fa-check-circle',
+            'error': 'fa-exclamation-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle'
+        }[tipo] || 'fa-info-circle';
+
+        const notificacionHTML = `
+            <div class="alert ${alertClass} alert-dismissible fade show notificacion-temporal" role="alert">
+                <i class="fas ${iconClass} me-2"></i>
+                ${mensaje}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', notificacionHTML);
+        
+        setTimeout(() => {
+            const alert = document.querySelector('.notificacion-temporal');
+            if (alert) alert.remove();
+        }, 4000);
+    }
+    
+    // Función para mostrar el tab de combos
+    window.mostrarTabCombos = function() {
+        const comboTab = document.querySelector('#combos-tab');
+        if (comboTab) {
+            comboTab.click();
+            // Scroll suave al formulario
+            setTimeout(() => {
+                document.querySelector('#combos').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    };
+    
+    // ==================== FUNCIONALIDAD PARA OFERTAS INDIVIDUALES ====================
+    
     const buscarInput = document.getElementById('buscarProductos');
     const filtroCategoria = document.getElementById('filtroCategoria');
     const filtroStock = document.getElementById('filtroStock');
@@ -435,21 +1339,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const configuraciones = document.getElementById('configuracionesProductos');
     const mensajeVacio = document.getElementById('mensajeVacio');
     const contador = document.getElementById('contadorProductosSeleccionados');
-    const contadorVariantes = document.getElementById('contadorVariantes');
-
-    // Calcular contador de productos con variantes
-    function calcularContadorVariantes() {
-        let contador = 0;
-        productosItems.forEach(item => {
-            const tieneVariantes = item.getAttribute('data-tiene-variantes') === 'true';
-            if (tieneVariantes) {
-                contador++;
-            }
-        });
-        contadorVariantes.textContent = contador;
-    }
-
-    // Cargar productos seleccionados desde sessionStorage al iniciar
+    
+    // Cargar selección guardada desde sessionStorage
     function cargarSeleccionGuardada() {
         const seleccionGuardada = sessionStorage.getItem('productosSeleccionadosOfertas');
         if (seleccionGuardada) {
@@ -458,7 +1349,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 actualizarConfiguraciones();
                 actualizarContador();
                 
-                // Restaurar estado de botones seleccionados
                 productosSeleccionados.forEach(producto => {
                     const [productoId, varianteId] = producto.key.split('-');
                     const buttons = document.querySelectorAll(
@@ -475,12 +1365,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
-
-    // Guardar productos seleccionados en sessionStorage
+    
+    // Guardar selección en sessionStorage
     function guardarSeleccion() {
         sessionStorage.setItem('productosSeleccionadosOfertas', JSON.stringify(productosSeleccionados));
     }
-
+    
     // Obtener fecha y hora actual
     const now = new Date();
     const today = now.toISOString().split('T')[0];
@@ -492,7 +1382,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
-
+    
     // Inicializar acordeones de variantes
     document.querySelectorAll('.btn-variantes-toggle').forEach(toggle => {
         toggle.addEventListener('click', function(e) {
@@ -505,16 +1395,22 @@ document.addEventListener('DOMContentLoaded', function() {
             icono.classList.toggle('rotado');
         });
     });
-
+    
     // Búsqueda en tiempo real
-    buscarInput.addEventListener('input', filtrarProductos);
-    filtroCategoria.addEventListener('change', filtrarProductos);
-    filtroStock.addEventListener('change', filtrarProductos);
-
+    if (buscarInput) {
+        buscarInput.addEventListener('input', filtrarProductos);
+    }
+    if (filtroCategoria) {
+        filtroCategoria.addEventListener('change', filtrarProductos);
+    }
+    if (filtroStock) {
+        filtroStock.addEventListener('change', filtrarProductos);
+    }
+    
     function filtrarProductos() {
-        const busqueda = buscarInput.value.toLowerCase();
-        const categoria = filtroCategoria.value;
-        const filtroStockVal = filtroStock.value;
+        const busqueda = buscarInput ? buscarInput.value.toLowerCase() : '';
+        const categoria = filtroCategoria ? filtroCategoria.value : '';
+        const filtroStockVal = filtroStock ? filtroStock.value : '';
         
         let productosVisibles = 0;
         
@@ -546,17 +1442,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        document.getElementById('totalProductos').textContent = productosVisibles;
+        const totalProductosEl = document.getElementById('totalProductos');
+        if (totalProductosEl) {
+            totalProductosEl.textContent = productosVisibles;
+        }
     }
-
+    
     // Limpiar filtros
     window.limpiarFiltros = function() {
-        buscarInput.value = '';
-        filtroCategoria.value = '';
-        filtroStock.value = '';
+        if (buscarInput) buscarInput.value = '';
+        if (filtroCategoria) filtroCategoria.value = '';
+        if (filtroStock) filtroStock.value = '';
         filtrarProductos();
     };
-
+    
     // Mostrar información de debug
     window.mostrarDebugInfo = function() {
         const debugElements = document.querySelectorAll('.debug-info');
@@ -565,13 +1464,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         mostrarNotificacion('Información de debug ' + (debugElements[0].style.display === 'none' ? 'oculta' : 'visible'), 'info');
     };
-
+    
     // Recargar página
     window.recargarPagina = function() {
         window.location.reload();
     };
-
-    // Seleccionar producto
+    
+    // Seleccionar producto para oferta individual
     document.querySelectorAll('.seleccionar-producto').forEach(button => {
         button.addEventListener('click', function() {
             const productoId = this.getAttribute('data-producto-id');
@@ -603,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', function() {
             productosSeleccionados.push(producto);
             actualizarConfiguraciones();
             actualizarContador();
-            guardarSeleccion(); // Guardar en sessionStorage
+            guardarSeleccion();
             
             // Deshabilitar el botón
             this.disabled = true;
@@ -612,208 +1511,143 @@ document.addEventListener('DOMContentLoaded', function() {
             mostrarNotificacion(`"${producto.nombre}" agregado a configuración`, 'success');
         });
     });
-
+    
     function actualizarContador() {
-        contador.textContent = productosSeleccionados.length;
+        if (contador) {
+            contador.textContent = productosSeleccionados.length;
+        }
     }
-
+    
     function actualizarConfiguraciones() {
-        if (productosSeleccionados.length === 0) {
-            mensajeVacio.style.display = 'flex';
-            configuraciones.innerHTML = '';
-            configuraciones.classList.remove('con-scroll-activo');
-            return;
-        }
-
-        mensajeVacio.style.display = 'none';
+        if (!configuraciones || !mensajeVacio) return;
         
-        // Activar scroll cuando hay 2 o más productos
-        if (productosSeleccionados.length >= 2) {
-            configuraciones.classList.add('con-scroll-activo');
+        // Ocultar mensaje de vacío si hay productos
+        if (productosSeleccionados.length > 0) {
+            mensajeVacio.style.display = 'none';
         } else {
-            configuraciones.classList.remove('con-scroll-activo');
+            mensajeVacio.style.display = 'block';
         }
         
-        configuraciones.innerHTML = productosSeleccionados.map((producto, index) => `
-            <div class="configuracion-oferta-card" data-key="${producto.key}">
+        let configHTML = '';
+        
+        productosSeleccionados.forEach((producto, index) => {
+            configHTML += `
+            <div class="configuracion-oferta-item" data-producto-key="${producto.key}">
                 <div class="configuracion-header">
                     <div class="configuracion-info">
-                        <i class="fas ${producto.variante_id ? 'fa-layer-group text-info' : 'fa-box text-primary'}"></i>
-                        <div class="configuracion-detalles">
-                            <h5>${producto.nombre}</h5>
-                            <div class="configuracion-meta">
-                                <span class="precio-config">$${producto.precio}</span>
-                                <span class="stock-config">Stock: ${producto.stock}</span>
-                                <span class="categoria-config">${producto.categoria}</span>
-                                <span class="tipo-config">
-                                    ${producto.variante_id ? '<i class="fas fa-cube"></i> Variante' : '<i class="fas fa-box"></i> Producto Base'}
-                                </span>
-                            </div>
+                        <h6 class="configuracion-titulo">
+                            <i class="fas fa-tag me-2"></i>${producto.nombre}
+                            ${producto.variante_id ? '<span class="badge bg-info ms-2">Variante</span>' : ''}
+                        </h6>
+                        <div class="configuracion-meta">
+                            <span class="precio-original">Precio: $${producto.precio}</span>
+                            <span class="stock-disponible">Stock: ${producto.stock}</span>
+                            <span class="categoria">Categoría: ${producto.categoria}</span>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-quitar quitar-producto" data-key="${producto.key}">
+                    
+                    <button type="button" class="btn btn-sm btn-danger quitar-producto-btn" 
+                            onclick="quitarProductoConfig('${producto.key}')">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 
-                <div class="configuracion-body">
-                    <form method="POST" action="{% url 'crear_oferta' %}" class="form-configuracion-oferta" data-producto-key="${producto.key}">
-                        {% csrf_token %}
-                        <input type="hidden" name="producto_id" value="${producto.id}">
-                        <input type="hidden" name="variante_id" value="${producto.variante_id}">
-                        
-                        <div class="configuracion-grid-compacto">
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Descuento % *</label>
-                                <div class="grupo-input">
-                                    <input type="number" class="control-formulario descuento-input" 
-                                           name="porcentaje_descuento" value="10" min="1" max="100" 
-                                           step="0.1" required data-precio-original="${producto.precio}" 
-                                           data-index="${index}">
-                                    <span class="sufijo-input">%</span>
-                                </div>
-                                <small class="texto-ayuda-campo">Entre 1% y 100%</small>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Stock oferta *</label>
-                                <input type="number" class="control-formulario stock-oferta-input" 
-                                       name="stock_oferta" value="1" min="1" max="${producto.stock}" 
-                                       required data-stock-max="${producto.stock}">
-                                <small class="texto-ayuda-campo">Máximo: ${producto.stock}</small>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Tipo oferta *</label>
-                                <select class="control-formulario tipo-oferta-select" name="tipo_oferta" 
-                                        required data-index="${index}">
-                                    <option value="tiempo">Por tiempo</option>
-                                    <option value="stock">Por stock</option>
-                                </select>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Fecha inicio *</label>
-                                <input type="date" class="control-formulario" name="fecha_inicio" 
-                                       value="${today}" min="${today}" required>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Hora inicio *</label>
-                                <input type="time" class="control-formulario" name="hora_inicio" 
-                                       value="${currentTime}" required>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Fecha fin *</label>
-                                <input type="date" class="control-formulario fecha-fin-input" 
-                                       name="fecha_fin" value="${tomorrowFormatted}" min="${today}" required>
-                            </div>
-                            
-                            <div class="campo-configuracion">
-                                <label class="etiqueta-campo">Hora fin *</label>
-                                <input type="time" class="control-formulario hora-fin-input" 
-                                       name="hora_fin" value="23:59" required>
-                            </div>
+                <form class="form-oferta-individual" method="POST" action="{% url 'crear_oferta' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="producto_id" value="${producto.id}">
+                    ${producto.variante_id ? `<input type="hidden" name="variante_id" value="${producto.variante_id}">` : ''}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo de Oferta</label>
+                            <select class="form-select" name="tipo_oferta" required>
+                                <option value="">Seleccionar...</option>
+                                <option value="tiempo">Por tiempo</option>
+                                <option value="stock">Por stock</option>
+                            </select>
                         </div>
                         
-                        <!-- Resumen de precios compacto -->
-                        <div class="resumen-precios-compacto">
-                            <h6><i class="fas fa-calculator me-2"></i>Resumen de Precios</h6>
-                            <div class="precios-lista">
-                                <div class="precio-item">
-                                    <span>Precio original:</span>
-                                    <strong>$${producto.precio}</strong>
-                                </div>
-                                <div class="precio-item">
-                                    <span>Precio con descuento:</span>
-                                    <strong class="precio-final" id="precio-final-${index}">$${(producto.precio * 0.9).toFixed(0)}</strong>
-                                </div>
-                                <div class="precio-item">
-                                    <span>Ahorro para el cliente:</span>
-                                    <strong class="ahorro-cliente" id="ahorro-${index}">$${(producto.precio * 0.1).toFixed(0)}</strong>
-                                </div>
-                            </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Descuento (%)</label>
+                            <input type="number" class="form-control" name="porcentaje_descuento" 
+                                step="0.1" min="1" max="100" placeholder="10" required>
                         </div>
                         
-                        <!-- Información según tipo de oferta -->
-                        <div class="info-oferta-compacta" id="info-oferta-${index}">
-                            <i class="fas fa-info-circle"></i>
-                            <div class="info-contenido">
-                                <span id="info-tiempo-${index}">
-                                    <strong>Oferta por tiempo:</strong> La oferta estará activa hasta la fecha y hora fin especificada.
-                                </span>
-                                <span class="d-none" id="info-stock-${index}">
-                                    <strong>Oferta por stock:</strong> La oferta estará activa hasta agotar el stock asignado o hasta la fecha fin, lo que ocurra primero.
-                                </span>
-                            </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Stock Oferta</label>
+                            <input type="number" class="form-control" name="stock_oferta" 
+                                min="1" max="${producto.stock}" value="${Math.min(producto.stock, 50)}" required>
                         </div>
                         
-                        <!-- Botón de crear oferta -->
-                        <div class="acciones-configuracion">
-                            <button type="submit" class="btn btn-crear-oferta" 
-                                    data-producto-key="${producto.key}"
-                                    data-producto-nombre="${producto.nombre}">
-                                <i class="fas fa-tag me-2"></i>
-                                Crear Oferta para "${producto.nombre}"
-                            </button>
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha Inicio</label>
+                            <input type="date" class="form-control" name="fecha_inicio" 
+                                value="${today}" required>
                         </div>
-                    </form>
-                </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha Fin</label>
+                            <input type="date" class="form-control" name="fecha_fin" 
+                                value="${tomorrowFormatted}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-2">
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Inicio</label>
+                            <input type="time" class="form-control" name="hora_inicio" value="00:00">
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">Hora Fin</label>
+                            <input type="time" class="form-control" name="hora_fin" value="23:59">
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="submit" class="btn btn-primary btn-crear-oferta">
+                            <i class="fas fa-bolt me-1"></i> Crear Oferta
+                        </button>
+                    </div>
+                </form>
             </div>
-        `).join('');
-
-        // Agregar event listeners
-        document.querySelectorAll('.descuento-input').forEach(input => {
-            input.addEventListener('input', function() {
-                calcularPrecioFinal(this);
-            });
+            `;
         });
-
-        document.querySelectorAll('.tipo-oferta-select').forEach(select => {
-            select.addEventListener('change', function() {
-                actualizarTipoOferta(this);
-            });
-            actualizarTipoOferta(select);
-        });
-
-        document.querySelectorAll('.stock-oferta-input').forEach(input => {
-            input.addEventListener('input', function() {
-                validarStockOferta(this);
-            });
-        });
-
-        document.querySelectorAll('.quitar-producto').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const productoKey = this.getAttribute('data-key');
-                quitarProducto(productoKey);
-            });
-        });
-
-        // Manejar envío de formularios - VERSIÓN CORREGIDA
-        document.querySelectorAll('.form-configuracion-oferta').forEach(form => {
+        
+        configuraciones.innerHTML = configHTML;
+        
+        // Agregar eventos para los formularios de oferta
+        document.querySelectorAll('.form-oferta-individual').forEach(form => {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                if (!validarFormularioOferta(this)) {
+                const formData = new FormData(this);
+                const productoKey = this.closest('.configuracion-oferta-item').getAttribute('data-producto-key');
+                const producto = productosSeleccionados.find(p => p.key === productoKey);
+                
+                // Validar stock
+                const stockOferta = parseInt(formData.get('stock_oferta'));
+                if (stockOferta > producto.stock) {
+                    mostrarNotificacion(`El stock de oferta no puede superar el stock disponible (${producto.stock})`, 'error');
                     return;
                 }
-
-                const productoKey = this.getAttribute('data-producto-key');
-                const productoNombre = this.querySelector('.btn-crear-oferta').getAttribute('data-producto-nombre');
-                const boton = this.querySelector('.btn-crear-oferta');
                 
-                // Mostrar loading
-                const textoOriginal = boton.innerHTML;
-                boton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creando oferta...';
-                boton.disabled = true;
-
-                // CORRECCIÓN: Remover el producto ANTES de enviar el formulario
-                quitarProducto(productoKey);
+                // Validar fechas
+                const fechaInicio = formData.get('fecha_inicio');
+                const fechaFin = formData.get('fecha_fin');
+                if (fechaFin && fechaFin < fechaInicio) {
+                    mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio', 'error');
+                    return;
+                }
                 
-                // Enviar formulario normalmente
-                const formData = new FormData(this);
+                // Validar descuento
+                const porcentajeDescuento = parseFloat(formData.get('porcentaje_descuento'));
+                if (porcentajeDescuento <= 0 || porcentajeDescuento > 100) {
+                    mostrarNotificacion('El descuento debe estar entre 1% y 100%', 'error');
+                    return;
+                }
                 
+                // Enviar formulario
                 fetch(this.action, {
                     method: 'POST',
                     body: formData,
@@ -823,137 +1657,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .then(response => {
                     if (response.redirected) {
-                        // Oferta creada exitosamente - ya removimos el producto
-                        mostrarNotificacion(`Oferta creada exitosamente para "${productoNombre}"`, 'success');
+                        // Si hay redirección, es éxito
+                        mostrarNotificacion('Oferta creada exitosamente', 'success');
                         
-                        // Recargar después de un breve delay
+                        // Quitar producto de la lista de seleccionados
+                        quitarProductoConfig(productoKey);
+                        
+                        // Recargar después de 1 segundo
                         setTimeout(() => {
                             window.location.href = response.url;
                         }, 1000);
-                        return;
+                    } else if (response.ok) {
+                        // Intentar parsear como JSON
+                        return response.json().then(data => {
+                            if (data.success) {
+                                mostrarNotificacion(data.message || 'Oferta creada exitosamente', 'success');
+                                quitarProductoConfig(productoKey);
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1000);
+                            } else {
+                                mostrarNotificacion(data.error || 'Error al crear la oferta', 'error');
+                            }
+                        });
+                    } else {
+                        // Error de servidor
+                        throw new Error('Error del servidor');
                     }
-                    
-                    // Si no hay redirección, asumir éxito
-                    mostrarNotificacion(`Oferta creada exitosamente para "${productoNombre}"`, 'success');
-                    
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    mostrarNotificacion('Error al crear la oferta. Recargando página...', 'error');
-                    
-                    // En caso de error, recargar la página
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
+                    mostrarNotificacion('Error al crear la oferta', 'error');
                 });
             });
         });
-
-        // Calcular precios iniciales
-        document.querySelectorAll('.descuento-input').forEach(input => {
-            calcularPrecioFinal(input);
-        });
-
-        // Hacer scroll al último elemento agregado si hay scroll activo
-        if (productosSeleccionados.length >= 2) {
-            setTimeout(() => {
-                const lastCard = configuraciones.lastElementChild;
-                if (lastCard) {
-                    lastCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                }
-            }, 100);
-        }
     }
-
-    function calcularPrecioFinal(input) {
-        const precioOriginal = parseFloat(input.getAttribute('data-precio-original'));
-        const descuento = parseFloat(input.value) || 0;
-        const index = input.getAttribute('data-index');
-        
-        const precioConDescuento = precioOriginal * (1 - descuento / 100);
-        const ahorro = precioOriginal - precioConDescuento;
-        
-        document.getElementById(`precio-final-${index}`).textContent = `$${precioConDescuento.toFixed(0)}`;
-        document.getElementById(`ahorro-${index}`).textContent = `$${ahorro.toFixed(0)}`;
-    }
-
-    function actualizarTipoOferta(select) {
-        const index = select.getAttribute('data-index');
-        const tipoOferta = select.value;
-        const infoTiempo = document.getElementById(`info-tiempo-${index}`);
-        const infoStock = document.getElementById(`info-stock-${index}`);
     
-        if (tipoOferta === 'stock') {
-            infoTiempo.classList.add('d-none');
-            infoStock.classList.remove('d-none');
-        } else {
-            infoTiempo.classList.remove('d-none');
-            infoStock.classList.add('d-none');
-        }
-    }
-
-    function validarStockOferta(input) {
-        const stockMax = parseInt(input.getAttribute('data-stock-max'));
-        const stockValue = parseInt(input.value) || 0;
-        
-        if (stockValue > stockMax) {
-            input.value = stockMax;
-            mostrarNotificacion(`El stock de oferta no puede ser mayor a ${stockMax}`, 'warning');
-        }
-        
-        if (stockValue <= 0) {
-            input.value = 1;
-            mostrarNotificacion('El stock de oferta debe ser al menos 1', 'warning');
-        }
-    }
-
-    function validarFormularioOferta(form) {
-        const stockInput = form.querySelector('.stock-oferta-input');
-        const maxStock = parseInt(stockInput.getAttribute('data-stock-max'));
-        const stockValue = parseInt(stockInput.value);
-        
-        if (stockValue > maxStock) {
-            mostrarNotificacion(`El stock de oferta no puede ser mayor a ${maxStock}`, 'error');
-            stockInput.focus();
-            return false;
-        }
-
-        if (stockValue <= 0) {
-            mostrarNotificacion('El stock de oferta debe ser mayor a 0', 'error');
-            stockInput.focus();
-            return false;
-        }
-
-        const tipoOferta = form.querySelector('select[name="tipo_oferta"]').value;
-        const fechaInicioInput = form.querySelector('input[name="fecha_inicio"]');
-        const horaInicioInput = form.querySelector('input[name="hora_inicio"]');
-        const fechaFinInput = form.querySelector('input[name="fecha_fin"]');
-        const horaFinInput = form.querySelector('input[name="hora_fin"]');
-        
-        const fechaInicio = fechaInicioInput.value;
-        const horaInicio = horaInicioInput.value;
-        const fechaFin = fechaFinInput.value;
-        const horaFin = horaFinInput.value;
-        
-        if (fechaFin < fechaInicio) {
-            mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio', 'error');
-            fechaFinInput.focus();
-            return false;
-        }
-        
-        if (fechaFin === fechaInicio && horaFin <= horaInicio) {
-            mostrarNotificacion('Para el mismo día, la hora de fin debe ser posterior a la hora de inicio', 'error');
-            horaFinInput.focus();
-            return false;
-        }
-
-        return true;
-    }
-
-    function quitarProducto(productoKey) {
+    function quitarProductoConfig(productoKey) {
         productosSeleccionados = productosSeleccionados.filter(p => p.key !== productoKey);
         
         const [productoId, varianteId] = productoKey.split('-');
@@ -966,9 +1706,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         actualizarConfiguraciones();
         actualizarContador();
-        guardarSeleccion(); // Actualizar sessionStorage
+        guardarSeleccion();
     }
-
+    
+    // Hacer función disponible globalmente
+    window.quitarProductoConfig = quitarProductoConfig;
+    
     // Limpiar toda la selección
     window.limpiarSeleccion = function() {
         if (productosSeleccionados.length === 0) {
@@ -990,13 +1733,534 @@ document.addEventListener('DOMContentLoaded', function() {
             productosSeleccionados = [];
             actualizarConfiguraciones();
             actualizarContador();
-            sessionStorage.removeItem('productosSeleccionadosOfertas'); // Limpiar sessionStorage
+            sessionStorage.removeItem('productosSeleccionadosOfertas');
             mostrarNotificacion('Todas las configuraciones han sido limpiadas', 'success');
         }
     };
-
-    // Manejar botones de finalizar oferta
+    
+    // ==================== FUNCIONALIDAD PARA COMBOS ====================
+    
+    // Función para agregar producto base a combo
     document.addEventListener('click', function(e) {
+        if (e.target.closest('.agregar-producto-base')) {
+            const button = e.target.closest('.agregar-producto-base');
+            agregarProductoCombo(button, false);
+        }
+        
+        if (e.target.closest('.agregar-variante')) {
+            const button = e.target.closest('.agregar-variante');
+            agregarProductoCombo(button, true);
+        }
+        
+        // Botón "A Combo" en productos individuales
+        if (e.target.closest('.agregar-a-combo')) {
+            const button = e.target.closest('.agregar-a-combo');
+            const productoId = button.getAttribute('data-producto-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            const productoPrecio = parseFloat(button.getAttribute('data-producto-precio'));
+            
+            // Navegar al tab de combos
+            mostrarTabCombos();
+            
+            // Después de un breve delay, agregar el producto base
+            setTimeout(() => {
+                agregarProductoAlCombo({
+                    id: productoId,
+                    nombre: productoNombre,
+                    precio: productoPrecio,
+                    cantidad: 1,
+                    es_variante: false,
+                    variante_id: null,
+                    producto_nombre_base: productoNombre
+                });
+            }, 500);
+        }
+    });
+    
+    function agregarProductoCombo(button, esVariante) {
+        const productoId = button.getAttribute('data-producto-id');
+        const productoNombre = button.getAttribute('data-producto-nombre');
+        
+        let productoKey, productoNombreCompleto, precio;
+        
+        if (esVariante) {
+            const varianteId = button.getAttribute('data-variante-id');
+            const varianteNombre = button.getAttribute('data-variante-nombre');
+            productoKey = `${productoId}-${varianteId}`;
+            productoNombreCompleto = `${productoNombre} - ${varianteNombre}`;
+            precio = parseFloat(button.getAttribute('data-precio-total'));
+        } else {
+            productoKey = `${productoId}`;
+            productoNombreCompleto = `${productoNombre}`;
+            precio = parseFloat(button.getAttribute('data-producto-precio'));
+        }
+        
+        // Verificar si ya está agregado
+        if (productosSeleccionadosCombo.find(p => p.key === productoKey)) {
+            mostrarNotificacion('Este producto ya está en el combo', 'warning');
+            return;
+        }
+        
+        // Agregar producto al combo
+        const producto = {
+            key: productoKey,
+            id: productoId,
+            nombre: productoNombreCompleto,
+            precio: precio,
+            cantidad: 1,
+            es_variante: esVariante,
+            variante_id: esVariante ? button.getAttribute('data-variante-id') : null,
+            producto_nombre_base: productoNombre
+        };
+        
+        agregarProductoAlCombo(producto);
+    }
+    
+    function agregarProductoAlCombo(producto) {
+        productosSeleccionadosCombo.push(producto);
+        actualizarProductosCombo();
+        calcularResumenCombo();
+        
+        mostrarNotificacion(`"${producto.nombre}" agregado al combo`, 'success');
+    }
+    
+    // Función para actualizar la lista de productos del combo
+    function actualizarProductosCombo() {
+        const productosSeleccionadosComboDiv = document.getElementById('productosSeleccionadosCombo');
+        const sinProductosCombo = document.getElementById('sinProductosCombo');
+        const contadorProductosCombo = document.getElementById('contadorProductosCombo');
+        
+        if (productosSeleccionadosCombo.length === 0) {
+            if (sinProductosCombo) sinProductosCombo.style.display = 'block';
+            if (productosSeleccionadosComboDiv) productosSeleccionadosComboDiv.innerHTML = '';
+        } else {
+            if (sinProductosCombo) sinProductosCombo.style.display = 'none';
+            
+            const productosHTML = productosSeleccionadosCombo.map((producto, index) => `
+                <div class="combo-item mb-3 p-3 border rounded bg-white" data-index="${index}">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="flex-grow-1">
+                            <strong class="d-block">${producto.nombre}</strong>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-${producto.es_variante ? 'cube' : 'box'} me-1"></i>
+                                ${producto.es_variante ? 'Variante' : 'Producto Base'}
+                            </small>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger eliminar-producto-combo" 
+                                data-index="${index}" title="Eliminar del combo">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Cantidad:</span>
+                                <input type="number" class="form-control combo-item-cantidad" 
+                                       value="${producto.cantidad}" min="1" data-index="${index}" style="max-width: 80px;">
+                                <span class="input-group-text">u</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <span class="text-muted">Precio: $${producto.precio.toFixed(0)}</span>
+                            <div class="mt-1">
+                                <strong>Total: $<span class="total-producto" data-index="${index}">${(producto.precio * producto.cantidad).toFixed(0)}</span></strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            if (productosSeleccionadosComboDiv) {
+                productosSeleccionadosComboDiv.innerHTML = productosHTML;
+                
+                // Agregar eventos para eliminar productos
+                document.querySelectorAll('.eliminar-producto-combo').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        const productoNombre = productosSeleccionadosCombo[index].nombre;
+                        productosSeleccionadosCombo.splice(index, 1);
+                        actualizarProductosCombo();
+                        calcularResumenCombo();
+                        mostrarNotificacion(`"${productoNombre}" eliminado del combo`, 'info');
+                    });
+                });
+                
+                // Agregar eventos para cambiar cantidad
+                document.querySelectorAll('.combo-item-cantidad').forEach(input => {
+                    input.addEventListener('change', function() {
+                        const index = parseInt(this.getAttribute('data-index'));
+                        let cantidad = parseInt(this.value) || 1;
+                        if (cantidad < 1) {
+                            this.value = 1;
+                            cantidad = 1;
+                        }
+                        productosSeleccionadosCombo[index].cantidad = cantidad;
+                        
+                        // Actualizar total del producto
+                        const producto = productosSeleccionadosCombo[index];
+                        const totalSpan = document.querySelector(`.total-producto[data-index="${index}"]`);
+                        if (totalSpan) {
+                            totalSpan.textContent = (producto.precio * cantidad).toFixed(0);
+                        }
+                        
+                        calcularResumenCombo();
+                    });
+                });
+            }
+        }
+        
+        if (contadorProductosCombo) {
+            contadorProductosCombo.textContent = productosSeleccionadosCombo.length;
+        }
+    }
+    
+    // Calcular resumen del combo
+    function calcularResumenCombo() {
+        let precioRegularTotal = 0;
+        productosSeleccionadosCombo.forEach(producto => {
+            precioRegularTotal += producto.precio * producto.cantidad;
+        });
+        
+        const precioComboInput = document.getElementById('precioCombo');
+        const precioCombo = precioComboInput ? parseFloat(precioComboInput.value) || 0 : 0;
+        
+        const precioRegularCombo = document.getElementById('precioRegularCombo');
+        const precioFinalCombo = document.getElementById('precioFinalCombo');
+        const ahorroCombo = document.getElementById('ahorroCombo');
+        
+        if (precioRegularCombo) {
+            precioRegularCombo.textContent = `$${precioRegularTotal.toFixed(0)}`;
+        }
+        if (precioFinalCombo) {
+            precioFinalCombo.textContent = `$${precioCombo.toFixed(0)}`;
+        }
+        if (ahorroCombo) {
+            if (precioRegularTotal > precioCombo && precioCombo > 0) {
+                const ahorro = precioRegularTotal - precioCombo;
+                ahorroCombo.textContent = `$${ahorro.toFixed(0)}`;
+                ahorroCombo.classList.remove('text-muted');
+                ahorroCombo.classList.add('text-success');
+            } else {
+                ahorroCombo.textContent = '$0';
+                ahorroCombo.classList.remove('text-success');
+                ahorroCombo.classList.add('text-muted');
+            }
+        }
+    }
+    
+    // Búsqueda en productos para combo
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.id === 'buscarProductosCombo') {
+            const busqueda = e.target.value.toLowerCase();
+            document.querySelectorAll('.accordion-item').forEach(item => {
+                const nombre = item.textContent.toLowerCase();
+                if (nombre.includes(busqueda)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+    });
+    
+    // Actualizar resumen cuando cambia el precio del combo
+    const precioComboInput = document.getElementById('precioCombo');
+    if (precioComboInput) {
+        precioComboInput.addEventListener('input', calcularResumenCombo);
+    }
+    
+    // Validar y enviar formulario de combo
+    const formCrearCombo = document.getElementById('formCrearCombo');
+    if (formCrearCombo) {
+        formCrearCombo.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validar que haya productos en el combo
+            if (productosSeleccionadosCombo.length === 0) {
+                mostrarNotificacion('Debes agregar al menos un producto al combo', 'error');
+                return;
+            }
+            
+            // Validar nombre del combo
+            const nombreCombo = document.getElementById('nombreCombo').value;
+            if (!nombreCombo.trim()) {
+                mostrarNotificacion('Debes ingresar un nombre para el combo', 'error');
+                return;
+            }
+            
+            // Validar precio del combo
+            const precioCombo = parseFloat(document.getElementById('precioCombo').value);
+            if (!precioCombo || precioCombo <= 0) {
+                mostrarNotificacion('El precio del combo debe ser mayor a 0', 'error');
+                return;
+            }
+            
+            // Validar fechas
+            const fechaInicio = document.getElementById('fechaInicioCombo').value;
+            const fechaFin = document.getElementById('fechaFinCombo').value;
+            if (fechaFin && fechaFin < fechaInicio) {
+                mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio', 'error');
+                return;
+            }
+            
+            // Crear inputs ocultos para productos
+            const inputsProductosCombo = document.getElementById('inputsProductosCombo');
+            if (inputsProductosCombo) {
+                inputsProductosCombo.innerHTML = '';
+                
+                // Agregar cada producto como input oculto
+                productosSeleccionadosCombo.forEach((producto, index) => {
+                    inputsProductosCombo.innerHTML += `
+                        <input type="hidden" name="productos_combo[]" value="${producto.id}">
+                        <input type="hidden" name="cantidades[]" value="${producto.cantidad}">
+                        <input type="hidden" name="variantes[]" value="${producto.variante_id || ''}">
+                        <input type="hidden" name="es_variante[]" value="${producto.es_variante ? '1' : '0'}">
+                    `;
+                });
+                
+                // Calcular precio regular automáticamente
+                let precioRegularTotal = 0;
+                productosSeleccionadosCombo.forEach(producto => {
+                    precioRegularTotal += producto.precio * producto.cantidad;
+                });
+                
+                // Agregar input oculto para precio regular
+                if (!document.querySelector('input[name="precio_regular"]')) {
+                    inputsProductosCombo.innerHTML += `<input type="hidden" name="precio_regular" value="${precioRegularTotal}">`;
+                }
+            }
+            
+            // Mostrar loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Creando...';
+            submitBtn.disabled = true;
+            
+            // Enviar formulario
+            const formData = new FormData(this);
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            })
+            .then(response => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                
+                if (response.redirected) {
+                    mostrarNotificacion('Combo creado exitosamente', 'success');
+                    
+                    // Limpiar formulario
+                    this.reset();
+                    productosSeleccionadosCombo = [];
+                    actualizarProductosCombo();
+                    calcularResumenCombo();
+                    
+                    setTimeout(() => {
+                        window.location.href = response.url;
+                    }, 1500);
+                    return;
+                }
+                
+                return response.json().then(data => {
+                    if (data.success) {
+                        mostrarNotificacion(data.message || 'Combo creado exitosamente', 'success');
+                        
+                        // Limpiar formulario
+                        this.reset();
+                        productosSeleccionadosCombo = [];
+                        actualizarProductosCombo();
+                        calcularResumenCombo();
+                        
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    } else {
+                        mostrarNotificacion(data.error || 'Error al crear el combo', 'error');
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+                mostrarNotificacion('Error al crear el combo', 'error');
+            });
+        });
+    }
+    
+    // ==================== FUNCIONALIDAD PARA 2x1 ====================
+    
+    // Modal de creación de 2x1
+    const modalCrear2x1 = document.getElementById('modalCrear2x1');
+    if (modalCrear2x1) {
+        const producto2x1Select = document.getElementById('producto2x1');
+        const variante2x1Select = document.getElementById('variante2x1');
+        const aplicaVariantes2x1 = document.getElementById('aplicaVariantes2x1');
+        const formCrear2x1 = document.getElementById('formCrear2x1');
+        
+        // Cargar variantes cuando se selecciona un producto
+        if (producto2x1Select) {
+            producto2x1Select.addEventListener('change', function() {
+                const productoId = this.value;
+                if (!productoId || !variante2x1Select) {
+                    variante2x1Select.innerHTML = '<option value="">Seleccionar variante (opcional)</option>';
+                    return;
+                }
+                
+                // Aquí deberías hacer una llamada AJAX para obtener las variantes del producto
+                // Por ahora, vamos a usar una función simulada
+                cargarVariantesProducto(productoId).then(data => {
+                    variante2x1Select.innerHTML = '<option value="">Seleccionar variante (opcional)</option>';
+                    
+                    // Agregar opción para producto base
+                    const baseOption = document.createElement('option');
+                    baseOption.value = "";
+                    baseOption.textContent = `Producto Base - $${data.precio_base} (Stock: ${data.stock_base})`;
+                    variante2x1Select.appendChild(baseOption);
+                    
+                    // Agregar variantes
+                    data.variantes.forEach(variante => {
+                        const option = document.createElement('option');
+                        option.value = variante.id;
+                        option.textContent = `${variante.nombre} - $${variante.precio_total} (Stock: ${variante.stock})`;
+                        variante2x1Select.appendChild(option);
+                    });
+                }).catch(error => {
+                    console.error('Error cargando variantes:', error);
+                    variante2x1Select.innerHTML = '<option value="">Error cargando variantes</option>';
+                });
+            });
+        }
+        
+        // Deshabilitar selector de variante si se aplica a todas
+        if (aplicaVariantes2x1 && variante2x1Select) {
+            aplicaVariantes2x1.addEventListener('change', function() {
+                variante2x1Select.disabled = this.checked;
+                if (this.checked) {
+                    variante2x1Select.value = '';
+                }
+            });
+        }
+        
+        // Función para cargar variantes (simulada)
+        async function cargarVariantesProducto(productoId) {
+            // Esta es una función simulada - deberías reemplazarla con una llamada real a tu API
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    // Datos de ejemplo
+                    resolve({
+                        variantes: [],
+                        precio_base: 10000,
+                        stock_base: 10
+                    });
+                }, 300);
+            });
+        }
+        
+        // Validar formulario 2x1
+        if (formCrear2x1) {
+            formCrear2x1.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const productoId = producto2x1Select ? producto2x1Select.value : '';
+                const fechaInicio = document.getElementById('fechaInicio2x1') ? document.getElementById('fechaInicio2x1').value : '';
+                const fechaFin = document.getElementById('fechaFin2x1') ? document.getElementById('fechaFin2x1').value : '';
+                
+                if (!productoId) {
+                    mostrarNotificacion('Debes seleccionar un producto', 'error');
+                    return;
+                }
+                
+                if (!fechaInicio || !fechaFin) {
+                    mostrarNotificacion('Las fechas de inicio y fin son obligatorias', 'error');
+                    return;
+                }
+                
+                if (fechaFin < fechaInicio) {
+                    mostrarNotificacion('La fecha de fin no puede ser anterior a la fecha de inicio', 'error');
+                    return;
+                }
+                
+                // Enviar formulario
+                const formData = new FormData(this);
+                
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    }
+                })
+                .then(response => {
+                    if (response.redirected) {
+                        mostrarNotificacion('Promoción 2x1 creada exitosamente', 'success');
+                        
+                        const modal = bootstrap.Modal.getInstance(modalCrear2x1);
+                        if (modal) modal.hide();
+                        
+                        setTimeout(() => {
+                            window.location.href = response.url;
+                        }, 1000);
+                        return;
+                    }
+                    
+                    return response.json().then(data => {
+                        if (data.success) {
+                            mostrarNotificacion(data.message || 'Promoción 2x1 creada exitosamente', 'success');
+                            
+                            const modal = bootstrap.Modal.getInstance(modalCrear2x1);
+                            if (modal) modal.hide();
+                            
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            mostrarNotificacion(data.error || 'Error al crear la promoción 2x1', 'error');
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarNotificacion('Error al crear la promoción 2x1', 'error');
+                });
+            });
+        }
+    }
+    
+    // ==================== FUNCIONALIDAD PARA BOTONES DE FINALIZAR ====================
+    
+    // Finalizar combo
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.finalizar-combo-btn')) {
+            const button = e.target.closest('.finalizar-combo-btn');
+            const comboId = button.getAttribute('data-combo-id');
+            const comboNombre = button.getAttribute('data-combo-nombre');
+            
+            if (confirm(`¿Estás seguro de que deseas finalizar el combo "${comboNombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                const form = button.closest('form');
+                if (form) form.submit();
+            }
+            e.preventDefault();
+        }
+        
+        // Finalizar 2x1
+        if (e.target.closest('.finalizar-2x1-btn')) {
+            const button = e.target.closest('.finalizar-2x1-btn');
+            const promoId = button.getAttribute('data-promo-id');
+            const productoNombre = button.getAttribute('data-producto-nombre');
+            
+            if (confirm(`¿Estás seguro de que deseas finalizar la promoción 2x1 para "${productoNombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                const form = button.closest('form');
+                if (form) form.submit();
+            }
+            e.preventDefault();
+        }
+        
+        // Finalizar oferta individual
         if (e.target.closest('.finalizar-oferta-btn')) {
             const button = e.target.closest('.finalizar-oferta-btn');
             const ofertaId = button.getAttribute('data-oferta-id');
@@ -1004,56 +2268,45 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (confirm(`¿Estás seguro de que deseas finalizar la oferta "${ofertaNombre}"?\n\nEsta acción no se puede deshacer.`)) {
                 const form = button.closest('.finalizar-oferta-form');
-                form.submit();
+                if (form) form.submit();
             }
+            e.preventDefault();
         }
     });
-
-    // Función para mostrar notificaciones
-    function mostrarNotificacion(mensaje, tipo = 'info') {
-        // Eliminar notificaciones existentes
-        const notificacionesExistentes = document.querySelectorAll('.notificacion-temporal');
-        notificacionesExistentes.forEach(notif => notif.remove());
-
-        const alertClass = {
-            'success': 'alert-success',
-            'error': 'alert-danger',
-            'warning': 'alert-warning',
-            'info': 'alert-info'
-        }[tipo] || 'alert-info';
-
-        const iconClass = {
-            'success': 'fa-check-circle',
-            'error': 'fa-exclamation-circle',
-            'warning': 'fa-exclamation-triangle',
-            'info': 'fa-info-circle'
-        }[tipo] || 'fa-info-circle';
-
-        const notificacionHTML = `
-            <div class="alert ${alertClass} alert-dismissible fade show notificacion-temporal" role="alert" 
-                 style="position: fixed; top: 100px; right: 20px; z-index: 1060; min-width: 300px;">
-                <i class="fas ${iconClass} me-2"></i>
-                ${mensaje}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-        
-        document.body.insertAdjacentHTML('beforeend', notificacionHTML);
-        
-        // Auto-eliminar después de 4 segundos
-        setTimeout(() => {
-            const alert = document.querySelector('.notificacion-temporal');
-            if (alert) {
-                alert.remove();
-            }
-        }, 4000);
-    }
-
+    
+    // ==================== INICIALIZACIÓN ====================
+    
     // Cargar selección guardada al iniciar la página
     cargarSeleccionGuardada();
-    calcularContadorVariantes();
+    
+    // Inicializar tabs de Bootstrap
+    const triggerTabList = document.querySelectorAll('#ofertasTabs button[data-bs-toggle="tab"]');
+    triggerTabList.forEach(triggerEl => {
+        triggerEl.addEventListener('click', function(event) {
+            event.preventDefault();
+            const target = this.getAttribute('data-bs-target');
+            const tabPane = document.querySelector(target);
+            if (tabPane) {
+                // Ocultar todos los tab-panes
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('show', 'active');
+                });
+                
+                // Desactivar todos los nav-links
+                document.querySelectorAll('#ofertasTabs .nav-link').forEach(link => {
+                    link.classList.remove('active');
+                });
+                
+                // Activar el tab seleccionado
+                this.classList.add('active');
+                tabPane.classList.add('show', 'active');
+            }
+        });
+    });
+    
+    // Inicializar tooltips de Bootstrap
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 });
 </script>
-
-
 {% endblock %}

@@ -1,10 +1,10 @@
-#software/views/vendedor_ofertas_views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.db import connection
 from datetime import datetime, date, time
+import json
 import logging
 
 # Importar modelos necesarios
@@ -66,14 +66,6 @@ def actualizar_estado_ofertas_automatico(negocio_id):
         with connection.cursor() as cursor:
             ahora = timezone.now()
 
-            # Verificar cuántas ofertas activas hay antes
-            cursor.execute("""
-                SELECT COUNT(*) FROM promociones 
-                WHERE fknegocio_id = %s AND estado_promo = 'activa'
-            """, [negocio_id])
-            ofertas_antes = cursor.fetchone()[0]
-            print(f"🔄 DEBUG: Ofertas activas antes: {ofertas_antes}")
-
             # ✅ CORRECCIÓN: Actualizar ofertas por tiempo que han expirado
             cursor.execute("""
                 UPDATE promociones 
@@ -128,13 +120,27 @@ def actualizar_estado_ofertas_automatico(negocio_id):
             filas_afectadas = cursor.rowcount
             print(f"🔄 DEBUG: Ofertas por tiempo reactivadas: {filas_afectadas}")
             
-            # Verificar cuántas ofertas activas hay después
+            # ✅ Actualizar estado de combos
             cursor.execute("""
-                SELECT COUNT(*) FROM promociones 
-                WHERE fknegocio_id = %s AND estado_promo = 'activa'
-            """, [negocio_id])
-            ofertas_despues = cursor.fetchone()[0]
-            print(f"🔄 DEBUG: Ofertas activas después: {ofertas_despues}")
+                UPDATE combos 
+                SET estado_combo = 'inactivo'
+                WHERE fknegocio_id = %s 
+                AND estado_combo = 'activo'
+                AND fecha_fin < %s
+            """, [negocio_id, ahora.date()])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Combos finalizados: {filas_afectadas}")
+            
+            # ✅ Actualizar estado de promociones 2x1
+            cursor.execute("""
+                UPDATE promociones_2x1 
+                SET estado = 'finalizada'
+                WHERE fknegocio_id = %s 
+                AND estado = 'activa'
+                AND fecha_fin < %s
+            """, [negocio_id, ahora.date()])
+            filas_afectadas = cursor.rowcount
+            print(f"🔄 DEBUG: Promociones 2x1 finalizadas: {filas_afectadas}")
             
     except Exception as e:
         print(f"❌ ERROR actualizando estado de ofertas: {str(e)}")
@@ -194,7 +200,7 @@ def registrar_movimiento_oferta(producto_id, negocio_id, usuario_id, cantidad, m
 
 @login_required(login_url='login')
 def Ofertas_V(request):
-    """Vista principal para gestión de ofertas - CORREGIDA PARA MOSTRAR TODOS LOS PRODUCTOS CON VARIANTES"""
+    """Vista principal para gestión de ofertas - AHORA CON COMBOS Y 2X1"""
     datos = obtener_datos_vendedor_ofertas(request)
     if not datos:
         return redirect('Negocios_V')
@@ -291,18 +297,6 @@ def Ofertas_V(request):
                     }
                     
                     productos_list.append(producto_data)
-                    
-                    print(f"DEBUG: Producto incluido: {producto_base[1]}")
-                    print(f"DEBUG:   - Estado: {producto_base[5]}")
-                    print(f"DEBUG:   - Stock principal: {stock_principal}")
-                    print(f"DEBUG:   - Stock variantes: {stock_variantes_total}")
-                    print(f"DEBUG:   - Stock total: {stock_total}")
-                    print(f"DEBUG:   - Tiene variantes: {tiene_variantes_activas}")
-                    print(f"DEBUG:   - Variantes activas: {len(variantes_list)}")
-                else:
-                    print(f"DEBUG: Producto excluido: {producto_base[1]} - Estado: {producto_base[5]}, Stock principal: {stock_principal}, Tiene variantes: {tiene_variantes_activas}")
-            
-            print(f"DEBUG: Productos finales en lista: {len(productos_list)}")
             
             # Obtener ofertas activas con información completa
             ofertas_list = []
@@ -381,6 +375,124 @@ def Ofertas_V(request):
                     'fecha_creacion': oferta[17].strftime('%d/%m/%Y %H:%M') if oferta[17] else ''
                 })
             
+            # Obtener combos activos del negocio
+            combos_list = []
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        c.pkid_combo,
+                        c.nombre_combo,
+                        c.descripcion_combo,
+                        c.precio_combo,
+                        c.precio_regular,
+                        c.descuento_porcentaje,
+                        c.imagen_combo,
+                        c.estado_combo,
+                        c.stock_combo,
+                        c.fecha_creacion,
+                        c.fecha_inicio,
+                        c.fecha_fin,
+                        COUNT(ci.pkid_combo_item) as total_items
+                    FROM combos c
+                    LEFT JOIN combo_items ci ON c.pkid_combo = ci.fkcombo_id
+                    WHERE c.fknegocio_id = %s
+                    GROUP BY c.pkid_combo
+                    ORDER BY c.estado_combo, c.fecha_creacion DESC
+                """, [negocio.pkid_neg])
+                combos_db = cursor.fetchall()
+            
+            # Procesar combos para template
+            for combo in combos_db:
+                # Obtener items del combo
+                with connection.cursor() as cursor:
+                    cursor.execute("""
+                        SELECT 
+                            p.nom_prod,
+                            COALESCE(v.nombre_variante, '') as nombre_variante,
+                            ci.cantidad,
+                            p.precio_prod,
+                            COALESCE(v.precio_adicional, 0) as precio_adicional,
+                            p.nom_prod || COALESCE(' - ' || v.nombre_variante, '') as nombre_completo
+                        FROM combo_items ci
+                        JOIN productos p ON ci.fkproducto_id = p.pkid_prod
+                        LEFT JOIN variantes_producto v ON ci.variante_id = v.id_variante
+                        WHERE ci.fkcombo_id = %s
+                    """, [combo[0]])
+                    items_db = cursor.fetchall()
+                
+                items_list = []
+                for item in items_db:
+                    precio_total_item = float(item[3]) + float(item[4])
+                    items_list.append({
+                        'nombre_producto': item[0],
+                        'nombre_variante': item[1],
+                        'cantidad': item[2],
+                        'precio_unitario': precio_total_item,
+                        'precio_total': precio_total_item * item[2],
+                        'nombre_completo': item[5]
+                    })
+                
+                # Calcular ahorro si hay precio regular
+                precio_combo = float(combo[3])
+                precio_regular = float(combo[4]) if combo[4] else 0
+                ahorro = precio_regular - precio_combo if precio_regular > 0 else 0
+                
+                combos_list.append({
+                    'id': combo[0],
+                    'nombre': combo[1],
+                    'descripcion': combo[2],
+                    'precio': precio_combo,
+                    'precio_regular': precio_regular,
+                    'descuento_porcentaje': float(combo[5]) if combo[5] else 0,
+                    'imagen': combo[6],
+                    'estado': combo[7],
+                    'stock': combo[8],
+                    'fecha_creacion': combo[9].strftime('%d/%m/%Y %H:%M') if combo[9] else '',
+                    'fecha_inicio': combo[10].strftime('%d/%m/%Y') if combo[10] else '',
+                    'fecha_fin': combo[11].strftime('%d/%m/%Y') if combo[11] else '',
+                    'total_items': combo[12],
+                    'items': items_list,
+                    'ahorro': ahorro,
+                    'tiene_ahorro': ahorro > 0
+                })
+            
+            # Obtener promociones 2x1 activas
+            promociones_2x1_list = []
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT 
+                        p2.pkid_promo_2x1,
+                        p.nom_prod,
+                        COALESCE(v.nombre_variante, '') as nombre_variante,
+                        p2.fecha_inicio,
+                        p2.fecha_fin,
+                        p2.estado,
+                        p2.aplica_variantes,
+                        p2.fecha_creacion
+                    FROM promociones_2x1 p2
+                    JOIN productos p ON p2.fkproducto_id = p.pkid_prod
+                    LEFT JOIN variantes_producto v ON p2.variante_id = v.id_variante
+                    WHERE p2.fknegocio_id = %s
+                    ORDER BY p2.estado, p2.fecha_inicio DESC
+                """, [negocio.pkid_neg])
+                promos_2x1_db = cursor.fetchall()
+            
+            for promo in promos_2x1_db:
+                nombre_producto = promo[1]
+                if promo[2]:  # Tiene variante
+                    nombre_producto = f"{promo[1]} - {promo[2]}"
+                
+                promociones_2x1_list.append({
+                    'id': promo[0],
+                    'producto_nombre': nombre_producto,
+                    'fecha_inicio': promo[3].strftime('%d/%m/%Y') if promo[3] else '',
+                    'fecha_fin': promo[4].strftime('%d/%m/%Y') if promo[4] else '',
+                    'estado': promo[5],
+                    'aplica_variantes': promo[6],
+                    'fecha_creacion': promo[7].strftime('%d/%m/%Y %H:%M') if promo[7] else '',
+                    'esta_activa': promo[5] == 'activa' and date.today() <= (promo[4] if promo[4] else date.today())
+                })
+            
             # Calcular fechas para el template
             today = timezone.now().date()
             tomorrow = today + timezone.timedelta(days=1)
@@ -391,6 +503,8 @@ def Ofertas_V(request):
                 'negocio_activo': datos['negocio_activo'],
                 'productos': productos_list,
                 'ofertas_activas': ofertas_list,
+                'combos_activos': combos_list,
+                'promociones_2x1': promociones_2x1_list,
                 'today': today.strftime('%Y-%m-%d'),
                 'tomorrow': tomorrow.strftime('%Y-%m-%d')
             }
@@ -406,7 +520,13 @@ def Ofertas_V(request):
     
     # Si es POST, procesamos la creación de oferta
     elif request.method == 'POST':
-        return crear_oferta(request)
+        # Verificar si es creación de combo o 2x1
+        if 'crear_combo' in request.POST:
+            return crear_combo(request)
+        elif 'crear_2x1' in request.POST:
+            return crear_promocion_2x1(request)
+        else:
+            return crear_oferta(request)
 
 @login_required(login_url='login')
 def crear_oferta(request):
@@ -510,27 +630,6 @@ def crear_oferta(request):
             print(f"DEBUG: Creando oferta para {producto_nombre} - Stock disponible: {stock_disponible}")
             
             # Validar stock disponible - CORREGIDO PARA VARIANTES
-            stock_total_ofertas_activas = 0
-            with connection.cursor() as cursor:
-                if variante_id:
-                    cursor.execute("""
-                        SELECT COALESCE(SUM(stock_oferta), 0) 
-                        FROM promociones 
-                        WHERE fkproducto_id = %s AND variante_id = %s 
-                        AND estado_promo = 'activa'
-                        AND tipo_oferta = 'stock'
-                    """, [producto_id, variante_id])
-                else:
-                    cursor.execute("""
-                        SELECT COALESCE(SUM(stock_oferta), 0) 
-                        FROM promociones 
-                        WHERE fkproducto_id = %s 
-                        AND estado_promo = 'activa'
-                        AND tipo_oferta = 'stock'
-                    """, [producto_id])
-                
-                stock_total_ofertas_activas = cursor.fetchone()[0]
-            
             if tipo_oferta == 'stock':
                 with connection.cursor() as cursor:
                     if variante_id:
@@ -540,11 +639,6 @@ def crear_oferta(request):
                             SET stock_variante = stock_variante - %s
                             WHERE id_variante = %s
                         """, [stock_oferta, variante_id])
-                        
-                        # Obtener stock actualizado para registro
-                        cursor.execute("SELECT stock_variante FROM variantes_producto WHERE id_variante = %s", [variante_id])
-                        stock_nuevo_variante = cursor.fetchone()[0]
-                        
                     else:
                         # Descontar del producto principal
                         cursor.execute("""
@@ -552,10 +646,6 @@ def crear_oferta(request):
                             SET stock_prod = stock_prod - %s
                             WHERE pkid_prod = %s
                         """, [stock_oferta, producto_id])
-                        
-                        # Obtener stock actualizado para registro
-                        cursor.execute("SELECT stock_prod FROM productos WHERE pkid_prod = %s", [producto_id])
-                        stock_nuevo_producto = cursor.fetchone()[0]
             
             # PROCESAR FECHAS Y HORAS - AMBOS TIPOS REQUIEREN FECHA FIN
             now = timezone.now()
@@ -677,6 +767,341 @@ def crear_oferta(request):
         return redirect('Ofertas_V')
 
 @login_required(login_url='login')
+def crear_combo(request):
+    """Crear un combo/paquete de productos"""
+    try:
+        datos = obtener_datos_vendedor_ofertas(request)
+        if not datos:
+            messages.error(request, "No tienes un negocio activo.")
+            return redirect('Ofertas_V')
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener datos del formulario
+        nombre_combo = request.POST.get('nombre_combo')
+        descripcion_combo = request.POST.get('descripcion_combo')
+        precio_combo = request.POST.get('precio_combo')
+        descuento_porcentaje = request.POST.get('descuento_porcentaje', 0)
+        stock_combo = request.POST.get('stock_combo', 0)
+        fecha_inicio = request.POST.get('fecha_inicio')
+        fecha_fin = request.POST.get('fecha_fin')
+        productos_combo = request.POST.getlist('productos_combo[]')
+        cantidades = request.POST.getlist('cantidades[]')
+        variantes = request.POST.getlist('variantes[]')
+        
+        # Validaciones básicas
+        if not nombre_combo or not precio_combo:
+            messages.error(request, 'Nombre y precio del combo son obligatorios.')
+            return redirect('Ofertas_V')
+        
+        if not productos_combo or len(productos_combo) == 0:
+            messages.error(request, 'Debes seleccionar al menos un producto para el combo.')
+            return redirect('Ofertas_V')
+        
+        try:
+            precio_combo = float(precio_combo)
+            descuento_porcentaje = float(descuento_porcentaje) if descuento_porcentaje else 0
+            stock_combo = int(stock_combo) if stock_combo else 0
+            
+            if precio_combo <= 0:
+                messages.error(request, 'El precio del combo debe ser mayor a 0.')
+                return redirect('Ofertas_V')
+            
+            if descuento_porcentaje < 0 or descuento_porcentaje > 100:
+                messages.error(request, 'El descuento debe estar entre 0% y 100%.')
+                return redirect('Ofertas_V')
+            
+            # Calcular precio regular (suma de productos individuales)
+            precio_regular_total = 0
+            items_validos = []
+            
+            for i, (producto_id_str, cantidad_str, variante_id_str) in enumerate(zip(productos_combo, cantidades, variantes)):
+                try:
+                    producto_id = int(producto_id_str)
+                    cantidad = int(cantidad_str)
+                    variante_id = int(variante_id_str) if variante_id_str and variante_id_str != 'null' else None
+                    
+                    if cantidad <= 0:
+                        continue
+                    
+                    # Validar producto/variante
+                    with connection.cursor() as cursor:
+                        if variante_id:
+                            cursor.execute("""
+                                SELECT p.pkid_prod, p.nom_prod, p.precio_prod, 
+                                       v.nombre_variante, v.precio_adicional, v.stock_variante
+                                FROM productos p
+                                JOIN variantes_producto v ON p.pkid_prod = v.producto_id
+                                WHERE p.pkid_prod = %s AND p.fknegocioasociado_prod = %s 
+                                AND v.id_variante = %s AND v.estado_variante = 'activa'
+                            """, [producto_id, negocio.pkid_neg, variante_id])
+                        else:
+                            cursor.execute("""
+                                SELECT pkid_prod, nom_prod, precio_prod, stock_prod
+                                FROM productos 
+                                WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
+                            """, [producto_id, negocio.pkid_neg])
+                        
+                        producto_db = cursor.fetchone()
+                    
+                    if not producto_db:
+                        continue
+                    
+                    # Calcular precio unitario
+                    if variante_id:
+                        precio_unitario = float(producto_db[2]) + float(producto_db[4])
+                        nombre_completo = f"{producto_db[1]} - {producto_db[3]}"
+                        stock_disponible = producto_db[5]
+                    else:
+                        precio_unitario = float(producto_db[2])
+                        nombre_completo = producto_db[1]
+                        stock_disponible = producto_db[3]
+                    
+                    # Validar stock disponible
+                    if stock_combo > 0 and cantidad * stock_combo > stock_disponible:
+                        messages.error(request, f'Stock insuficiente para {nombre_completo}. Disponible: {stock_disponible}, Necesario: {cantidad * stock_combo}')
+                        return redirect('Ofertas_V')
+                    
+                    precio_regular_total += precio_unitario * cantidad
+                    
+                    items_validos.append({
+                        'producto_id': producto_id,
+                        'variante_id': variante_id,
+                        'cantidad': cantidad,
+                        'precio_unitario': precio_unitario,
+                        'nombre': nombre_completo
+                    })
+                    
+                except (ValueError, IndexError) as e:
+                    logger.error(f"Error procesando item de combo: {e}")
+                    continue
+            
+            if not items_validos:
+                messages.error(request, 'No se encontraron productos válidos para el combo.')
+                return redirect('Ofertas_V')
+            
+            # Si no se proporcionó precio regular, usar el calculado
+            precio_regular = request.POST.get('precio_regular')
+            if not precio_regular or precio_regular == '0':
+                precio_regular = precio_regular_total
+            else:
+                precio_regular = float(precio_regular)
+            
+            # Calcular descuento automático si no se proporcionó
+            if descuento_porcentaje == 0 and precio_regular > precio_combo:
+                descuento_porcentaje = ((precio_regular - precio_combo) / precio_regular) * 100
+            
+            # Procesar fechas
+            fecha_inicio_obj = None
+            fecha_fin_obj = None
+            
+            if fecha_inicio:
+                fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            if fecha_fin:
+                fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            
+            # Crear el combo
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO combos 
+                    (fknegocio_id, nombre_combo, descripcion_combo, precio_combo, 
+                     precio_regular, descuento_porcentaje, stock_combo, estado_combo,
+                     fecha_inicio, fecha_fin, fecha_creacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    negocio.pkid_neg,
+                    nombre_combo,
+                    descripcion_combo,
+                    precio_combo,
+                    precio_regular,
+                    descuento_porcentaje,
+                    stock_combo,
+                    'activo',
+                    fecha_inicio_obj,
+                    fecha_fin_obj,
+                    timezone.now()
+                ])
+                
+                combo_id = cursor.lastrowid
+                
+                # Crear items del combo
+                for item in items_validos:
+                    cursor.execute("""
+                        INSERT INTO combo_items 
+                        (fkcombo_id, fkproducto_id, variante_id, cantidad)
+                        VALUES (%s, %s, %s, %s)
+                    """, [
+                        combo_id,
+                        item['producto_id'],
+                        item['variante_id'],
+                        item['cantidad']
+                    ])
+                
+                # Reservar stock si el combo tiene stock definido
+                if stock_combo > 0:
+                    for item in items_validos:
+                        cantidad_total_reservar = item['cantidad'] * stock_combo
+                        
+                        if item['variante_id']:
+                            # Descontar de variante
+                            cursor.execute("""
+                                UPDATE variantes_producto 
+                                SET stock_variante = stock_variante - %s
+                                WHERE id_variante = %s
+                            """, [cantidad_total_reservar, item['variante_id']])
+                            
+                            registrar_movimiento_oferta(
+                                item['producto_id'],
+                                negocio.pkid_neg,
+                                datos['perfil'].id,
+                                cantidad_total_reservar,
+                                'creacion_combo',
+                                f"Reserva para combo: {nombre_combo}",
+                                item['variante_id']
+                            )
+                        else:
+                            # Descontar del producto principal
+                            cursor.execute("""
+                                UPDATE productos 
+                                SET stock_prod = stock_prod - %s
+                                WHERE pkid_prod = %s
+                            """, [cantidad_total_reservar, item['producto_id']])
+                            
+                            registrar_movimiento_oferta(
+                                item['producto_id'],
+                                negocio.pkid_neg,
+                                datos['perfil'].id,
+                                cantidad_total_reservar,
+                                'creacion_combo',
+                                f"Reserva para combo: {nombre_combo}"
+                            )
+            
+            ahorro_msg = ""
+            if precio_regular > precio_combo:
+                ahorro = precio_regular - precio_combo
+                ahorro_msg = f" Los clientes ahorran ${ahorro:.0f} ({descuento_porcentaje:.1f}%)"
+            
+            messages.success(request, 
+                f'✅ Combo "{nombre_combo}" creado exitosamente.{ahorro_msg}'
+            )
+            return redirect('Ofertas_V')
+            
+        except ValueError as e:
+            messages.error(request, f'Error en los datos numéricos: {str(e)}')
+        except Exception as e:
+            messages.error(request, f'Error al crear combo: {str(e)}')
+            import traceback
+            logger.error(f"Error al crear combo: {traceback.format_exc()}")
+        
+        return redirect('Ofertas_V')
+    except Exception as e:
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+        return redirect('Ofertas_V')
+
+@login_required(login_url='login')
+def crear_promocion_2x1(request):
+    """Crear una promoción 2x1"""
+    try:
+        datos = obtener_datos_vendedor_ofertas(request)
+        if not datos:
+            messages.error(request, "No tienes un negocio activo.")
+            return redirect('Ofertas_V')
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener datos del formulario
+        producto_id = request.POST.get('producto_id_2x1')
+        variante_id = request.POST.get('variante_id_2x1')
+        fecha_inicio = request.POST.get('fecha_inicio_2x1')
+        fecha_fin = request.POST.get('fecha_fin_2x1')
+        aplica_variantes = request.POST.get('aplica_variantes', '0')
+        
+        # Validaciones básicas
+        if not producto_id:
+            messages.error(request, 'Debes seleccionar un producto para la promoción 2x1.')
+            return redirect('Ofertas_V')
+        
+        if not fecha_inicio or not fecha_fin:
+            messages.error(request, 'Las fechas de inicio y fin son obligatorias.')
+            return redirect('Ofertas_V')
+        
+        try:
+            producto_id = int(producto_id)
+            variante_id = int(variante_id) if variante_id else None
+            aplica_variantes = aplica_variantes == '1'
+            
+            # Validar que el producto pertenezca al negocio
+            with connection.cursor() as cursor:
+                if variante_id:
+                    cursor.execute("""
+                        SELECT p.pkid_prod, p.nom_prod, v.nombre_variante
+                        FROM productos p
+                        JOIN variantes_producto v ON p.pkid_prod = v.producto_id
+                        WHERE p.pkid_prod = %s AND p.fknegocioasociado_prod = %s 
+                        AND v.id_variante = %s AND v.estado_variante = 'activa'
+                    """, [producto_id, negocio.pkid_neg, variante_id])
+                else:
+                    cursor.execute("""
+                        SELECT pkid_prod, nom_prod FROM productos 
+                        WHERE pkid_prod = %s AND fknegocioasociado_prod = %s
+                    """, [producto_id, negocio.pkid_neg])
+                
+                producto_db = cursor.fetchone()
+            
+            if not producto_db:
+                messages.error(request, 'Producto/Variante no encontrado o no pertenece a tu negocio.')
+                return redirect('Ofertas_V')
+            
+            # Determinar nombre del producto
+            if variante_id:
+                producto_nombre = f"{producto_db[1]} - {producto_db[2]}"
+            else:
+                producto_nombre = producto_db[1]
+            
+            # Procesar fechas
+            fecha_inicio_obj = datetime.strptime(fecha_inicio, '%Y-%m-%d').date()
+            fecha_fin_obj = datetime.strptime(fecha_fin, '%Y-%m-%d').date()
+            
+            # Validar fechas
+            if fecha_fin_obj < fecha_inicio_obj:
+                messages.error(request, 'La fecha de fin no puede ser anterior a la fecha de inicio.')
+                return redirect('Ofertas_V')
+            
+            # Crear la promoción 2x1
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    INSERT INTO promociones_2x1 
+                    (fknegocio_id, fkproducto_id, variante_id, fecha_inicio, 
+                     fecha_fin, estado, aplica_variantes, fecha_creacion)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, [
+                    negocio.pkid_neg,
+                    producto_id,
+                    variante_id,
+                    fecha_inicio_obj,
+                    fecha_fin_obj,
+                    'activa',
+                    aplica_variantes,
+                    timezone.now()
+                ])
+            
+            messages.success(request, 
+                f'✅ Promoción 2x1 creada exitosamente para {producto_nombre}'
+            )
+            return redirect('Ofertas_V')
+            
+        except ValueError as e:
+            messages.error(request, f'Error en los datos: {str(e)}')
+        except Exception as e:
+            messages.error(request, f'Error al crear promoción 2x1: {str(e)}')
+            logger.error(f"Error al crear promoción 2x1: {str(e)}")
+        
+        return redirect('Ofertas_V')
+    except Exception as e:
+        messages.error(request, f'Error al procesar la solicitud: {str(e)}')
+        return redirect('Ofertas_V')
+
+@login_required(login_url='login')
 def eliminar_oferta(request, oferta_id):
     """ELIMINAR una oferta y liberar stock"""
     try:
@@ -729,6 +1154,97 @@ def eliminar_oferta(request, oferta_id):
     except Exception as e:
         messages.error(request, f'Error al eliminar oferta: {str(e)}')
         logger.error(f"Error al eliminar oferta: {str(e)}")
+    
+    return redirect('Ofertas_V')
+
+@login_required(login_url='login')
+def eliminar_combo(request, combo_id):
+    """Eliminar un combo y liberar stock reservado"""
+    try:
+        datos = obtener_datos_vendedor_ofertas(request)
+        if not datos:
+            messages.error(request, "No tienes un negocio activo.")
+            return redirect('Ofertas_V')
+        
+        negocio = datos['negocio_activo']
+        
+        # Obtener información del combo antes de eliminar
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT c.nombre_combo, c.stock_combo
+                FROM combos c
+                WHERE c.pkid_combo = %s AND c.fknegocio_id = %s
+            """, [combo_id, negocio.pkid_neg])
+            combo_info = cursor.fetchone()
+        
+        if not combo_info:
+            messages.error(request, 'Combo no encontrado')
+            return redirect('Ofertas_V')
+        
+        nombre_combo, stock_combo = combo_info
+        
+        # Obtener items del combo para liberar stock
+        if stock_combo > 0:
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    SELECT ci.fkproducto_id, ci.variante_id, ci.cantidad
+                    FROM combo_items ci
+                    WHERE ci.fkcombo_id = %s
+                """, [combo_id])
+                items = cursor.fetchall()
+            
+            # Liberar stock de cada item
+            for item in items:
+                producto_id, variante_id, cantidad = item
+                cantidad_total_liberar = cantidad * stock_combo
+                
+                if variante_id:
+                    cursor.execute("""
+                        UPDATE variantes_producto 
+                        SET stock_variante = stock_variante + %s
+                        WHERE id_variante = %s
+                    """, [cantidad_total_liberar, variante_id])
+                else:
+                    cursor.execute("""
+                        UPDATE productos 
+                        SET stock_prod = stock_prod + %s
+                        WHERE pkid_prod = %s
+                    """, [cantidad_total_liberar, producto_id])
+        
+        # Eliminar el combo
+        with connection.cursor() as cursor:
+            cursor.execute("DELETE FROM combos WHERE pkid_combo = %s", [combo_id])
+        
+        messages.success(request, f'✅ Combo "{nombre_combo}" eliminado exitosamente.')
+        
+    except Exception as e:
+        messages.error(request, f'Error al eliminar combo: {str(e)}')
+        logger.error(f"Error al eliminar combo: {str(e)}")
+    
+    return redirect('Ofertas_V')
+
+@login_required(login_url='login')
+def eliminar_promocion_2x1(request, promocion_id):
+    """Eliminar una promoción 2x1"""
+    try:
+        datos = obtener_datos_vendedor_ofertas(request)
+        if not datos:
+            messages.error(request, "No tienes un negocio activo.")
+            return redirect('Ofertas_V')
+        
+        negocio = datos['negocio_activo']
+        
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM promociones_2x1 
+                WHERE pkid_promo_2x1 = %s AND fknegocio_id = %s
+            """, [promocion_id, negocio.pkid_neg])
+        
+        messages.success(request, f'✅ Promoción 2x1 eliminada exitosamente.')
+        
+    except Exception as e:
+        messages.error(request, f'Error al eliminar promoción 2x1: {str(e)}')
+        logger.error(f"Error al eliminar promoción 2x1: {str(e)}")
     
     return redirect('Ofertas_V')
 
@@ -789,6 +1305,60 @@ def finalizar_oferta_manual(request, oferta_id):
         except Exception as e:
             messages.error(request, f'Error al finalizar oferta: {str(e)}')
             logger.error(f"Error al finalizar oferta: {str(e)}")
+    
+    return redirect('Ofertas_V')
+
+@login_required(login_url='login')
+def finalizar_combo_manual(request, combo_id):
+    """Finalizar un combo manualmente"""
+    if request.method == 'POST':
+        try:
+            datos = obtener_datos_vendedor_ofertas(request)
+            if not datos:
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('Ofertas_V')
+            
+            negocio = datos['negocio_activo']
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE combos 
+                    SET estado_combo = 'inactivo'
+                    WHERE pkid_combo = %s AND fknegocio_id = %s
+                """, [combo_id, negocio.pkid_neg])
+            
+            messages.success(request, '✅ Combo finalizado manualmente.')
+            
+        except Exception as e:
+            messages.error(request, f'Error al finalizar combo: {str(e)}')
+            logger.error(f"Error al finalizar combo: {str(e)}")
+    
+    return redirect('Ofertas_V')
+
+@login_required(login_url='login')
+def finalizar_promocion_2x1_manual(request, promocion_id):
+    """Finalizar una promoción 2x1 manualmente"""
+    if request.method == 'POST':
+        try:
+            datos = obtener_datos_vendedor_ofertas(request)
+            if not datos:
+                messages.error(request, "No tienes un negocio activo.")
+                return redirect('Ofertas_V')
+            
+            negocio = datos['negocio_activo']
+            
+            with connection.cursor() as cursor:
+                cursor.execute("""
+                    UPDATE promociones_2x1 
+                    SET estado = 'finalizada'
+                    WHERE pkid_promo_2x1 = %s AND fknegocio_id = %s
+                """, [promocion_id, negocio.pkid_neg])
+            
+            messages.success(request, '✅ Promoción 2x1 finalizada manualmente.')
+            
+        except Exception as e:
+            messages.error(request, f'Error al finalizar promoción 2x1: {str(e)}')
+            logger.error(f"Error al finalizar promoción 2x1: {str(e)}")
     
     return redirect('Ofertas_V')
 

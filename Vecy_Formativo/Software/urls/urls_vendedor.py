@@ -61,8 +61,14 @@ urlpatterns = [
     # ==================== URLs PARA OFERTAS VENDEDOR ====================
     path('ofertas/', vendedor_ofertas_views.Ofertas_V, name='Ofertas_V'),
     path('ofertas/crear/', vendedor_ofertas_views.crear_oferta, name='crear_oferta'),
+    path('ofertas/crear-combo/', vendedor_ofertas_views.crear_combo, name='crear_combo'),
+    path('ofertas/crear-2x1/', vendedor_ofertas_views.crear_promocion_2x1, name='crear_promocion_2x1'),
     path('ofertas/eliminar/<int:oferta_id>/', vendedor_ofertas_views.eliminar_oferta, name='eliminar_oferta'),
+    path('ofertas/eliminar-combo/<int:combo_id>/', vendedor_ofertas_views.eliminar_combo, name='eliminar_combo'),
+    path('ofertas/eliminar-2x1/<int:promocion_id>/', vendedor_ofertas_views.eliminar_promocion_2x1, name='eliminar_promocion_2x1'),
     path('ofertas/finalizar/<int:oferta_id>/', vendedor_ofertas_views.finalizar_oferta_manual, name='finalizar_oferta_manual'),
+    path('ofertas/finalizar-combo/<int:combo_id>/', vendedor_ofertas_views.finalizar_combo_manual, name='finalizar_combo_manual'),
+    path('ofertas/finalizar-2x1/<int:promocion_id>/', vendedor_ofertas_views.finalizar_promocion_2x1_manual, name='finalizar_promocion_2x1_manual'),
     path('ofertas/verificar-estado/', vendedor_ofertas_views.verificar_estado_ofertas, name='verificar_estado_ofertas'),
 
     # ==================== URLs DE STOCK VENDEDOR ====================
