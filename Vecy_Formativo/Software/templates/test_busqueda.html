@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Búsqueda Sugerencias</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        input { padding: 10px; width: 300px; margin-right: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow: auto; }
+        .result { margin-top: 20px; border: 1px solid #ddd; padding: 15px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Debug: Búsqueda de Sugerencias</h1>
+    
+    <form method="GET">
+        <input type="text" name="q" value="{{ query }}" placeholder="Escribe para buscar...">
+        <button type="submit">Probar Búsqueda</button>
+        <button type="button" onclick="probarAPI()">Probar API Directamente</button>
+    </form>
+    
+    {% if query %}
+    <div class="result">
+        <h3>Resultado para: "{{ query }}"</h3>
+        <p>URL de prueba: <a href="{{ test_url }}" target="_blank">{{ test_url }}</a></p>
+        
+        <div id="api-result">
+            <p>Cargando resultado de API...</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <script>
+        async function probarAPI() {
+            const query = document.querySelector('input[name="q"]').value;
+            if (!query) {
+                alert('Escribe algo para buscar');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<p>Cargando...</p>';
+            
+            try {
+                const response = await fetch(`/api/sugerencia/?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                let html = `<h4>Respuesta API:</h4>`;
+                html += `<p class="${data.success ? 'success' : 'error'}">Success: ${data.success}</p>`;
+                html += `<p>Mensaje: ${data.message || 'Ninguno'}</p>`;
+                html += `<p>Cantidad de sugerencias: ${data.count}</p>`;
+                
+                if (data.suggestions && data.suggestions.length > 0) {
+                    html += '<h4>Sugerencias:</h4>';
+                    html += '<table border="1" style="width: 100%; border-collapse: collapse;">';
+                    html += '<tr><th>Tipo</th><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Negocio</th></tr>';
+                    
+                    data.suggestions.forEach(item => {
+                        html += `<tr>
+                            <td>${item.type}</td>
+                            <td><strong>${item.text}</strong></td>
+                            <td>${item.category}</td>
+                            <td>${item.precio ? '$' + item.precio : '-'}</td>
+                            <td>${item.negocio || '-'}</td>
+                        </tr>`;
+                    });
+                    
+                    html += '</table>';
+                } else {
+                    html += '<p>No hay sugerencias</p>';
+                }
+                
+                // Mostrar JSON completo
+                html += '<h4>JSON Completo:</h4>';
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = html;
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        // Ejecutar automáticamente si hay query
+        {% if query %}
+        document.addEventListener('DOMContentLoaded', probarAPI);
+        {% endif %}
+    </script>
+</body>
+</html>

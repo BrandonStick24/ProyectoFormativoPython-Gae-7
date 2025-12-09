@@ -699,7 +699,7 @@ body {
     transition: var(--vecy-transition);
     position: relative;
     border: 1px solid rgba(0, 0, 0, 0.05);
-    height: 500px;
+    height: 500px !important; /* ALTURA FIJA PARA CONSISTENCIA */
     display: flex;
     flex-direction: column;
 }
@@ -1048,8 +1048,7 @@ body {
     transition: var(--vecy-transition);
     position: relative;
     border: 2px solid transparent;
-    background: linear-gradient(135deg, var(--vecy-white) 0%, #fef7ed 100%);
-    height: 550px; /* MISMA ALTURA QUE PRODUCTOS NORMALES */
+    background: linear-gradient(135deg, var(--vecy-white) 0%, #fef7ed 100%); /* MISMA ALTURA QUE PRODUCTOS NORMALES */
     display: flex;
     flex-direction: column;
 }

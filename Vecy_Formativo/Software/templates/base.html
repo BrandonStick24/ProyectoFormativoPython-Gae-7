@@ -95,6 +95,132 @@
       background: var(--secondary);
     }
 
+    /* Estilos para el autocompletado */
+    .autocomplete-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .autocomplete-suggestions {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 1050;
+      display: none;
+      margin-top: 5px;
+    }
+
+    .autocomplete-suggestions.show {
+      display: block;
+    }
+
+    .suggestion-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: var(--transition);
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .suggestion-item:hover {
+      background-color: #f8f9fa;
+    }
+
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+
+    .suggestion-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 10px;
+      color: var(--primary);
+      font-size: 0.8rem;
+    }
+
+    .suggestion-text {
+      flex: 1;
+    }
+
+    .suggestion-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 2px;
+    }
+
+    .suggestion-category {
+      font-size: 0.8rem;
+      color: #666;
+    }
+
+    .recent-searches {
+      padding: 10px 15px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .recent-title {
+      font-size: 0.8rem;
+      color: #666;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .clear-history {
+      color: var(--primary);
+      cursor: pointer;
+      font-size: 0.7rem;
+    }
+
+    .clear-history:hover {
+      text-decoration: underline;
+    }
+
+    .recent-item {
+      display: inline-block;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 20px;
+      padding: 4px 12px;
+      margin: 3px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .recent-item:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .no-suggestions {
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      font-style: italic;
+    }
+
+    .search-loading {
+      padding: 10px;
+      text-align: center;
+    }
+
     .btn-primary-custom {
       background: var(--primary);
       color: white;
@@ -518,6 +644,16 @@
         width: 100%;
         right: -100%;
       }
+
+      /* Autocompletado móvil */
+      .autocomplete-suggestions {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        right: 10px;
+        max-height: 300px;
+        z-index: 1100;
+      }
     }
 
     /* Overlay para sidebar */
@@ -791,13 +927,35 @@
           </a>
         </div>
 
-        <!-- Search Bar -->
+        <!-- Search Bar - CON AUTOCOMPLETADO -->
         <div class="col-lg-5 d-none d-lg-block">
-          <div class="search-container">
-            <input type="text" class="search-input" placeholder="Buscar productos, negocios...">
-            <button class="search-btn">
+          <div class="autocomplete-container">
+            <input type="text" class="search-input" id="search-input" 
+                   placeholder="Buscar productos, negocios..." 
+                   value="{{ request.GET.q|default:'' }}"
+                   autocomplete="off">
+            <button class="search-btn" id="search-btn">
               <i class="fas fa-search"></i>
             </button>
+            <div class="autocomplete-suggestions" id="autocomplete-suggestions-desktop">
+              <!-- Las sugerencias se cargarán aquí dinámicamente -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Search Bar (oculta en desktop) -->
+        <div class="col-12 d-lg-none mt-2">
+          <div class="autocomplete-container">
+            <input type="text" class="search-input" id="search-input-mobile" 
+                   placeholder="Buscar productos, negocios..." 
+                   value="{{ request.GET.q|default:'' }}"
+                   autocomplete="off">
+            <button class="search-btn" id="search-btn-mobile">
+              <i class="fas fa-search"></i>
+            </button>
+            <div class="autocomplete-suggestions" id="autocomplete-suggestions-mobile">
+              <!-- Las sugerencias se cargarán aquí dinámicamente -->
+            </div>
           </div>
         </div>
 
@@ -976,7 +1134,7 @@
   {% endif %}
 
   <!-- Main Content -->
-  <main style="margin-bottom: {% if request.session.usuario_id %}80px{% else %}0{% endif %};">
+  <main style="margin-bottom: {% if request.user.is_authenticated %}80px{% else %}0{% endif %};">
     {% block content %}
     <!-- El contenido específico de cada página irá aquí -->
     {% endblock %}
@@ -1069,741 +1227,821 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
-    // =============================================
-    // SISTEMA DE NOTIFICACIONES MEJORADO
-    // =============================================
-    class NotificationSystem {
-        constructor() {
-            this.isLoading = false;
-            this.init();
+/// =============================================
+// CONFIGURACIÓN GLOBAL
+// =============================================
+const VECY_CONFIG = {
+    IS_LOGGED_IN: {% if request.user.is_authenticated %}true{% else %}false{% endif %},
+    RECENT_SEARCHES_KEY: 'vecy_recent_searches_final'
+};
+
+// =============================================
+// SISTEMA DE AUTOCOMPLETADO COMPLETO
+// =============================================
+class VecyAutocomplete {
+    constructor() {
+        this.searchTimeout = null;
+        this.currentQuery = '';
+        this.init();
+    }
+
+    init() {
+        console.log('🚀 Inicializando VecyAutocomplete...');
+        
+        // Configurar ambos campos
+        this.setupSearchField('search-input', 'autocomplete-suggestions-desktop');
+        this.setupSearchField('search-input-mobile', 'autocomplete-suggestions-mobile');
+        
+        this.setupGlobalEvents();
+        console.log('✅ VecyAutocomplete listo');
+    }
+
+    setupSearchField(inputId, suggestionsId) {
+        const input = document.getElementById(inputId);
+        const suggestions = document.getElementById(suggestionsId);
+        
+        if (!input || !suggestions) {
+            console.warn(`⚠️ No se encontró: ${inputId} o ${suggestionsId}`);
+            return;
         }
 
-        init() {
-            this.loadNotifications();
-            this.setupEventListeners();
-            this.setupPolling();
-        }
+        // Evento input
+        input.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            console.log(`⌨️ Input "${inputId}": "${query}"`);
+            this.handleInput(query, suggestions, inputId);
+        });
 
-        setupEventListeners() {
-            // Cargar notificaciones cuando se abre el dropdown
-            const notificationsBtn = document.getElementById('notifications-dropdown-btn');
-            if (notificationsBtn) {
-                notificationsBtn.addEventListener('click', () => {
-                    this.loadNotifications(true);
-                });
-            }
-        }
-
-        // Cargar notificaciones
-        async loadNotifications(showDropdown = false) {
-            if (this.isLoading) return;
+        // Evento focus
+        input.addEventListener('focus', () => {
+            const query = input.value.trim();
+            console.log(`👁️ Focus en ${inputId}: "${query}"`);
             
-            this.isLoading = true;
-            try {
-                const response = await fetch('{% url "get_notifications" %}');
-                const data = await response.json();
-                
-                if (data.success) {
-                    this.updateNotificationUI(data.notifications, data.unread_count);
-                    if (showDropdown) {
-                        this.showNotificationsDropdown(data.notifications);
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading notifications:', error);
-            } finally {
-                this.isLoading = false;
+            if (query.length === 0) {
+                this.showRecentSearches(suggestions, inputId);
+            } else if (query.length >= 2) {
+                this.handleInput(query, suggestions, inputId);
             }
+        });
+
+        // Evento keydown
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const query = input.value.trim();
+                console.log(`↵️ Enter en ${inputId}: "${query}"`);
+                this.performSearch(query, inputId);
+            } else if (e.key === 'Escape') {
+                this.hideSuggestions(suggestions);
+            }
+        });
+
+        // Botón de búsqueda
+        const buttonId = inputId.includes('mobile') ? 'search-btn-mobile' : 'search-btn';
+        const button = document.getElementById(buttonId);
+        if (button) {
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const query = input.value.trim();
+                console.log(`🖱️ Botón ${inputId}: "${query}"`);
+                this.performSearch(query, inputId);
+            });
+        }
+    }
+
+    setupGlobalEvents() {
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.autocomplete-container')) {
+                this.hideAllSuggestions();
+            }
+        });
+
+        // Cerrar con Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.hideAllSuggestions();
+            }
+        });
+    }
+
+    async handleInput(query, suggestionsElement, inputId) {
+        this.currentQuery = query;
+        clearTimeout(this.searchTimeout);
+
+        if (query.length === 0) {
+            this.showRecentSearches(suggestionsElement, inputId);
+            return;
         }
 
-        // Actualizar contador
-        updateNotificationUI(notifications, unreadCount) {
-            const notificationCountElement = document.getElementById('notification-count');
-            if (notificationCountElement) {
-                notificationCountElement.textContent = unreadCount;
-                // Mostrar/ocultar badge según si hay notificaciones
-                if (unreadCount > 0) {
-                    notificationCountElement.style.display = 'flex';
-                } else {
-                    notificationCountElement.style.display = 'none';
-                }
-            }
+        if (query.length < 2) {
+            this.showMessage(suggestionsElement, 
+                'Escribe al menos 2 caracteres...', 'info');
+            return;
         }
 
-        // Mostrar notificaciones en el dropdown
-        showNotificationsDropdown(notifications) {
-            const dropdownMenu = document.getElementById('notifications-dropdown-menu');
-            if (!dropdownMenu) return;
+        this.showLoading(suggestionsElement, query);
 
-            if (notifications.length === 0) {
-                dropdownMenu.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                        <h6 class="mb-0">Notificaciones</h6>
-                    </div>
-                    <div class="text-center py-4">
-                        <i class="fas fa-bell-slash text-muted fa-2x mb-2"></i>
-                        <p class="text-muted mb-0">No hay notificaciones</p>
-                    </div>
-                    <div class="text-center py-2 border-top">
-                        <a href="{% url 'ver_notificaciones' %}" class="text-primary small">Ver historial</a>
-                    </div>
-                `;
+        this.searchTimeout = setTimeout(async () => {
+            // Verificar que la query no haya cambiado
+            if (this.currentQuery !== query) {
+                console.log(`⏭️ Query cambió de "${query}" a "${this.currentQuery}", ignorando...`);
                 return;
             }
 
-            let html = `
-                <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                    <h6 class="mb-0">Notificaciones</h6>
-                    <div>
-                        <a href="#" class="small text-primary" id="mark-all-read">Marcar todas</a>
-                        <a href="{% url 'ver_notificaciones' %}" class="small text-primary ms-2">Ver todas</a>
-                    </div>
-                </div>
-                <div class="notification-list" style="max-height: 400px; overflow-y: auto;">
-            `;
-
-            notifications.forEach(notification => {
-                const unreadClass = notification.leida ? '' : 'unread';
-                const icon = this.getNotificationIcon(notification.tipo);
+            try {
+                console.log(`🔍 Buscando: "${query}"`);
+                const data = await this.fetchSuggestions(query);
                 
-                html += `
-                    <div class="notification-item ${unreadClass}" data-id="${notification.id}">
-                        <div class="d-flex align-items-start p-3">
-                            <div class="notification-icon" style="background: ${icon.color};">
-                                <i class="${icon.class}"></i>
-                            </div>
-                            <div class="notification-content flex-grow-1">
-                                <div class="notification-title">${notification.titulo}</div>
-                                <div class="notification-message small text-muted">${notification.mensaje}</div>
-                                <div class="notification-time small text-muted mt-1">${notification.tiempo}</div>
-                            </div>
-                            ${!notification.leida ? '<span class="notification-dot ms-2 mt-1"></span>' : ''}
+                // Verificar que sigamos con la misma query
+                if (this.currentQuery === query) {
+                    this.displaySuggestions(data, query, suggestionsElement);
+                }
+            } catch (error) {
+                console.error('❌ Error en búsqueda:', error);
+                this.showMessage(suggestionsElement, 'Error al buscar sugerencias', 'error');
+            }
+        }, 350);
+    }
+
+    async fetchSuggestions(query) {
+        try {
+            const url = `/api/sugerencia-debug/?q=${encodeURIComponent(query)}`;
+            console.log(`📡 Llamando API: ${url}`);
+            
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log(`✅ API respondió: ${data.suggestions?.length || 0} sugerencias`);
+            
+            // DEBUG: Mostrar las sugerencias
+            if (data.suggestions && data.suggestions.length > 0) {
+                data.suggestions.forEach((s, i) => {
+                    console.log(`   ${i+1}. ${s.value}`);
+                });
+            }
+            
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Error en fetch:', error);
+            throw error;
+        }
+    }
+
+    displaySuggestions(data, query, container) {
+        if (!container) return;
+
+        let html = '';
+
+        if (!data.success || !data.suggestions || data.suggestions.length === 0) {
+            console.log(`📭 No hay resultados para: "${query}"`);
+            html = this.getNoResultsHTML(query);
+        } else {
+            console.log(`✨ Mostrando ${data.suggestions.length} sugerencias`);
+            
+            // Mostrar todas las sugerencias (solo productos)
+            data.suggestions.forEach(suggestion => {
+                html += this.getSuggestionItemHTML(suggestion, query);
+            });
+
+            // Opción "Buscar todo" al final
+            const searchUrl = VECY_CONFIG.IS_LOGGED_IN ? 
+                '/productos-filtrados/' : '/productos/';
+            
+            html += `
+                <div class="search-all-container">
+                    <div class="suggestion-item search-all-item" 
+                         data-url="${searchUrl}?q=${encodeURIComponent(query)}">
+                        <div class="suggestion-icon" style="background: var(--primary);">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="suggestion-text">
+                            <div class="suggestion-title">Buscar todo: "${query}"</div>
+                            <div class="suggestion-category">Ver todos los resultados</div>
+                        </div>
+                        <div class="text-primary">
+                            <i class="fas fa-arrow-right"></i>
                         </div>
                     </div>
-                `;
-            });
-
-            html += `
-                </div>
-                <div class="text-center py-2 border-top">
-                    <a href="{% url 'ver_notificaciones' %}" class="text-primary small">Ver historial completo</a>
                 </div>
             `;
-
-            dropdownMenu.innerHTML = html;
-            this.setupNotificationEvents();
         }
 
-        // Iconos por tipo de notificación
-        getNotificationIcon(tipo) {
-            const icons = {
-                'pedido': { class: 'fas fa-shopping-bag', color: '#3498db' },
-                'oferta': { class: 'fas fa-bolt', color: '#e74c3c' },
-                'negocio': { class: 'fas fa-store', color: '#2ecc71' },
-                'sistema': { class: 'fas fa-info-circle', color: '#f39c12' },
-                'alerta': { class: 'fas fa-exclamation-triangle', color: '#e67e22' },
-                'promocion': { class: 'fas fa-tag', color: '#9b59b6' }
-            };
-            return icons[tipo] || icons.sistema;
-        }
-
-        // Configurar eventos de notificaciones
-        setupNotificationEvents() {
-            // Marcar como leída al hacer click
-            document.querySelectorAll('.notification-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    const notificationId = item.dataset.id;
-                    this.markAsRead(notificationId);
-                    item.classList.remove('unread');
-                    item.querySelector('.notification-dot')?.remove();
-                    
-                    // Actualizar contador
-                    const currentCount = parseInt(document.getElementById('notification-count').textContent);
-                    if (currentCount > 0) {
-                        document.getElementById('notification-count').textContent = currentCount - 1;
-                    }
-                });
-            });
-
-            // Marcar todas como leídas
-            document.getElementById('mark-all-read')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.markAllAsRead();
-            });
-        }
-
-        // Marcar notificación como leída
-        async markAsRead(notificationId) {
-            try {
-                await fetch('{% url "mark_notification_read" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({ notification_id: notificationId })
-                });
-            } catch (error) {
-                console.error('Error marking notification as read:', error);
-            }
-        }
-
-        // Marcar todas como leídas
-        async markAllAsRead() {
-            try {
-                await fetch('{% url "mark_all_notifications_read" %}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': getCookie('csrftoken')
-                    }
-                });
-                
-                // Actualizar UI
-                document.getElementById('notification-count').textContent = '0';
-                document.getElementById('notification-count').style.display = 'none';
-                document.querySelectorAll('.notification-item').forEach(item => {
-                    item.classList.remove('unread');
-                    item.querySelector('.notification-dot')?.remove();
-                });
-            } catch (error) {
-                console.error('Error marking all notifications as read:', error);
-            }
-        }
-
-        // Polling para nuevas notificaciones
-        setupPolling() {
-            setInterval(() => {
-                this.loadNotifications();
-            }, 30000); // Cada 30 segundos
-        }
+        container.innerHTML = html;
+        container.classList.add('show');
+        this.attachSuggestionEvents(container);
     }
 
-    // =============================================
-    // FUNCIONES GLOBALES
-    // =============================================
-
-    // Función para obtener cookie CSRF
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    // =============================================
-    // CÓDIGO EXISTENTE DE CARRITO Y PEDIDOS
-    // =============================================
-
-    document.addEventListener('DOMContentLoaded', function () {
-      // Inicializar sistema de notificaciones
-      window.notificationSystem = new NotificationSystem();
-
-      // Elementos del DOM
-      const cartDropdownBtn = document.getElementById('cart-dropdown-btn');
-      const cartDropdownMenu = document.getElementById('cart-dropdown-menu');
-      const cartItemsContainer = document.getElementById('cart-items-container');
-      const cartTotal = document.getElementById('cart-total');
-      const cartItemsCount = document.getElementById('cart-items-count');
-      const cartCount = document.getElementById('cart-count');
-
-      const pedidosSidebar = document.getElementById('pedidos-sidebar');
-      const sidebarOverlay = document.getElementById('sidebar-overlay');
-      const pedidosBtn = document.getElementById('pedidos-btn');
-      const sidebarPedidosBtn = document.getElementById('sidebar-pedidos-btn');
-      const mobilePedidos = document.getElementById('mobile-pedidos');
-      const closePedidosSidebar = document.getElementById('close-pedidos-sidebar');
-      const pedidosContent = document.getElementById('pedidos-content');
-
-      // Cargar carrito al abrir el dropdown
-      if (cartDropdownBtn) {
-        cartDropdownBtn.addEventListener('click', loadCartData);
-      }
-
-      // Abrir sidebar de pedidos
-      function openPedidosSidebar() {
-        pedidosSidebar.classList.add('show');
-        sidebarOverlay.classList.add('show');
-        document.body.style.overflow = 'hidden';
-        loadPedidosData();
-      }
-
-      // Cerrar sidebar de pedidos
-      function closePedidosSidebarFunc() {
-        pedidosSidebar.classList.remove('show');
-        sidebarOverlay.classList.remove('show');
-        document.body.style.overflow = '';
-      }
-
-      // Event listeners para pedidos
-      if (pedidosBtn) pedidosBtn.addEventListener('click', openPedidosSidebar);
-      if (sidebarPedidosBtn) sidebarPedidosBtn.addEventListener('click', openPedidosSidebar);
-      if (mobilePedidos) mobilePedidos.addEventListener('click', openPedidosSidebar);
-      if (closePedidosSidebar) closePedidosSidebar.addEventListener('click', closePedidosSidebarFunc);
-      if (sidebarOverlay) sidebarOverlay.addEventListener('click', closePedidosSidebarFunc);
-
-      // Cargar datos del carrito
-      function loadCartData() {
-        fetch('{% url "carrito_data" %}')
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              updateCartUI(data);
-            }
-          })
-          .catch(error => {
-            console.error('Error loading cart data:', error);
-          });
-      }
-
-      // Actualizar UI del carrito
-      function updateCartUI(data) {
-        const items = data.items;
-        const totales = data.totales;
-
-        // Actualizar contadores
-        cartCount.textContent = data.carrito_count;
-        cartItemsCount.textContent = `${data.carrito_count} item${data.carrito_count !== 1 ? 's' : ''}`;
-        cartTotal.textContent = `$${totales.total.toLocaleString('es-CO')}`;
-
-        // Actualizar items del carrito
-        if (items.length === 0) {
-          cartItemsContainer.innerHTML = `
-            <div class="cart-empty">
-              <i class="fas fa-shopping-cart"></i>
-              <p>Tu carrito está vacío</p>
-              <small class="text-muted">Agrega productos para comenzar</small>
-            </div>
-          `;
-        } else {
-          let itemsHTML = '';
-          items.forEach(item => {
-            const precioTotal = item.precio_unitario * item.cantidad;
-            itemsHTML += `
-              <div class="cart-item">
-                <img src="${item.imagen || '{% static "img/placeholder-product.jpg" %}'}" 
-                     alt="${item.nombre}" class="cart-item-img">
-                <div class="cart-item-info">
-                  <div class="cart-item-name">${item.nombre}</div>
-                  ${item.variante ? `<div class="cart-item-variante">${item.variante}</div>` : ''}
-                  <div class="cart-item-price">$${item.precio_unitario.toLocaleString('es-CO')} x ${item.cantidad}</div>
-                  <div class="cart-item-actions">
-                    <button class="btn-quantity" onclick="updateCartQuantity(${item.id}, -1)">
-                      <i class="fas fa-minus"></i>
-                    </button>
-                    <span class="cart-item-quantity">${item.cantidad}</span>
-                    <button class="btn-quantity" onclick="updateCartQuantity(${item.id}, 1)">
-                      <i class="fas fa-plus"></i>
-                    </button>
-                    <button class="btn-remove" onclick="removeCartItem(${item.id})">
-                      <i class="fas fa-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            `;
-          });
-          cartItemsContainer.innerHTML = itemsHTML;
-        }
-      }
-
-      // Cargar datos de pedidos
-      function loadPedidosData() {
-        fetch('{% url "mis_pedidos_data" %}')
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              updatePedidosUI(data.pedidos);
-            } else {
-              pedidosContent.innerHTML = `
-                <div class="text-center py-5">
-                  <i class="fas fa-exclamation-triangle text-warning fa-2x mb-3"></i>
-                  <p>Error al cargar los pedidos</p>
-                </div>
-              `;
-            }
-          })
-          .catch(error => {
-            console.error('Error loading pedidos data:', error);
-            pedidosContent.innerHTML = `
-              <div class="text-center py-5">
-                <i class="fas fa-exclamation-triangle text-danger fa-2x mb-3"></i>
-                <p>Error de conexión</p>
-              </div>
-            `;
-          });
-      }
-
-      // Actualizar UI de pedidos
-      function updatePedidosUI(pedidos) {
-        if (pedidos.length === 0) {
-          pedidosContent.innerHTML = `
-            <div class="text-center py-5">
-              <i class="fas fa-shopping-bag text-muted fa-2x mb-3"></i>
-              <p>No tienes pedidos recientes</p>
-              <small class="text-muted">Realiza tu primera compra</small>
-            </div>
-          `;
-        } else {
-          let pedidosHTML = '';
-          pedidos.forEach(pedido => {
-            const estadoClass = `estado-${pedido.estado_pedido}`;
-            pedidosHTML += `
-              <div class="pedido-item">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <strong>Pedido #${pedido.numero_pedido}</strong>
-                    <div class="text-muted small">${pedido.fecha_pedido}</div>
-                  </div>
-                  <span class="pedido-estado ${estadoClass}">${pedido.estado_display}</span>
-                </div>
-                <div class="mb-2">
-                  <small class="text-muted">${pedido.negocio_nombre}</small>
-                </div>
-                <div class="mb-2">
-                  ${pedido.productos.map(producto => `
-                    <div class="d-flex justify-content-between small">
-                      <span>${producto.nombre} x${producto.cantidad}</span>
-                      <span>$${(producto.precio_unitario * producto.cantidad).toLocaleString('es-CO')}</span>
-                    </div>
-                  `).join('')}
-                </div>
-                <div class="d-flex justify-content-between align-items-center">
-                  <strong>Total: $${pedido.total_pedido.toLocaleString('es-CO')}</strong>
-                  ${pedido.puede_cancelar ? `
-                    <button class="btn btn-outline-danger btn-sm" onclick="cancelarPedido(${pedido.pkid_pedido})">
-                      Cancelar
-                    </button>
-                  ` : ''}
-                </div>
-                ${pedido.tiempo_restante ? `
-                  <div class="text-end small text-muted mt-1">
-                    Puedes cancelar en: ${pedido.tiempo_restante}
-                  </div>
-                ` : ''}
-              </div>
-            `;
-          });
-          pedidosContent.innerHTML = pedidosHTML;
-        }
-      }
-
-      // Cargar carrito al iniciar la página si el usuario está autenticado
-      {% if request.user.is_authenticated %}
-      loadCartData();
-      {% endif %}
-    });
-
-    // Función global para actualizar cantidad
-    window.updateCartQuantity = function (itemId, cambio) {
-      fetch('{% url "actualizar_cantidad_carrito" %}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-          item_id: itemId,
-          cambio: cambio
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            loadCartData(); // Recargar carrito
-          } else {
-            alert(data.message || 'Error al actualizar la cantidad');
-          }
-        })
-        .catch(error => {
-          console.error('Error updating cart quantity:', error);
-          alert('Error al actualizar la cantidad');
-        });
-    };
-
-    // Función global para eliminar item
-    window.removeCartItem = function (itemId) {
-      if (!confirm('¿Estás seguro de que quieres eliminar este producto del carrito?')) {
-        return;
-      }
-
-      fetch('{% url "eliminar_item_carrito" %}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-          item_id: itemId
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            loadCartData(); // Recargar carrito
-          } else {
-            alert('Error al eliminar el producto');
-          }
-        })
-        .catch(error => {
-          console.error('Error removing cart item:', error);
-          alert('Error al eliminar el producto');
-        });
-    };
-
-    // Función global para cancelar pedido
-    window.cancelarPedido = function (pedidoId) {
-      if (!confirm('¿Estás seguro de que quieres cancelar este pedido?')) {
-        return;
-      }
-
-      fetch('{% url "cancelar_pedido" %}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-          pedido_id: pedidoId
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Pedido cancelado exitosamente');
-            loadPedidosData(); // Recargar pedidos
-          } else {
-            alert(data.message || 'Error al cancelar el pedido');
-          }
-        })
-        .catch(error => {
-          console.error('Error canceling order:', error);
-          alert('Error al cancelar el pedido');
-        });
-    };
-
-    // =============================================
-    // FUNCIONES DE PERFIL (MANTENER EXISTENTES)
-    // =============================================
-
-    // Función para cargar el formulario en el modal
-    function cargarFormularioPerfil() {
-        const container = document.getElementById('perfil-form-container');
+    getSuggestionItemHTML(suggestion, query) {
+        const icon = this.getIconForType(suggestion.type);
         
-        // Mostrar spinner
-        container.innerHTML = `
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando...</span>
+        // Resaltar la query en el texto (si está presente)
+        let displayText = suggestion.text;
+        if (query && suggestion.value.toLowerCase().includes(query.toLowerCase())) {
+            const regex = new RegExp(`(${this.escapeRegExp(query)})`, 'gi');
+            displayText = suggestion.text.replace(regex, '<mark class="highlight-query">$1</mark>');
+        }
+
+        return `
+            <div class="suggestion-item" data-url="${suggestion.url || '#'}">
+                <div class="suggestion-icon" style="background: ${icon.color};">
+                    <i class="${icon.class}"></i>
                 </div>
-                <p class="mt-2 text-muted">Cargando formulario...</p>
+                <div class="suggestion-text">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="suggestion-title">${displayText}</div>
+                        ${suggestion.precio_formateado ? 
+                            `<span class="text-primary fw-bold ms-2">${suggestion.precio_formateado}</span>` : ''}
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-1">
+                        <span class="suggestion-category">
+                            <i class="${icon.small} me-1"></i>${suggestion.category}
+                        </span>
+                        ${suggestion.negocio ? 
+                            `<small class="text-muted"><i class="fas fa-store me-1"></i>${suggestion.negocio}</small>` : ''}
+                    </div>
+                </div>
             </div>
         `;
-        
-        // Cargar formulario via AJAX
-        fetch('{% url "get_perfil_form" %}')
-            .then(response => response.text())
-            .then(html => {
-                container.innerHTML = html;
-                inicializarEventosPerfil();
-            })
-            .catch(error => {
-                container.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        Error al cargar el formulario
+    }
+
+    escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    getNoResultsHTML(query) {
+        return `
+            <div class="no-suggestions">
+                <div class="text-center py-4">
+                    <i class="fas fa-search fa-2x text-muted mb-3"></i>
+                    <div class="fw-bold">No hay resultados para "${query}"</div>
+                    <div class="small text-muted mt-2">
+                        Intenta con otras palabras o revisa la ortografía
                     </div>
-                `;
-            });
+                </div>
+            </div>
+        `;
     }
 
-    // Función para inicializar eventos del formulario
-    function inicializarEventosPerfil() {
-        const form = document.getElementById('perfilForm');
-        const fileInput = document.getElementById('id_img_user');
+    showRecentSearches(container, inputId) {
+        const searches = this.getRecentSearches();
         
-        if (form) {
-            form.addEventListener('submit', guardarPerfil);
+        if (!container) return;
+        
+        console.log(`📚 Mostrando ${searches.length} búsquedas recientes`);
+        
+        if (searches.length === 0) {
+            this.showMessage(container, 'No hay búsquedas recientes', 'history');
+            return;
         }
         
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                previewImage(this);
-            });
-        }
-    }
-
-    // Función para previsualizar imagen
-    function previewImage(input) {
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                let preview = document.getElementById('profile-picture-preview');
-                let placeholder = document.getElementById('profile-picture-placeholder');
-                
-                if (preview) {
-                    preview.src = e.target.result;
-                } else if (placeholder) {
-                    const newImg = document.createElement('img');
-                    newImg.src = e.target.result;
-                    newImg.className = 'profile-picture';
-                    newImg.id = 'profile-picture-preview';
-                    newImg.alt = 'Foto de perfil';
-                    placeholder.parentNode.replaceChild(newImg, placeholder);
-                }
-            }
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-
-    function guardarPerfil(e) {
-        e.preventDefault();
+        let html = `
+            <div class="recent-searches">
+                <div class="recent-title">
+                    <span><i class="fas fa-history me-2"></i>Búsquedas recientes</span>
+                    <button type="button" class="btn-clear-history btn btn-link p-0 text-primary">
+                        <i class="fas fa-trash-alt me-1"></i>Limpiar
+                    </button>
+                </div>
+                <div class="recent-items-container">
+        `;
         
-        const form = e.target;
-        const formData = new FormData(form);
-        const btnGuardar = document.getElementById('btn-guardar');
-        const messagesDiv = document.getElementById('form-messages');
-        
-        // Cambiar estado del botón
-        const originalText = btnGuardar.innerHTML;
-        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
-        btnGuardar.disabled = true;
-        
-        // Limpiar mensajes anteriores
-        if (messagesDiv) {
-            messagesDiv.className = 'alert d-none';
-            messagesDiv.innerHTML = '';
-        }
-        
-        // Limpiar errores anteriores
-        document.querySelectorAll('[id^="error-"]').forEach(el => {
-            el.textContent = '';
+        searches.forEach((search, index) => {
+            const isNew = index < 2 ? '<span class="badge bg-primary ms-1" style="font-size: 0.6rem; padding: 1px 4px;">nuevo</span>' : '';
+            html += `
+                <div class="recent-item" data-search="${this.escapeHtml(search)}">
+                    <i class="fas fa-search me-2"></i>
+                    <span class="recent-item-text">${search}</span>
+                    ${isNew}
+                </div>
+            `;
         });
         
-        // Enviar datos
-        fetch('{% url "actualizar_perfil" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
+        html += `</div></div>`;
+        
+        container.innerHTML = html;
+        container.classList.add('show');
+        
+        // Eventos para items del historial
+        container.querySelectorAll('.recent-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const searchTerm = item.dataset.search;
+                console.log(`↩️ Click en historial: "${searchTerm}"`);
+                
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.value = searchTerm;
+                    input.focus();
+                    this.performSearch(searchTerm, inputId);
+                }
+            });
+        });
+        
+        // Evento para limpiar historial
+        container.querySelector('.btn-clear-history')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('¿Estás seguro de que quieres limpiar todo el historial de búsquedas?')) {
+                localStorage.removeItem(VECY_CONFIG.RECENT_SEARCHES_KEY);
+                this.showRecentSearches(container, inputId);
+                console.log('🗑️ Historial limpiado');
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                if (messagesDiv) {
-                    messagesDiv.className = 'alert alert-success';
-                    messagesDiv.innerHTML = `<i class="fas fa-check me-2"></i>${data.message}`;
-                }
-                
-                actualizarInterfazUsuario(data);
-                
-                setTimeout(() => {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editarPerfilModal'));
-                    if (modal) {
-                        modal.hide();
-                    }
-                    location.reload();
-                }, 2000);
-                
-            } else {
-                if (messagesDiv) {
-                    messagesDiv.className = 'alert alert-danger';
-                    messagesDiv.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message}`;
-                }
-                
-                if (data.errors) {
-                    for (const [field, error] of Object.entries(data.errors)) {
-                        const errorElement = document.getElementById(`error-${field}`);
-                        if (errorElement) {
-                            errorElement.textContent = error;
-                        }
-                    }
-                }
-                
-                btnGuardar.innerHTML = originalText;
-                btnGuardar.disabled = false;
+        });
+    }
+
+    showLoading(container, query) {
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="search-loading">
+                <div class="d-flex align-items-center justify-content-center py-3">
+                    <div class="spinner-border spinner-border-sm text-primary me-3"></div>
+                    <span>Buscando "${query}"...</span>
+                </div>
+            </div>
+        `;
+        container.classList.add('show');
+    }
+
+    showMessage(container, message, type = 'info') {
+        if (!container) return;
+        
+        const icons = {
+            info: 'info-circle',
+            error: 'exclamation-triangle',
+            history: 'history',
+            search: 'search'
+        };
+        
+        container.innerHTML = `
+            <div class="no-suggestions">
+                <i class="fas fa-${icons[type] || 'info-circle'} me-2"></i>
+                ${message}
+            </div>
+        `;
+        container.classList.add('show');
+    }
+
+    performSearch(query, inputId) {
+        if (!query || query.trim() === '') return;
+        
+        console.log(`🔎 Ejecutando búsqueda: "${query}"`);
+        
+        // Guardar en historial
+        this.saveToRecentSearches(query);
+        
+        // Ocultar sugerencias
+        this.hideAllSuggestions();
+        
+        // Redirigir
+        const searchUrl = VECY_CONFIG.IS_LOGGED_IN ? 
+            '/productos-filtrados/' : '/productos/';
+        
+        console.log(`📍 Redirigiendo a: ${searchUrl}?q=${encodeURIComponent(query)}`);
+        window.location.href = `${searchUrl}?q=${encodeURIComponent(query)}`;
+    }
+
+    saveToRecentSearches(searchTerm) {
+        try {
+            if (!searchTerm || searchTerm.trim().length < 2) {
+                console.log('⚠️ Búsqueda muy corta, no guardando en historial');
+                return false;
             }
+            
+            let searches = this.getRecentSearches();
+            
+            // Eliminar duplicados (case insensitive)
+            searches = searches.filter(s => 
+                s.toLowerCase() !== searchTerm.toLowerCase()
+            );
+            
+            // Agregar al inicio
+            searches.unshift(searchTerm);
+            
+            // Limitar a 12 búsquedas
+            if (searches.length > 12) {
+                searches = searches.slice(0, 12);
+            }
+            
+            localStorage.setItem(VECY_CONFIG.RECENT_SEARCHES_KEY, JSON.stringify(searches));
+            console.log(`💾 Historial guardado: "${searchTerm}" (total: ${searches.length})`);
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error guardando historial:', error);
+            return false;
+        }
+    }
+
+    getRecentSearches() {
+        try {
+            const searches = localStorage.getItem(VECY_CONFIG.RECENT_SEARCHES_KEY);
+            return searches ? JSON.parse(searches) : [];
+        } catch (error) {
+            console.error('❌ Error leyendo historial:', error);
+            return [];
+        }
+    }
+
+    getIconForType(type) {
+        const icons = {
+            'producto': { 
+                class: 'fas fa-box', 
+                small: 'fas fa-box',
+                color: '#3498db' 
+            },
+            'negocio': { 
+                class: 'fas fa-store', 
+                small: 'fas fa-store',
+                color: '#2ecc71' 
+            },
+            'categoria': { 
+                class: 'fas fa-tag', 
+                small: 'fas fa-tag',
+                color: '#9b59b6' 
+            }
+        };
+        return icons[type] || icons.producto;
+    }
+
+    attachSuggestionEvents(container) {
+        container.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const url = item.dataset.url;
+                console.log(`🎯 Click en sugerencia: ${url}`);
+                
+                if (url && url !== '#') {
+                    window.location.href = url;
+                }
+                this.hideAllSuggestions();
+            });
+            
+            // Efecto hover
+            item.addEventListener('mouseenter', () => {
+                item.style.backgroundColor = 'rgba(52, 152, 219, 0.1)';
+                item.style.transform = 'translateX(3px)';
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                item.style.backgroundColor = '';
+                item.style.transform = '';
+            });
+        });
+    }
+
+    hideSuggestions(container) {
+        if (container) {
+            container.classList.remove('show');
+        }
+    }
+
+    hideAllSuggestions() {
+        document.querySelectorAll('.autocomplete-suggestions').forEach(container => {
+            this.hideSuggestions(container);
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+}
+
+// =============================================
+// INICIALIZACIÓN
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🎯 Inicializando VECY Search System...');
+    
+    // Inicializar autocompletado
+    window.vecyAutocomplete = new VecyAutocomplete();
+    
+    // Agregar estilos dinámicos
+    this.addAutocompleteStyles();
+    
+    console.log('✅ Sistema de búsqueda VECY inicializado correctamente');
+});
+
+// =============================================
+// ESTILOS DINÁMICOS
+// =============================================
+function addAutocompleteStyles() {
+    const styles = document.createElement('style');
+    styles.textContent = `
+        /* Animaciones */
+        .autocomplete-suggestions {
+            animation: fadeIn 0.25s ease;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Items de sugerencia */
+        .suggestion-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .suggestion-item:hover {
+            background-color: rgba(52, 152, 219, 0.08) !important;
+            border-left: 4px solid var(--primary);
+            padding-left: 12px;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* Iconos */
+        .suggestion-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            color: white;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        
+        /* Texto */
+        .suggestion-text {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .suggestion-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        
+        .highlight-query {
+            background-color: rgba(255, 193, 7, 0.3);
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        
+        .suggestion-category {
+            font-size: 0.8rem;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* Historial */
+        .recent-searches {
+            padding: 15px;
+        }
+        
+        .recent-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: #495057;
+        }
+        
+        .recent-items-container {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .recent-item {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        
+        .recent-item:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+        
+        .recent-item:hover .badge {
+            background-color: white !important;
+            color: var(--primary) !important;
+        }
+        
+        .recent-item-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        
+        /* Buscar todo */
+        .search-all-container {
+            background: linear-gradient(135deg, #f8f9ff, #e3f2fd);
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .search-all-item {
+            background: white !important;
+            border: 2px solid var(--primary) !important;
+            margin: 10px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(52, 152, 219, 0.15);
+        }
+        
+        .search-all-item:hover {
+            background: var(--primary) !important;
+            color: white !important;
+        }
+        
+        .search-all-item:hover .text-primary {
+            color: white !important;
+        }
+        
+        /* Estados */
+        .no-suggestions, .search-loading {
+            padding: 30px 20px;
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .no-suggestions i {
+            font-size: 2.2rem;
+            margin-bottom: 15px;
+            color: #adb5bd;
+        }
+        
+        .search-loading .spinner-border {
+            width: 1.3rem;
+            height: 1.3rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .autocomplete-suggestions {
+                position: fixed !important;
+                top: 70px !important;
+                left: 10px !important;
+                right: 10px !important;
+                max-height: 70vh;
+                overflow-y: auto;
+                z-index: 1050;
+            }
+            
+            .suggestion-item {
+                padding: 14px 12px;
+            }
+            
+            .suggestion-icon {
+                width: 36px;
+                height: 36px;
+            }
+        }
+    `;
+    document.head.appendChild(styles);
+}
+
+// =============================================
+// FUNCIONES DE PERFIL (MANTENIDAS)
+// =============================================
+function cargarFormularioPerfil() {
+    const container = document.getElementById('perfil-form-container');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2 text-muted">Cargando formulario...</p>
+        </div>
+    `;
+    
+    fetch('{% url "get_perfil_form" %}')
+        .then(response => response.text())
+        .then(html => {
+            container.innerHTML = html;
+            inicializarEventosPerfil();
         })
         .catch(error => {
-            console.error('Error:', error);
-            if (messagesDiv) {
-                messagesDiv.className = 'alert alert-danger';
-                messagesDiv.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Error de conexión';
+            console.error('Error cargando formulario:', error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Error al cargar el formulario
+                </div>
+            `;
+        });
+}
+
+function inicializarEventosPerfil() {
+    const form = document.getElementById('perfilForm');
+    if (form) form.addEventListener('submit', guardarPerfil);
+    
+    const fileInput = document.getElementById('id_img_user');
+    if (fileInput) fileInput.addEventListener('change', previewImage);
+}
+
+function previewImage(event) {
+    const input = event.target;
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('profile-picture-preview');
+            const placeholder = document.getElementById('profile-picture-placeholder');
+            
+            if (preview) {
+                preview.src = e.target.result;
+            } else if (placeholder) {
+                placeholder.style.backgroundImage = `url(${e.target.result})`;
+                placeholder.style.backgroundSize = 'cover';
+                placeholder.innerHTML = '';
             }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function guardarPerfil(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const btnGuardar = form.querySelector('#btn-guardar');
+    const originalText = btnGuardar.innerHTML;
+    
+    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+    btnGuardar.disabled = true;
+    
+    fetch('{% url "actualizar_perfil" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            setTimeout(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editarPerfilModal'));
+                if (modal) modal.hide();
+                location.reload();
+            }, 1500);
+        } else {
+            alert(data.message || 'Error al guardar');
             btnGuardar.innerHTML = originalText;
             btnGuardar.disabled = false;
-        });
-    }
-
-    function actualizarInterfazUsuario(data) {
-        const userDropdown = document.querySelector('.user-dropdown .dropdown-toggle');
-        if (userDropdown && data.usuario_nombre) {
-            const userNameElement = userDropdown.querySelector('.user-avatar')?.nextSibling || 
-                                  userDropdown.querySelector('i').nextSibling;
-            if (userNameElement) {
-                userNameElement.textContent = ' ' + data.usuario_nombre;
-            }
         }
-        
-        if (data.usuario_imagen) {
-            const userAvatar = document.querySelector('.user-dropdown .user-avatar');
-            if (userAvatar) {
-                userAvatar.src = data.usuario_imagen;
-            } else {
-                const dropdownToggle = document.querySelector('.user-dropdown .dropdown-toggle');
-                const icon = dropdownToggle.querySelector('i');
-                if (icon) {
-                    const newAvatar = document.createElement('img');
-                    newAvatar.src = data.usuario_imagen;
-                    newAvatar.alt = data.usuario_nombre;
-                    newAvatar.className = 'user-avatar';
-                    newAvatar.style.width = '32px';
-                    newAvatar.style.height = '32px';
-                    newAvatar.style.borderRadius = '50%';
-                    newAvatar.style.objectFit = 'cover';
-                    newAvatar.style.border = '2px solid white';
-                    newAvatar.style.marginRight = '8px';
-                    dropdownToggle.insertBefore(newAvatar, icon);
-                    icon.style.display = 'none';
-                }
-            }
-            
-            const profilePreview = document.getElementById('profile-picture-preview');
-            if (profilePreview) {
-                profilePreview.src = data.usuario_imagen;
-            }
-        }
-    }
-
-    // Inicializar cuando el modal se muestra
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('editarPerfilModal');
-        if (modal) {
-            modal.addEventListener('show.bs.modal', function() {
-                cargarFormularioPerfil();
-            });
-            
-            modal.addEventListener('hidden.bs.modal', function() {
-                document.getElementById('perfil-form-container').innerHTML = `
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <p class="mt-2 text-muted">Cargando formulario...</p>
-                    </div>
-                `;
-            });
-        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error de conexión');
+        btnGuardar.innerHTML = originalText;
+        btnGuardar.disabled = false;
     });
+}
+
+// Función getCookie para el perfil
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+console.log('✨ Script VECY cargado completamente');
   </script>
   {% block scripts %}{% endblock %}
 </body>

@@ -91,16 +91,67 @@ class Carrito(models.Model):
 class CarritoItem(models.Model):
     pkid_item = models.AutoField(primary_key=True)
     fkcarrito = models.ForeignKey(Carrito, models.DO_NOTHING, db_column='fkcarrito')
-    fkproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto')
+    
+    # Campos para productos individuales
+    fkproducto = models.ForeignKey(
+        'Productos', 
+        models.DO_NOTHING, 
+        db_column='fkproducto',
+        null=True,  # AHORA puede ser NULL porque puede ser un combo
+        blank=True
+    )
+    
     fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio')
     cantidad = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     variante_seleccionada = models.CharField(max_length=100, blank=True, null=True)
     variante_id = models.IntegerField(blank=True, null=True)
+    
+    # NUEVOS CAMPOS PARA COMBOS
+    fkcombo = models.ForeignKey(
+        'Combos',
+        models.DO_NOTHING,
+        db_column='fkcombo_id',
+        null=True,
+        blank=True,
+        related_name='carrito_items'
+    )
+    
+    tipo_item = models.CharField(
+        max_length=20,
+        choices=[
+            ('producto', 'Producto'),
+            ('combo', 'Combo')
+        ],
+        default='producto'
+    )
 
     class Meta:
         db_table = 'carrito_item'
-
+    
+    def __str__(self):
+        if self.fkcombo:
+            return f"Combo: {self.fkcombo.nombre_combo} x{self.cantidad}"
+        else:
+            return f"Producto: {self.fkproducto.nom_prod} x{self.cantidad}"
+    
+    @property
+    def es_combo(self):
+        return self.tipo_item == 'combo'
+    
+    @property
+    def nombre_producto(self):
+        if self.fkcombo:
+            return self.fkcombo.nombre_combo
+        else:
+            nombre = self.fkproducto.nom_prod
+            if self.variante_seleccionada:
+                nombre += f" - {self.variante_seleccionada}"
+            return nombre
+    
+    @property
+    def subtotal(self):
+        return self.precio_unitario * self.cantidad
 
 class CategoriaNegocio(models.Model):
     nombre = models.CharField(max_length=100)
@@ -323,7 +374,112 @@ class PagosNegocios(models.Model):
     class Meta:
         db_table = 'pagos_negocios'
 
+# Agrega estos modelos al archivo de modelos (models.py)
 
+class Combos(models.Model):
+    ESTADO_CHOICES = [
+        ('activo', 'Activo'),
+        ('inactivo', 'Inactivo'),
+        ('agotado', 'Agotado'),
+    ]
+    
+    pkid_combo = models.AutoField(primary_key=True)
+    fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio_id')
+    nombre_combo = models.CharField(max_length=100)
+    descripcion_combo = models.TextField(blank=True, null=True)
+    precio_combo = models.DecimalField(max_digits=10, decimal_places=2)
+    precio_regular = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    descuento_porcentaje = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    imagen_combo = models.ImageField(upload_to='combos/', blank=True, null=True)
+    estado_combo = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activo')
+    stock_combo = models.IntegerField(default=0)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_inicio = models.DateField(blank=True, null=True)
+    fecha_fin = models.DateField(blank=True, null=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'combos'
+    
+    def __str__(self):
+        return self.nombre_combo
+    
+    @property
+    def precio_ahorro(self):
+        """Calcula el ahorro respecto al precio regular"""
+        if self.precio_regular > 0:
+            return self.precio_regular - self.precio_combo
+        return 0
+    
+    @property
+    def esta_activo(self):
+        """Verifica si el combo está activo y en fecha"""
+        if self.estado_combo != 'activo':
+            return False
+        
+        hoy = timezone.now().date()
+        
+        if self.fecha_inicio and self.fecha_inicio > hoy:
+            return False
+            
+        if self.fecha_fin and self.fecha_fin < hoy:
+            return False
+            
+        return True
+    
+    @property
+    def tiene_stock(self):
+        """Verifica si tiene stock disponible"""
+        return self.stock_combo > 0
+
+
+class ComboItems(models.Model):
+    pkid_combo_item = models.AutoField(primary_key=True)
+    fkcombo = models.ForeignKey('Combos', models.DO_NOTHING, db_column='fkcombo_id')
+    fkproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_id')
+    variante = models.ForeignKey('VariantesProducto', models.DO_NOTHING, db_column='variante_id', blank=True, null=True)
+    cantidad = models.IntegerField(default=1)
+    
+    class Meta:
+        managed = True
+        db_table = 'combo_items'
+    
+    def __str__(self):
+        return f"{self.fkproducto.nom_prod} x{self.cantidad}"
+
+
+class Promociones2x1(models.Model):
+    ESTADO_CHOICES = [
+        ('activa', 'Activa'),
+        ('finalizada', 'Finalizada'),
+    ]
+    
+    pkid_promo_2x1 = models.AutoField(primary_key=True)
+    fknegocio = models.ForeignKey('Negocios', models.DO_NOTHING, db_column='fknegocio_id')
+    fkproducto = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_id')
+    variante = models.ForeignKey('VariantesProducto', models.DO_NOTHING, db_column='variante_id', blank=True, null=True)
+    fecha_inicio = models.DateField()
+    fecha_fin = models.DateField()
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='activa')
+    aplica_variantes = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        managed = True
+        db_table = 'promociones_2x1'
+    
+    def __str__(self):
+        return f"2x1 - {self.fkproducto.nom_prod}"
+    
+    @property
+    def esta_activa(self):
+        """Verifica si la promoción está activa"""
+        if self.estado != 'activa':
+            return False
+        
+        hoy = timezone.now().date()
+        return self.fecha_inicio <= hoy <= self.fecha_fin
+    
 class Pedidos(models.Model):
     pkid_pedido = models.AutoField(primary_key=True)
     fkusuario_pedido = models.ForeignKey('UsuarioPerfil', models.DO_NOTHING, db_column='fkusuario_pedido')
