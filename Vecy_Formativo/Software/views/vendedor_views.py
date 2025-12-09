@@ -2490,75 +2490,94 @@ def enviar_correo_estado_pedido(pedido_id, nuevo_estado):
 
 @login_required(login_url='login')
 def descargar_plantilla_productos(request):
-    """Vista para descargar plantilla Excel de productos"""
+    """Vista para descargar plantilla Excel de productos - CORREGIDA"""
     try:
         # Crear un libro de Excel con pandas
         with pd.ExcelWriter('plantilla_productos.xlsx', engine='openpyxl') as writer:
             
-            # Hoja de INSTRUCCIONES MEJORADA
+            # Hoja de INSTRUCCIONES MEJORADA CON EJEMPLOS REALES
             instrucciones_data = {
-                'SECCIÓN': [
-                    '📋 PRODUCTOS BASE',
-                    '📋 PRODUCTOS BASE', 
-                    '📋 PRODUCTOS BASE',
-                    '📋 PRODUCTOS BASE',
-                    '📋 PRODUCTOS BASE',
-                    '📋 PRODUCTOS BASE',
-                    '',
-                    '🎨 VARIANTES (Opcional)',
-                    '🎨 VARIANTES (Opcional)',
-                    '🎨 VARIANTES (Opcional)',
-                    '🎨 VARIANTES (Opcional)',
-                    '🎨 VARIANTES (Opcional)',
-                    '',
-                    '⚠️ IMPORTANTE',
-                    '⚠️ IMPORTANTE',
-                    '⚠️ IMPORTANTE',
-                    '⚠️ IMPORTANTE'
-                ],
                 'COLUMNA': [
-                    'nombre*',
-                    'precio*',
-                    'descripcion',
-                    'stock_inicial', 
-                    'categoria*',
-                    'estado',
+                    'A. nombre*',
+                    'B. precio*', 
+                    'C. descripcion',
+                    'D. stock_inicial',
+                    'E. categoria*',
+                    'F. estado',
                     '',
-                    'producto_base*',
-                    'nombre_variante*',
-                    'precio_adicional',
-                    'stock',
-                    'estado',
-                    '',
-                    'FORMATO',
-                    'OBLIGATORIOS',
-                    'CATEGORÍAS',
-                    'VINCULACIÓN'
+                    'EJEMPLOS DE CATEGORÍAS DISPONIBLES:',
+                    'Helados, Postres y Productos Congelados',
+                    'Tecnología y Electrónica',
+                    'Informática y Computación',
+                    'Moda, Vestuario y Estilo',
+                    'Belleza, Cuidado Personal y Cosmética',
+                    'Hogar, Decoración y Estilo de Vida',
+                    'Alimentos, Bebidas y Consumo Masivo'
                 ],
                 'DESCRIPCIÓN': [
-                    'Nombre único del producto (Ej: "Helado de Vainilla")',
-                    'Precio base del producto (Ej: 4000)',
+                    'Nombre único del producto (Máx: 50 caracteres)',
+                    'Precio base (Ej: 4000.50)',
                     'Descripción opcional del producto',
-                    'Stock inicial (Ej: 10). Por defecto: 0',
-                    'Nombre de la categoría (Ej: "Helado"). Se crea automáticamente si no existe',
-                    'Estado: "disponible", "no_disponible" o "agotado". Por defecto: "disponible"',
+                    'Cantidad inicial (Ej: 10). Por defecto: 0',
+                    'Nombre EXACTO de la categoría. Se creará si no existe.',
+                    'disponible, no_disponible o agotado. Por defecto: disponible',
                     '',
-                    'Nombre EXACTO del producto base (debe existir en la hoja PRODUCTOS_BASE)',
-                    'Nombre único de la variante (Ej: "Vaso Grande")',
-                    'Precio adicional sobre el precio base (Ej: 1000). Por defecto: 0',
-                    'Stock de la variante (Ej: 5). Por defecto: 0',
-                    'Estado: "activa" o "inactiva". Por defecto: "activa"',
-                    '',
-                    'Los campos con * son obligatorios',
-                    'Los nombres de productos deben ser únicos',
-                    'Las categorías se crearán automáticamente si no existen',
-                    'Las variantes se vinculan por nombre EXACTO del producto base'
+                    'Usa estos nombres exactamente como aparecen:',
+                    '→ Para helados y postres',
+                    '→ Para dispositivos electrónicos',
+                    '→ Para computadoras y accesorios',
+                    '→ Para ropa y accesorios',
+                    '→ Para productos de belleza',
+                    '→ Para decoración del hogar',
+                    '→ Para alimentos y bebidas'
                 ]
             }
             df_instrucciones = pd.DataFrame(instrucciones_data)
-            df_instrucciones.to_excel(writer, sheet_name='INSTRUCCIONES', index=False)
+            df_instrucciones.to_excel(writer, sheet_name='📋 INSTRUCCIONES', index=False)
             
-            # Hoja de PRODUCTOS_BASE VACÍA con solo los encabezados
+            # Hoja de EJEMPLOS con datos reales
+            ejemplos_data = {
+                'nombre*': [
+                    'Helado de Vainilla',
+                    'Mouse Inalámbrico',
+                    'Camiseta Básica',
+                    'Crema Facial'
+                ],
+                'precio*': [
+                    4000,
+                    35000,
+                    25000,
+                    45000
+                ],
+                'descripcion': [
+                    'Delicioso helado de vainilla artesanal',
+                    'Mouse ergonómico con conexión Bluetooth',
+                    'Camiseta 100% algodón de colores básicos',
+                    'Crema hidratante con protección solar'
+                ],
+                'stock_inicial': [
+                    20,
+                    15,
+                    50,
+                    30
+                ],
+                'categoria*': [
+                    'Helados, Postres y Productos Congelados',
+                    'Informática y Computación',
+                    'Moda, Vestuario y Estilo',
+                    'Belleza, Cuidado Personal y Cosmética'
+                ],
+                'estado': [
+                    'disponible',
+                    'disponible',
+                    'disponible',
+                    'disponible'
+                ]
+            }
+            df_ejemplos = pd.DataFrame(ejemplos_data)
+            df_ejemplos.to_excel(writer, sheet_name='📝 EJEMPLOS', index=False)
+            
+            # Hoja de PRODUCTOS_BASE VACÍA
             productos_data = {
                 'nombre*': [],
                 'precio*': [], 
@@ -2570,7 +2589,41 @@ def descargar_plantilla_productos(request):
             df_productos = pd.DataFrame(productos_data)
             df_productos.to_excel(writer, sheet_name='PRODUCTOS_BASE', index=False)
             
-            # Hoja de VARIANTES VACÍA con solo los encabezados
+            # Hoja de VARIANTES VACÍA con instrucciones específicas
+            variantes_instrucciones = {
+                'COLUMNA': [
+                    'A. producto_base*',
+                    'B. nombre_variante*',
+                    'C. precio_adicional',
+                    'D. stock',
+                    'E. estado',
+                    '',
+                    '⚠️ IMPORTANTE PARA VARIANTES:',
+                    '1. El producto_base DEBE existir en PRODUCTOS_BASE',
+                    '2. Primero importa productos, luego sus variantes',
+                    '3. Usa el nombre EXACTO del producto base',
+                    '4. Ejemplo: Si tienes "Helado de Vainilla" en productos,',
+                    '   aquí pones "Helado de Vainilla" en producto_base'
+                ],
+                'EJEMPLO': [
+                    'Helado de Vainilla',
+                    'Con Oreo',
+                    1000,
+                    15,
+                    'activa',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    ''
+                ]
+            }
+            df_variantes_instrucciones = pd.DataFrame(variantes_instrucciones)
+            df_variantes_instrucciones.to_excel(writer, sheet_name='🎨 VARIANTES_INSTRUCC', index=False)
+            
+            # Hoja de VARIANTES VACÍA
             variantes_data = {
                 'producto_base*': [],
                 'nombre_variante*': [],
@@ -2584,7 +2637,7 @@ def descargar_plantilla_productos(request):
         # Leer el archivo generado y enviarlo como respuesta
         with open('plantilla_productos.xlsx', 'rb') as f:
             response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-            response['Content-Disposition'] = 'attachment; filename="plantilla_productos.xlsx"'
+            response['Content-Disposition'] = 'attachment; filename="plantilla_productos_VECY.xlsx"'
         
         # Eliminar el archivo temporal
         os.remove('plantilla_productos.xlsx')
@@ -2596,15 +2649,15 @@ def descargar_plantilla_productos(request):
         return redirect('Crud_V')
 
 
-
 @login_required(login_url='login')
 def importar_productos_excel(request):
-    """Vista para importar productos desde Excel - ACTUALIZADA CON REGISTRO DE VARIANTES"""
+    """Vista para importar productos desde Excel - VERSIÓN CORREGIDA Y SIMPLIFICADA"""
     if request.method == 'POST' and request.FILES.get('archivo_excel'):
         try:
             archivo = request.FILES['archivo_excel']
             sobrescribir = request.POST.get('sobrescribir_existentes') == 'on'
-            crear_categorias = request.POST.get('crear_categorias') == 'on'
+            # IMPORTANTE: Siempre crear categorías automáticamente
+            crear_categorias = True  # Forzado a True - el usuario no puede desactivarlo
             
             # Validar extensión
             if not archivo.name.endswith(('.xlsx', '.xls')):
@@ -2626,7 +2679,12 @@ def importar_productos_excel(request):
                 df_productos = pd.read_excel(archivo, sheet_name='PRODUCTOS_BASE')
                 df_variantes = pd.read_excel(archivo, sheet_name='VARIANTES')
             except Exception as e:
-                messages.error(request, f'❌ Error al leer el archivo Excel: {str(e)}')
+                messages.error(request, f'❌ Error al leer el archivo Excel: {str(e)}. Asegúrate de que las hojas se llamen "PRODUCTOS_BASE" y "VARIANTES"')
+                return redirect('Crud_V')
+            
+            # Validar que hay datos en productos
+            if df_productos.empty:
+                messages.error(request, '❌ La hoja PRODUCTOS_BASE está vacía')
                 return redirect('Crud_V')
             
             # Contadores para resultados
@@ -2635,33 +2693,87 @@ def importar_productos_excel(request):
             variantes_creadas = 0
             movimientos_registrados = 0
             errores = []
+            advertencias = []
+            
+            # Diccionario para mapear nombres de productos a IDs (para variantes)
+            mapa_productos = {}
             
             # ========== PROCESAR PRODUCTOS BASE ==========
+            print(f"🔍 Procesando {len(df_productos)} productos...")
+            
             for index, row in df_productos.iterrows():
                 try:
                     # Validar campos obligatorios
-                    if pd.isna(row['nombre*']) or pd.isna(row['precio*']) or pd.isna(row['categoria*']):
+                    if pd.isna(row.get('nombre*')) or pd.isna(row.get('precio*')) or pd.isna(row.get('categoria*')):
                         errores.append(f"Fila {index+2}: Campos obligatorios faltantes")
                         continue
                     
                     nombre = str(row['nombre*']).strip()
-                    precio = float(row['precio*'])
-                    descripcion = str(row['descripcion']) if not pd.isna(row['descripcion']) else ""
-                    stock = int(row['stock_inicial']) if not pd.isna(row['stock_inicial']) else 0
-                    categoria_nombre = str(row['categoria*']).strip()
-                    estado = str(row['estado']).lower() if not pd.isna(row['estado']) else 'disponible'
+                    if len(nombre) > 50:
+                        nombre = nombre[:50]
+                        advertencias.append(f"'{nombre}': Nombre truncado a 50 caracteres")
                     
-                    # Buscar o crear categoría
+                    # Validar precio
                     try:
-                        categoria = CategoriaProductos.objects.get(desc_cp__iexact=categoria_nombre)
-                    except CategoriaProductos.DoesNotExist:
-                        if crear_categorias:
-                            categoria = CategoriaProductos.objects.create(desc_cp=categoria_nombre)
-                        else:
-                            errores.append(f"'{nombre}': Categoría '{categoria_nombre}' no existe")
+                        precio = float(row['precio*'])
+                        if precio <= 0:
+                            errores.append(f"'{nombre}': El precio debe ser mayor a 0")
                             continue
+                    except:
+                        errores.append(f"'{nombre}': Precio inválido")
+                        continue
                     
-                    # Verificar si el producto ya existe
+                    descripcion = str(row['descripcion']) if not pd.isna(row.get('descripcion')) else ""
+                    stock = int(row['stock_inicial']) if not pd.isna(row.get('stock_inicial')) else 0
+                    
+                    # Validar y normalizar categoría
+                    categoria_nombre = str(row['categoria*']).strip()
+                    if not categoria_nombre:
+                        errores.append(f"'{nombre}': La categoría no puede estar vacía")
+                        continue
+                    
+                    # Normalizar estado
+                    estado_raw = str(row['estado']).lower() if not pd.isna(row.get('estado')) else 'disponible'
+                    if estado_raw in ['disponible', 'activo', 'disponible ']:
+                        estado = 'disponible'
+                    elif estado_raw in ['no_disponible', 'inactivo', 'no disponible']:
+                        estado = 'no_disponible'
+                    elif estado_raw in ['agotado', 'sin stock', 'agotado ']:
+                        estado = 'agotado'
+                    else:
+                        estado = 'disponible'
+                        advertencias.append(f"'{nombre}': Estado '{estado_raw}' no reconocido, usando 'disponible'")
+                    
+                    print(f"🔄 Procesando producto: {nombre} - Categoría: {categoria_nombre}")
+                    
+                    # ========== BUSCAR O CREAR CATEGORÍA (SIEMPRE CREAR SI NO EXISTE) ==========
+                    try:
+                        # Primero buscar exacto
+                        categoria = CategoriaProductos.objects.filter(desc_cp__iexact=categoria_nombre).first()
+                        
+                        if not categoria:
+                            # Buscar similar (sin mayúsculas/acentos)
+                            from django.db.models.functions import Lower
+                            categoria = CategoriaProductos.objects.annotate(
+                                desc_lower=Lower('desc_cp')
+                            ).filter(desc_lower=categoria_nombre.lower()).first()
+                        
+                        # Si aún no existe, CREARLA automáticamente
+                        if not categoria:
+                            categoria = CategoriaProductos.objects.create(
+                                desc_cp=categoria_nombre,
+                                fecha_creacion=timezone.now()
+                            )
+                            print(f"✅ Categoría creada: {categoria_nombre} (ID: {categoria.pkid_cp})")
+                            advertencias.append(f"Nueva categoría creada: '{categoria_nombre}'")
+                        else:
+                            print(f"✅ Categoría encontrada: {categoria.desc_cp} (ID: {categoria.pkid_cp})")
+                            
+                    except Exception as e:
+                        errores.append(f"'{nombre}': Error con categoría '{categoria_nombre}': {str(e)}")
+                        continue
+                    
+                    # ========== VERIFICAR SI EL PRODUCTO YA EXISTE ==========
                     producto_existente = Productos.objects.filter(
                         nom_prod__iexact=nombre,
                         fknegocioasociado_prod=negocio
@@ -2670,7 +2782,8 @@ def importar_productos_excel(request):
                     stock_anterior = 0
                     if producto_existente:
                         stock_anterior = producto_existente.stock_prod
-                        
+                    
+                    # ========== CREAR O ACTUALIZAR PRODUCTO ==========
                     if producto_existente and sobrescribir:
                         # Actualizar producto existente
                         producto_existente.precio_prod = precio
@@ -2681,9 +2794,13 @@ def importar_productos_excel(request):
                         producto_existente.save()
                         productos_actualizados += 1
                         producto = producto_existente
+                        print(f"🔄 Producto actualizado: {nombre}")
+                        
                     elif producto_existente:
-                        errores.append(f"'{nombre}': Ya existe (usar sobrescribir)")
+                        # Producto existe pero no sobrescribir
+                        errores.append(f"'{nombre}': Ya existe (marca 'Sobrescribir existentes' para actualizar)")
                         producto = producto_existente
+                        
                     else:
                         # Crear nuevo producto
                         producto = Productos.objects.create(
@@ -2693,11 +2810,17 @@ def importar_productos_excel(request):
                             stock_prod=stock,
                             fkcategoria_prod=categoria,
                             estado_prod=estado,
-                            fknegocioasociado_prod=negocio
+                            fknegocioasociado_prod=negocio,
+                            stock_minimo=5,
+                            fecha_creacion=timezone.now()
                         )
                         productos_creados += 1
+                        print(f"✅ Producto creado: {nombre} (ID: {producto.pkid_prod})")
                     
-                    # ✅ REGISTRAR MOVIMIENTO DE STOCK PARA PRODUCTO BASE SI HAY STOCK INICIAL
+                    # Guardar en el mapa para variantes
+                    mapa_productos[nombre.lower()] = producto.pkid_prod
+                    
+                    # ========== REGISTRAR MOVIMIENTO DE STOCK ==========
                     if stock > 0:
                         try:
                             with connection.cursor() as cursor:
@@ -2710,7 +2833,7 @@ def importar_productos_excel(request):
                                     producto.pkid_prod,
                                     negocio.pkid_neg,
                                     'entrada',
-                                    'importacion_excel_producto',
+                                    'importacion_excel',
                                     stock,
                                     stock_anterior,
                                     stock,
@@ -2719,130 +2842,196 @@ def importar_productos_excel(request):
                                 ])
                             movimientos_registrados += 1
                         except Exception as e:
-                            print(f"Error registrando movimiento producto {nombre}: {e}")
+                            print(f"⚠️ Error registrando movimiento: {e}")
+                            advertencias.append(f"'{nombre}': Movimiento de stock no registrado")
                     
                 except Exception as e:
                     nombre_producto = str(row['nombre*'])[:50] if not pd.isna(row['nombre*']) else f"Fila {index+2}"
                     errores.append(f"'{nombre_producto}': {str(e)}")
+                    print(f"❌ Error en producto: {str(e)}")
                     continue
             
             # ========== PROCESAR VARIANTES ==========
-            for index, row in df_variantes.iterrows():
-                try:
-                    # Validar campos obligatorios
-                    if pd.isna(row['producto_base*']) or pd.isna(row['nombre_variante*']):
-                        continue  # Saltar variantes incompletas
-                    
-                    producto_base_nombre = str(row['producto_base*']).strip()
-                    nombre_variante = str(row['nombre_variante*']).strip()
-                    precio_adicional = float(row['precio_adicional']) if not pd.isna(row['precio_adicional']) else 0
-                    stock_variante = int(row['stock']) if not pd.isna(row['stock']) else 0
-                    estado_variante = str(row['estado']).lower() if not pd.isna(row['estado']) else 'activa'
-                    
-                    # Buscar producto base
+            if not df_variantes.empty:
+                print(f"🔍 Procesando {len(df_variantes)} variantes...")
+                
+                for index, row in df_variantes.iterrows():
                     try:
-                        producto_base = Productos.objects.get(
-                            nom_prod__iexact=producto_base_nombre,
-                            fknegocioasociado_prod=negocio
-                        )
-                    except Productos.DoesNotExist:
-                        errores.append(f"Variante '{nombre_variante}': Producto base '{producto_base_nombre}' no encontrado")
-                        continue
-                    
-                    # Verificar si la variante ya existe
-                    variante_existente = None
-                    stock_anterior_variante = 0
-                    with connection.cursor() as cursor:
-                        cursor.execute("""
-                            SELECT id_variante, stock_variante FROM variantes_producto 
-                            WHERE producto_id = %s AND nombre_variante = %s
-                        """, [producto_base.pkid_prod, nombre_variante])
-                        resultado = cursor.fetchone()
-                        if resultado:
-                            variante_existente = resultado[0]
-                            stock_anterior_variante = resultado[1]
-                    
-                    if variante_existente and sobrescribir:
-                        # Actualizar variante existente
-                        with connection.cursor() as cursor:
-                            cursor.execute("""
-                                UPDATE variantes_producto 
-                                SET precio_adicional = %s, stock_variante = %s, estado_variante = %s
-                                WHERE id_variante = %s
-                            """, [precio_adicional, stock_variante, estado_variante, variante_existente])
-                    elif not variante_existente:
-                        # Crear nueva variante
-                        sku_unico = f"VAR-{producto_base.pkid_prod}-{int(timezone.now().timestamp())}"
-                        with connection.cursor() as cursor:
-                            cursor.execute("""
-                                INSERT INTO variantes_producto 
-                                (producto_id, nombre_variante, precio_adicional, stock_variante, estado_variante, sku_variante, fecha_creacion)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                            """, [
-                                producto_base.pkid_prod,
-                                nombre_variante,
-                                precio_adicional,
-                                stock_variante,
-                                estado_variante,
-                                sku_unico,
-                                timezone.now()
-                            ])
-                            variante_id = cursor.lastrowid
-                        variantes_creadas += 1
+                        # Validar campos obligatorios
+                        if pd.isna(row.get('producto_base*')) or pd.isna(row.get('nombre_variante*')):
+                            continue  # Saltar filas incompletas
                         
-                        # ✅ REGISTRAR MOVIMIENTO DE STOCK PARA VARIANTE SI HAY STOCK
-                        if stock_variante > 0:
-                            try:
-                                with connection.cursor() as cursor:
-                                    cursor.execute("""
-                                        INSERT INTO movimientos_stock 
-                                        (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
-                                         stock_anterior, stock_nuevo, usuario_id, variante_id, descripcion_variante, fecha_movimiento)
-                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                                    """, [
-                                        producto_base.pkid_prod,
-                                        negocio.pkid_neg,
-                                        'entrada',
-                                        'importacion_excel_variante',
-                                        stock_variante,
-                                        0,  # Stock anterior era 0
-                                        stock_variante,
-                                        perfil_id,
-                                        variante_id,
-                                        nombre_variante,
-                                        datetime.now()
-                                    ])
-                                movimientos_registrados += 1
-                            except Exception as e:
-                                print(f"Error registrando movimiento variante {nombre_variante}: {e}")
-                    
-                except Exception as e:
-                    nombre_var = str(row['nombre_variante*'])[:50] if not pd.isna(row['nombre_variante*']) else f"Variante fila {index+2}"
-                    errores.append(f"'{nombre_var}': {str(e)}")
-                    continue
+                        producto_base_nombre = str(row['producto_base*']).strip()
+                        nombre_variante = str(row['nombre_variante*']).strip()
+                        
+                        # Validar precio adicional
+                        try:
+                            precio_adicional = float(row['precio_adicional']) if not pd.isna(row.get('precio_adicional')) else 0
+                        except:
+                            precio_adicional = 0
+                            advertencias.append(f"Variante '{nombre_variante}': Precio adicional inválido, usando 0")
+                        
+                        # Validar stock
+                        try:
+                            stock_variante = int(row['stock']) if not pd.isna(row.get('stock')) else 0
+                            if stock_variante < 0:
+                                stock_variante = 0
+                        except:
+                            stock_variante = 0
+                            advertencias.append(f"Variante '{nombre_variante}': Stock inválido, usando 0")
+                        
+                        # Validar estado
+                        estado_raw = str(row['estado']).lower() if not pd.isna(row.get('estado')) else 'activa'
+                        if estado_raw in ['activa', 'activo', 'disponible']:
+                            estado_variante = 'activa'
+                        else:
+                            estado_variante = 'inactiva'
+                        
+                        # ========== BUSCAR PRODUCTO BASE ==========
+                        # Buscar por nombre exacto o similar (case-insensitive)
+                        producto_id = mapa_productos.get(producto_base_nombre.lower())
+                        
+                        if not producto_id:
+                            # Intentar buscar en productos ya creados
+                            producto = Productos.objects.filter(
+                                nom_prod__iexact=producto_base_nombre,
+                                fknegocioasociado_prod=negocio
+                            ).first()
+                            
+                            if producto:
+                                producto_id = producto.pkid_prod
+                                mapa_productos[producto_base_nombre.lower()] = producto_id
+                            else:
+                                errores.append(f"Variante '{nombre_variante}': Producto base '{producto_base_nombre}' no encontrado. Asegúrate de que esté en PRODUCTOS_BASE")
+                                continue
+                        
+                        # ========== VERIFICAR SI LA VARIANTE YA EXISTE ==========
+                        variante_existente = None
+                        with connection.cursor() as cursor:
+                            cursor.execute("""
+                                SELECT id_variante, stock_variante FROM variantes_producto 
+                                WHERE producto_id = %s AND LOWER(nombre_variante) = LOWER(%s)
+                            """, [producto_id, nombre_variante])
+                            resultado = cursor.fetchone()
+                            if resultado:
+                                variante_existente = resultado[0]
+                                stock_anterior_variante = resultado[1]
+                        
+                        # ========== CREAR O ACTUALIZAR VARIANTE ==========
+                        if variante_existente and sobrescribir:
+                            # Actualizar variante existente
+                            with connection.cursor() as cursor:
+                                cursor.execute("""
+                                    UPDATE variantes_producto 
+                                    SET precio_adicional = %s, stock_variante = %s, estado_variante = %s
+                                    WHERE id_variante = %s
+                                """, [precio_adicional, stock_variante, estado_variante, variante_existente])
+                            print(f"🔄 Variante actualizada: {nombre_variante}")
+                            
+                        elif not variante_existente:
+                            # Crear nueva variante
+                            sku_unico = f"VAR-{producto_id}-{int(timezone.now().timestamp())}"
+                            with connection.cursor() as cursor:
+                                cursor.execute("""
+                                    INSERT INTO variantes_producto 
+                                    (producto_id, nombre_variante, precio_adicional, stock_variante, 
+                                     estado_variante, sku_variante, fecha_creacion)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                                """, [
+                                    producto_id,
+                                    nombre_variante,
+                                    precio_adicional,
+                                    stock_variante,
+                                    estado_variante,
+                                    sku_unico,
+                                    timezone.now()
+                                ])
+                                variante_id = cursor.lastrowid
+                            variantes_creadas += 1
+                            print(f"✅ Variante creada: {nombre_variante} (ID: {variante_id})")
+                            
+                            # ========== REGISTRAR MOVIMIENTO DE STOCK PARA VARIANTE ==========
+                            if stock_variante > 0:
+                                try:
+                                    with connection.cursor() as cursor:
+                                        cursor.execute("""
+                                            INSERT INTO movimientos_stock 
+                                            (producto_id, negocio_id, tipo_movimiento, motivo, cantidad, 
+                                             stock_anterior, stock_nuevo, usuario_id, variante_id, 
+                                             descripcion_variante, fecha_movimiento)
+                                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        """, [
+                                            producto_id,
+                                            negocio.pkid_neg,
+                                            'entrada',
+                                            'importacion_excel_variante',
+                                            stock_variante,
+                                            0,
+                                            stock_variante,
+                                            perfil_id,
+                                            variante_id,
+                                            nombre_variante,
+                                            datetime.now()
+                                        ])
+                                    movimientos_registrados += 1
+                                except Exception as e:
+                                    print(f"⚠️ Error registrando movimiento de variante: {e}")
+                                    
+                    except Exception as e:
+                        nombre_var = str(row['nombre_variante*'])[:50] if not pd.isna(row['nombre_variante*']) else f"Variante fila {index+2}"
+                        errores.append(f"'{nombre_var}': {str(e)}")
+                        print(f"❌ Error en variante: {str(e)}")
+                        continue
             
             # ========== PREPARAR MENSAJE DE RESULTADO ==========
             mensaje = f"✅ Importación completada: "
+            
             if productos_creados > 0:
                 mensaje += f"{productos_creados} productos creados, "
             if productos_actualizados > 0:
                 mensaje += f"{productos_actualizados} productos actualizados, "
             if variantes_creadas > 0:
-                mensaje += f"{variantes_creadas} variantes creadas, "
+                mensaje += f"{variantes_creadas} variantes creadas."
+            
             if movimientos_registrados > 0:
-                mensaje += f"{movimientos_registrados} movimientos registrados."
+                mensaje += f" 📦 {movimientos_registrados} movimientos de stock registrados."
+            
+            if advertencias:
+                mensaje += f" ⚠️ {len(advertencias)} advertencias."
+                # Mostrar algunas advertencias
+                for i, adv in enumerate(advertencias[:3]):
+                    if i == 0:
+                        mensaje += f" ({adv}"
+                    else:
+                        mensaje += f", {adv}"
+                if len(advertencias) > 3:
+                    mensaje += f", ...)"
+                else:
+                    mensaje += ")"
             
             if errores:
-                mensaje += f" ❌ Errores: {len(errores)}"
+                mensaje += f" ❌ {len(errores)} errores."
                 # Guardar errores en sesión para mostrarlos
-                request.session['importacion_errores'] = errores[:10]  # Máximo 10 errores
+                request.session['importacion_errores'] = errores[:5]
+                request.session['importacion_advertencias'] = advertencias[:5]
             
             messages.success(request, mensaje)
             
+            # Debug: Mostrar en consola
+            print(f"📊 RESULTADO: {mensaje}")
+            if errores:
+                print("❌ ERRORES:")
+                for err in errores[:5]:
+                    print(f"   - {err}")
+            
         except Exception as e:
+            import traceback
+            print(f"❌ ERROR GLOBAL en importación: {str(e)}")
+            print(f"TRACEBACK: {traceback.format_exc()}")
             messages.error(request, f'❌ Error en importación: {str(e)}')
     
     return redirect('Crud_V')
+
 
 def descontar_stock_pedido_al_entregar(pedido_id):
     """
