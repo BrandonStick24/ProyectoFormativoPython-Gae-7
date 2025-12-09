@@ -137,9 +137,13 @@
                                     </td>
                                     <td>{{ usuario.email }}</td>
                                     <td>
-                                        <span class="badge {% if usuario.rol == 'CLIENTE' %}bg-info{% else %}bg-warning{% endif %}">
-                                            {{ usuario.rol }}
-                                        </span>
+                                        {% if usuario.rol == 'CLIENTE' %}
+                                        <span class="badge bg-info text-white">CLIENTE</span>
+                                        {% elif usuario.rol == 'VENDEDOR' %}
+                                        <span class="badge bg-warning text-dark">VENDEDOR</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ usuario.rol }}</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <span class="badge {% if usuario.estado == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
@@ -445,15 +449,23 @@
                 `;
             }
 
+            // Determinar color del badge según el rol (mismo que en la tabla)
+            let badgeHTML = '';
+            if (usuarioRol === 'CLIENTE') {
+                badgeHTML = '<span class="badge bg-info text-white">CLIENTE</span>';
+            } else if (usuarioRol === 'VENDEDOR') {
+                badgeHTML = '<span class="badge bg-warning text-dark">VENDEDOR</span>';
+            } else {
+                badgeHTML = `<span class="badge bg-secondary">${usuarioRol}</span>`;
+            }
+
             const contenidoHTML = `
                 <div class="row">
                     <div class="col-md-4 text-center">
                         ${imagenHTML}
                         <h4>${usuarioNombre}</h4>
                         <p class="text-muted">${usuarioEmail}</p>
-                        <span class="badge ${usuarioRol === 'CLIENTE' ? 'bg-info' : 'bg-warning'}">
-                            ${usuarioRol}
-                        </span>
+                        ${badgeHTML}
                     </div>
                     <div class="col-md-8">
                         <div class="mb-3">

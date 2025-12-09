@@ -144,17 +144,17 @@
                         <i class="fas fa-tags me-2 text-success"></i>
                         Categorías Populares
                     </h6>
-                    <small class="text-muted">Top 5 categorías con más negocios</small>
+                    <small class="text-muted">Top 5 categorías con más productos</small>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 250px;">
                         <canvas id="categoriasChart"></canvas>
                     </div>
                     <div class="mt-3">
-                        {% for categoria in categorias_nombres|slice:":3" %}
+                        {% for categoria in categorias_lista|slice:":3" %}
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="text-sm">{{ categoria }}</span>
-                            <span class="font-weight-bold text-dark">{{ categorias_totales.forloop.counter0 }}</span>
+                            <span class="text-sm">{{ categoria.desc_cp|truncatechars:20 }}</span>
+                            <span class="font-weight-bold text-dark">{{ categoria.total_productos }}</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -200,7 +200,7 @@
                 <div class="card-header bg-transparent border-0 py-3">
                     <h6 class="m-0 font-weight-bold text-dark">
                         <i class="fas fa-chart-line me-2 text-info"></i>
-                        Actividad Reciente (<span id="filtro-actual">Todos los tiempos</span>)
+                        Actividad Reciente (<span id="filtro-actual">Último año</span>)
                     </h6>
                     <small class="text-muted">Nuevos registros en el período seleccionado</small>
                 </div>
@@ -255,16 +255,16 @@
                         <h6 class="font-weight-bold text-dark mb-3">Estadísticas Adicionales</h6>
                         <div class="row text-center">
                             <div class="col-4">
-                                <div class="h5 font-weight-bold text-dark mb-1">{{ negocios_activos }}</div>
-                                <small class="text-muted">Negocios Activos</small>
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ total_productos }}</div>
+                                <small class="text-muted">Productos</small>
                             </div>
                             <div class="col-4">
-                                <div class="h5 font-weight-bold text-dark mb-1">{{ usuarios_activos }}</div>
-                                <small class="text-muted">Usuarios Activos</small>
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ total_pedidos }}</div>
+                                <small class="text-muted">Pedidos</small>
                             </div>
                             <div class="col-4">
-                                <div class="h5 font-weight-bold text-dark mb-1">{{ negocios_suspendidos }}</div>
-                                <small class="text-muted">Suspendidos</small>
+                                <div class="h5 font-weight-bold text-dark mb-1">{{ pedidos_entregados }}</div>
+                                <small class="text-muted">Entregados</small>
                             </div>
                         </div>
                     </div>
@@ -342,31 +342,40 @@
     function updateChartData(filter) {
         let dataUsuarios, dataNegocios, labels;
         
+        // Datos reales del backend
+        const meses = JSON.parse('{{ meses_labels|safe }}');
+        const usuariosData = JSON.parse('{{ usuarios_data|safe }}');
+        const negociosData = JSON.parse('{{ negocios_data|safe }}');
+        
         switch(filter) {
             case '7 días':
-                labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-                dataUsuarios = [12, 19, 8, 15, 12, 18, 14];
-                dataNegocios = [5, 8, 4, 7, 6, 9, 5];
+                // Tomar solo los últimos 7 días
+                labels = meses.slice(-7);
+                dataUsuarios = usuariosData.slice(-7);
+                dataNegocios = negociosData.slice(-7);
                 break;
             case '1 mes':
-                labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'];
-                dataUsuarios = [45, 52, 48, 55];
-                dataNegocios = [18, 22, 20, 25];
+                // Tomar solo el último mes
+                labels = meses.slice(-1);
+                dataUsuarios = usuariosData.slice(-1);
+                dataNegocios = negociosData.slice(-1);
                 break;
             case '2 meses':
-                labels = ['Mes 1', 'Mes 2'];
-                dataUsuarios = [200, 220];
-                dataNegocios = [85, 95];
+                // Tomar los últimos 2 meses
+                labels = meses.slice(-2);
+                dataUsuarios = usuariosData.slice(-2);
+                dataNegocios = negociosData.slice(-2);
                 break;
             case '3 meses':
-                labels = ['Mes 1', 'Mes 2', 'Mes 3'];
-                dataUsuarios = [200, 220, 240];
-                dataNegocios = [85, 95, 105];
+                // Tomar los últimos 3 meses
+                labels = meses.slice(-3);
+                dataUsuarios = usuariosData.slice(-3);
+                dataNegocios = negociosData.slice(-3);
                 break;
             default: // Todos los tiempos
-                labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                dataUsuarios = [180, 195, 210, 190, 220, 240, 260, 250, 270, 280, 290, 300];
-                dataNegocios = [75, 80, 85, 78, 90, 95, 100, 98, 105, 110, 115, 120];
+                labels = meses;
+                dataUsuarios = usuariosData;
+                dataNegocios = negociosData;
         }
         
         // Actualizar la gráfica de actividad reciente
@@ -387,14 +396,14 @@
         info: '#0891b2'
     };
 
-    // 1. ESTADO DE NEGOCIOS - Más claro
+    // 1. ESTADO DE NEGOCIOS - Datos reales
     const estadoCtx = document.getElementById('estadoNegociosChart').getContext('2d');
     const estadoChart = new Chart(estadoCtx, {
         type: 'doughnut',
         data: {
-            labels: ['Activos', 'Rechazados', 'Suspendidos'],
+            labels: JSON.parse('{{ estado_negocios_labels|safe }}'),
             datasets: [{
-                data: [{{ negocios_activos }}, {{ negocios_inactivos }}, {{ negocios_suspendidos }}],
+                data: JSON.parse('{{ estado_negocios_values|safe }}'),
                 backgroundColor: [colors.success, colors.danger, colors.warning],
                 borderWidth: 0,
             }]
@@ -416,15 +425,15 @@
         }
     });
 
-    // 2. CATEGORÍAS POPULARES - Más descriptiva
+    // 2. CATEGORÍAS POPULARES - Datos reales
     const catCtx = document.getElementById('categoriasChart').getContext('2d');
     const catChart = new Chart(catCtx, {
         type: 'bar',
         data: {
-            labels: {{ categorias_nombres|safe }},
+            labels: JSON.parse('{{ categorias_nombres|safe }}'),
             datasets: [{
-                label: 'Número de Negocios',
-                data: {{ categorias_totales|safe }},
+                label: 'Número de Productos',
+                data: JSON.parse('{{ categorias_totales|safe }}'),
                 backgroundColor: [
                     colors.primary,
                     colors.success,
@@ -447,7 +456,7 @@
                             return tooltipItems[0].label;
                         },
                         label: function(context) {
-                            return `Negocios: ${context.parsed.y}`;
+                            return `Productos: ${context.parsed.y}`;
                         }
                     }
                 }
@@ -457,7 +466,7 @@
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Cantidad de Negocios'
+                        text: 'Cantidad de Productos'
                     }
                 },
                 x: {
@@ -470,15 +479,15 @@
         }
     });
 
-    // 3. DISTRIBUCIÓN DE PLATAFORMA - Más clara
+    // 3. DISTRIBUCIÓN DE PLATAFORMA - Datos reales
     const distCtx = document.getElementById('distribucionChart').getContext('2d');
     const distChart = new Chart(distCtx, {
         type: 'pie',
         data: {
-            labels: ['Usuarios', 'Negocios', 'Reseñas'],
+            labels: JSON.parse('{{ distribucion_labels|safe }}'),
             datasets: [{
-                data: [{{ total_usuarios }}, {{ total_negocios }}, {{ total_resenas }}],
-                backgroundColor: [colors.primary, colors.success, colors.warning],
+                data: JSON.parse('{{ distribucion_values|safe }}'),
+                backgroundColor: [colors.primary, colors.success, colors.warning, colors.info],
                 borderWidth: 0,
             }]
         },
@@ -504,16 +513,16 @@
         }
     });
 
-    // 4. GRÁFICA DE ACTIVIDAD RECIENTE
+    // 4. GRÁFICA DE ACTIVIDAD RECIENTE - Datos reales
     const actividadCtx = document.getElementById('actividadRecienteChart').getContext('2d');
     const actividadChart = new Chart(actividadCtx, {
         type: 'line',
         data: {
-            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
+            labels: JSON.parse('{{ meses_labels|safe }}'),
             datasets: [
                 {
                     label: 'Nuevos Usuarios',
-                    data: [180, 195, 210, 190, 220, 240, 260, 250, 270, 280, 290, 300],
+                    data: JSON.parse('{{ usuarios_data|safe }}'),
                     borderColor: colors.primary,
                     backgroundColor: colors.primary + '20',
                     tension: 0.4,
@@ -521,7 +530,7 @@
                 },
                 {
                     label: 'Nuevos Negocios',
-                    data: [75, 80, 85, 78, 90, 95, 100, 98, 105, 110, 115, 120],
+                    data: JSON.parse('{{ negocios_data|safe }}'),
                     borderColor: colors.success,
                     backgroundColor: colors.success + '20',
                     tension: 0.4,
@@ -549,7 +558,7 @@
                 x: {
                     title: {
                         display: true,
-                        text: 'Meses del Año'
+                        text: 'Meses'
                     }
                 }
             }
