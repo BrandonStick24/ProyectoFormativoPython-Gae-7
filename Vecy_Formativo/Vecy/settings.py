@@ -154,3 +154,6 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 if DEBUG:
     SESSION_COOKIE_AGE = 1800
+
+from dotenv import load_dotenv
+load_dotenv()
