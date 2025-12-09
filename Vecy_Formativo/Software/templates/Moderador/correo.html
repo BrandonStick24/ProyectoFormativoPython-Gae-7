@@ -24,6 +24,12 @@
                     <i class="fas fa-user"></i>
                     <span id="totalClientes">{{ total_clientes }}</span> Clientes
                 </span>
+                {% if filtro_actual == 'categorias' and categoria_actual %}
+                <span class="stat-item">
+                    <i class="fas fa-tag"></i>
+                    <span>{{ usuarios_categoria_count }}</span> En categoría
+                </span>
+                {% endif %}
             </div>
         </div>
 
@@ -51,15 +57,49 @@
                         </div>
 
                         <div class="role-filters">
-                            <button class="role-filter-btn active" data-role="all">
+                            <a href="?filtro=todos"
+                                class="role-filter-btn {% if filtro_actual == 'todos' %}active{% endif %}"
+                                data-role="all">
                                 <i class="fas fa-users me-1"></i>Todos ({{ total_usuarios }})
-                            </button>
-                            <button class="role-filter-btn" data-role="VENDEDOR">
+                            </a>
+                            <a href="?filtro=vendedores"
+                                class="role-filter-btn {% if filtro_actual == 'vendedores' %}active{% endif %}"
+                                data-role="VENDEDOR">
                                 <i class="fas fa-user-tie me-1"></i>Vendedores ({{ total_vendedores }})
-                            </button>
-                            <button class="role-filter-btn" data-role="CLIENTE">
+                            </a>
+                            <a href="?filtro=clientes"
+                                class="role-filter-btn {% if filtro_actual == 'clientes' %}active{% endif %}"
+                                data-role="CLIENTE">
                                 <i class="fas fa-user me-1"></i>Clientes ({{ total_clientes }})
-                            </button>
+                            </a>
+
+                            <!-- Dropdown para categorías DE NEGOCIOS -->
+                            <div class="dropdown" style="display: inline-block;">
+                                <button
+                                    class="role-filter-btn dropdown-toggle {% if filtro_actual == 'categorias' %}active{% endif %}"
+                                    type="button" id="categoriasDropdown" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    <i class="fas fa-store me-1"></i> <!-- Cambiado icono de tag a store -->
+                                    {% if filtro_actual == 'categorias' and categoria_actual %}
+                                    {{ nombre_categoria_actual }} ({{ usuarios_categoria_count }})
+                                    {% else %}
+                                    Categorías de Negocios <!-- Texto más claro -->
+                                    {% endif %}
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="categoriasDropdown"
+                                    style="max-height: 300px; overflow-y: auto;">
+                                    {% for categoria in categorias %}
+                                    <li>
+                                        <a class="dropdown-item"
+                                            href="?filtro=categorias&categoria={{ categoria.pkid_tiponeg }}">
+                                            <i class="fas fa-store me-2"></i> <!-- Icono para cada categoría -->
+                                            {{ categoria.desc_tiponeg }}
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+
                         </div>
                     </div>
 
@@ -409,17 +449,49 @@
         flex: 1;
         justify-content: center;
         min-width: 0;
+        text-decoration: none;
     }
 
     .role-filter-btn:hover {
         border-color: var(--primary);
         color: var(--primary);
+        text-decoration: none;
     }
 
     .role-filter-btn.active {
         background: var(--primary);
         border-color: var(--primary);
         color: white;
+        text-decoration: none;
+    }
+
+    /* Estilos para el dropdown de categorías */
+    .role-filters .dropdown {
+        position: relative;
+    }
+
+    .role-filters .dropdown-toggle {
+        padding: 6px 12px;
+    }
+
+    .role-filters .dropdown-menu {
+        min-width: 250px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .role-filters .dropdown-item {
+        padding: 8px 12px;
+        font-size: 14px;
+        white-space: normal;
+        text-decoration: none;
+        color: var(--dark);
+    }
+
+    .role-filters .dropdown-item:hover {
+        background-color: var(--hover);
+        color: var(--primary);
+        text-decoration: none;
     }
 
     .selection-actions {
@@ -1025,7 +1097,7 @@
 
 <script>
     // Variables globales
-    let currentFilter = 'all';
+    let currentFilter = '{{ filtro_actual }}' || 'todos';
     let currentSearch = '';
     let selectedUsers = new Set();
     let selectedFiles = [];
@@ -1063,76 +1135,99 @@
         setupFiltering();
         setupFileUpload();
         updateCharacterCount(); // Inicializar contador
+
+        // Actualizar estadísticas en la interfaz
+        updateStatsDisplay();
     });
+
+    // Función para actualizar las estadísticas en la interfaz
+    function updateStatsDisplay() {
+        const totalUsers = document.getElementById('totalUsers');
+        const totalVendedores = document.getElementById('totalVendedores');
+        const totalClientes = document.getElementById('totalClientes');
+
+        // Estos valores ya vienen del backend, solo asegurarnos que se muestren
+        console.log('Estadísticas cargadas:');
+        console.log('Total usuarios:', totalUsers.textContent);
+        console.log('Total vendedores:', totalVendedores.textContent);
+        console.log('Total clientes:', totalClientes.textContent);
+    }
 
     // Configurar event listeners
     function setupEventListeners() {
         // Búsqueda
-        document.getElementById('searchUsers').addEventListener('input', function () {
-            currentSearch = this.value.toLowerCase();
-            const clearButton = document.getElementById('clearSearch');
+        const searchInput = document.getElementById('searchUsers');
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                currentSearch = this.value.toLowerCase();
+                const clearButton = document.getElementById('clearSearch');
 
-            if (this.value.length > 0) {
-                clearButton.style.display = 'flex';
-            } else {
-                clearButton.style.display = 'none';
-            }
+                if (this.value.length > 0) {
+                    clearButton.style.display = 'flex';
+                } else {
+                    clearButton.style.display = 'none';
+                }
 
-            filterUsers();
-        });
-
-        // Limpiar búsqueda
-        document.getElementById('clearSearch').addEventListener('click', function () {
-            document.getElementById('searchUsers').value = '';
-            currentSearch = '';
-            this.style.display = 'none';
-            filterUsers();
-        });
-
-        // Filtros por rol
-        document.querySelectorAll('.role-filter-btn').forEach(button => {
-            button.addEventListener('click', function () {
-                document.querySelectorAll('.role-filter-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                this.classList.add('active');
-                currentFilter = this.getAttribute('data-role');
                 filterUsers();
             });
-        });
+        }
+
+        // Limpiar búsqueda
+        const clearSearch = document.getElementById('clearSearch');
+        if (clearSearch) {
+            clearSearch.addEventListener('click', function () {
+                document.getElementById('searchUsers').value = '';
+                currentSearch = '';
+                this.style.display = 'none';
+                filterUsers();
+            });
+        }
 
         // Seleccionar todos
-        document.getElementById('selectAll').addEventListener('click', () => {
-            document.querySelectorAll('.recipient-checkbox').forEach(checkbox => {
-                if (checkbox.closest('.recipient-item').style.display !== 'none') {
-                    checkbox.checked = true;
-                    const userId = checkbox.getAttribute('data-user-id');
-                    selectedUsers.add(userId);
-                }
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) {
+            selectAll.addEventListener('click', () => {
+                document.querySelectorAll('.recipient-checkbox').forEach(checkbox => {
+                    if (checkbox.closest('.recipient-item').style.display !== 'none') {
+                        checkbox.checked = true;
+                        const userId = checkbox.getAttribute('data-user-id');
+                        selectedUsers.add(userId);
+                    }
+                });
+                updateSelectionCount();
+                updateSendButton();
+                updateRecipientItems();
             });
-            updateSelectionCount();
-            updateSendButton();
-            updateRecipientItems();
-        });
+        }
 
         // Deseleccionar todos
-        document.getElementById('selectNone').addEventListener('click', () => {
-            document.querySelectorAll('.recipient-checkbox').forEach(checkbox => {
-                checkbox.checked = false;
-                const userId = checkbox.getAttribute('data-user-id');
-                selectedUsers.delete(userId);
+        const selectNone = document.getElementById('selectNone');
+        if (selectNone) {
+            selectNone.addEventListener('click', () => {
+                document.querySelectorAll('.recipient-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                    const userId = checkbox.getAttribute('data-user-id');
+                    selectedUsers.delete(userId);
+                });
+                updateSelectionCount();
+                updateSendButton();
+                updateRecipientItems();
             });
-            updateSelectionCount();
-            updateSendButton();
-            updateRecipientItems();
-        });
+        }
 
         // Validación de formulario
-        document.getElementById('emailSubject').addEventListener('input', updateSendButton);
-        document.getElementById('emailMessage').addEventListener('input', function () {
-            updateSendButton();
-            updateCharacterCount(); // CORREGIDO: Llamar a la función definida
-        });
+        const emailSubject = document.getElementById('emailSubject');
+        if (emailSubject) {
+            emailSubject.addEventListener('input', updateSendButton);
+        }
+
+        const emailMessage = document.getElementById('emailMessage');
+        if (emailMessage) {
+            emailMessage.addEventListener('input', function () {
+                updateSendButton();
+                updateCharacterCount();
+            });
+        }
 
         // Barra de herramientas de formato
         document.querySelectorAll('.format-btn').forEach(button => {
@@ -1140,42 +1235,45 @@
                 const command = this.getAttribute('data-command');
                 document.execCommand(command, false, null);
                 document.getElementById('emailMessage').focus();
-                updateCharacterCount(); // Actualizar contador después de formato
+                updateCharacterCount();
             });
         });
 
         // Envío de correos
-        document.getElementById('sendButton').addEventListener('click', sendEmail);
+        const sendButton = document.getElementById('sendButton');
+        if (sendButton) {
+            sendButton.addEventListener('click', sendEmail);
+        }
 
         // Configurar eventos de selección para los usuarios
         setupUserSelection();
     }
 
-    // Configurar carga de archivos - VERSIÓN CORREGIDA
+    // Configurar carga de archivos
     function setupFileUpload() {
-        // Solo el input file maneja los clics
+        if (!fileInput) return;
+
         fileInput.addEventListener('change', handleFileSelect);
 
         // Drag and drop
-        fileUploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadSection.classList.add('dragover');
-        });
+        if (fileUploadSection) {
+            fileUploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUploadSection.classList.add('dragover');
+            });
 
-        fileUploadSection.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            fileUploadSection.classList.remove('dragover');
-        });
+            fileUploadSection.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                fileUploadSection.classList.remove('dragover');
+            });
 
-        fileUploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadSection.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            handleFiles(files);
-        });
-
-        // El label ya está asociado al input via "for" attribute
-        // No necesitamos manejar su click manualmente
+            fileUploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                fileUploadSection.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                handleFiles(files);
+            });
+        }
     }
 
     // Manejar selección de archivos
@@ -1227,6 +1325,8 @@
 
     // Agregar archivo a la lista visual
     function addFileToList(file) {
+        if (!fileList) return;
+
         const fileItem = document.createElement('div');
         fileItem.className = 'file-item';
 
@@ -1326,13 +1426,19 @@
     // Actualizar contador de selección
     function updateSelectionCount() {
         const count = selectedUsers.size;
-        selectedCount.textContent = `${count} seleccionado${count !== 1 ? 's' : ''}`;
-        sendCount.textContent = count;
+        if (selectedCount) {
+            selectedCount.textContent = `${count} seleccionado${count !== 1 ? 's' : ''}`;
+        }
+        if (sendCount) {
+            sendCount.textContent = count;
+        }
     }
 
     // Actualizar estado del botón de envío
     function updateSendButton() {
         const sendButton = document.getElementById('sendButton');
+        if (!sendButton) return;
+
         const hasSelection = selectedUsers.size > 0;
         const hasSubject = document.getElementById('emailSubject').value.trim().length > 0;
         const hasMessage = document.getElementById('emailMessage').textContent.trim().length > 0;
@@ -1365,19 +1471,17 @@
         let visibleCount = 0;
 
         items.forEach(item => {
-            const userRole = item.getAttribute('data-role');
-            const userName = item.querySelector('.recipient-name').textContent.toLowerCase();
-            const userEmail = item.querySelector('.recipient-email').textContent.toLowerCase();
-            const userDoc = item.querySelector('.recipient-doc').textContent.toLowerCase();
+            const userName = item.querySelector('.recipient-name')?.textContent.toLowerCase() || '';
+            const userEmail = item.querySelector('.recipient-email')?.textContent.toLowerCase() || '';
+            const userDoc = item.querySelector('.recipient-doc')?.textContent.toLowerCase() || '';
 
-            // Aplicar filtros
-            const roleMatch = currentFilter === 'all' || userRole === currentFilter;
+            // Aplicar filtro de búsqueda
             const searchMatch = currentSearch === '' ||
                 userName.includes(currentSearch) ||
                 userEmail.includes(currentSearch) ||
                 userDoc.includes(currentSearch);
 
-            if (roleMatch && searchMatch) {
+            if (searchMatch) {
                 item.style.display = 'flex';
                 visibleCount++;
             } else {
@@ -1386,14 +1490,14 @@
         });
 
         // Mostrar mensaje si no hay resultados
-        const noResults = document.querySelector('.no-results');
+        const noResults = recipientsList.querySelector('.no-results');
         if (visibleCount === 0 && items.length > 0) {
             if (!noResults) {
                 const noResultsDiv = document.createElement('div');
                 noResultsDiv.className = 'no-results';
                 noResultsDiv.innerHTML = `
                     <i class="fas fa-search"></i>
-                    <div>No se encontraron usuarios</div>
+                    <div>No se encontraron usuarios con la búsqueda actual</div>
                 `;
                 recipientsList.appendChild(noResultsDiv);
             }
@@ -1448,7 +1552,7 @@
         };
     }
 
-    // Realizar petición de envío de correo - VERSIÓN CORREGIDA
+    // Realizar petición de envío de correo
     async function sendEmailRequest() {
         const sendButton = document.getElementById('sendButton');
         const originalText = sendButton.innerHTML;
@@ -1558,29 +1662,31 @@
 
         // Limpiar archivos
         selectedFiles = [];
-        fileList.innerHTML = '';
+        if (fileList) {
+            fileList.innerHTML = '';
+        }
 
         updateCharacterCount(); // Actualizar contador
     }
 
-    // Función para obtener el token CSRF - VERSIÓN CORREGIDA
+    // Función para obtener el token CSRF
     function getCsrfToken() {
         // Método 1: Buscar en el form que creamos
         const csrfInput = document.querySelector('#emailForm [name=csrfmiddlewaretoken]');
         if (csrfInput) {
             return csrfInput.value;
         }
-        
+
         // Método 2: Buscar en cookies
         const cookieValue = document.cookie
             .split('; ')
             .find(row => row.startsWith('csrftoken='))
             ?.split('=')[1];
-        
+
         if (cookieValue) {
             return cookieValue;
         }
-        
+
         console.error('No se pudo encontrar el token CSRF');
         showAlert('Error de seguridad: No se pudo verificar la solicitud.', 'error');
         return '';

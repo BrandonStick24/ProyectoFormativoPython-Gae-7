@@ -4,15 +4,21 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
-from Software.models import Negocios, UsuarioPerfil, Pedidos, DetallesPedido, ResenasNegocios, AuthUser, Roles, TipoDocumento, UsuariosRoles, TipoNegocio, Productos, CategoriaProductos, Reportes
+# Importar solo tus modelos personalizados
+from Software.models import Negocios, UsuarioPerfil, Pedidos, DetallesPedido, ResenasNegocios, AuthUser, Roles, TipoDocumento, UsuariosRoles, TipoNegocio, Productos, CategoriaProductos, Reportes, Carrito, CarritoItem, CategoriaNegocio, MetodoPago, MetodoEntrega, PagosNegocios, VariantesProducto, Favoritos, Notificacion, CategoriasTiponegocio, MovimientosStock, Promociones, ResenasServicios, Servicios
+# Importar modelos de Django directamente
+from django.contrib.auth.models import User, Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.admin.models import LogEntry
+from django.contrib.sessions.models import Session
+from django.db import models
 from django.utils import timezone
 from django.db import connection
-from django.db.models import Count, Avg
+from django.db.models import Count, Avg, Q
 from django.contrib import messages
-from django.db.models import Q
-from datetime import timedelta
-from collections import Counter
 from django.db.models.functions import ExtractMonth, ExtractYear
+from datetime import timedelta
+import datetime
 from Software.email_utils import enviar_notificacion_simple
 
 # Importaciones para correos
@@ -31,7 +37,7 @@ def obtener_datos_moderador(request):
             'perfil': perfil,
             'auth_user': request.user,
         }
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+    except (User.DoesNotExist, UsuarioPerfil.DoesNotExist):
         return None
 
 def is_moderator(user):
@@ -48,13 +54,13 @@ def is_moderator(user):
             fkperfil=perfil, 
             fkrol__desc_rol__iexact='moderador'
         ).exists()
-    except (AuthUser.DoesNotExist, UsuarioPerfil.DoesNotExist):
+    except (User.DoesNotExist, UsuarioPerfil.DoesNotExist):
         return False
 
-# VISTA PRINCIPAL DEL MODERADOR - CORREGIDA
+# VISTA PRINCIPAL DEL MODERADOR - CORREGIDA Y MEJORADA CON ESTADÍSTICAS REALES
 @login_required(login_url='/auth/login/')
 def moderador_dash(request):
-    """Vista principal del dashboard del moderador con verificación corregida"""
+    """Vista principal del dashboard del moderador con estadísticas reales de la BD"""
     try:
         # Verificar si el usuario está autenticado
         if not request.user.is_authenticated:
@@ -79,83 +85,100 @@ def moderador_dash(request):
             messages.error(request, "No tienes permisos de moderador.")
             return redirect('principal')
         
-        # ============ CÓDIGO DE ESTADÍSTICAS COMPLETAS ============
-        # Obtener el rango de tiempo (último año)
-        fecha_limite = timezone.now() - timedelta(days=365)
+        # ============ CÁLCULO DE ESTADÍSTICAS REALES DE LA BD ============
         
-        # 1. REGISTRO DE USUARIOS POR MES - CORREGIDO: Usar AuthUser
-        usuarios_por_mes = AuthUser.objects.filter(
-            date_joined__gte=fecha_limite
-        ).annotate(
-            mes=ExtractMonth('date_joined'),
-            ano=ExtractYear('date_joined')
-        ).values('mes', 'ano').annotate(total=Count('pk')).order_by('ano', 'mes')
+        # 1. USUARIOS - DATOS REALES DE LA BASE DE DATOS
+        # Total de usuarios (auth_user)
+        total_usuarios = User.objects.count()
         
-        # Preparar datos para el gráfico de usuarios por mes
-        meses_labels = []
-        usuarios_data = []
+        # Usuarios activos (auth_user.is_active = True)
+        usuarios_activos = User.objects.filter(is_active=True).count()
         
-        # Crear nombres de meses en español
-        meses_espanol = {
-            1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun',
-            7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic'
-        }
-        
-        for item in usuarios_por_mes:
-            mes_num = item['mes']
-            ano = item['ano']
-            meses_labels.append(f"{meses_espanol.get(mes_num, mes_num)}/{str(ano)[-2:]}")
-            usuarios_data.append(item['total'])
-        
-        # 2. NEGOCIOS POR CATEGORÍA
-        negocios_por_categoria = Negocios.objects.values(
-            'fktiponeg_neg__desc_tiponeg'
-        ).annotate(total=Count('pkid_neg')).order_by('-total')[:10]
-        
-        categorias_nombres = [item['fktiponeg_neg__desc_tiponeg'] for item in negocios_por_categoria]
-        categorias_totales = [item['total'] for item in negocios_por_categoria]
-        
-        # 3. REPORTES POR TIPO
-        reportes_por_tipo = Reportes.objects.values('motivo').annotate(
-            total=Count('pkid_reporte')
-        ).order_by('-total')
-        
-        reportes_tipos = [item['motivo'] for item in reportes_por_tipo]
-        reportes_totales = [item['total'] for item in reportes_por_tipo]
-        
-        # 4. ACTIVIDAD DE MODERACIÓN
-        acciones_moderacion = [
-            {'tipo_accion': 'Negocios Aprobados', 'total': Negocios.objects.filter(estado_neg='activo').count()},
-            {'tipo_accion': 'Negocios Rechazados', 'total': Negocios.objects.filter(estado_neg='inactivo').count()},
-            {'tipo_accion': 'Negocios Suspendidos', 'total': Negocios.objects.filter(estado_neg='suspendido').count()},
-            {'tipo_accion': 'Reportes Atendidos', 'total': Reportes.objects.filter(estado_reporte='atendido').count()},
-            {'tipo_accion': 'Reseñas Moderadas', 'total': ResenasNegocios.objects.filter(~Q(estado_resena='pendiente')).count()},
-        ]
-        
-        acciones_tipos = [item['tipo_accion'] for item in acciones_moderacion]
-        acciones_totales = [item['total'] for item in acciones_moderacion]
-        
-        # MÉTRICAS PRINCIPALES - CORREGIDO: Usar AuthUser
-        total_usuarios = AuthUser.objects.count()
-        usuarios_activos = AuthUser.objects.filter(is_active=1).count()
+        # 2. NEGOCIOS - DATOS REALES DE LA BASE DE DATOS
         total_negocios = Negocios.objects.count()
         negocios_activos = Negocios.objects.filter(estado_neg='activo').count()
         negocios_suspendidos = Negocios.objects.filter(estado_neg='suspendido').count()
         negocios_inactivos = Negocios.objects.filter(estado_neg='inactivo').count()
-        total_resenas = ResenasNegocios.objects.count()
         
+        # 3. RESEÑAS - DATOS REALES DE LA BASE DE DATOS
+        total_resenas = ResenasNegocios.objects.count()
         resenas_activas = ResenasNegocios.objects.filter(estado_resena='activa').count()
         
-        # Calcular promedio de estrellas
-        promedio_estrellas = ResenasNegocios.objects.aggregate(
-            avg_rating=Avg('estrellas')
-        )['avg_rating'] or 0
+        # Calcular promedio de estrellas REAL
+        promedio_query = ResenasNegocios.objects.aggregate(
+            avg_stars=Avg('estrellas')
+        )
+        promedio_estrellas = round(promedio_query['avg_stars'] or 0, 1)
+        
+        # 4. CATEGORÍAS MÁS POPULARES - DATOS REALES
+        # Obtener top 5 categorías de productos con más productos
+        categorias_populares = CategoriaProductos.objects.annotate(
+            total_productos=Count('productos')
+        ).filter(total_productos__gt=0).order_by('-total_productos')[:5]
+        
+        categorias_nombres = [cat.desc_cp for cat in categorias_populares]
+        categorias_totales = [cat.total_productos for cat in categorias_populares]
+        
+        # 5. PEDIDOS - DATOS REALES
+        total_pedidos = Pedidos.objects.count()
+        pedidos_pendientes = Pedidos.objects.filter(estado_pedido='pendiente').count()
+        pedidos_entregados = Pedidos.objects.filter(estado_pedido='entregado').count()
+        
+        # 6. PRODUCTOS - DATOS REALES
+        total_productos = Productos.objects.count()
+        
+        # 7. DATOS PARA GRÁFICAS TEMPORALES
+        # Obtener los últimos 12 meses para gráfica de actividad
+        meses = []
+        usuarios_por_mes = []
+        negocios_por_mes = []
+        
+        hoy = timezone.now()
+        for i in range(11, -1, -1):
+            mes_actual = hoy - timedelta(days=30*i)
+            mes_nombre = mes_actual.strftime('%b')
+            meses.append(mes_nombre)
+            
+            # Usuarios registrados en ese mes
+            inicio_mes = mes_actual.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if i == 0:
+                fin_mes = hoy
+            else:
+                siguiente_mes = mes_actual + timedelta(days=30)
+                fin_mes = siguiente_mes.replace(day=1, hour=0, minute=0, second=0, microsecond=0) - timedelta(seconds=1)
+            
+            usuarios_mes = User.objects.filter(
+                date_joined__range=(inicio_mes, fin_mes)
+            ).count()
+            usuarios_por_mes.append(usuarios_mes)
+            
+            # Negocios creados en ese mes
+            negocios_mes = Negocios.objects.filter(
+                fechacreacion_neg__range=(inicio_mes, fin_mes)
+            ).count()
+            negocios_por_mes.append(negocios_mes)
+        
+        # 8. DATOS DE DISTRIBUCIÓN DE LA PLATAFORMA
+        distribucion_data = {
+            'usuarios': total_usuarios,
+            'negocios': total_negocios,
+            'productos': total_productos,
+            'resenas': total_resenas,
+            'pedidos': total_pedidos
+        }
+        
+        # 9. ESTADO DE NEGOCIOS PARA GRÁFICA
+        estado_negocios_data = {
+            'activos': negocios_activos,
+            'suspendidos': negocios_suspendidos,
+            'inactivos': negocios_inactivos
+        }
         
         contexto = {
             'nombre': request.user.first_name or request.user.username,
             'perfil': perfil,
             
-            # Métricas principales para las tarjetas
+            # Métricas principales para las tarjetas - DATOS REALES
             'total_usuarios': total_usuarios,
             'usuarios_activos': usuarios_activos,
             'total_negocios': total_negocios,
@@ -164,18 +187,40 @@ def moderador_dash(request):
             'negocios_inactivos': negocios_inactivos,
             'total_resenas': total_resenas,
             'resenas_activas': resenas_activas,
-            'promedio_estrellas': round(promedio_estrellas, 1),
+            'promedio_estrellas': promedio_estrellas,
+            'total_productos': total_productos,
+            'total_pedidos': total_pedidos,
+            'pedidos_pendientes': pedidos_pendientes,
+            'pedidos_entregados': pedidos_entregados,
             
-            # Datos para gráficas
-            'meses_labels': meses_labels,
-            'usuarios_data': usuarios_data,
-            'categorias_nombres': categorias_nombres,
-            'categorias_totales': categorias_totales,
-            'reportes_tipos': reportes_tipos,
-            'reportes_totales': reportes_totales,
-            'acciones_tipos': acciones_tipos,
-            'acciones_totales': acciones_totales,
-            'negocios_por_categoria': negocios_por_categoria,
+            # Datos para gráficas - FORMATO JSON
+            'categorias_nombres': json.dumps(categorias_nombres),
+            'categorias_totales': json.dumps(categorias_totales),
+            'meses_labels': json.dumps(meses),
+            'usuarios_data': json.dumps(usuarios_por_mes),
+            'negocios_data': json.dumps(negocios_por_mes),
+            
+            # Datos para gráficas de distribución
+            'distribucion_labels': json.dumps(['Usuarios', 'Negocios', 'Productos', 'Reseñas']),
+            'distribucion_values': json.dumps([
+                total_usuarios, 
+                total_negocios, 
+                total_productos, 
+                total_resenas
+            ]),
+            
+            # Datos para gráfica de estado de negocios
+            'estado_negocios_labels': json.dumps(['Activos', 'Suspendidos', 'Inactivos']),
+            'estado_negocios_values': json.dumps([
+                negocios_activos, 
+                negocios_suspendidos, 
+                negocios_inactivos
+            ]),
+            
+            # Datos crudos para el template
+            'categorias_lista': categorias_populares,
+            'distribucion_data': distribucion_data,
+            'estado_negocios_data': estado_negocios_data,
         }
         
         return render(request, 'Moderador/estadisticas.html', contexto)
@@ -431,7 +476,7 @@ def gestion_usuarios(request):
         messages.error(request, f"Error: {str(e)}")
         return redirect('principal')
 
-# GESTIÓN DE NEGOCIOS - CORREGIDA
+# GESTIÓN DE NEGOCIOS - CORREGIDA Y MEJORADA CON CORREOS
 @login_required(login_url='/auth/login/')
 def gestion_negocios(request):
     """Vista principal de gestión de negocios para moderadores - CORREGIDA"""    
@@ -443,7 +488,6 @@ def gestion_negocios(request):
         
         # Obtener perfil del usuario - CORREGIDO
         try:
-            # CORREGIDO: Usar UsuarioPerfil directamente
             perfil = UsuarioPerfil.objects.get(fkuser=request.user)
         except UsuarioPerfil.DoesNotExist:
             messages.error(request, "Perfil de usuario no encontrado.")
@@ -464,13 +508,16 @@ def gestion_negocios(request):
             negocio_id = request.POST.get('negocio_id')
             accion = request.POST.get('accion')
             nuevo_estado = request.POST.get('nuevo_estado')
+            razon_suspension = request.POST.get('razon_suspension', '')
+            detalles_suspension = request.POST.get('detalles_suspension', '')
             
             try:
                 negocio = Negocios.objects.get(pkid_neg=negocio_id)
+                propietario_user = negocio.fkpropietario_neg.fkuser
                 
                 if accion == 'cambiar_estado' and nuevo_estado:
-                    # Validar estado
-                    if nuevo_estado in ['activo', 'inactivo', 'suspendido']:
+                    # Validar estado (solo permitir activo y suspendido, NO inactivo/rechazado)
+                    if nuevo_estado in ['activo', 'suspendido']:
                         estado_anterior = negocio.estado_neg
                         negocio.estado_neg = nuevo_estado
                         negocio.save()
@@ -478,23 +525,67 @@ def gestion_negocios(request):
                         # Mapear estados para mensaje
                         estado_map = {
                             'activo': 'Activo',
-                            'inactivo': 'Rechazado', 
                             'suspendido': 'Suspendido'
                         }
                         
-                        messages.success(
-                            request, 
-                            f'Estado del negocio "{negocio.nom_neg}" cambiado de ' 
-                            f'{estado_map.get(estado_anterior, estado_anterior)} a '
-                            f'{estado_map.get(nuevo_estado, nuevo_estado)}'
-                        )
+                        # ENVIAR CORREO DE NOTIFICACIÓN
+                        if nuevo_estado != estado_anterior:
+                            # Preparar datos para el correo
+                            datos_negocio = {
+                                'nombre': negocio.nom_neg,
+                                'nit': negocio.nit_neg,
+                                'direccion': negocio.direcc_neg,
+                                'categoria': negocio.fktiponeg_neg.desc_tiponeg,
+                                'propietario': f"{propietario_user.first_name} {propietario_user.last_name}".strip() or propietario_user.username,
+                                'email_propietario': propietario_user.email,
+                                'fecha_registro': negocio.fechacreacion_neg.strftime("%d/%m/%Y"),
+                                'estado_anterior': estado_map.get(estado_anterior, estado_anterior),
+                                'estado_nuevo': estado_map.get(nuevo_estado, nuevo_estado),
+                                'razon': razon_suspension,
+                                'detalles': detalles_suspension,
+                                'moderador': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
+                            }
+                            
+                            # Enviar correo al propietario
+                            resultado = enviar_notificacion_negocio(propietario_user, nuevo_estado, datos_negocio)
+                        
+                        mensaje = f'Estado del negocio "{negocio.nom_neg}" cambiado de ' 
+                        f'{estado_map.get(estado_anterior, estado_anterior)} a '
+                        f'{estado_map.get(nuevo_estado, nuevo_estado)}'
+                        
+                        if nuevo_estado != estado_anterior and resultado.get('success'):
+                            mensaje += f' - Notificación enviada al propietario'
+                        elif nuevo_estado != estado_anterior and not resultado.get('success'):
+                            mensaje += f' - Error enviando notificación: {resultado.get("error", "Error desconocido")}'
+                        
+                        messages.success(request, mensaje)
                     else:
                         messages.error(request, 'Estado inválido')
                 
                 elif accion == 'eliminar':
                     nombre_negocio = negocio.nom_neg
+                    
+                    # Enviar notificación antes de eliminar
+                    datos_negocio = {
+                        'nombre': negocio.nom_neg,
+                        'nit': negocio.nit_neg,
+                        'propietario': f"{propietario_user.first_name} {propietario_user.last_name}".strip() or propietario_user.username,
+                        'fecha_registro': negocio.fechacreacion_neg.strftime("%d/%m/%Y"),
+                        'moderador': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username
+                    }
+                    
+                    resultado = enviar_notificacion_negocio(propietario_user, 'eliminado', datos_negocio)
+                    
+                    # Eliminar el negocio
                     negocio.delete()
-                    messages.success(request, f'Negocios "{nombre_negocio}" eliminado correctamente')
+                    
+                    mensaje = f'Negocio "{nombre_negocio}" eliminado correctamente'
+                    if resultado.get('success'):
+                        mensaje += f' - Notificación enviada al propietario'
+                    else:
+                        mensaje += f' - Error enviando notificación: {resultado.get("error", "Error desconocido")}'
+                    
+                    messages.success(request, mensaje)
                 
                 else:
                     messages.error(request, 'Acción no válida')
@@ -529,7 +620,6 @@ def gestion_negocios(request):
             # Mapeo inverso de estados del frontend a estados de la BD
             status_map = {
                 'Activo': 'activo',
-                'Rechazado': 'inactivo',
                 'Suspendido': 'suspendido'
             }
             estado_db = status_map.get(status_filter)
@@ -556,7 +646,6 @@ def gestion_negocios(request):
             # Mapear estados de la base de datos a los estados del frontend
             estado_map = {
                 'activo': 'Activo',
-                'inactivo': 'Rechazado', 
                 'suspendido': 'Suspendido'
             }
             
@@ -636,7 +725,6 @@ def detalle_negocio_json(request, negocio_id):
         # Mapear estados
         estado_map = {
             'activo': 'Activo',
-            'inactivo': 'Rechazado', 
             'suspendido': 'Suspendido'
         }
         
@@ -779,8 +867,8 @@ def cambiar_estado_negocio(request, negocio_id):
         data = json.loads(request.body)
         nuevo_estado = data.get('estado')
         
-        # Validar estado
-        if nuevo_estado not in ['activo', 'inactivo', 'suspendido']:
+        # Validar estado (solo permitir activo y suspendido)
+        if nuevo_estado not in ['activo', 'suspendido']:
             return JsonResponse({'error': 'Estado inválido'}, status=400)
         
         negocio = Negocios.objects.get(pkid_neg=negocio_id)
@@ -790,7 +878,6 @@ def cambiar_estado_negocio(request, negocio_id):
         # Mapear estado para respuesta
         estado_map = {
             'activo': 'Activo',
-            'inactivo': 'Rechazado', 
             'suspendido': 'Suspendido'
         }
         
@@ -1073,6 +1160,304 @@ def enviar_correo_simple_masivo(destinatarios, asunto, mensaje_html, archivos_ad
         
     except Exception as e:
         print(f"❌ ERROR enviando correo simple: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def enviar_notificacion_negocio(user, accion, datos_negocio):
+    """
+    Envía correo de notificación cuando se cambia el estado de un negocio
+    Versión mejorada con diseño profesional
+    """
+    try:
+        print(f"🔍 DEBUG - Enviando notificación para negocio: {datos_negocio.get('nombre', 'Desconocido')}")
+        print(f"🔍 DEBUG - Acción: {accion}")
+        print(f"🔍 DEBUG - Usuario: {user.email}")
+        
+        # Verificar que el usuario tenga email
+        if not user.email or '@' not in user.email:
+            print(f"⚠️ DEBUG - Email inválido: {user.email}")
+            return {'success': False, 'error': 'Email inválido', 'enviado_a': None}
+        
+        # Determinar asunto según la acción
+        asunto_map = {
+            'activo': '✅ Tu negocio ha sido activado en Vecy',
+            'suspendido': '⚠️ Actualización sobre el estado de tu negocio en Vecy',
+            'eliminado': '🗑️ Tu negocio ha sido eliminado de Vecy'
+        }
+        
+        asunto = asunto_map.get(accion, f'Actualización de estado de tu negocio en Vecy')
+        
+        # Mapear razones de suspensión
+        razon_map = {
+            'informacion_falsa': 'Información falsa o incompleta',
+            'productos_prohibidos': 'Venta de productos no permitidos',
+            'malas_practicas': 'Malas prácticas comerciales',
+            'quejas_clientes': 'Múltiples quejas de clientes',
+            'incumplimiento_normas': 'Incumplimiento de normas de la plataforma',
+            'inactividad_prolongada': 'Inactividad prolongada',
+            'solicitud_usuario': 'Solicitud del propietario',
+            'otra': 'Otra razón'
+        }
+        
+        razon_texto = razon_map.get(datos_negocio.get('razon', ''), datos_negocio.get('razon', 'No especificada'))
+        
+        # Determinar colores según la acción
+        color_primario_map = {
+            'activo': '#28a745',
+            'suspendido': '#ffc107',
+            'eliminado': '#dc3545'
+        }
+        
+        color_secundario_map = {
+            'activo': '#d4edda',
+            'suspendido': '#fff3cd',
+            'eliminado': '#f8d7da'
+        }
+        
+        color_primario = color_primario_map.get(accion, '#007bff')
+        color_secundario = color_secundario_map.get(accion, '#e9ecef')
+        
+        # Determinar icono según la acción
+        icono_map = {
+            'activo': '✅',
+            'suspendido': '⚠️',
+            'eliminado': '🗑️'
+        }
+        
+        icono = icono_map.get(accion, '📋')
+        
+        # Crear mensaje HTML con diseño profesional
+        mensaje_html = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>{asunto}</title>
+            <style>
+                body {{
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f8f9fa;
+                }}
+                .email-container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    background-color: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }}
+                .email-header {{
+                    background-color: {color_primario};
+                    color: white;
+                    padding: 30px 20px;
+                    text-align: center;
+                }}
+                .email-header h1 {{
+                    margin: 0;
+                    font-size: 24px;
+                    font-weight: 600;
+                }}
+                .email-header .icon {{
+                    font-size: 48px;
+                    margin-bottom: 15px;
+                }}
+                .email-body {{
+                    padding: 30px;
+                }}
+                .status-card {{
+                    background-color: {color_secundario};
+                    border-left: 4px solid {color_primario};
+                    padding: 20px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                }}
+                .info-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                }}
+                .info-table td {{
+                    padding: 12px 0;
+                    border-bottom: 1px solid #dee2e6;
+                }}
+                .info-table td:first-child {{
+                    font-weight: 600;
+                    color: #495057;
+                    width: 35%;
+                }}
+                .info-table tr:last-child td {{
+                    border-bottom: none;
+                }}
+                .action-buttons {{
+                    text-align: center;
+                    margin: 30px 0;
+                }}
+                .btn {{
+                    display: inline-block;
+                    padding: 12px 30px;
+                    background-color: {color_primario};
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    font-weight: 600;
+                    margin: 0 10px;
+                }}
+                .email-footer {{
+                    background-color: #f8f9fa;
+                    padding: 20px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-size: 12px;
+                    border-top: 1px solid #dee2e6;
+                }}
+                .logo {{
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: {color_primario};
+                    margin-bottom: 10px;
+                }}
+                .contact-info {{
+                    background-color: #f8f9fa;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                    font-size: 14px;
+                }}
+                .highlight {{
+                    color: {color_primario};
+                    font-weight: 600;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <div class="email-header">
+                    <div class="icon">{icono}</div>
+                    <h1>{asunto}</h1>
+                </div>
+                
+                <div class="email-body">
+                    <div class="logo">VECY</div>
+                    
+                    <p>Hola <span class="highlight">{datos_negocio.get('propietario', 'Usuario')}</span>,</p>
+                    
+                    <p>Te informamos sobre una actualización en el estado de tu negocio registrado en nuestra plataforma:</p>
+                    
+                    <div class="status-card">
+                        <h3 style="margin-top: 0; color: {color_primario};">{datos_negocio.get('estado_nuevo', 'Nuevo estado')}</h3>
+                        <p style="margin-bottom: 0;">
+                            { '¡Excelente noticia! Tu negocio está ahora activo y visible para todos los clientes.' if accion == 'activo' else 
+                              'Tu negocio ha sido suspendido temporariamente. Para más información o para solicitar la reactivación, contacta a nuestro equipo de soporte.' if accion == 'suspendido' else
+                              'Tu negocio ha sido eliminado permanentemente de la plataforma.' }
+                        </p>
+                    </div>
+                    
+                    <h3>Detalles del Negocio</h3>
+                    <table class="info-table">
+                        <tr>
+                            <td>Nombre del negocio:</td>
+                            <td class="highlight">{datos_negocio.get('nombre', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>NIT:</td>
+                            <td>{datos_negocio.get('nit', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Dirección:</td>
+                            <td>{datos_negocio.get('direccion', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Categoría:</td>
+                            <td>{datos_negocio.get('categoria', 'No disponible')}</td>
+                        </tr>
+                        <tr>
+                            <td>Fecha de registro:</td>
+                            <td>{datos_negocio.get('fecha_registro', 'No disponible')}</td>
+                        </tr>
+        """
+        
+        # Agregar razón si existe para suspensión
+        if accion == 'suspendido' and razon_texto:
+            mensaje_html += f"""
+                        <tr>
+                            <td>Razón de suspensión:</td>
+                            <td class="highlight">{razon_texto}</td>
+                        </tr>
+            """
+        
+        # Agregar detalles adicionales si existen
+        if datos_negocio.get('detalles'):
+            mensaje_html += f"""
+                        <tr>
+                            <td>Detalles adicionales:</td>
+                            <td>{datos_negocio.get('detalles', '')}</td>
+                        </tr>
+            """
+        
+        mensaje_html += f"""
+                    </table>
+                    
+                    <div class="contact-info">
+                        <p><strong>Moderador responsable:</strong> {datos_negocio.get('moderador', 'Equipo de Moderación Vecy')}</p>
+                        <p><strong>Fecha de la acción:</strong> {timezone.now().strftime("%d/%m/%Y %H:%M")}</p>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        { '<a href="#" class="btn" style="background-color: #28a745;">Ver mi negocio</a>' if accion == 'activo' else 
+                          '<a href="#" class="btn" style="background-color: #6c757d;">Contactar soporte</a>' if accion == 'suspendido' else 
+                          '<a href="#" class="btn" style="background-color: #6c757d;">Contactar soporte</a>' }
+                    </div>
+                    
+                    <p>Si tienes preguntas o necesitas más información, no dudes en contactar a nuestro equipo de soporte.</p>
+                    
+                    <p>Atentamente,<br>
+                    <strong>El equipo de Vecy</strong><br>
+                    Plataforma de Comercio Local</p>
+                </div>
+                
+                <div class="email-footer">
+                    <p>© {timezone.now().year} Vecy - Todos los derechos reservados.</p>
+                    <p>Este es un correo automático, por favor no responder a este mensaje.</p>
+                    <p>Si recibiste este correo por error, por favor ignóralo.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Enviar correo usando la función existente
+        destinatarios = [user.email]
+        
+        resultado = enviar_correo_simple_masivo(
+            destinatarios=destinatarios,
+            asunto=asunto,
+            mensaje_html=mensaje_html,
+            es_test=False  # Cambiar a True para pruebas
+        )
+        
+        print(f"✅ DEBUG - Resultado envío correo negocio: {resultado}")
+        
+        if resultado['success']:
+            return {
+                'success': True,
+                'enviado_a': destinatarios,
+                'total': len(destinatarios)
+            }
+        else:
+            return {
+                'success': False,
+                'error': resultado.get('error', 'Error desconocido al enviar correo')
+            }
+        
+    except Exception as e:
+        print(f"❌ ERROR en enviar_notificacion_negocio: {str(e)}")
         return {
             'success': False,
             'error': str(e)
@@ -1580,4 +1965,219 @@ def gestion_resenas_reportadas(request):
     except Exception as e:
         print(f"ERROR en vista reseñas reportadas: {str(e)}")
         messages.error(request, f"Error al cargar las reseñas reportadas: {str(e)}")
+        return redirect('principal')
+    
+
+# ==================== FUNCIONES AUXILIARES PARA FILTROS ====================
+
+def obtener_usuarios_por_rol(rol_buscado):
+    """Obtiene usuarios por rol específico excluyendo moderadores"""
+    perfiles_moderadores = UsuariosRoles.objects.filter(
+        fkrol__desc_rol__iexact='moderador'
+    ).values_list('fkperfil_id', flat=True)
+    
+    if rol_buscado == 'VENDEDOR':
+        perfiles_ids = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='VENDEDOR'
+        ).exclude(fkperfil__id__in=perfiles_moderadores).values_list('fkperfil_id', flat=True)
+    elif rol_buscado == 'CLIENTE':
+        perfiles_ids = UsuariosRoles.objects.filter(
+            fkrol__desc_rol='CLIENTE'
+        ).exclude(fkperfil__id__in=perfiles_moderadores).values_list('fkperfil_id', flat=True)
+    else:  # Todos
+        perfiles_ids = UsuarioPerfil.objects.exclude(
+            id__in=perfiles_moderadores
+        ).values_list('id', flat=True)
+    
+    return perfiles_ids
+
+def obtener_usuarios_por_categoria(categoria_id):
+    """Obtiene usuarios por categoría de producto comprado"""
+    # Primero obtenemos los negocios que tienen productos de esta categoría
+    negocios_ids = Productos.objects.filter(
+        fkcategoria_prod=categoria_id
+    ).values_list('fknegocioasociado_prod', flat=True).distinct()
+    
+    # Luego obtenemos los propietarios de esos negocios (vendedores)
+    vendedores_ids = Negocios.objects.filter(
+        pkid_neg__in=negocios_ids
+    ).values_list('fkpropietario_neg', flat=True).distinct()
+    
+    # También obtenemos clientes que han comprado productos de esta categoría
+    # Buscamos en detalles de pedido
+    productos_categoria = Productos.objects.filter(
+        fkcategoria_prod=categoria_id
+    ).values_list('pkid_prod', flat=True)
+    
+    pedidos_categoria = DetallesPedido.objects.filter(
+        fkproducto_detalle__in=productos_categoria
+    ).values_list('fkpedido_detalle', flat=True).distinct()
+    
+    clientes_ids = Pedidos.objects.filter(
+        pkid_pedido__in=pedidos_categoria
+    ).values_list('fkusuario_pedido', flat=True).distinct()
+    
+    # Combinamos todos los IDs únicos
+    todos_ids = set(list(vendedores_ids) + list(clientes_ids))
+    
+    return list(todos_ids)
+
+# Modificar la vista enviar_correos para manejar los filtros:
+
+@login_required(login_url='/auth/login/')
+def enviar_correos(request):
+    """Vista para la página de envío de correos - CORREGIDA CON ESTADÍSTICAS CORRECTAS Y CATEGORÍAS DE NEGOCIOS"""
+    try:
+        # Verificar si el usuario está autenticado
+        if not request.user.is_authenticated:
+            messages.error(request, "Debes iniciar sesión.")
+            return redirect('iniciar_sesion')
+        
+        # Obtener perfil del usuario
+        try:
+            perfil = UsuarioPerfil.objects.get(fkuser=request.user)
+        except UsuarioPerfil.DoesNotExist:
+            messages.error(request, "Perfil de usuario no encontrado.")
+            return redirect('iniciar_sesion')
+        
+        # Verificar si es moderador
+        es_moderador = UsuariosRoles.objects.filter(
+            fkperfil=perfil, 
+            fkrol__desc_rol__iexact='moderador'
+        ).exists()
+        
+        if not es_moderador:
+            messages.error(request, "No tienes permisos de moderador.")
+            return redirect('principal')
+        
+        # Obtener parámetro de filtro
+        filtro_tipo = request.GET.get('filtro', 'todos')
+        filtro_categoria = request.GET.get('categoria', None)
+        
+        # ===== CORRECCIÓN IMPORTANTE: OBTENER USUARIOS EXCLUYENDO MODERADORES =====
+        perfiles_moderadores = UsuariosRoles.objects.filter(
+            fkrol__desc_rol__iexact='moderador'
+        ).values_list('fkperfil_id', flat=True)
+        
+        # Obtener TODOS los usuarios (excluyendo moderadores) para estadísticas generales
+        usuarios_perfiles = UsuarioPerfil.objects.select_related(
+            'fkuser', 'fktipodoc_user'
+        ).prefetch_related('usuariosroles_set__fkrol').exclude(
+            id__in=perfiles_moderadores
+        )
+        
+        # ===== CALCULAR ESTADÍSTICAS CORRECTAS =====
+        # Contar usuarios por rol EXCLUYENDO MODERADORES
+        usuarios_con_roles = usuarios_perfiles.annotate(
+            tiene_vendedor=Count('usuariosroles', filter=Q(usuariosroles__fkrol__desc_rol='VENDEDOR')),
+            tiene_cliente=Count('usuariosroles', filter=Q(usuariosroles__fkrol__desc_rol='CLIENTE'))
+        )
+        
+        # Contar usuarios por rol correctamente
+        total_vendedores = usuarios_con_roles.filter(tiene_vendedor__gt=0).count()
+        total_clientes = usuarios_con_roles.filter(tiene_cliente__gt=0).count()
+        total_usuarios = usuarios_perfiles.count()
+        
+        # ===== APLICAR FILTROS A LA LISTA VISIBLE =====
+        usuarios_filtrados = usuarios_perfiles
+        
+        if filtro_tipo == 'vendedores':
+            # Filtrar solo vendedores
+            usuarios_filtrados = usuarios_filtrados.filter(
+                usuariosroles__fkrol__desc_rol='VENDEDOR'
+            ).distinct()
+        elif filtro_tipo == 'clientes':
+            # Filtrar solo clientes
+            usuarios_filtrados = usuarios_filtrados.filter(
+                usuariosroles__fkrol__desc_rol='CLIENTE'
+            ).distinct()
+        elif filtro_tipo == 'categorias' and filtro_categoria:
+            try:
+                # CORRECCIÓN: Filtrar por categoría de NEGOCIO (TipoNegocio)
+                # Obtener negocios de esta categoría
+                negocios_categoria = Negocios.objects.filter(
+                    fktiponeg_neg=filtro_categoria
+                )
+                
+                # Obtener los propietarios (vendedores) de esos negocios
+                propietarios_categoria = negocios_categoria.values_list('fkpropietario_neg', flat=True).distinct()
+                
+                # Filtrar usuarios que sean vendedores de negocios en esta categoría
+                usuarios_filtrados = usuarios_filtrados.filter(
+                    Q(id__in=propietarios_categoria) &
+                    Q(usuariosroles__fkrol__desc_rol='VENDEDOR')
+                ).distinct()
+                
+            except Exception as e:
+                print(f"Error filtrando por categoría: {str(e)}")
+                usuarios_filtrados = usuarios_filtrados.none()
+        
+        # Preparar datos para el template
+        usuarios_data = []
+        for perfil_usuario in usuarios_filtrados:
+            user = perfil_usuario.fkuser
+            roles = perfil_usuario.usuariosroles_set.all()
+            
+            # Determinar el rol principal
+            rol_principal = 'CLIENTE'
+            if roles.exists():
+                for rol in roles:
+                    if rol.fkrol.desc_rol.lower() != 'moderador':
+                        rol_principal = rol.fkrol.desc_rol
+                        break
+            
+            # Construir nombre completo
+            nombre_completo = f"{user.first_name} {user.last_name}".strip()
+            if not nombre_completo:
+                nombre_completo = user.username
+            
+            usuarios_data.append({
+                'id': perfil_usuario.id,
+                'nombre': nombre_completo,
+                'email': user.email,
+                'documento': perfil_usuario.doc_user,
+                'tipo_documento': perfil_usuario.fktipodoc_user.desc_doc if perfil_usuario.fktipodoc_user else 'No especificado',
+                'estado': perfil_usuario.estado_user,
+                'rol': rol_principal,
+                'fecha_registro': user.date_joined.strftime("%d/%m/%Y")
+            })
+        
+        # CORRECCIÓN: Obtener todas las categorías de NEGOCIOS (TipoNegocio)
+        categorias_negocios = TipoNegocio.objects.all().order_by('desc_tiponeg')
+        
+        # Si hay filtro por categoría, contar usuarios en esa categoría
+        usuarios_categoria_count = 0
+        nombre_categoria = "Seleccione categoría"
+        
+        if filtro_tipo == 'categorias' and filtro_categoria:
+            usuarios_categoria_count = len(usuarios_data)
+            # Obtener nombre de categoría de negocio
+            try:
+                categoria_obj = TipoNegocio.objects.get(pkid_tiponeg=filtro_categoria)
+                nombre_categoria = categoria_obj.desc_tiponeg
+            except TipoNegocio.DoesNotExist:
+                nombre_categoria = f"Categoría {filtro_categoria}"
+        
+        context = {
+            'nombre': request.user.first_name or request.user.username,
+            'perfil': perfil,
+            'titulo_pagina': 'Enviar Correos',
+            
+            # ===== ESTADÍSTICAS CORRECTAS =====
+            'total_usuarios': total_usuarios,
+            'total_vendedores': total_vendedores,
+            'total_clientes': total_clientes,
+            
+            'usuarios': usuarios_data,
+            'categorias': categorias_negocios,  # CORRECCIÓN: Usar categorías de negocios
+            'filtro_actual': filtro_tipo,
+            'categoria_actual': filtro_categoria,
+            'nombre_categoria_actual': nombre_categoria,
+            'usuarios_categoria_count': usuarios_categoria_count,
+        }
+        
+        return render(request, 'Moderador/correo.html', context)
+    
+    except Exception as e:
+        messages.error(request, f"Error: {str(e)}")
         return redirect('principal')

@@ -37,7 +37,7 @@
                             <div class="col-md-4 mb-3">
                                 <label for="searchInput" class="form-label">Buscar Negocio</label>
                                 <input type="text" class="form-control" id="searchInput" name="search" 
-                                       placeholder="Nombre, NIT o propietario..." value="{{ search_query }}"
+                                       placeholder="Nombre, RUT o propietario..." value="{{ search_query }}"
                                        onkeyup="filterBusinesses()">
                             </div>
                             <div class="col-md-4 mb-3">
@@ -109,7 +109,7 @@
                                     </td>
                                     <td class="business-name">
                                         <strong>{{ negocio.nombre }}</strong><br>
-                                        <small class="text-muted business-nit">NIT: {{ negocio.nit }}</small>
+                                        <small class="text-muted business-nit">RUT: {{ negocio.nit }}</small>
                                     </td>
                                     <td class="business-owner">
                                         {{ negocio.propietario }}<br>
@@ -199,7 +199,7 @@
                                 <p class="mb-1">{{ negocio.nombre }}</p>
                             </div>
                             <div class="col-md-6">
-                                <strong>NIT:</strong>
+                                <strong>Rut:</strong>
                                 <p class="mb-1">{{ negocio.nit }}</p>
                             </div>
                         </div>
