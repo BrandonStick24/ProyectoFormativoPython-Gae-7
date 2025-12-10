@@ -179,14 +179,18 @@ def crear_variante(request, producto_id):
                     extension = os.path.splitext(imagen_variante.name)[1]
                     nombre_archivo_imagen = f"variante_{producto_id}_{int(timezone.now().timestamp())}{extension}"
                     
-                    # Guardar la imagen en la carpeta media/variantes/
-                    media_path = os.path.join(settings.MEDIA_ROOT, 'variantes')
-                    os.makedirs(media_path, exist_ok=True)
+                    # ✅ MODIFICADO: Guardar directamente en media/ sin subcarpeta 'variantes'
+                    media_path = settings.MEDIA_ROOT
+                    if not os.path.exists(media_path):
+                        os.makedirs(media_path)
                     
-                    with open(os.path.join(media_path, nombre_archivo_imagen), 'wb+') as destination:
+                    # Ruta completa del archivo
+                    filepath = os.path.join(media_path, nombre_archivo_imagen)
+                    
+                    with open(filepath, 'wb+') as destination:
                         for chunk in imagen_variante.chunks():
                             destination.write(chunk)
-                    print(f"DEBUG: Imagen guardada: {nombre_archivo_imagen}")
+                    print(f"DEBUG: Imagen guardada en media/: {nombre_archivo_imagen}")
                 except Exception as e:
                     print(f"ERROR procesando imagen: {e}")
                     messages.warning(request, "La imagen no pudo ser procesada, pero la variante se creará sin imagen.")
@@ -309,9 +313,11 @@ def editar_variante(request):
                     # Eliminar imagen anterior si existe
                     if imagen_actual:
                         try:
+                            # ✅ MODIFICADO: Eliminar de media/ directamente
                             imagen_path = os.path.join(settings.MEDIA_ROOT, imagen_actual)
                             if os.path.exists(imagen_path):
                                 os.remove(imagen_path)
+                                print(f"DEBUG: Imagen anterior eliminada de media/: {imagen_actual}")
                         except Exception as e:
                             print(f"Error al eliminar imagen anterior: {e}")
                     
@@ -319,13 +325,18 @@ def editar_variante(request):
                     extension = os.path.splitext(imagen_variante.name)[1]
                     nombre_archivo_imagen = f"variante_{variante_id}_{int(timezone.now().timestamp())}{extension}"
                     
-                    media_path = os.path.join(settings.MEDIA_ROOT, 'variantes')
-                    os.makedirs(media_path, exist_ok=True)
+                    # ✅ MODIFICADO: Guardar directamente en media/ sin subcarpeta
+                    media_path = settings.MEDIA_ROOT
+                    if not os.path.exists(media_path):
+                        os.makedirs(media_path)
                     
-                    with open(os.path.join(media_path, nombre_archivo_imagen), 'wb+') as destination:
+                    # Ruta completa del archivo
+                    filepath = os.path.join(media_path, nombre_archivo_imagen)
+                    
+                    with open(filepath, 'wb+') as destination:
                         for chunk in imagen_variante.chunks():
                             destination.write(chunk)
-                    print(f"DEBUG: Nueva imagen guardada: {nombre_archivo_imagen}")
+                    print(f"DEBUG: Nueva imagen guardada en media/: {nombre_archivo_imagen}")
                 except Exception as e:
                     print(f"ERROR procesando nueva imagen: {e}")
                     messages.warning(request, "La nueva imagen no pudo ser procesada, se mantendrá la imagen actual.")
@@ -449,10 +460,11 @@ def eliminar_variante(request, variante_id):
                     # Eliminar la imagen del sistema de archivos si existe
                     if imagen_variante:
                         try:
-                            imagen_path = os.path.join(settings.MEDIA_ROOT, 'variantes', imagen_variante)
+                            # ✅ MODIFICADO: Eliminar de media/ directamente
+                            imagen_path = os.path.join(settings.MEDIA_ROOT, imagen_variante)
                             if os.path.exists(imagen_path):
                                 os.remove(imagen_path)
-                                print(f"DEBUG: Imagen eliminada: {imagen_variante}")
+                                print(f"DEBUG: Imagen eliminada de media/: {imagen_variante}")
                         except Exception as e:
                             print(f"Error al eliminar imagen: {e}")
                     
