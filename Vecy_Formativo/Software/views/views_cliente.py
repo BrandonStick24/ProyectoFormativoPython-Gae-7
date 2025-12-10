@@ -790,48 +790,26 @@ def detalle_negocio(request, id):
 
     return render(request, 'Cliente/detalle_neg.html', contexto)
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
+from django.utils import timezone
+from django.db.models import Q, Avg, Count, Sum
+from django.db import connection
+from decimal import Decimal
+from ..models import (
+    UsuarioPerfil, Productos, Negocios, VariantesProducto, 
+    DetallesPedido, ResenasNegocios, CarritoItem, Favoritos, 
+    Pedidos, Combos, ComboItems
+)
+
 @never_cache
 @login_required(login_url='/auth/login/')
 def cliente_dashboard(request):
     try:
         perfil_cliente = UsuarioPerfil.objects.get(fkuser=request.user)
-        
-        from django.utils import timezone
-        from django.db.models import Q, Avg, Count, Sum
-        from django.db import connection
-        from decimal import Decimal
         hoy = timezone.now().date()
-
-        # =============================================
-        # IMPORTAR HELPER DE COMBOS
-        # =============================================
-        combos_activos = []
-        promociones_2x1 = []
-        ofertas_especiales = []
         
-        try:
-            from .helpers_combos import (
-                obtener_combos_activos,
-                obtener_promociones_2x1,
-                obtener_ofertas_especiales
-            )
-            
-            combos_activos = obtener_combos_activos(limite=8)
-            promociones_2x1 = obtener_promociones_2x1(limite=8)
-            ofertas_especiales = obtener_ofertas_especiales()
-        except ImportError:
-            try:
-                from helpers_combos import (
-                    obtener_combos_activos,
-                    obtener_promociones_2x1,
-                    obtener_ofertas_especiales
-                )
-                combos_activos = obtener_combos_activos(limite=8)
-                promociones_2x1 = obtener_promociones_2x1(limite=8)
-                ofertas_especiales = obtener_ofertas_especiales()
-            except ImportError:
-                pass
-
         # =============================================
         # FUNCIÓN PARA FORMATEAR PRECIOS
         # =============================================
@@ -840,9 +818,257 @@ def cliente_dashboard(request):
                 if valor is None:
                     return "0.00"
                 valor_float = float(valor)
-                return "{:,.2f}".format(valor_float).replace(',', 'X').replace('.', ',').replace('X', '.')
+                return "{:,.0f}".format(valor_float).replace(',', 'X').replace('.', ',').replace('X', '.')
             except (ValueError, TypeError):
                 return "0.00"
+
+        # =============================================
+        # COMBOS - VERSIÓN DEFINITIVA
+        # =============================================
+        combos_activos = []
+        hay_combos_activos = False
+        
+        try:
+            print("="*60)
+            print("DEBUG INICIO - BUSCANDO COMBOS")
+            print("="*60)
+            
+            # PRUEBA 1: Usar Django ORM
+            try:
+                print("Prueba 1: Usando Django ORM...")
+                combos = Combos.objects.filter(
+                    estado_combo='activo',
+                    stock_combo__gt=0
+                ).select_related('fknegocio')[:8]
+                
+                print(f"Combos encontrados ORM: {combos.count()}")
+                
+                for combo in combos:
+                    try:
+                        # Obtener items del combo
+                        items = ComboItems.objects.filter(fkcombo=combo).select_related('fkproducto', 'variante')
+                        
+                        productos_data = []
+                        for item in items:
+                            producto_info = {
+                                'producto': item.fkproducto,
+                                'cantidad': item.cantidad,
+                                'variante': item.variante
+                            }
+                            productos_data.append(producto_info)
+                        
+                        # Calcular precios
+                        precio_combo = float(combo.precio_combo) if combo.precio_combo else 0
+                        precio_regular = float(combo.precio_regular) if combo.precio_regular else 0
+                        
+                        # Si no hay precio regular, calcularlo
+                        if precio_regular == 0:
+                            precio_regular = 0
+                            for prod_info in productos_data:
+                                precio_base = float(prod_info['producto'].precio_prod) if prod_info['producto'].precio_prod else 0
+                                if prod_info['variante'] and prod_info['variante'].precio_adicional:
+                                    precio_base += float(prod_info['variante'].precio_adicional)
+                                precio_regular += precio_base * prod_info['cantidad']
+                        
+                        # Calcular descuento
+                        descuento = float(combo.descuento_porcentaje) if combo.descuento_porcentaje else 0
+                        if descuento == 0 and precio_regular > 0:
+                            descuento = ((precio_regular - precio_combo) / precio_regular) * 100
+                        
+                        # Preparar datos del combo
+                        combo_data = {
+                            'combo': combo,
+                            'productos': productos_data,
+                            'cantidad_productos': len(productos_data),
+                            'precio_combo': precio_combo,
+                            'precio_combo_formateado': formatear_precio(precio_combo),
+                            'precio_regular': precio_regular,
+                            'precio_regular_formateado': formatear_precio(precio_regular),
+                            'descuento_porcentaje': descuento,
+                            'ahorro': precio_regular - precio_combo,
+                            'ahorro_formateado': formatear_precio(precio_regular - precio_combo),
+                            'stock': combo.stock_combo,
+                            'negocio': combo.fknegocio,
+                            'imagen_url': combo.imagen_combo.url if combo.imagen_combo else None,
+                        }
+                        
+                        combos_activos.append(combo_data)
+                        print(f"✓ Combo agregado: {combo.nombre_combo}")
+                        
+                    except Exception as e:
+                        print(f"✗ Error procesando combo: {str(e)}")
+                        continue
+                
+                hay_combos_activos = len(combos_activos) > 0
+                print(f"Total combos ORM procesados: {len(combos_activos)}")
+                
+            except Exception as orm_error:
+                print(f"ORM falló: {str(orm_error)}")
+                print("Prueba 2: Usando SQL directo...")
+                
+                # PRUEBA 2: SQL directo
+                with connection.cursor() as cursor:
+                    # 1. Obtener combos
+                    cursor.execute("""
+                        SELECT 
+                            c.pkid_combo, c.nombre_combo, c.descripcion_combo,
+                            c.precio_combo, c.precio_regular, c.descuento_porcentaje,
+                            c.imagen_combo, c.stock_combo,
+                            c.fknegocio_id, n.nom_neg,
+                            c.fecha_inicio, c.fecha_fin
+                        FROM combos c
+                        LEFT JOIN negocios n ON c.fknegocio_id = n.pkid_neg
+                        WHERE c.estado_combo = 'activo'
+                        AND c.stock_combo > 0
+                        AND (c.fecha_inicio IS NULL OR c.fecha_inicio <= %s)
+                        AND (c.fecha_fin IS NULL OR c.fecha_fin >= %s)
+                        ORDER BY c.descuento_porcentaje DESC
+                        LIMIT 8
+                    """, [hoy, hoy])
+                    
+                    combos_db = cursor.fetchall()
+                    print(f"Combos encontrados SQL: {len(combos_db)}")
+                    
+                    for combo_row in combos_db:
+                        try:
+                            combo_id = combo_row[0]
+                            
+                            # 2. Obtener productos del combo
+                            cursor.execute("""
+                                SELECT 
+                                    ci.cantidad,
+                                    p.pkid_prod, p.nom_prod, p.img_prod, p.precio_prod,
+                                    vp.id_variante, vp.nombre_variante, vp.precio_adicional
+                                FROM combo_items ci
+                                INNER JOIN productos p ON ci.fkproducto_id = p.pkid_prod
+                                LEFT JOIN variantes_producto vp ON ci.variante_id = vp.id_variante
+                                WHERE ci.fkcombo_id = %s
+                            """, [combo_id])
+                            
+                            items_combo = cursor.fetchall()
+                            print(f"  Combo {combo_id}: {len(items_combo)} productos")
+                            
+                            if not items_combo:
+                                continue
+                            
+                            # Crear objetos para el template
+                            class ObjSimple:
+                                def __init__(self, **kwargs):
+                                    for key, value in kwargs.items():
+                                        setattr(self, key, value)
+                            
+                            # Negocio
+                            negocio_obj = ObjSimple(
+                                pkid_neg=combo_row[8],
+                                nom_neg=combo_row[9] or "Sin nombre"
+                            )
+                            
+                            # Combo
+                            combo_obj = ObjSimple(
+                                pkid_combo=combo_row[0],
+                                nombre_combo=combo_row[1],
+                                descripcion_combo=combo_row[2] or "Combo especial",
+                                precio_combo=float(combo_row[3]) if combo_row[3] else 0,
+                                precio_regular=float(combo_row[4]) if combo_row[4] else 0,
+                                descuento_porcentaje=float(combo_row[5]) if combo_row[5] else 0,
+                                stock_combo=combo_row[7],
+                                fknegocio=negocio_obj
+                            )
+                            
+                            # Imagen
+                            if combo_row[6]:
+                                combo_obj.imagen_combo = ObjSimple(url=combo_row[6])
+                            else:
+                                combo_obj.imagen_combo = None
+                            
+                            # Productos
+                            productos_data = []
+                            precio_regular_total = 0
+                            
+                            for item in items_combo:
+                                # Producto
+                                producto_obj = ObjSimple(
+                                    pkid_prod=item[1],
+                                    nom_prod=item[2],
+                                    precio_prod=float(item[4]) if item[4] else 0
+                                )
+                                
+                                # Imagen del producto
+                                if item[3]:
+                                    producto_obj.img_prod = ObjSimple(url=item[3])
+                                else:
+                                    producto_obj.img_prod = None
+                                
+                                # Variante
+                                variante_obj = None
+                                if item[5]:  # Tiene variante
+                                    variante_obj = ObjSimple(
+                                        id_variante=item[5],
+                                        nombre_variante=item[6],
+                                        precio_adicional=float(item[7]) if item[7] else 0
+                                    )
+                                
+                                # Calcular precio
+                                precio_item = producto_obj.precio_prod
+                                if variante_obj:
+                                    precio_item += variante_obj.precio_adicional
+                                
+                                precio_regular_total += precio_item * item[0]
+                                
+                                productos_data.append({
+                                    'producto': producto_obj,
+                                    'cantidad': item[0],
+                                    'variante': variante_obj
+                                })
+                            
+                            # Ajustar precios si es necesario
+                            if combo_obj.precio_regular == 0:
+                                combo_obj.precio_regular = precio_regular_total
+                            
+                            if combo_obj.descuento_porcentaje == 0 and combo_obj.precio_regular > 0:
+                                combo_obj.descuento_porcentaje = ((combo_obj.precio_regular - combo_obj.precio_combo) / combo_obj.precio_regular) * 100
+                            
+                            # Combo final
+                            combo_data = {
+                                'combo': combo_obj,
+                                'productos': productos_data,
+                                'cantidad_productos': len(productos_data),
+                                'precio_combo': combo_obj.precio_combo,
+                                'precio_combo_formateado': formatear_precio(combo_obj.precio_combo),
+                                'precio_regular': combo_obj.precio_regular,
+                                'precio_regular_formateado': formatear_precio(combo_obj.precio_regular),
+                                'descuento_porcentaje': combo_obj.descuento_porcentaje,
+                                'ahorro': combo_obj.precio_regular - combo_obj.precio_combo,
+                                'ahorro_formateado': formatear_precio(combo_obj.precio_regular - combo_obj.precio_combo),
+                                'stock': combo_obj.stock_combo,
+                                'negocio': negocio_obj,
+                                'imagen_url': combo_row[6],
+                            }
+                            
+                            combos_activos.append(combo_data)
+                            print(f"  ✓ Combo SQL agregado: {combo_obj.nombre_combo}")
+                            
+                        except Exception as e:
+                            print(f"  ✗ Error en combo SQL: {str(e)}")
+                            continue
+                    
+                    hay_combos_activos = len(combos_activos) > 0
+                    print(f"Total combos SQL procesados: {len(combos_activos)}")
+        
+        except Exception as e:
+            print(f"ERROR CRÍTICO en combos: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            combos_activos = []
+            hay_combos_activos = False
+        
+        print(f"\n{'='*60}")
+        print(f"RESULTADO FINAL COMBOS:")
+        print(f"¿Hay combos activos? {hay_combos_activos}")
+        print(f"Total combos: {len(combos_activos)}")
+        for i, combo in enumerate(combos_activos):
+            print(f"  {i+1}. {combo['combo'].nombre_combo} - ${combo['precio_combo']:,}")
+        print(f"{'='*60}\n")
 
         # =============================================
         # DETECCIÓN DE FECHAS ESPECIALES
@@ -1469,10 +1695,10 @@ def cliente_dashboard(request):
             'electrodomesticos': electrodomesticos_data[:8],
             'tecnologia': tecnologia_data[:8],
             
-            # Secciones de combos
+            # Secciones de combos - ¡AHORA SÍ!
             'combos_activos': combos_activos,
-            'promociones_2x1': promociones_2x1,
-            'ofertas_especiales': ofertas_especiales,
+            'promociones_2x1': [],
+            'ofertas_especiales': [],
             
             # Flags de existencia
             'hay_ofertas_activas': len(ofertas_carrusel_data) > 0,
@@ -1485,14 +1711,25 @@ def cliente_dashboard(request):
             'hay_productos_fecha_especial': len(productos_fecha_especial_data) > 0,
             'hay_electrodomesticos': len(electrodomesticos_data) > 0,
             'hay_tecnologia': len(tecnologia_data) > 0,
-            'hay_combos_activos': len(combos_activos) > 0,
-            'hay_promociones_2x1': len(promociones_2x1) > 0,
-            'hay_ofertas_especiales': len(ofertas_especiales) > 0,
+            'hay_combos_activos': hay_combos_activos,  # <-- ¡ESTO DEBE SER TRUE!
+            'hay_promociones_2x1': False,
+            'hay_ofertas_especiales': False,
         }
+        
+        # DEBUG FINAL
+        print(f"\n{'='*80}")
+        print(f"CONTEXT FINAL:")
+        print(f"  Combos activos: {len(combos_activos)}")
+        print(f"  hay_combos_activos: {hay_combos_activos}")
+        print(f"{'='*80}\n")
         
         return render(request, 'Cliente/Cliente.html', context)
         
     except Exception as e:
+        print(f"ERROR CRÍTICO en cliente_dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        
         return render(request, 'Cliente/Cliente.html', {
             'carrito_count': 0,
             'favoritos_count': 0,
@@ -1522,7 +1759,8 @@ def cliente_dashboard(request):
             'hay_combos_activos': False,
             'hay_promociones_2x1': False,
             'hay_ofertas_especiales': False,
-        })        
+        })
+
 
 @csrf_exempt
 @login_required
@@ -3566,18 +3804,11 @@ def producto_detalle_logeado(request, id):
 @csrf_exempt
 def procesar_pedido(request):
     try:
-        print("=== INICIANDO PROCESO DE PEDIDO ===")
+        print("=== INICIANDO PROCESO DE PEDIDO (CON CORREOS) ===")
         
-        # Obtener hora actual (Django ya maneja la conversión a zona local)
-        from django.utils import timezone
-        
-        # Esta hora ya debería estar en Colombia porque TIME_ZONE = 'America/Bogota'
+        # Obtener hora actual
         fecha_actual = timezone.localtime(timezone.now())
-        print(f"Hora Colombia (desde Django): {fecha_actual}")
-        
-        # Convertir a formato sin timezone para MySQL
         fecha_mysql = fecha_actual.replace(tzinfo=None)
-        print(f"Hora para MySQL: {fecha_mysql}")
         
         # 1. Validar que sea una solicitud JSON
         if request.content_type != 'application/json':
@@ -3631,9 +3862,11 @@ def procesar_pedido(request):
                 'message': f'Error al acceder al carrito: {str(e)}'
             }, status=500)
         
-        # 6. Obtener items del carrito
+        # 6. Obtener items del carrito (INCLUYENDO COMBOS)
         try:
-            items_carrito = CarritoItem.objects.filter(fkcarrito=carrito)
+            items_carrito = CarritoItem.objects.filter(fkcarrito=carrito).select_related(
+                'fkproducto', 'fknegocio', 'fkcombo'
+            )
             items_count = items_carrito.count()
             print(f"Items en carrito: {items_count}")
             
@@ -3642,6 +3875,11 @@ def procesar_pedido(request):
                     'success': False, 
                     'message': 'El carrito está vacío'
                 }, status=400)
+            
+            # Contar combos
+            combos_count = items_carrito.filter(tipo_item='combo').count()
+            productos_count = items_carrito.filter(tipo_item='producto').count()
+            print(f"📊 Distribución: {combos_count} combos, {productos_count} productos")
                 
         except Exception as e:
             print(f"ERROR al obtener items del carrito: {str(e)}")
@@ -3650,66 +3888,163 @@ def procesar_pedido(request):
                 'message': f'Error al obtener items del carrito: {str(e)}'
             }, status=500)
         
-        # 7. Validar stock y calcular total
+        # 7. Validar stock y calcular total (CON COMBOS)
         total_pedido = 0
         negocios_involucrados = {}
         items_detallados = []
         
         try:
             for item_carrito in items_carrito:
-                print(f"Procesando item: {item_carrito.pkid_item} - Producto: {item_carrito.fkproducto.nom_prod}")
+                print(f"🛒 Procesando item: {item_carrito.pkid_item} - Tipo: {item_carrito.tipo_item}")
                 
-                # Validar stock para producto base o variante
-                if item_carrito.variante_id:
-                    try:
-                        variante = VariantesProducto.objects.get(
-                            id_variante=item_carrito.variante_id,
-                            producto=item_carrito.fkproducto,
-                            estado_variante='activa'
-                        )
-                        if (variante.stock_variante or 0) < item_carrito.cantidad:
+                # ==================== PROCESAR COMBOS ====================
+                if item_carrito.tipo_item == 'combo' and item_carrito.fkcombo:
+                    print(f"   🎁 Procesando COMBO: {item_carrito.fkcombo.nombre_combo}")
+                    
+                    combo = item_carrito.fkcombo
+                    
+                    # 1. Validar que el combo esté activo
+                    if combo.estado_combo != 'activo':
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'El combo "{combo.nombre_combo}" ya no está disponible'
+                        }, status=400)
+                    
+                    # 2. Validar stock del combo
+                    if (combo.stock_combo or 0) < item_carrito.cantidad:
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'Stock insuficiente para el combo "{combo.nombre_combo}". Solo quedan {combo.stock_combo} unidades'
+                        }, status=400)
+                    
+                    # 3. Validar stock de cada producto dentro del combo
+                    items_del_combo = ComboItems.objects.filter(fkcombo=combo)
+                    
+                    for item_combo in items_del_combo:
+                        producto_combo = item_combo.fkproducto
+                        cantidad_necesaria = item_combo.cantidad * item_carrito.cantidad
+                        
+                        if item_combo.variante:
+                            # Validar stock de variante
+                            if (item_combo.variante.stock_variante or 0) < cantidad_necesaria:
+                                return JsonResponse({
+                                    'success': False, 
+                                    'message': f'Stock insuficiente para {producto_combo.nom_prod} - {item_combo.variante.nombre_variante} en el combo "{combo.nombre_combo}"'
+                                }, status=400)
+                        else:
+                            # Validar stock de producto base
+                            if (producto_combo.stock_prod or 0) < cantidad_necesaria:
+                                return JsonResponse({
+                                    'success': False, 
+                                    'message': f'Stock insuficiente para {producto_combo.nom_prod} en el combo "{combo.nombre_combo}"'
+                                }, status=400)
+                    
+                    # 4. Calcular monto del combo
+                    precio_combo = float(combo.precio_combo) if combo.precio_combo else 0
+                    monto_item = precio_combo * item_carrito.cantidad
+                    total_pedido += monto_item
+                    
+                    # 5. Agregar a negocios involucrados
+                    negocio = combo.fknegocio
+                    if negocio in negocios_involucrados:
+                        negocios_involucrados[negocio] += monto_item
+                    else:
+                        negocios_involucrados[negocio] = monto_item
+                    
+                    # 6. Guardar detalles para el pedido
+                    items_detallados.append({
+                        'tipo': 'combo',
+                        'combo': combo,
+                        'cantidad': item_carrito.cantidad,
+                        'precio_unitario': precio_combo,
+                        'subtotal': monto_item,
+                        'negocio': negocio,
+                        'carrito_item_id': item_carrito.pkid_item,
+                        'detalle': f"Combo: {combo.nombre_combo}"
+                    })
+                    
+                    print(f"   ✅ Combo validado: {combo.nombre_combo} x{item_carrito.cantidad} = ${monto_item:,.0f}")
+                
+                # ==================== PROCESAR PRODUCTOS INDIVIDUALES ====================
+                elif item_carrito.tipo_item == 'producto' and item_carrito.fkproducto:
+                    print(f"   🛍️ Procesando PRODUCTO: {item_carrito.fkproducto.nom_prod}")
+                    
+                    producto = item_carrito.fkproducto
+                    
+                    # Validar que el producto esté disponible
+                    if producto.estado_prod != 'disponible':
+                        return JsonResponse({
+                            'success': False, 
+                            'message': f'El producto "{producto.nom_prod}" ya no está disponible'
+                        }, status=400)
+                    
+                    # Validar stock para producto base o variante
+                    if item_carrito.variante_id:
+                        try:
+                            variante = VariantesProducto.objects.get(
+                                id_variante=item_carrito.variante_id,
+                                producto=producto,
+                                estado_variante='activa'
+                            )
+                            if (variante.stock_variante or 0) < item_carrito.cantidad:
+                                return JsonResponse({
+                                    'success': False, 
+                                    'message': f'Stock insuficiente para {producto.nom_prod} - {variante.nombre_variante}. Solo quedan {variante.stock_variante} unidades'
+                                }, status=400)
+                        except VariantesProducto.DoesNotExist:
                             return JsonResponse({
                                 'success': False, 
-                                'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod} - {variante.nombre_variante}. Solo quedan {variante.stock_variante} unidades'
+                                'message': f'La variante de {producto.nom_prod} ya no está disponible'
                             }, status=400)
-                    except VariantesProducto.DoesNotExist:
-                        return JsonResponse({
-                            'success': False, 
-                            'message': f'La variante de {item_carrito.fkproducto.nom_prod} ya no está disponible'
-                        }, status=400)
+                    else:
+                        if (producto.stock_prod or 0) < item_carrito.cantidad:
+                            return JsonResponse({
+                                'success': False, 
+                                'message': f'Stock insuficiente para {producto.nom_prod}. Solo quedan {producto.stock_prod} unidades'
+                            }, status=400)
+                    
+                    # Calcular monto del item
+                    precio_unitario = float(item_carrito.precio_unitario) if item_carrito.precio_unitario else 0
+                    monto_item = precio_unitario * item_carrito.cantidad
+                    total_pedido += monto_item
+                    
+                    # Agregar a negocios involucrados
+                    negocio = item_carrito.fknegocio
+                    if not negocio:
+                        negocio = producto.fknegocioasociado_prod
+                    
+                    if negocio in negocios_involucrados:
+                        negocios_involucrados[negocio] += monto_item
+                    else:
+                        negocios_involucrados[negocio] = monto_item
+                    
+                    # Guardar detalles
+                    items_detallados.append({
+                        'tipo': 'producto',
+                        'producto': producto,
+                        'cantidad': item_carrito.cantidad,
+                        'precio_unitario': precio_unitario,
+                        'subtotal': monto_item,
+                        'negocio': negocio,
+                        'variante_id': item_carrito.variante_id,
+                        'variante_seleccionada': item_carrito.variante_seleccionada,
+                        'carrito_item_id': item_carrito.pkid_item,
+                        'detalle': f"{producto.nom_prod}" + (f" - {item_carrito.variante_seleccionada}" if item_carrito.variante_seleccionada else "")
+                    })
+                    
+                    print(f"   ✅ Producto validado: {producto.nom_prod} x{item_carrito.cantidad} = ${monto_item:,.0f}")
+                
                 else:
-                    if (item_carrito.fkproducto.stock_prod or 0) < item_carrito.cantidad:
-                        return JsonResponse({
-                            'success': False, 
-                            'message': f'Stock insuficiente para {item_carrito.fkproducto.nom_prod}. Solo quedan {item_carrito.fkproducto.stock_prod} unidades'
-                        }, status=400)
-                
-                # Calcular monto del item
-                monto_item = float(item_carrito.precio_unitario) * item_carrito.cantidad
-                total_pedido += monto_item
-                negocio = item_carrito.fknegocio
-                
-                if negocio in negocios_involucrados:
-                    negocios_involucrados[negocio] += monto_item
-                else:
-                    negocios_involucrados[negocio] = monto_item
-                
-                items_detallados.append({
-                    'producto': item_carrito.fkproducto,
-                    'cantidad': item_carrito.cantidad,
-                    'precio_unitario': item_carrito.precio_unitario,
-                    'subtotal': monto_item,
-                    'negocio': negocio,
-                    'variante_seleccionada': item_carrito.variante_seleccionada,
-                    'variante_id': item_carrito.variante_id,
-                    'carrito_item_id': item_carrito.pkid_item
-                })
-                
-            print(f"Total pedido calculado: {total_pedido}")
-            print(f"Negocios involucrados: {len(negocios_involucrados)}")
+                    print(f"   ⚠️ Item tipo desconocido: {item_carrito.tipo_item}")
+                    continue
+            
+            print(f"💰 Total pedido calculado: ${total_pedido:,.0f}")
+            print(f"🏪 Negocios involucrados: {len(negocios_involucrados)}")
             
         except Exception as e:
             print(f"ERROR al validar stock/calcular total: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({
                 'success': False, 
                 'message': f'Error al validar stock: {str(e)}'
@@ -3731,7 +4066,7 @@ def procesar_pedido(request):
                     'message': 'No se pudo determinar el negocio principal'
                 }, status=500)
                 
-            print(f"Negocio principal: {negocio_principal.nom_neg} (ID: {negocio_principal.pkid_neg})")
+            print(f"🏪 Negocio principal: {negocio_principal.nom_neg} (ID: {negocio_principal.pkid_neg})")
             
         except Exception as e:
             print(f"ERROR al determinar negocio principal: {str(e)}")
@@ -3742,10 +4077,8 @@ def procesar_pedido(request):
         
         # 9. Crear pedido en la base de datos
         try:
-            # Usar la fecha/hora Colombia que preparamos
             pedido_fecha = fecha_mysql
             
-            # Insertar con SQL directo para control total
             with connection.cursor() as cursor:
                 sql = """
                     INSERT INTO pedidos (
@@ -3763,8 +4096,8 @@ def procesar_pedido(request):
                     data.get('metodo_pago', ''),
                     data.get('metodo_pago_texto', '').strip(),
                     data.get('banco', ''),
-                    pedido_fecha,  # Hora Colombia
-                    pedido_fecha   # Hora Colombia
+                    pedido_fecha,
+                    pedido_fecha
                 ])
                 
                 pedido_id = cursor.lastrowid
@@ -3773,7 +4106,6 @@ def procesar_pedido(request):
             pedido = Pedidos.objects.get(pkid_pedido=pedido_id)
             
             print(f"✅ Pedido creado: ID {pedido.pkid_pedido}")
-            print(f"✅ Fecha/hora guardada en MySQL: {pedido.fecha_pedido}")
             
         except Exception as e:
             print(f"ERROR al crear pedido: {str(e)}")
@@ -3784,22 +4116,64 @@ def procesar_pedido(request):
                 'message': f'Error al crear el pedido: {str(e)}'
             }, status=500)
         
-        # 10. Crear detalles del pedido
+        # 10. Crear detalles del pedido (CON SOPORTE PARA COMBOS - VERSIÓN CORREGIDA)
         try:
             detalles_creados = []
-            for item_detallado in items_detallados:
-                detalle = DetallesPedido.objects.create(
-                    fkpedido_detalle=pedido,
-                    fkproducto_detalle=item_detallado['producto'],
-                    cantidad_detalle=item_detallado['cantidad'],
-                    precio_unitario=item_detallado['precio_unitario']
-                )
-                detalles_creados.append(detalle)
             
-            print(f"Detalles creados: {len(detalles_creados)}")
+            for item_detallado in items_detallados:
+                if item_detallado['tipo'] == 'combo':
+                    # Crear detalle para combo - USANDO CAMPOS NUEVOS
+                    try:
+                        # Usar SQL directo para insertar con los nuevos campos
+                        with connection.cursor() as cursor:
+                            sql = """
+                                INSERT INTO detalles_pedido (
+                                    fkpedido_detalle, fkproducto_detalle, fkcombo_id,
+                                    cantidad_detalle, precio_unitario, descripcion_adicional
+                                ) VALUES (%s, %s, %s, %s, %s, %s)
+                            """
+                            cursor.execute(sql, [
+                                pedido.pkid_pedido,
+                                None,  # No hay producto específico
+                                item_detallado['combo'].pkid_combo,
+                                item_detallado['cantidad'],
+                                float(item_detallado['precio_unitario']),
+                                f"Combo: {item_detallado['combo'].nombre_combo}"
+                            ])
+                    except Exception as sql_error:
+                        print(f"⚠️ Error SQL detalle combo: {sql_error}")
+                        # Intentar con Django ORM (si los campos ya están en el modelo)
+                        try:
+                            detalle = DetallesPedido.objects.create(
+                                fkpedido_detalle=pedido,
+                                fkproducto_detalle=None,
+                                fkcombo=item_detallado['combo'],
+                                cantidad_detalle=item_detallado['cantidad'],
+                                precio_unitario=item_detallado['precio_unitario'],
+                                descripcion_adicional=f"Combo: {item_detallado['combo'].nombre_combo}"
+                            )
+                            detalles_creados.append(detalle)
+                        except Exception as e:
+                            print(f"❌ Error Django detalle combo: {e}")
+                            continue
+                    
+                else:
+                    # Crear detalle normal para producto
+                    detalle = DetallesPedido.objects.create(
+                        fkpedido_detalle=pedido,
+                        fkproducto_detalle=item_detallado['producto'],
+                        cantidad_detalle=item_detallado['cantidad'],
+                        precio_unitario=item_detallado['precio_unitario'],
+                        descripcion_adicional=item_detallado.get('variante_seleccionada', '')
+                    )
+                    detalles_creados.append(detalle)
+            
+            print(f"✅ Detalles creados: {len(detalles_creados)} (Combos: {sum(1 for d in items_detallados if d['tipo'] == 'combo')})")
             
         except Exception as e:
             print(f"ERROR al crear detalles: {str(e)}")
+            import traceback
+            traceback.print_exc()
             # Revertir pedido si fallan los detalles
             pedido.delete()
             return JsonResponse({
@@ -3807,12 +4181,12 @@ def procesar_pedido(request):
                 'message': f'Error al crear detalles del pedido: {str(e)}'
             }, status=500)
         
-        # 11. Descontar stock
+        # 11. Descontar stock (ACTUALIZADO PARA COMBOS)
         try:
-            stock_descontado = descontar_stock_pedido(pedido, items_carrito)
-            print(f"Stock descontado: {stock_descontado}")
+            stock_descontado = descontar_stock_pedido_completo(pedido, items_carrito)
+            print(f"✅ Stock descontado: {stock_descontado}")
         except Exception as e:
-            print(f"ERROR al descontar stock: {str(e)}")
+            print(f"⚠️ Error al descontar stock: {str(e)}")
             # Continuar aunque falle el descuento de stock
         
         # 12. Crear pagos para cada negocio
@@ -3832,18 +4206,81 @@ def procesar_pedido(request):
                     fkpedido=pedido,
                     fknegocio=negocio,
                     monto=monto,
-                    fecha_pago=fecha_mysql,  # Usar misma hora Colombia
+                    fecha_pago=fecha_mysql,
                     estado_pago=estado_pago,
                     metodo_pago=metodo_pago
                 )
             
-            print(f"Pagos creados: {len(negocios_involucrados)}")
+            print(f"✅ Pagos creados: {len(negocios_involucrados)}")
             
         except Exception as e:
-            print(f"ERROR al crear pagos: {str(e)}")
-            # Continuar aunque falle la creación de pagos
+            print(f"⚠️ Error al crear pagos: {str(e)}")
         
-        # 13. Crear notificaciones
+        # 13. ENVÍO DE CORREO ELECTRÓNICO - ¡CORRECCIÓN AQUÍ!
+        try:
+            email_cliente = auth_user.email
+            if email_cliente:
+                print(f"📧 Enviando comprobante a: {email_cliente}")
+                
+                # Preparar datos para el correo
+                meses_es = [
+                    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+                ]
+                
+                dias_es = [
+                    'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'
+                ]
+                
+                fecha_colombia = timezone.localtime(pedido.fecha_pedido)
+                fecha_formateada = fecha_colombia.strftime(f"%d de {meses_es[fecha_colombia.month-1]} de %Y")
+                hora_formateada = fecha_colombia.strftime("%I:%M %p").lower()
+                
+                dia_semana = dias_es[fecha_colombia.weekday()]
+                fecha_completa = f"{dia_semana}, {fecha_formateada} a las {hora_formateada}"
+                
+                context = {
+                    'pedido': pedido,
+                    'items': items_detallados,
+                    'negocios': list(negocios_involucrados.keys()),
+                    'cliente': perfil_cliente,
+                    'fecha_pedido': fecha_completa,
+                    'fecha_simple': fecha_formateada,
+                    'hora_pedido': hora_formateada,
+                    'total_pedido': total_pedido,
+                    'metodo_pago': data.get('metodo_pago_texto', ''),
+                    'numero_pedido': f"VECY-{pedido.pkid_pedido:06d}",
+                }
+                
+                # Renderizar contenido HTML
+                html_content = render_to_string('emails/comprobante_pedido.html', context)
+                text_content = strip_tags(html_content)
+                
+                subject = f'✅ Comprobante de Pedido VECY - #{context["numero_pedido"]}'
+                
+                # Configurar correo
+                email = EmailMultiAlternatives(
+                    subject=subject,
+                    body=text_content,
+                    from_email=os.getenv('DEFAULT_FROM_EMAIL', 'noreply@vecy.com'),
+                    to=[email_cliente],
+                    reply_to=[os.getenv('REPLY_TO_EMAIL', 'soporte@vecy.com')]
+                )
+                
+                email.attach_alternative(html_content, "text/html")
+                email.send()
+                
+                print(f"✅ Correo enviado exitosamente a {email_cliente}")
+            else:
+                print(f"⚠️ Usuario no tiene email registrado: {auth_user.username}")
+                
+        except Exception as e:
+            print(f"⚠️ Error enviando correo: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            # Continuar aunque falle el correo (no es crítico)
+        
+        # 14. Crear notificaciones
         try:
             # Notificación para el CLIENTE
             Notificacion.objects.create(
@@ -3866,44 +4303,19 @@ def procesar_pedido(request):
                     fecha_creacion=fecha_mysql
                 )
             
-            # Notificaciones para otros negocios
-            for negocio, monto in negocios_involucrados.items():
-                if negocio != negocio_principal and negocio.fkpropietario_neg and negocio.fkpropietario_neg.fkuser:
-                    Notificacion.objects.create(
-                        usuario=negocio.fkpropietario_neg.fkuser,
-                        tipo='pedido',
-                        titulo='🛒 Pedido Multi-Negocio',
-                        mensaje=f'Tienes productos en el pedido #{pedido.pkid_pedido}. Tu ganancia: ${monto:,.0f}',
-                        url=f'/negocio/pedidos/{pedido.pkid_pedido}/',
-                        fecha_creacion=fecha_mysql
-                    )
-            
-            print(f"Notificaciones creadas: {1 + len(negocios_involucrados)}")
+            print(f"✅ Notificaciones creadas")
             
         except Exception as e:
-            print(f"ERROR al crear notificaciones: {str(e)}")
-            # Continuar aunque falle la creación de notificaciones
+            print(f"⚠️ Error al crear notificaciones: {str(e)}")
         
-        # 14. Vaciar carrito
+        # 15. Vaciar carrito
         try:
             items_carrito.delete()
-            print("Carrito vaciado exitosamente")
+            print("✅ Carrito vaciado exitosamente")
         except Exception as e:
-            print(f"ERROR al vaciar carrito: {str(e)}")
-            # Continuar aunque falle el vaciado del carrito
-        
-        # 15. Enviar comprobante por correo
-        try:
-            email_cliente = auth_user.email
-            if email_cliente:
-                enviar_comprobante_pedido(email_cliente, pedido, items_detallados, negocios_involucrados)
-                print(f"Correo enviado a: {email_cliente}")
-        except Exception as e:
-            print(f"ERROR al enviar correo: {str(e)}")
-            # Continuar aunque falle el envío de correo
+            print(f"⚠️ Error al vaciar carrito: {str(e)}")
         
         # 16. Formatear respuesta exitosa
-        # Usar la fecha del pedido que guardamos
         fecha_respuesta = timezone.localtime(pedido.fecha_pedido)
         fecha_formateada = fecha_respuesta.strftime("%d/%m/%Y %I:%M:%S %p").lower()
         
@@ -3914,18 +4326,19 @@ def procesar_pedido(request):
             'total': float(total_pedido),
             'metodo_pago': data.get('metodo_pago_texto', '').strip(),
             'fecha': fecha_formateada,
-            'fecha_raw': pedido.fecha_pedido.isoformat() if hasattr(pedido.fecha_pedido, 'isoformat') else str(pedido.fecha_pedido),
             'estado_pedido': pedido.estado_pedido,
-            'pagos_creados': len(negocios_involucrados),
             'negocio_principal': negocio_principal.nom_neg,
             'items_procesados': len(items_detallados),
+            'combos_procesados': sum(1 for item in items_detallados if item['tipo'] == 'combo'),
             'stock_descontado': stock_descontado if 'stock_descontado' in locals() else False,
+            'email_enviado': 'email_cliente' in locals() and email_cliente is not None,
         }
         
         print(f"=== PEDIDO PROCESADO EXITOSAMENTE ===")
-        print(f"ID Pedido: {pedido.pkid_pedido}")
-        print(f"Hora Colombia guardada: {pedido.fecha_pedido}")
-        print(f"Hora Colombia formateada: {fecha_formateada}")
+        print(f"📦 ID Pedido: {pedido.pkid_pedido}")
+        print(f"💰 Total: ${total_pedido:,.0f}")
+        print(f"📧 Email: {'Enviado' if email_cliente else 'No enviado'}")
+        print(f"🎁 Combos incluidos: {response_data['combos_procesados']}")
         
         return JsonResponse(response_data)
 
@@ -3950,7 +4363,6 @@ def procesar_pedido(request):
             'success': False, 
             'message': f'Error interno del servidor: {str(e)[:100]}...'
         }, status=500)
-        
 # =============================================================================
 # FUNCIONES PARA CREAR NOTIFICACIONES (SIN @never_cache)
 # =============================================================================
@@ -4436,14 +4848,78 @@ def mis_pedidos_data(request):
             detalles = DetallesPedido.objects.filter(fkpedido_detalle=pedido)
             
             productos_data = []
-            for detalle in detalles:
-                productos_data.append({
-                    'nombre': detalle.fkproducto_detalle.nom_prod,
-                    'cantidad': detalle.cantidad_detalle,
-                    'precio_unitario': float(detalle.precio_unitario),
-                    'imagen': detalle.fkproducto_detalle.img_prod.url if detalle.fkproducto_detalle.img_prod else None
-                })
+            combos_data = []
             
+            for detalle in detalles:
+                # ==================== PROCESAR COMBOS ====================
+                if detalle.fkcombo:
+                    try:
+                        combo = detalle.fkcombo
+                        # Calcular precio del combo
+                        precio_combo = float(combo.precio_combo) if combo.precio_combo else 0
+                        precio_unitario = float(detalle.precio_unitario) if detalle.precio_unitario else precio_combo
+                        
+                        # Obtener productos del combo
+                        items_combo = ComboItems.objects.filter(fkcombo=combo)
+                        productos_del_combo = []
+                        
+                        for item_combo in items_combo[:3]:  # Mostrar solo primeros 3 productos
+                            nombre_producto = item_combo.fkproducto.nom_prod
+                            if item_combo.variante:
+                                nombre_producto += f" - {item_combo.variante.nombre_variante}"
+                            
+                            productos_del_combo.append({
+                                'nombre': nombre_producto,
+                                'cantidad': item_combo.cantidad
+                            })
+                        
+                        # Agregar combo a los datos
+                        combos_data.append({
+                            'tipo': 'combo',
+                            'nombre': combo.nombre_combo,
+                            'cantidad': detalle.cantidad_detalle,
+                            'precio_unitario': precio_unitario,
+                            'total': precio_unitario * detalle.cantidad_detalle,
+                            'productos': productos_del_combo,
+                            'descripcion': detalle.descripcion_adicional or f"Combo: {combo.nombre_combo}",
+                            'imagen': combo.imagen_combo.url if combo.imagen_combo else None
+                        })
+                        
+                    except Exception as e:
+                        print(f"Error procesando combo en pedido {pedido.pkid_pedido}: {str(e)}")
+                        continue
+                
+                # ==================== PROCESAR PRODUCTOS INDIVIDUALES ====================
+                elif detalle.fkproducto_detalle:
+                    try:
+                        producto = detalle.fkproducto_detalle
+                        
+                        # Obtener URL de imagen
+                        imagen_producto = None
+                        if producto.img_prod:
+                            try:
+                                imagen_producto = producto.img_prod.url
+                            except:
+                                pass
+                        
+                        productos_data.append({
+                            'tipo': 'producto',
+                            'nombre': producto.nom_prod,
+                            'cantidad': detalle.cantidad_detalle,
+                            'precio_unitario': float(detalle.precio_unitario),
+                            'total': float(detalle.precio_unitario) * detalle.cantidad_detalle,
+                            'imagen': imagen_producto,
+                            'descripcion': detalle.descripcion_adicional or ''
+                        })
+                        
+                    except Exception as e:
+                        print(f"Error procesando producto en pedido {pedido.pkid_pedido}: {str(e)}")
+                        continue
+            
+            # Combinar productos y combos
+            todos_items = productos_data + combos_data
+            
+            # Calcular tiempo transcurrido
             tiempo_transcurrido = timezone.now() - pedido.fecha_pedido
             puede_cancelar = (tiempo_transcurrido < timedelta(hours=1) and 
                             pedido.estado_pedido in ['pendiente', 'confirmado'])
@@ -4457,6 +4933,7 @@ def mis_pedidos_data(request):
                 if horas > 0:
                     tiempo_restante = f"{horas}h {minutos}min"
             
+            # Diccionario de estados
             estados_display = {
                 'pendiente': 'Pendiente',
                 'confirmado': 'Confirmado', 
@@ -4474,10 +4951,12 @@ def mis_pedidos_data(request):
                 'total_pedido': float(pedido.total_pedido),
                 'fecha_pedido': pedido.fecha_pedido.strftime('%d/%m/%Y %H:%M'),
                 'negocio_nombre': pedido.fknegocio_pedido.nom_neg,
-                'productos': productos_data,
+                'items': todos_items,  # Ahora incluye combos y productos
                 'puede_cancelar': puede_cancelar,
                 'tiempo_restante': tiempo_restante,
-                'metodo_pago': pedido.metodo_pago_texto or pedido.metodo_pago
+                'metodo_pago': pedido.metodo_pago_texto or pedido.metodo_pago,
+                'combos_count': len(combos_data),
+                'productos_count': len(productos_data)
             }
             
             pedidos_data.append(pedido_data)
@@ -4487,10 +4966,14 @@ def mis_pedidos_data(request):
             'pedidos': pedidos_data
         })
         
-    except Exception:
+    except Exception as e:
+        print(f"ERROR en mis_pedidos_data: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({
             'success': False,
-            'message': 'Error al cargar los pedidos'
+            'message': 'Error al cargar los pedidos',
+            'error': str(e)
         })
 
 @never_cache

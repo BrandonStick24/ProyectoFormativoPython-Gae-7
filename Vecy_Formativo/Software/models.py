@@ -189,14 +189,15 @@ class CategoriasTiponegocio(models.Model):
 class DetallesPedido(models.Model):
     pkid_detalle = models.AutoField(primary_key=True)
     fkpedido_detalle = models.ForeignKey('Pedidos', models.DO_NOTHING, db_column='fkpedido_detalle')
-    fkproducto_detalle = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_detalle')
+    fkproducto_detalle = models.ForeignKey('Productos', models.DO_NOTHING, db_column='fkproducto_detalle', blank=True, null=True)  # AHORA nullable
+    fkcombo = models.ForeignKey('Combos', models.DO_NOTHING, db_column='fkcombo_id', blank=True, null=True)  # NUEVO CAMPO
     cantidad_detalle = models.IntegerField()
     precio_unitario = models.DecimalField(max_digits=10, decimal_places=2)
+    descripcion_adicional = models.CharField(max_length=255, blank=True, null=True)  # NUEVO CAMPO
 
     class Meta:
         managed = False
         db_table = 'detalles_pedido'
-
 
 class DjangoAdminLog(models.Model):
     action_time = models.DateTimeField()
@@ -311,6 +312,8 @@ class Negocios(models.Model):
     class Meta:
         managed = True
         db_table = 'negocios'
+
+
 
 class Notificacion(models.Model):
     TIPOS_NOTIFICACION = (

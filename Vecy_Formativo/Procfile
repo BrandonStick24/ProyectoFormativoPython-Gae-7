@@ -1,1 +1,0 @@
-web: gunicorn Vecy.wsgi:application --log-file -

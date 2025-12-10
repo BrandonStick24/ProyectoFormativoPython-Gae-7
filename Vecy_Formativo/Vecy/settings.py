@@ -19,12 +19,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SEGURIDAD
 # ============================
 SECRET_KEY = 'django-insecure-i2uw@)s42-((jsku2q@y^s+rbg97$t8rcd73evtxhdxdfrxgl#'
-
+CSRF_TRUSTED_ORIGINS = ['https://vecy.shop']
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
-ALLOWED_HOSTS = [
-    "*",                           # Railway usa URL dinámica
-]
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'vecy.shop', 'www.vecy.shop']
+
+
+
 
 # ============================
 # APPS
@@ -110,6 +111,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
 
 # ============================
 # INTERNACIONALIZACIÓN

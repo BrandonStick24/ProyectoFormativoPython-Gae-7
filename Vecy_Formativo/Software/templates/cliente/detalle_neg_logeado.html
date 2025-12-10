@@ -751,7 +751,7 @@
         gap: 0.5rem;
     }
 
-    /* RATINGS SUMMARY */
+    /* RATINGS SUMMARY - CORREGIDO */
     .average-rating {
         text-align: center;
         padding: 1rem;
@@ -795,6 +795,7 @@
         background: var(--vecy-light);
         border-radius: 10px;
         overflow: hidden;
+        position: relative;
     }
 
     .rating-progress {
@@ -802,6 +803,7 @@
         background: linear-gradient(90deg, #ffc107, #fd7e14);
         border-radius: 10px;
         transition: width 1.5s ease;
+        min-width: 3px; /* Asegura que se vea al menos un poco */
     }
 
     .rating-count {
@@ -1042,12 +1044,13 @@
         width: 100%;
     }
 
-    /* STAR RATING FORM */
+    /* STAR RATING FORM - COMPLETAMENTE CORREGIDO */
     .star-rating {
         display: flex;
         justify-content: center;
         gap: 0.5rem;
         margin-bottom: 1.5rem;
+        flex-direction: row; /* Asegurar que estén en fila */
     }
 
     .star-label {
@@ -1055,6 +1058,7 @@
         color: #d1d5db;
         transition: all 0.3s ease;
         font-size: 2rem;
+        order: 1; /* Forzar orden normal */
     }
 
     .star-label:hover,
@@ -1064,6 +1068,29 @@
     }
 
     .star-label.active {
+        color: #ffc107;
+    }
+
+    /* Asegurar que las estrellas seleccionadas se muestren bien */
+    .star-rating input[type="radio"] {
+        display: none;
+    }
+
+    /* Cuando un radio está checked, todas las etiquetas anteriores también se activan */
+    .star-rating input[type="radio"]:checked ~ label {
+        color: #ffc107;
+    }
+
+    .star-rating input[type="radio"]:checked + label {
+        color: #ffc107;
+    }
+
+    /* Esto es importante: cuando haces hover, todas las estrellas hasta la que haces hover se activan */
+    .star-rating label:hover ~ label {
+        color: #d1d5db;
+    }
+
+    .star-rating:hover label {
         color: #ffc107;
     }
 
@@ -1250,15 +1277,10 @@
                     <p class="hero-description">{{ negocio.desc_neg }}</p>
                     {% endif %}
                     
+                    <!-- SOLO EL BOTÓN DE COMPARTIR -->
                     <div class="hero-actions">
-                        <button class="vecy-btn-primary" onclick="seguirNegocio({{ negocio.pkid_neg }})">
-                            <i class="far fa-heart me-1"></i> Seguir Negocio
-                        </button>
-                        <button class="vecy-btn-outline">
-                            <i class="fas fa-share-alt me-1"></i> Compartir
-                        </button>
-                        <button class="vecy-btn-outline" onclick="abrirModalReporte('negocio', {{ negocio.pkid_neg }})">
-                            <i class="fas fa-flag me-1"></i> Reportar
+                        <button class="vecy-btn-primary" onclick="compartirNegocio()">
+                            <i class="fas fa-share-alt me-1"></i> Compartir Negocio
                         </button>
                     </div>
                 </div>
@@ -1502,7 +1524,7 @@
     <div class="container">
         <div class="row">
             <div class="col-lg-8">
-                <!-- ESTADÍSTICAS DE RESEÑAS -->
+                <!-- ESTADÍSTICAS DE RESEÑAS - CORREGIDO -->
                 <div class="ratings-summary-card vecy-card" data-aos="fade-up" data-aos-delay="100">
                     <div class="card-body">
                         <h5 class="card-title">
@@ -1594,28 +1616,6 @@
                                                     {{ resena.fecha_resena|date:"d M Y" }}
                                                 </div>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="review-actions dropdown">
-                                            <button class="btn-review-actions" type="button" data-bs-toggle="dropdown">
-                                                <i class="fas fa-ellipsis-v"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end">
-                                                {% if resena.fkusuario_resena != perfil_cliente %}
-                                                <li>
-                                                    <a class="dropdown-item text-danger" href="#" 
-                                                       onclick="abrirModalReporte('resena', {{ negocio.pkid_neg }}, {{ resena.pkid_resena }})">
-                                                        <i class="fas fa-flag me-2"></i>Reportar Reseña
-                                                    </a>
-                                                </li>
-                                                {% else %}
-                                                <li>
-                                                    <span class="dropdown-item text-muted">
-                                                        <i class="fas fa-user me-2"></i>Tu reseña
-                                                    </span>
-                                                </li>
-                                                {% endif %}
-                                            </ul>
                                         </div>
                                     </div>
                                     
@@ -1754,7 +1754,7 @@
                         </div>
                     </div>
 
-                    <!-- Mapa de Ubicación -->
+                    <!-- Mapa de Ubicación - CENTRADO EN FOSCA -->
                     <div class="sidebar-card vecy-card mb-4" data-aos="fade-left" data-aos-delay="150">
                         <div class="card-body">
                             <h5 class="card-title">
@@ -1773,7 +1773,7 @@
                         </div>
                     </div>
 
-                    <!-- Formulario de reseña -->
+                    <!-- Formulario de reseña - COMPLETAMENTE CORREGIDO -->
                     <div class="sidebar-card vecy-card" data-aos="fade-left" data-aos-delay="200">
                         <div class="card-body">
                             <h5 class="card-title">
@@ -1797,30 +1797,40 @@
                                 <input type="hidden" name="fknegocio_resena" value="{{ negocio.pkid_neg }}">
                                 <input type="hidden" name="es_vista_logeada" value="true">
                                 
-                                <div class="star-rating mb-3 text-center">
-                                    <input type="radio" id="star1" name="estrellas" value="1" class="d-none">
+                                <!-- Sistema de estrellas interactivo - CORREGIDO CON ORDEN CORRECTO -->
+                                <div class="star-rating mb-3 text-center" id="starRatingContainer">
+                                    <!-- ESTRELLA 1 (IZQUIERDA) -->
+                                    <input type="radio" id="star1" name="estrellas" value="1" class="d-none"
+                                           {% if usuario_ya_reseno and reseña_usuario_actual.estrellas == 1 %}checked{% endif %}>
                                     <label for="star1" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                     
-                                    <input type="radio" id="star2" name="estrellas" value="2" class="d-none">
+                                    <!-- ESTRELLA 2 -->
+                                    <input type="radio" id="star2" name="estrellas" value="2" class="d-none"
+                                           {% if usuario_ya_reseno and reseña_usuario_actual.estrellas == 2 %}checked{% endif %}>
                                     <label for="star2" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                     
-                                    <input type="radio" id="star3" name="estrellas" value="3" class="d-none">
+                                    <!-- ESTRELLA 3 -->
+                                    <input type="radio" id="star3" name="estrellas" value="3" class="d-none"
+                                           {% if usuario_ya_reseno and reseña_usuario_actual.estrellas == 3 %}checked{% endif %}>
                                     <label for="star3" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                     
-                                    <input type="radio" id="star4" name="estrellas" value="4" class="d-none">
+                                    <!-- ESTRELLA 4 -->
+                                    <input type="radio" id="star4" name="estrellas" value="4" class="d-none"
+                                           {% if usuario_ya_reseno and reseña_usuario_actual.estrellas == 4 %}checked{% endif %}>
                                     <label for="star4" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                     
-                                    <input type="radio" id="star5" name="estrellas" value="5" class="d-none" 
-                                           {% if not usuario_ya_reseno or reseña_usuario_actual.estrellas == 5 %}checked{% endif %}>
-                                    <label for="star5" class="star-label active">
+                                    <!-- ESTRELLA 5 (DERECHA) -->
+                                    <input type="radio" id="star5" name="estrellas" value="5" class="d-none"
+                                           {% if usuario_ya_reseno and reseña_usuario_actual.estrellas == 5 %}checked{% endif %}>
+                                    <label for="star5" class="star-label">
                                         <i class="fas fa-star fa-lg"></i>
                                     </label>
                                 </div>
@@ -1876,71 +1886,6 @@
     </div>
 </div>
 
-<div class="modal fade modal-reporte" id="modalReporte" tabindex="-1" aria-labelledby="modalReporteLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title text-white" id="modalReporteTitulo">
-                    <i class="fas fa-flag me-2"></i>
-                    Reportar Contenido
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="reporte-header mb-4">
-                    <div class="reporte-icon">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h4 class="reporte-title">Ayúdanos a mantener la comunidad segura</h4>
-                    <p class="reporte-subtitle">Tu reporte es anónimo y nos ayuda a mejorar la experiencia de todos</p>
-                </div>
-                
-                <form id="formReporte">
-                    <input type="hidden" id="negocioId" name="negocio_id">
-                    <input type="hidden" id="reseñaId" name="reseña_id">
-                    <input type="hidden" id="tipoReporte" name="tipo_reporte">
-                    
-                    <div class="mb-4">
-                        <label for="asuntoReporte" class="form-label">Asunto del Reporte</label>
-                        <input type="text" class="form-control" id="asuntoReporte" name="asunto" 
-                               placeholder="Describe brevemente el motivo del reporte" required>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="motivoReporte" class="form-label">Motivo Principal</label>
-                        <select class="form-select" id="motivoReporte" name="motivo" required>
-                            <option value="">Selecciona un motivo</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-4">
-                        <label for="descripcionReporte" class="form-label">Descripción Detallada</label>
-                        <textarea class="form-control" id="descripcionReporte" name="descripcion" 
-                                  rows="4" placeholder="Proporciona todos los detalles relevantes sobre el reporte..."></textarea>
-                        <div class="form-text">Mientras más detalles proporciones, más fácil será revisar tu reporte.</div>
-                    </div>
-                    
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Importante:</strong> Tus reportes nos ayudan a mantener la comunidad segura y confiable. 
-                        Revisaremos tu reporte en un plazo máximo de 48 horas.
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="vecy-btn-outline" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Cancelar
-                </button>
-                <button type="button" class="vecy-btn-primary" id="btnEnviarReporte" onclick="enviarReporte()">
-                    <i class="fas fa-paper-plane me-2"></i>
-                    Enviar Reporte
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Sistema de carrito -->
 {% include 'carrito_sistema.html' %}
 
@@ -1951,11 +1896,13 @@
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
     // ==================== INICIALIZACIÓN DE LA PÁGINA ====================
 
-    console.log("🎯 VECY CLIENTE INICIADO - SISTEMA COMPLETO CON VARIANTES");
+    console.log("🎯 VECY CLIENTE INICIADO - SISTEMA COMPLETO");
 
     // Inicializar AOS
     function initAOS() {
@@ -1984,6 +1931,463 @@
             });
         });
         console.log("✅ Scroll suave configurado");
+    }
+
+    // ==================== SISTEMA DE COMPARTIR NEGOCIO ====================
+
+    function compartirNegocio() {
+        console.log("📤 Compartiendo negocio...");
+        
+        const nombreNegocio = "{{ negocio.nom_neg }}";
+        const urlActual = window.location.href;
+        const descripcion = "{{ negocio.desc_neg|default:'¡Mira este increíble negocio en VECY!'|truncatechars:100 }}";
+        
+        // Verificar si el navegador soporta la API de Web Share
+        if (navigator.share) {
+            // Usar la API de Web Share (disponible en móviles)
+            navigator.share({
+                title: nombreNegocio,
+                text: descripcion,
+                url: urlActual
+            })
+            .then(() => {
+                console.log('✅ Negocio compartido exitosamente');
+                vecyShowNotification('¡Negocio compartido exitosamente!', 'success');
+            })
+            .catch((error) => {
+                console.log('❌ Error al compartir:', error);
+                // Fallback: copiar al portapapeles
+                copiarEnlace(urlActual);
+            });
+        } else {
+            // Fallback para navegadores que no soportan Web Share API
+            copiarEnlace(urlActual);
+        }
+    }
+
+    function copiarEnlace(url) {
+        // Crear un elemento temporal para copiar
+        const tempInput = document.createElement('input');
+        tempInput.value = url;
+        document.body.appendChild(tempInput);
+        tempInput.select();
+        tempInput.setSelectionRange(0, 99999); // Para dispositivos móviles
+        
+        try {
+            // Intentar copiar usando el portapapeles
+            const copiado = document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            
+            if (copiado) {
+                console.log('✅ Enlace copiado al portapapeles:', url);
+                vecyShowNotification('¡Enlace copiado al portapapeles!', 'success');
+                
+                // Mostrar opciones para compartir
+                mostrarOpcionesCompartir(url);
+            } else {
+                mostrarOpcionesCompartir(url);
+            }
+        } catch (err) {
+            console.log('❌ Error al copiar:', err);
+            mostrarOpcionesCompartir(url);
+        }
+    }
+
+    function mostrarOpcionesCompartir(url) {
+        const nombreNegocio = "{{ negocio.nom_neg }}";
+        const mensaje = encodeURIComponent(`¡Mira este increíble negocio en VECY! ${nombreNegocio} - ${url}`);
+        
+        Swal.fire({
+            title: 'Compartir Negocio',
+            html: `
+                <div style="text-align: center;">
+                    <div style="font-size: 3rem; color: #2563eb; margin-bottom: 1rem;">
+                        <i class="fas fa-share-alt"></i>
+                    </div>
+                    <h5 style="margin-bottom: 1rem;">¡Comparte este negocio!</h5>
+                    <p style="color: #64748b; margin-bottom: 1.5rem;">Enlace copiado al portapapeles</p>
+                    <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 1.5rem;">
+                        <button onclick="compartirWhatsApp()" style="
+                            background: #25D366;
+                            color: white;
+                            border: none;
+                            padding: 0.75rem 1.5rem;
+                            border-radius: 10px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                        ">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </button>
+                        <button onclick="compartirFacebook()" style="
+                            background: #1877F2;
+                            color: white;
+                            border: none;
+                            padding: 0.75rem 1.5rem;
+                            border-radius: 10px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                        ">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </button>
+                        <button onclick="compartirTwitter()" style="
+                            background: #1DA1F2;
+                            color: white;
+                            border: none;
+                            padding: 0.75rem 1.5rem;
+                            border-radius: 10px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                        ">
+                            <i class="fab fa-twitter"></i> Twitter
+                        </button>
+                    </div>
+                </div>
+            `,
+            showConfirmButton: false,
+            showCloseButton: true
+        });
+    }
+
+    function compartirWhatsApp() {
+        const url = window.location.href;
+        const mensaje = encodeURIComponent(`¡Mira este increíble negocio en VECY! {{ negocio.nom_neg }} - ${url}`);
+        window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+    }
+
+    function compartirFacebook() {
+        const url = encodeURIComponent(window.location.href);
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+    }
+
+    function compartirTwitter() {
+        const url = encodeURIComponent(window.location.href);
+        const texto = encodeURIComponent('¡Mira este increíble negocio en VECY! {{ negocio.nom_neg }}');
+        window.open(`https://twitter.com/intent/tweet?text=${texto}&url=${url}`, '_blank', 'width=600,height=400');
+    }
+
+    // ==================== SISTEMA DE RATING BARS - COMPLETAMENTE CORREGIDO ====================
+
+    function initRatingBars() {
+        console.log("📊 Inicializando barras de rating...");
+        
+        const ratingBars = document.querySelectorAll('.rating-progress');
+        
+        ratingBars.forEach(bar => {
+            // Obtener el porcentaje del atributo data-percentage
+            let percentage = bar.getAttribute('data-percentage');
+            
+            // Si el porcentaje es nulo o vacío, calcularlo
+            if (!percentage || percentage === '0') {
+                const cantidad = parseInt(bar.getAttribute('data-cantidad')) || 0;
+                const totalResenas = {{ estadisticas_resenas.total_resenas|default:0 }};
+                
+                if (totalResenas > 0) {
+                    percentage = ((cantidad / totalResenas) * 100).toFixed(2);
+                } else {
+                    percentage = '0';
+                }
+                
+                // Actualizar el atributo data-percentage
+                bar.setAttribute('data-percentage', percentage);
+            }
+            
+            // Asegurarse de que el porcentaje sea un número válido
+            percentage = parseFloat(percentage);
+            if (isNaN(percentage) || percentage < 0) {
+                percentage = 0;
+            }
+            
+            // Establecer el ancho de la barra
+            setTimeout(() => {
+                bar.style.width = percentage + '%';
+                
+                // Si el porcentaje es muy pequeño (menos de 3%), asegurar que se vea
+                if (percentage > 0 && percentage < 3) {
+                    bar.style.minWidth = '3px';
+                }
+                
+                // Añadir tooltip con información detallada
+                const cantidad = bar.getAttribute('data-cantidad') || '0';
+                const estrellas = bar.getAttribute('data-estrellas') || '0';
+                const tooltipText = `${cantidad} reseñas (${percentage}%)`;
+                
+                bar.setAttribute('title', tooltipText);
+                
+                console.log(`📈 Barra ${estrellas} estrellas: ${percentage}% (${cantidad} reseñas)`);
+            }, 100);
+        });
+        
+        console.log("✅ Barras de rating inicializadas correctamente");
+    }
+
+    // ==================== SISTEMA DE MAPA - CENTRADO EN FOSCA ====================
+
+    function initLeafletMap() {
+        console.log("🗺️ Inicializando mapa en Fosca, Cundinamarca...");
+        
+        // Coordenadas de Fosca, Cundinamarca
+        const foscaCoords = [4.3390, -73.9386]; // Latitud, Longitud de Fosca
+        
+        // Crear mapa centrado en Fosca
+        const map = L.map('leaflet-map', {
+            zoomControl: true,
+            scrollWheelZoom: false, // Desactivar zoom con scroll para evitar conflictos
+            dragging: true,
+            tap: true
+        }).setView(foscaCoords, 14); // Zoom más cercano
+        
+        // Capa base de OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+            detectRetina: true
+        }).addTo(map);
+        
+        // Icono personalizado para el negocio
+        const businessIcon = L.divIcon({
+            html: `
+                <div style="
+                    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    border: 4px solid white;
+                    box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 16px;
+                    animation: mapPulse 2s infinite;
+                ">
+                    <i class="fas fa-store"></i>
+                </div>
+                <style>
+                    @keyframes mapPulse {
+                        0% { transform: scale(1); }
+                        50% { transform: scale(1.1); }
+                        100% { transform: scale(1); }
+                    }
+                </style>
+            `,
+            className: 'leaflet-custom-icon',
+            iconSize: [50, 50],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -50]
+        });
+        
+        // Marcador en Fosca
+        const marker = L.marker(foscaCoords, {icon: businessIcon}).addTo(map);
+        
+        // Contenido del popup mejorado
+        const popupContent = `
+            <div style="min-width: 250px; padding: 12px;">
+                <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; margin-right: 12px;">
+                        <i class="fas fa-store"></i>
+                    </div>
+                    <div>
+                        <h6 style="margin: 0; color: #2563eb; font-weight: 700; font-size: 1.1rem;">{{ negocio.nom_neg }}</h6>
+                        <small style="color: #64748b;">{{ negocio.fktiponeg_neg.desc_tiponeg }}</small>
+                    </div>
+                </div>
+                <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #475569; font-size: 13px; line-height: 1.4;">
+                        <i class="fas fa-map-marker-alt me-2" style="color: #2563eb;"></i>
+                        <strong>Ubicación:</strong> Fosca, Cundinamarca
+                    </p>
+                    <p style="margin: 8px 0 0 0; color: #475569; font-size: 13px; line-height: 1.4;">
+                        <i class="fas fa-road me-2" style="color: #2563eb;"></i>
+                        <strong>Dirección:</strong> {{ negocio.direcc_neg }}
+                    </p>
+                </div>
+                <div style="margin-top: 12px; text-align: center;">
+                    <button onclick="openInGoogleMaps()" style="
+                        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        font-size: 13px;
+                        cursor: pointer;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                    ">
+                        <i class="fas fa-external-link-alt"></i>
+                        Ver en Google Maps
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent, {
+            className: 'custom-popup',
+            maxWidth: 300
+        }).openPopup();
+        
+        // Añadir capa de círculo para resaltar el área
+        L.circle(foscaCoords, {
+            color: '#2563eb',
+            fillColor: '#3b82f6',
+            fillOpacity: 0.1,
+            radius: 500
+        }).addTo(map);
+        
+        console.log("✅ Mapa de Fosca inicializado correctamente");
+        
+        return map;
+    }
+
+    function openInGoogleMaps() {
+        const address = encodeURIComponent("Fosca, Cundinamarca, Colombia");
+        window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+    }
+
+    // ==================== SISTEMA DE ESTRELLAS INTERACTIVO - COMPLETAMENTE CORREGIDO ====================
+
+    function initStarRatingSystem() {
+        console.log("⭐ Inicializando sistema de estrellas interactivo...");
+        
+        const starRatingContainer = document.getElementById('starRatingContainer');
+        if (!starRatingContainer) return;
+        
+        const starLabels = starRatingContainer.querySelectorAll('.star-label');
+        const starInputs = starRatingContainer.querySelectorAll('input[type="radio"]');
+        
+        // Asegurar que las estrellas estén en orden correcto (1 a 5 de izquierda a derecha)
+        starLabels.forEach((label, index) => {
+            label.style.order = index + 1;
+        });
+        
+        // Configurar eventos para cada estrella
+        starLabels.forEach((label, index) => {
+            const starValue = index + 1; // 1, 2, 3, 4, 5
+            
+            // Evento hover - activar todas las estrellas hasta esta
+            label.addEventListener('mouseenter', () => {
+                highlightStars(starValue, true);
+            });
+            
+            // Evento mouse leave
+            label.addEventListener('mouseleave', () => {
+                // Restaurar selección actual
+                const checkedInput = starRatingContainer.querySelector('input[type="radio"]:checked');
+                if (checkedInput) {
+                    const rating = parseInt(checkedInput.value);
+                    highlightStars(rating);
+                } else {
+                    // Si no hay selección, limpiar todo
+                    starLabels.forEach(l => {
+                        l.classList.remove('active', 'hover');
+                        l.style.color = '#d1d5db';
+                    });
+                }
+            });
+            
+            // Evento click
+            label.addEventListener('click', (e) => {
+                console.log(`⭐ Calificación seleccionada: ${starValue} estrellas`);
+                
+                // Marcar el input correspondiente
+                const inputId = 'star' + starValue;
+                const input = document.getElementById(inputId);
+                if (input) {
+                    // Desmarcar todos los inputs primero
+                    starInputs.forEach(inp => inp.checked = false);
+                    
+                    // Marcar el input seleccionado
+                    input.checked = true;
+                    
+                    // Resaltar estrellas
+                    highlightStars(starValue);
+                    
+                    // Mostrar feedback visual
+                    showStarRatingFeedback(starValue);
+                }
+            });
+        });
+        
+        // Inicializar con estrellas seleccionadas si ya hay una reseña
+        const checkedInput = starRatingContainer.querySelector('input[type="radio"]:checked');
+        if (checkedInput) {
+            const rating = parseInt(checkedInput.value);
+            highlightStars(rating);
+            showStarRatingFeedback(rating);
+        }
+        
+        console.log("✅ Sistema de estrellas interactivo inicializado");
+    }
+
+    function highlightStars(rating, isHover = false) {
+        const starLabels = document.querySelectorAll('.star-label');
+        starLabels.forEach((label, index) => {
+            const starNumber = index + 1; // 1, 2, 3, 4, 5 (de izquierda a derecha)
+            
+            // Resetear todas
+            label.classList.remove('active', 'hover');
+            label.style.color = '#d1d5db';
+            
+            // Activar estrellas hasta la seleccionada
+            if (starNumber <= rating) {
+                if (isHover) {
+                    label.classList.add('hover');
+                    label.style.color = '#ffc107';
+                } else {
+                    label.classList.add('active');
+                    label.style.color = '#ffc107';
+                }
+            }
+        });
+    }
+
+    function showStarRatingFeedback(rating) {
+        const feedbackMessages = {
+            1: "😞 Muy mala experiencia",
+            2: "😐 Podría mejorar",
+            3: "😊 Aceptable",
+            4: "😃 Muy buena",
+            5: "😍 Excelente"
+        };
+        
+        // Crear o actualizar elemento de feedback
+        let feedbackElement = document.getElementById('starRatingFeedback');
+        if (!feedbackElement) {
+            feedbackElement = document.createElement('div');
+            feedbackElement.id = 'starRatingFeedback';
+            feedbackElement.style.cssText = `
+                text-align: center;
+                margin-top: 10px;
+                font-weight: 600;
+                color: #2563eb;
+                font-size: 14px;
+                animation: fadeIn 0.3s ease;
+                padding: 8px;
+                background: #f8fafc;
+                border-radius: 8px;
+                border: 1px solid #e2e8f0;
+            `;
+            const starContainer = document.querySelector('.star-rating');
+            starContainer.parentNode.insertBefore(feedbackElement, starContainer.nextSibling);
+        }
+        
+        feedbackElement.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="color: #ffc107; font-weight: 800;">${rating}</span>
+                <i class="fas fa-star" style="color: #ffc107;"></i>
+                <span style="color: #475569;">- ${feedbackMessages[rating]}</span>
+            </div>
+        `;
     }
 
     // ==================== SISTEMA DE VARIANTES COMPLETO ====================
@@ -2335,6 +2739,18 @@
         return cookieValue;
     }
 
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.style.display = count > 0 ? 'inline-block' : 'none';
+            if (count > 0) {
+                element.classList.add('pulse-animation');
+                setTimeout(() => element.classList.remove('pulse-animation'), 600);
+            }
+        });
+    }
+
     // ==================== SISTEMA DE CONEXIÓN Y SINCRONIZACIÓN ====================
 
     function connectToVecySystem() {
@@ -2388,18 +2804,6 @@
         });
     }
 
-    function updateCartCount(count) {
-        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
-        cartCountElements.forEach(element => {
-            element.textContent = count;
-            element.style.display = count > 0 ? 'inline-block' : 'none';
-            if (count > 0) {
-                element.classList.add('pulse-animation');
-                setTimeout(() => element.classList.remove('pulse-animation'), 600);
-            }
-        });
-    }
-
     function initLocalSystem() {
         console.log("🚀 INICIANDO SISTEMA LOCAL COMPLETO");
         
@@ -2417,42 +2821,13 @@
             }
         }
         
-        // 3. Configurar botones
-        setupConnectedButtons();
-        
         console.log("✅ Sistema LOCAL inicializado correctamente");
     }
 
     function initConnectedComponents() {
         console.log("🔄 Inicializando componentes...");
         
-        // Configurar botones
-        setupConnectedButtons();
-        
         console.log("✅ Componentes inicializados");
-    }
-
-    function setupConnectedButtons() {
-        // Reconfigurar botones de "Agregar al carrito" para usar el sistema híbrido
-        document.querySelectorAll('[onclick*="addToCart"]').forEach(button => {
-            const onclick = button.getAttribute('onclick');
-            
-            // Buscar addToCart(productId)
-            const matchSimple = onclick.match(/addToCart\(['"]?(\d+)['"]?\)/);
-            if (matchSimple) {
-                const productId = matchSimple[1];
-                button.setAttribute('onclick', `return addToCart('${productId}')`);
-                console.log(`✅ Botón simple configurado: producto ${productId}`);
-            }
-            
-            // Buscar addToCartWithVariant(productId)
-            const matchVariant = onclick.match(/addToCartWithVariant\(['"]?(\d+)['"]?\)/);
-            if (matchVariant) {
-                const productId = matchVariant[1];
-                button.setAttribute('onclick', `return addToCartWithVariant('${productId}')`);
-                console.log(`✅ Botón con variante configurado: producto ${productId}`);
-            }
-        });
     }
 
     // ==================== INICIALIZACIÓN COMPLETA ====================
@@ -2460,13 +2835,50 @@
     function initVecyCliente() {
         console.log("🚀 INICIANDO VECY CLIENTE COMPLETO");
         
+        // 1. Inicializar animaciones
         initAOS();
         initSmoothScroll();
         
-        // Conectar al sistema central (si existe)
+        // 2. Inicializar sistema de barras de rating CORREGIDO
+        initRatingBars();
+        
+        // 3. Inicializar mapa de Fosca
+        try {
+            initLeafletMap();
+        } catch (error) {
+            console.error("❌ Error inicializando el mapa:", error);
+            document.getElementById('leaflet-map').innerHTML = `
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); display: flex; align-items: center; justify-content: center; border-radius: 12px;">
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-map-marked-alt" style="font-size: 48px; color: #94a3b8; margin-bottom: 16px;"></i>
+                        <h4 style="color: #475569; margin-bottom: 8px;">Fosca, Cundinamarca</h4>
+                        <p style="color: #64748b; font-size: 14px;">Ubicación del negocio</p>
+                        <button onclick="openInGoogleMaps()" style="
+                            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+                            color: white;
+                            border: none;
+                            padding: 8px 16px;
+                            border-radius: 8px;
+                            font-weight: 600;
+                            font-size: 14px;
+                            cursor: pointer;
+                            margin-top: 12px;
+                        ">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            Ver en Google Maps
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 4. Inicializar sistema de estrellas interactivo - CORREGIDO
+        initStarRatingSystem();
+        
+        // 5. Conectar al sistema central (si existe)
         connectToVecySystem();
         
-        console.log("✅ VECY CLIENTE INICIALIZADO");
+        console.log("✅ VECY CLIENTE INICIALIZADO COMPLETAMENTE");
     }
 
     // Añadir CSS para animaciones
@@ -2495,12 +2907,83 @@
                 50% { transform: scale(1.2); }
                 100% { transform: scale(1); }
             }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(-10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            
+            /* Estilos para el popup del mapa */
+            .custom-popup .leaflet-popup-content-wrapper {
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(30, 41, 59, 0.15);
+                border: 1px solid #e2e8f0;
+            }
+            
+            .custom-popup .leaflet-popup-content {
+                margin: 0;
+                line-height: 1.4;
+            }
+            
+            .custom-popup .leaflet-popup-tip {
+                background: white;
+                box-shadow: 0 4px 20px rgba(30, 41, 59, 0.1);
+            }
+            
+            .leaflet-custom-icon {
+                background: transparent !important;
+                border: none !important;
+            }
+            
+            /* Estilos para el sistema de estrellas corregido */
+            .star-rating {
+                display: flex !important;
+                flex-direction: row !important;
+            }
+            
+            .star-label {
+                transition: all 0.2s ease !important;
+            }
+            
+            .star-label:hover {
+                transform: scale(1.1) !important;
+            }
+            
+            /* Estilos para las barras de rating corregidas */
+            .rating-progress {
+                transition: width 1.5s ease !important;
+                min-width: 3px !important;
+            }
+            
+            .rating-bar:hover .rating-progress {
+                opacity: 0.9;
+            }
+            
+            /* Tooltip para las barras de rating */
+            .rating-progress[title] {
+                position: relative;
+            }
+            
+            .rating-progress[title]:hover::after {
+                content: attr(title);
+                position: absolute;
+                top: -30px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--vecy-dark);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 6px;
+                font-size: 12px;
+                white-space: nowrap;
+                z-index: 1000;
+            }
         `;
         document.head.appendChild(style);
         console.log("✅ Estilos completos añadidos");
     }
 
-    // Ejecutar inicialización
+    // Ejecutar inicialización cuando el DOM esté listo
     document.addEventListener('DOMContentLoaded', function() {
         addSyncStyles();
         initVecyCliente();

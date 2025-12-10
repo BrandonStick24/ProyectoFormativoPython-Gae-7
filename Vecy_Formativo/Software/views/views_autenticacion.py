@@ -190,7 +190,7 @@ def iniciar_sesion(request):
     return render(request, "Autenticacion/login.html")
 
 def registro_usuario(request):
-    roles = Roles.objects.all()
+    roles = Roles.objects.exclude(desc_rol='moderador')
     tipo_documentos = TipoDocumento.objects.all()
     tipo_negocios = TipoNegocio.objects.all()  # CAMBIO: Usar TipoNegocio en lugar de CategoriaNegocio
     

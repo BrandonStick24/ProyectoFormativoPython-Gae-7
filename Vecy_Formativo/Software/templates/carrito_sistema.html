@@ -2666,89 +2666,140 @@ class VecyCarritoSystem {
         }
     }
 
-    renderPedidos(pedidos) {
-        const pedidosContent = document.getElementById('pedidosContent');
-        
-        if (!pedidos || pedidos.length === 0) {
-            this.showPedidosEmptyState();
+renderPedidos(pedidos) {
+    const pedidosContent = document.getElementById('pedidosContent');
+    
+    if (!pedidos || pedidos.length === 0) {
+        this.showPedidosEmptyState();
+        return;
+    }
+
+    let html = '';
+    
+    html += `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="mb-0">Tus Pedidos</h6>
+            <button class="btn-mostrar-todos" onclick="vecyCarritoSystem.toggleMostrarTodosPedidos()" id="btnMostrarTodos">
+                ${this.mostrarTodosPedidos ? 'Ocultar Antiguos' : 'Mostrar Todos'}
+            </button>
+        </div>
+    `;
+
+    pedidos.forEach(pedido => {
+        const fechaPedido = new Date(pedido.fecha_pedido);
+        const ahora = new Date();
+        const dosDiasAtras = new Date(ahora.getTime() - (2 * 24 * 60 * 60 * 1000));
+        const esReciente = fechaPedido >= dosDiasAtras;
+        const esCancelado = pedido.estado_pedido === 'cancelado';
+
+        if (!this.mostrarTodosPedidos && !esReciente) {
             return;
         }
 
-        let html = '';
-        let pedidosRecientes = 0;
-        let pedidosAntiguos = 0;
-        const ahora = new Date();
-        const dosDiasAtras = new Date(ahora.getTime() - (2 * 24 * 60 * 60 * 1000));
+        const clasePedido = esCancelado ? 'pedido-cancelado' : '';
+        const claseOculto = !esReciente && !this.mostrarTodosPedidos ? 'pedido-eliminado' : '';
 
-        html += `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0">Tus Pedidos</h6>
-                <button class="btn-mostrar-todos" onclick="vecyCarritoSystem.toggleMostrarTodosPedidos()" id="btnMostrarTodos">
-                    ${this.mostrarTodosPedidos ? 'Ocultar Antiguos' : 'Mostrar Todos'}
-                </button>
-            </div>
-        `;
-
-        pedidos.forEach(pedido => {
-            const fechaPedido = new Date(pedido.fecha_pedido);
-            const esReciente = fechaPedido >= dosDiasAtras;
-            const esCancelado = pedido.estado_pedido === 'cancelado';
-
-            if (esReciente) {
-                pedidosRecientes++;
-            } else {
-                pedidosAntiguos++;
-            }
-
-            if (!this.mostrarTodosPedidos && !esReciente) {
-                return;
-            }
-
-            const clasePedido = esCancelado ? 'pedido-cancelado' : '';
-            const claseOculto = !esReciente && !this.mostrarTodosPedidos ? 'pedido-eliminado' : '';
-
-            html += `
-            <div class="pedido-card ${clasePedido} ${claseOculto}" data-pedido-id="${pedido.pkid_pedido}" data-fecha="${pedido.fecha_pedido}">
-                <div class="pedido-header">
-                    <div class="pedido-info">
-                        <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
-                        <div class="pedido-fecha">${pedido.fecha_pedido}</div>
-                    </div>
-                    <span class="pedido-estado estado-${pedido.estado_pedido}">
-                        ${pedido.estado_display}
-                    </span>
-                </div>
-
-                <div class="pedido-negocio">
-                    <i class="fas fa-store"></i> ${pedido.negocio}
-                </div>
-
-                <div class="pedido-productos">
-                    ${pedido.productos.map(producto => `
-                        <div class="pedido-producto">
-                            <span class="producto-nombre">${producto.nombre}</span>
-                            <span class="producto-cantidad">${producto.cantidad}x</span>
-                            <span class="producto-precio">$${producto.precio_unitario}</span>
+        // Construir lista de items
+        let itemsHTML = '';
+        
+        pedido.items.forEach(item => {
+            if (item.tipo === 'combo') {
+                // Mostrar combo
+                itemsHTML += `
+                    <div class="pedido-item-combo mb-3 p-3 border rounded">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>🎁 ${item.nombre}</strong>
+                                <span class="badge bg-info ms-2">COMBO</span>
+                            </div>
+                            <div class="text-end">
+                                <div>${item.cantidad} x $${item.precio_unitario}</div>
+                                <strong>$${item.total}</strong>
+                            </div>
                         </div>
-                    `).join('')}
-                </div>
-
-                <div class="pedido-total">
-                    Total: $${pedido.total_pedido}
-                </div>
-
-                <div class="pedido-info-adicional">
-                    <div class="info-contacto">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Para consultas sobre tu pedido contacta a soporte@vecy.com
+                        ${item.descripcion ? `<div class="text-muted small mb-2">${item.descripcion}</div>` : ''}
+                        
+                        <div class="productos-combo small">
+                            <strong>Contiene:</strong>
+                            <ul class="mb-0 mt-1">
+                                ${item.productos.map(prod => 
+                                    `<li>${prod.nombre} x${prod.cantidad}</li>`
+                                ).join('')}
+                            </ul>
+                        </div>
                     </div>
-                </div>
-            </div>
-            `;
+                `;
+            } else {
+                // Mostrar producto individual
+                itemsHTML += `
+                    <div class="pedido-item-producto d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span>${item.nombre}</span>
+                            ${item.descripcion ? `<small class="text-muted d-block">${item.descripcion}</small>` : ''}
+                        </div>
+                        <div class="text-end">
+                            <div>${item.cantidad} x $${item.precio_unitario}</div>
+                            <strong>$${item.total}</strong>
+                        </div>
+                    </div>
+                `;
+            }
         });
 
-        pedidosContent.innerHTML = html;
-    }
+        html += `
+        <div class="pedido-card ${clasePedido} ${claseOculto}" data-pedido-id="${pedido.pkid_pedido}">
+            <div class="pedido-header">
+                <div class="pedido-info">
+                    <div class="pedido-numero">Pedido #${pedido.numero_pedido}</div>
+                    <div class="pedido-fecha">${pedido.fecha_pedido}</div>
+                </div>
+                <span class="pedido-estado estado-${pedido.estado_pedido}">
+                    ${pedido.estado_display}
+                </span>
+            </div>
+
+            <div class="pedido-negocio mb-2">
+                <i class="fas fa-store"></i> ${pedido.negocio_nombre}
+            </div>
+
+            <div class="pedido-items">
+                ${itemsHTML}
+            </div>
+
+            <div class="pedido-total d-flex justify-content-between align-items-center border-top pt-2 mt-2">
+                <strong>Total del pedido:</strong>
+                <strong>$${pedido.total_pedido}</strong>
+            </div>
+
+            <div class="pedido-metodo-pago mt-2">
+                <small class="text-muted">
+                    <i class="fas fa-credit-card me-1"></i>
+                    ${pedido.metodo_pago}
+                </small>
+            </div>
+
+            ${pedido.puede_cancelar ? `
+                <div class="pedido-acciones mt-3">
+                    <button class="btn btn-outline-danger btn-sm w-100" 
+                            onclick="vecyCarritoSystem.cancelarPedido(${pedido.pkid_pedido})">
+                        <i class="fas fa-times me-2"></i>
+                        Cancelar Pedido (${pedido.tiempo_restante})
+                    </button>
+                </div>
+            ` : ''}
+
+            <div class="pedido-info-adicional mt-3 p-2 bg-light rounded">
+                <div class="info-contacto">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Para consultas sobre tu pedido contacta a soporte@vecy.com
+                </div>
+            </div>
+        </div>
+        `;
+    });
+
+    pedidosContent.innerHTML = html;
+}
 
     showPedidosEmptyState(mensaje = 'Aún no tienes pedidos') {
         const pedidosContent = document.getElementById('pedidosContent');

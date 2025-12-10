@@ -3077,149 +3077,204 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // ==================== FUNCIONES DE MANEJO DE CLICKS ====================
-    
-    // Maneja el click en la tarjeta completa
-    function vecyHandleCardClick(event, productId) {
-        // Verificar si el click fue en un botón o zona no clickeable
-        const clickedElement = event.target;
-        const isButton = clickedElement.closest('.vecy-no-click-zone') || 
-                         clickedElement.closest('button') ||
-                         clickedElement.tagName === 'BUTTON' ||
-                         clickedElement.closest('.vecy-add-cart-btn') ||
-                         clickedElement.closest('.vecy-favorite-variant-btn') ||
-                         clickedElement.closest('.vecy-quick-view') ||
-                         clickedElement.closest('.vecy-favorite-btn');
-        
-        // Si es un botón, prevenir la navegación
-        if (isButton) {
-            event.preventDefault();
-            event.stopPropagation();
-            return false;
-        }
-        
-        // Si no es un botón, permitir la navegación al detalle
-        return true;
-    }
-    
-    // Función para agregar al carrito (con prevención de propagación)
-    function vecyAddToCart(event, productId, variantId = null) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        if (variantId) {
-            addToCartWithSpecificVariant(productId, variantId);
-        } else {
-            addToCart(productId);
-        }
-    }
-    
-    // Función para toggle de favoritos (con prevención de propagación)
-    function vecyToggleFavorite(event, productId, buttonElement) {
-        event.preventDefault();
-        event.stopPropagation();
-        toggleFavorite(productId, buttonElement);
-    }
-    
-    // Función para vista rápida (con prevención de propagación)
-    function vecyQuickView(event, productId) {
-        event.preventDefault();
-        event.stopPropagation();
-        quickView(productId);
-    }
-    
-    // ==================== INICIALIZACIÓN ====================
-    function initAOS() {
-        if (typeof AOS !== 'undefined') {
-            AOS.init({ 
-                duration: 800, 
-                once: true, 
-                offset: 100 
-            });
-        }
+// ====================================================================
+// SISTEMA UNIFICADO DE CARRITO - IDÉNTICO AL DE LA PÁGINA DE DETALLE
+// ====================================================================
+
+class VecyCarritoUnificado {
+    constructor() {
+        this.isProcessing = false;
+        this.pendingRequests = [];
+        this.debounceTime = 300; // ms para evitar múltiples clics
     }
 
-    function initSmoothScroll() {
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ 
-                        behavior: 'smooth', 
-                        block: 'start' 
-                    });
-                }
-            });
-        });
-    }
-
-    // ==================== FUNCIONES DE CARRITO ====================
-    async function addToCartWithSpecificVariant(productId, variantId) {
-        console.log(`🛒 Agregando al carrito: Producto ${productId}, Variante ${variantId}`);
-        
-        if (!window.vecyCarritoSystem) {
-            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
-            return false;
+    // ==================== MÉTODO PRINCIPAL - EXACTAMENTE IGUAL AL DE DETALLE ====================
+    async agregarAlCarrito(productId, variantId = null, cantidad = 1, tipo = 'producto') {
+        // Prevenir múltiples clics (debounce)
+        if (this.isProcessing) {
+            console.log('⏳ Solicitud en cola, procesando...');
+            return this.encolarSolicitud(productId, variantId, cantidad, tipo);
         }
-        
-        return window.vecyCarritoSystem.addToCart(productId, variantId);
-    }
 
-    async function addToCart(productId) {
-        console.log(`🛒 Agregando producto base al carrito: ${productId}`);
+        this.isProcessing = true;
         
-        if (!window.vecyCarritoSystem) {
-            vecyShowNotification('Sistema no disponible, recarga la página', 'error');
-            return false;
-        }
-        
-        return window.vecyCarritoSystem.addToCart(productId);
-    }
-
-    async function addComboToCart(comboId) {
-    console.log(`🎁 Agregando combo al carrito: ${comboId}`);
-    
-    try {
-        const response = await fetch('{% url "agregar_combo_carrito" %}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({
-                combo_id: comboId,
-                cantidad: 1
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            vecyShowNotification(data.message, 'success');
-            
-            // 🔄 RECARGAR LA PÁGINA INMEDIATAMENTE
-            window.location.reload();
-            
-        } else {
-            vecyShowNotification(data.error || 'Error al agregar el combo', 'error');
-        }
-        
-    } catch (error) {
-        console.error('Error al agregar combo:', error);
-        vecyShowNotification('Error de conexión', 'error');
-    }
-}
-
-    async function add2x1ToCart(promocionId) {
-        console.log(`🎯 Agregando promoción 2x1 al carrito: ${promocionId}`);
+        // Obtener botón para feedback visual
+        const boton = event ? event.target.closest('.vecy-add-cart-btn') : null;
+        const originalText = boton ? boton.innerHTML : null;
         
         try {
+            console.log(`🚀 [SISTEMA UNIFICADO] Agregando: Producto ${productId}, Variante ${variantId || 'base'}, Cantidad ${cantidad}`);
+            
+            // 1. USAR EXACTAMENTE EL MISMO SISTEMA QUE LA PÁGINA DE DETALLE
+            if (window.vecyCarritoSystem && window.vecyCarritoSystem.addToCart) {
+                // Feedback visual inmediato (igual que en detalle)
+                if (boton) {
+                    boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agregando...';
+                    boton.disabled = true;
+                }
+                
+                // LLAMADA IDÉNTICA A LA DE LA PÁGINA DE DETALLE
+                const success = await window.vecyCarritoSystem.addToCart(
+                    productId, 
+                    variantId || 'base', 
+                    cantidad
+                );
+                
+                if (success) {
+                    // CONFIRMACIÓN VISUAL IDÉNTICA A LA DE DETALLE
+                    this.mostrarConfirmacionRapida(productId, tipo, boton);
+                    
+                    // El sistema global ya actualiza todo automáticamente
+                    console.log('✅ Producto agregado usando sistema global unificado');
+                    
+                    return true;
+                } else {
+                    this.mostrarError('No se pudo agregar al carrito');
+                    if (boton && originalText) boton.innerHTML = originalText;
+                    return false;
+                }
+                
+            } else {
+                // 2. FALLBACK: LLAMADA DIRECTA A LA API (igual que en detalle)
+                console.warn('⚠ Sistema global no disponible, usando API directa');
+                return await this.llamadaDirectaAPI(productId, variantId, cantidad, boton);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error en sistema unificado:', error);
+            this.mostrarError('Error de conexión');
+            if (boton && originalText) boton.innerHTML = originalText;
+            return false;
+        } finally {
+            this.isProcessing = false;
+            if (boton) boton.disabled = false;
+            
+            // Procesar solicitudes pendientes después de un breve delay
+            setTimeout(() => this.procesarPendientes(), 500);
+        }
+    }
+
+    // ==================== LLAMADA DIRECTA A API (FALLBACK) ====================
+    async llamadaDirectaAPI(productId, variantId, cantidad, boton) {
+        try {
+            const csrftoken = this.getCookie('csrftoken');
+            const payload = {
+                producto_id: productId,
+                cantidad: cantidad,
+                variante_id: variantId && variantId !== 'base' ? variantId : null
+            };
+            
+            console.log('📦 Payload API:', payload);
+            
+            const response = await fetch('{% url "agregar_carrito" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                this.mostrarConfirmacionRapida(productId, 'producto', boton);
+                
+                // Actualizar contadores manualmente
+                this.actualizarContadorCarrito(data.carrito_count || 1);
+                
+                // Disparar evento para que el offcanvas se actualice
+                document.dispatchEvent(new CustomEvent('cartCountUpdated', {
+                    detail: data.carrito_count
+                }));
+                
+                return true;
+            } else {
+                this.mostrarError(data.error || 'Error al agregar');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('Error en API directa:', error);
+            this.mostrarError('Error de conexión');
+            return false;
+        }
+    }
+
+    // ==================== AGREGAR COMBOS (SIN RECARGAR PÁGINA) ====================
+    async agregarCombo(comboId) {
+        console.log(`🎁 Agregando combo: ${comboId}`);
+        
+        // Obtener botón para feedback
+        const boton = event ? event.target.closest('.vecy-combo-btn') : null;
+        const originalText = boton ? boton.innerHTML : null;
+        
+        try {
+            if (boton) {
+                boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                boton.disabled = true;
+            }
+            
+            const csrftoken = this.getCookie('csrftoken');
+            const response = await fetch('{% url "agregar_combo_carrito" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    combo_id: comboId,
+                    cantidad: 1
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // CONFIRMACIÓN RÁPIDA (igual que productos normales)
+                this.mostrarConfirmacionRapida(comboId, 'combo', boton);
+                
+                // Actualizar contadores usando el sistema global SIEMPRE
+                if (window.vecyCarritoSystem && window.vecyCarritoSystem.updateAllCountsFromServer) {
+                    await window.vecyCarritoSystem.updateAllCountsFromServer();
+                }
+                
+                console.log('✅ Combo agregado exitosamente');
+                
+            } else {
+                this.mostrarError(data.error || 'Error al agregar el combo');
+            }
+            
+        } catch (error) {
+            console.error('Error al agregar combo:', error);
+            this.mostrarError('Error de conexión');
+        } finally {
+            if (boton) {
+                if (originalText) boton.innerHTML = originalText;
+                boton.disabled = false;
+            }
+        }
+    }
+
+    // ==================== AGREGAR PROMOCIONES 2x1 ====================
+    async agregarPromocion2x1(promocionId) {
+        console.log(`🎯 Agregando promoción 2x1: ${promocionId}`);
+        
+        const boton = event ? event.target.closest('.vecy-2x1-btn') : null;
+        const originalText = boton ? boton.innerHTML : null;
+        
+        try {
+            if (boton) {
+                boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+                boton.disabled = true;
+            }
+            
+            const csrftoken = this.getCookie('csrftoken');
             const response = await fetch('{% url "agregar_promocion_2x1_carrito" %}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': csrftoken
                 },
                 body: JSON.stringify({
                     promocion_id: promocionId,
@@ -3230,80 +3285,182 @@
             const data = await response.json();
             
             if (data.success) {
-                vecyShowNotification(data.message, 'success');
+                this.mostrarConfirmacionRapida(promocionId, '2x1', boton);
                 
+                // Usar sistema global para actualizar
                 if (window.vecyCarritoSystem && window.vecyCarritoSystem.updateAllCountsFromServer) {
                     await window.vecyCarritoSystem.updateAllCountsFromServer();
                 }
+                
             } else {
-                vecyShowNotification(data.error || 'Error al agregar la promoción', 'error');
+                this.mostrarError(data.error || 'Error al agregar la promoción');
             }
             
         } catch (error) {
-            console.error('Error al agregar promoción 2x1:', error);
-            vecyShowNotification('Error de conexión', 'error');
+            console.error('Error al agregar 2x1:', error);
+            this.mostrarError('Error de conexión');
+        } finally {
+            if (boton) {
+                if (originalText) boton.innerHTML = originalText;
+                boton.disabled = false;
+            }
         }
     }
 
-    // ==================== FUNCIONES DE FAVORITOS ====================
-    async function toggleFavorite(productId, buttonElement) {
+    // ==================== FUNCIONES DE FAVORITOS (UNIFICADAS) ====================
+    async alternarFavorito(productId, buttonElement) {
         if (!window.vecyCarritoSystem) {
-            vecyShowNotification('Sistema no disponible', 'error');
+            this.mostrarError('Sistema no disponible');
             return;
         }
         
-        const isCurrentlyFavorite = buttonElement.getAttribute('data-is-favorite') === 'true';
+        const esFavorito = buttonElement.querySelector('i.fas.fa-heart');
+        const boton = buttonElement;
+        const originalHTML = boton.innerHTML;
         
         try {
+            // Feedback inmediato
+            boton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            boton.disabled = true;
+            
             let success;
             
-            if (isCurrentlyFavorite) {
+            if (esFavorito) {
+                // Eliminar de favoritos
                 success = await window.vecyCarritoSystem.eliminarFavorito(productId);
             } else {
+                // Agregar a favoritos
                 success = await window.vecyCarritoSystem.agregarFavorito(productId);
             }
             
             if (success) {
-                const action = isCurrentlyFavorite ? 'eliminado de' : 'agregado a';
-                vecyShowNotification(`Producto ${action} favoritos`, 'success');
+                const accion = esFavorito ? 'eliminado de' : 'agregado a';
+                this.mostrarNotificacion(`Producto ${accion} favoritos`, 'success');
+                
+                // Actualizar icono visualmente
+                this.actualizarIconoFavorito(boton, !esFavorito);
+                
+            } else {
+                this.mostrarError('Error al actualizar favoritos');
+                boton.innerHTML = originalHTML;
             }
             
         } catch (error) {
-            console.error('Error al alternar favorito:', error);
-            vecyShowNotification('Error al procesar la solicitud', 'error');
+            console.error('Error en favoritos:', error);
+            this.mostrarError('Error de conexión');
+            boton.innerHTML = originalHTML;
+        } finally {
+            boton.disabled = false;
         }
     }
 
-    async function toggleFavoriteCombo(comboId, buttonElement) {
-        vecyShowNotification('Función de favoritos para combos en desarrollo', 'info');
+    // ==================== FUNCIONES AUXILIARES ====================
+    mostrarConfirmacionRapida(id, tipo, boton) {
+        // NOTIFICACIÓN SWEETALERT2 (igual que en detalle)
+        this.mostrarNotificacion(
+            tipo === 'combo' ? '🎁 Combo agregado al carrito' :
+            tipo === '2x1' ? '🎯 Promoción 2x1 agregada' :
+            '✅ Producto agregado al carrito',
+            'success'
+        );
+        
+        // ANIMACIÓN EN BOTÓN (igual que en detalle)
+        if (boton) {
+            const originalHTML = boton.innerHTML;
+            const originalBg = boton.style.background;
+            const originalColor = boton.style.color;
+            
+            boton.innerHTML = tipo === 'combo' ? 
+                '<i class="fas fa-gift"></i> ¡Agregado!' :
+                '<i class="fas fa-check"></i> ¡Agregado!';
+            boton.style.background = 'var(--success)';
+            boton.style.color = 'white';
+            
+            // Restaurar después de 2 segundos (igual que detalle)
+            setTimeout(() => {
+                boton.innerHTML = originalHTML;
+                boton.style.background = originalBg;
+                boton.style.color = originalColor;
+            }, 2000);
+        }
     }
 
-    // ==================== FUNCIONES DE UTILIDAD ====================
-    function vecyShowNotification(message, type = 'info') {
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.addEventListener('mouseenter', Swal.stopTimer)
-                toast.addEventListener('mouseleave', Swal.resumeTimer)
+    mostrarNotificacion(mensaje, tipo = 'info') {
+        if (typeof Swal !== 'undefined') {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });
+
+            Toast.fire({
+                icon: tipo,
+                title: mensaje
+            });
+        } else {
+            console.log(`[${tipo.toUpperCase()}] ${mensaje}`);
+        }
+    }
+
+    mostrarError(mensaje) {
+        this.mostrarNotificacion(`❌ ${mensaje}`, 'error');
+    }
+
+    actualizarIconoFavorito(boton, esFavorito) {
+        const icono = boton.querySelector('i');
+        if (icono) {
+            if (esFavorito) {
+                icono.className = 'fas fa-heart';
+                boton.classList.add('favorito-activo');
+            } else {
+                icono.className = 'far fa-heart';
+                boton.classList.remove('favorito-activo');
+            }
+        }
+    }
+
+    actualizarContadorCarrito(count) {
+        // Actualizar TODOS los contadores de carrito en la página
+        const contadores = document.querySelectorAll(
+            '.cart-count, .vecy-cart-count, #carrito-count, .carrito-count'
+        );
+        
+        contadores.forEach(contador => {
+            contador.textContent = count;
+            contador.style.display = count > 0 ? 'inline-block' : 'none';
+            
+            // Animación de pulso (igual que en detalle)
+            if (count > 0) {
+                contador.classList.add('pulse-animation');
+                setTimeout(() => contador.classList.remove('pulse-animation'), 600);
             }
         });
-
-        Toast.fire({
-            icon: type,
-            title: message
-        });
     }
 
-    function quickView(productId) {
-        // Redirigir a la página de detalle del producto
-        window.location.href = `/producto/${productId}/`;
+    encolarSolicitud(productId, variantId, cantidad, tipo) {
+        this.pendingRequests.push({ productId, variantId, cantidad, tipo });
+        return false;
     }
 
-    function getCookie(name) {
+    async procesarPendientes() {
+        if (this.pendingRequests.length > 0 && !this.isProcessing) {
+            const solicitud = this.pendingRequests.shift();
+            await this.agregarAlCarrito(
+                solicitud.productId, 
+                solicitud.variantId, 
+                solicitud.cantidad, 
+                solicitud.tipo
+            );
+        }
+    }
+
+    getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');
@@ -3317,93 +3474,259 @@
         }
         return cookieValue;
     }
+}
 
-    // ==================== SISTEMA DE CONEXIÓN ====================
-    function connectToVecySystem() {
-        const checkInterval = setInterval(() => {
-            if (window.vecyCarritoSystem) {
-                clearInterval(checkInterval);
-                setupSyncEvents();
-            }
-        }, 100);
-        
-        setTimeout(() => {
-            if (!window.vecyCarritoSystem) {
-                clearInterval(checkInterval);
-                vecyShowNotification('Error al cargar el sistema de compras', 'error');
-            }
-        }, 5000);
-    }
+// ====================================================================
+// INSTANCIA GLOBAL DEL SISTEMA UNIFICADO
+// ====================================================================
+window.vecyCarritoUnificado = new VecyCarritoUnificado();
 
-    function setupSyncEvents() {
-        document.addEventListener('cartCountUpdated', (event) => {
-            updateCartCount(event.detail);
-        });
-        
-        document.addEventListener('favoritesCountUpdated', (event) => {
-            updateFavoritesCount(event.detail);
-        });
-    }
+// ====================================================================
+// FUNCIONES DE INTERFAZ (MANTENER COMPATIBILIDAD)
+// ====================================================================
 
-    function updateCartCount(count) {
-        const cartCountElements = document.querySelectorAll('.cart-count, .vecy-cart-count, #carrito-count');
-        cartCountElements.forEach(element => {
-            element.textContent = count;
-            element.style.display = count > 0 ? 'inline-block' : 'none';
-            if (count > 0) {
-                element.classList.add('pulse-animation');
-                setTimeout(() => element.classList.remove('pulse-animation'), 600);
-            }
-        });
-    }
-
-    function updateFavoritesCount(count) {
-        const favoriteCountElements = document.querySelectorAll('.favorite-count, .vecy-favorite-count, #favoritos-count');
-        favoriteCountElements.forEach(element => {
-            element.textContent = count;
-            element.style.display = count > 0 ? 'inline-block' : 'none';
-            if (count > 0) {
-                element.classList.add('pulse-animation');
-                setTimeout(() => element.classList.remove('pulse-animation'), 600);
-            }
-        });
-    }
-
-    // ==================== INICIALIZACIÓN COMPLETA ====================
-    function initVecyCliente() {
-        initAOS();
-        initSmoothScroll();
-        connectToVecySystem();
-        
-        // Agregar event listeners para prevenir clicks en botones
-        document.querySelectorAll('.vecy-add-cart-btn, .vecy-favorite-variant-btn, .vecy-quick-view, .vecy-favorite-btn').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-        });
-    }
-
-    function addSyncStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .pulse-animation {
-                animation: pulse 0.6s ease-in-out;
-            }
-            
-            @keyframes pulse {
-                0% { transform: scale(1); }
-                50% { transform: scale(1.3); }
-                100% { transform: scale(1); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        addSyncStyles();
-        initVecyCliente();
-    });
+// Función principal para agregar productos (usa el sistema unificado)
+async function addToCart(productId) {
+    event.preventDefault();
+    event.stopPropagation();
     
-    window.addEventListener('load', initVecyCliente);
+    return await window.vecyCarritoUnificado.agregarAlCarrito(productId);
+}
+
+// Función para agregar productos con variante específica
+async function addToCartWithSpecificVariant(productId, variantId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    return await window.vecyCarritoUnificado.agregarAlCarrito(productId, variantId);
+}
+
+// Función para agregar combos
+async function addComboToCart(comboId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    return await window.vecyCarritoUnificado.agregarCombo(comboId);
+}
+
+// Función para agregar promociones 2x1
+async function add2x1ToCart(promocionId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    return await window.vecyCarritoUnificado.agregarPromocion2x1(promocionId);
+}
+
+// Función para alternar favoritos
+async function toggleFavorite(productId, buttonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    return await window.vecyCarritoUnificado.alternarFavorito(productId, buttonElement);
+}
+
+// Función para favoritos de combos
+async function toggleFavoriteCombo(comboId, buttonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    window.vecyCarritoUnificado.mostrarNotificacion('Función de favoritos para combos próximamente', 'info');
+}
+
+// ====================================================================
+// FUNCIONES DE MANEJO DE CLICKS (PARA ENLACES DE TARJETAS)
+// ====================================================================
+
+function vecyHandleCardClick(event, productId) {
+    const clickedElement = event.target;
+    const esBoton = clickedElement.closest('.vecy-no-click-zone') || 
+                   clickedElement.closest('button') ||
+                   clickedElement.tagName === 'BUTTON' ||
+                   clickedElement.closest('.vecy-add-cart-btn') ||
+                   clickedElement.closest('.vecy-favorite-variant-btn') ||
+                   clickedElement.closest('.vecy-quick-view') ||
+                   clickedElement.closest('.vecy-favorite-btn') ||
+                   clickedElement.closest('.vecy-combo-btn') ||
+                   clickedElement.closest('.vecy-favorite-combo-btn') ||
+                   clickedElement.closest('.vecy-2x1-btn') ||
+                   clickedElement.closest('.vecy-favorite-2x1-btn');
+    
+    if (esBoton) {
+        event.preventDefault();
+        event.stopPropagation();
+        return false;
+    }
+    
+    return true;
+}
+
+// Versiones específicas para prevenir propagación
+function vecyAddToCart(event, productId, variantId = null) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (variantId) {
+        return addToCartWithSpecificVariant(productId, variantId);
+    } else {
+        return addToCart(productId);
+    }
+}
+
+function vecyToggleFavorite(event, productId, buttonElement) {
+    event.preventDefault();
+    event.stopPropagation();
+    return toggleFavorite(productId, buttonElement);
+}
+
+function vecyQuickView(event, productId) {
+    event.preventDefault();
+    event.stopPropagation();
+    // Redirigir a detalle
+    window.location.href = `/producto/${productId}/`;
+}
+
+// ====================================================================
+// INICIALIZACIÓN Y CONFIGURACIÓN
+// ====================================================================
+
+function initAOS() {
+    if (typeof AOS !== 'undefined') {
+        AOS.init({ 
+            duration: 800, 
+            once: true, 
+            offset: 100 
+        });
+    }
+}
+
+function initSmoothScroll() {
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }
+        });
+    });
+}
+
+// Conectar con el sistema global de carrito
+function conectarSistemaGlobal() {
+    console.log('🔗 Conectando con sistema global VecyCarritoSystem...');
+    
+    const intervalo = setInterval(() => {
+        if (window.vecyCarritoSystem) {
+            clearInterval(intervalo);
+            console.log('✅ Conectado al sistema global');
+            
+            // Configurar listeners para eventos
+            document.addEventListener('cartCountUpdated', (e) => {
+                window.vecyCarritoUnificado.actualizarContadorCarrito(e.detail);
+            });
+            
+            // Sincronizar contadores iniciales
+            if (window.vecyCarritoSystem.getCarritoCount) {
+                const count = window.vecyCarritoSystem.getCarritoCount();
+                window.vecyCarritoUnificado.actualizarContadorCarrito(count);
+            }
+        }
+    }, 100);
+    
+    // Timeout de seguridad
+    setTimeout(() => {
+        if (!window.vecyCarritoSystem) {
+            console.warn('⚠ Sistema global no disponible después de 5 segundos');
+        }
+    }, 5000);
+}
+
+// Agregar estilos de animación
+function agregarEstilosAnimacion() {
+    const estilos = document.createElement('style');
+    estilos.textContent = `
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+            animation: pulse 0.6s ease-in-out;
+        }
+        
+        .favorito-activo {
+            color: #e74c3c !important;
+        }
+        
+        .vecy-add-cart-btn:disabled,
+        .vecy-combo-btn:disabled,
+        .vecy-2x1-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .fa-spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(estilos);
+}
+
+// Prevenir clicks en botones dentro de enlaces
+function prevenirClicksEnBotones() {
+    document.addEventListener('click', function(e) {
+        const botones = [
+            '.vecy-add-cart-btn',
+            '.vecy-favorite-variant-btn',
+            '.vecy-quick-view',
+            '.vecy-favorite-btn',
+            '.vecy-combo-btn',
+            '.vecy-favorite-combo-btn',
+            '.vecy-2x1-btn',
+            '.vecy-favorite-2x1-btn'
+        ];
+        
+        botones.forEach(selector => {
+            if (e.target.closest(selector)) {
+                e.stopPropagation();
+            }
+        });
+    });
+}
+
+// Inicialización completa
+function initVecySistemaCompleto() {
+    console.log('🚀 Iniciando sistema unificado Vecy...');
+    
+    // 1. Inicializar animaciones
+    initAOS();
+    initSmoothScroll();
+    
+    // 2. Agregar estilos
+    agregarEstilosAnimacion();
+    
+    // 3. Conectar con sistema global
+    conectarSistemaGlobal();
+    
+    // 4. Prevenir problemas de clicks
+    prevenirClicksEnBotones();
+    
+    console.log('✅ Sistema unificado listo');
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', initVecySistemaCompleto);
+
+// Inicializar también cuando la página cargue completamente
+window.addEventListener('load', initVecySistemaCompleto);
 </script>
 {% endblock %}
