@@ -1087,6 +1087,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+     // ==================== FIN FUNCION DEL HEADER ====================
+
     // ==================== EVENT LISTENERS PRINCIPALES ====================
 
     if (elementos.alternadorNegocio) {

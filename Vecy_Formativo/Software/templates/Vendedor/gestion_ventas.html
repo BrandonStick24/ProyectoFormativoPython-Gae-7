@@ -7,7 +7,6 @@
 {% block title %}Gestión de Ventas{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'vendedor/css/crud_V.css' %}">
 <style>
 /* ESTILOS ESPECÍFICOS PARA GESTIÓN DE VENTAS */
 
@@ -646,7 +645,408 @@
         align-self: flex-start;
     }
 }
+
+/* MEDIA QUERIES ESPECÍFICAS PARA RESOLUCIONES INTERMEDIAS */
+
+/* Para laptops medianas (1024px a 1200px) */
+@media (max-width: 1200px) and (min-width: 992px) {
+    .metricas-grid-ventas {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.25rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.25rem;
+    }
+    
+    .metrica-content-ventas {
+        gap: 0.875rem;
+    }
+    
+    .metrica-icono-ventas {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+    }
+    
+    .metrica-valor-ventas {
+        font-size: 1.5rem;
+    }
+    
+    .metrica-label-ventas {
+        font-size: 0.85rem;
+    }
+}
+
+/* Para tablets (768px a 992px) */
+@media (max-width: 992px) and (min-width: 768px) {
+    .metricas-grid-ventas {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+    
+    .tarjeta-bienvenida-ventas {
+        padding: 1.5rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.25rem;
+    }
+    
+    .metrica-content-ventas {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.75rem;
+    }
+    
+    .metrica-icono-ventas {
+        width: 55px;
+        height: 55px;
+        font-size: 1.35rem;
+        margin: 0 auto;
+    }
+    
+    .metrica-info-ventas {
+        width: 100%;
+    }
+    
+    .metrica-valor-ventas {
+        font-size: 1.6rem;
+        margin-bottom: 0.125rem;
+    }
+    
+    .metrica-label-ventas {
+        font-size: 0.85rem;
+    }
+}
+
+/* Para dispositivos móviles (hasta 768px) */
+@media (max-width: 768px) {
+    .metricas-grid-ventas {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .tarjeta-bienvenida-ventas {
+        padding: 1.5rem 1rem;
+    }
+    
+    .tarjeta-bienvenida-ventas h2 {
+        font-size: 1.5rem;
+        text-align: center;
+    }
+    
+    .tarjeta-bienvenida-ventas p {
+        text-align: center;
+        font-size: 0.95rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.25rem;
+    }
+    
+    .metrica-content-ventas {
+        flex-direction: row;
+        text-align: left;
+        gap: 1rem;
+    }
+    
+    .metrica-icono-ventas {
+        width: 50px;
+        height: 50px;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .metrica-valor-ventas {
+        font-size: 1.5rem;
+    }
+    
+    .metrica-label-ventas {
+        font-size: 0.85rem;
+    }
+}
+
+/* Ajustes específicos para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .metricas-grid-ventas {
+        gap: 0.875rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1rem;
+    }
+    
+    .metrica-content-ventas {
+        gap: 0.75rem;
+    }
+    
+    .metrica-icono-ventas {
+        width: 45px;
+        height: 45px;
+        font-size: 1.1rem;
+    }
+    
+    .metrica-valor-ventas {
+        font-size: 1.4rem;
+    }
+    
+    .metrica-label-ventas {
+        font-size: 0.8rem;
+    }
+}
+
+/* Ajustes para la disposición de columnas en diferentes resoluciones */
+@media (max-width: 1400px) and (min-width: 1200px) {
+    .metricas-grid-ventas {
+        gap: 1.25rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.35rem;
+    }
+}
+
+/* Asegurar que los logos/iconos no se desborden */
+.metrica-icono-ventas i {
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Ajustes adicionales para la tarjeta de bienvenida */
+@media (max-width: 992px) {
+    .tarjeta-bienvenida-ventas .row {
+        flex-direction: column;
+    }
+    
+    .tarjeta-bienvenida-ventas .col-md-6 {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .tarjeta-bienvenida-ventas .col-md-6:first-child {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Mejorar el espaciado entre elementos en diferentes resoluciones */
+@media (max-width: 1200px) {
+    .contenedor-filtros-ventas {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 1rem;
+    }
+    
+    .contenedor-busqueda-ventas {
+        min-width: 100%;
+    }
+}
+
+/* Ajustes para que los filtros no se apilen mal en laptop */
+@media (max-width: 1200px) and (min-width: 768px) {
+    .barra-herramientas-ventas {
+        flex-wrap: wrap;
+    }
+    
+    .grupo-filtros-ventas {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    
+    .contenedor-filtros-ventas {
+        justify-content: flex-start;
+        margin-top: 1rem;
+    }
+}
+
+/* ================================================================= */
+/* MEDIA QUERIES ESPECÍFICAS PARA RESOLUCIÓN DE LAPTOP 1440px - REDISEÑADO */
+/* ================================================================= */
+
+@media (min-width: 1400px) and (max-width: 1600px) {
+    /* Optimización para 1440px basada en el estilo de 1024px */
+    
+    /* Tarjeta de Bienvenida - Mantenemos los estilos originales */
+    .tarjeta-bienvenida-ventas {
+        padding: 2rem;
+    }
+    
+    .tarjeta-bienvenida-ventas h2 {
+        font-size: 1.8rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .tarjeta-bienvenida-ventas p {
+        font-size: 1rem;
+    }
+    
+    /* Grid de métricas - Usamos el mismo enfoque que en 1024px pero optimizado */
+    .metricas-grid-ventas {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem; /* Mantenemos gap original, no lo reducimos */
+        margin-top: 1rem;
+    }
+    
+    /* Cards de métricas - MANTENEMOS TAMAÑOS ORIGINALES para buena visibilidad */
+    .metrica-card-ventas {
+        padding: 1.5rem; /* Mantenemos padding original */
+        min-height: auto; /* No forzamos altura mínima */
+        display: block; /* Cambiamos de flex a block para mejor control */
+    }
+    
+    .metrica-content-ventas {
+        gap: 1rem; /* Mantenemos gap original */
+        width: 100%;
+    }
+    
+    .metrica-icono-ventas {
+        width: 60px; /* TAMAÑO ORIGINAL */
+        height: 60px; /* TAMAÑO ORIGINAL */
+        font-size: 1.5rem; /* TAMAÑO ORIGINAL */
+    }
+    
+    .metrica-valor-ventas {
+        font-size: 1.8rem; /* TAMAÑO ORIGINAL COMPLETO */
+        margin-bottom: 0.25rem;
+        line-height: 1.2;
+    }
+    
+    .metrica-label-ventas {
+        font-size: 0.9rem; /* TAMAÑO ORIGINAL */
+        line-height: 1.3;
+    }
+    
+    /* DISTRIBUCIÓN ÓPTIMA - Similar a 1024px pero para 1440px */
+    .tarjeta-bienvenida-ventas .row {
+        align-items: center;
+        display: flex;
+        flex-wrap: nowrap;
+    }
+    
+    /* Texto de bienvenida ocupa menos espacio (como en 1024px) */
+    .tarjeta-bienvenida-ventas .col-md-6:first-child {
+        flex: 0 0 35%; /* Similar proporción a 1024px */
+        max-width: 35%;
+        padding-right: 2rem;
+    }
+    
+    /* Métricas ocupan más espacio (como en 1024px) */
+    .tarjeta-bienvenida-ventas .col-md-6:last-child {
+        flex: 0 0 65%; /* Similar proporción a 1024px */
+        max-width: 65%;
+        padding-left: 2rem;
+    }
+    
+    /* Asegurar que las cards aprovechen todo el ancho disponible */
+    .metricas-grid-ventas {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, auto);
+        width: 100%;
+    }
+    
+    /* Barra de herramientas - Ajustes menores */
+    .barra-herramientas-ventas {
+        padding: 1.5rem;
+    }
+    
+    .contenedor-busqueda-ventas {
+        min-width: 300px; /* Mantenemos tamaño original */
+    }
+    
+    /* Sección de pedidos - Ajustes menores */
+    .seccion-header-mejorada {
+        padding: 1.5rem;
+    }
+    
+    .pedido-card-mejorado {
+        padding: 1.5rem;
+    }
+    
+    /* Filtros - Mantenemos tamaños originales */
+    .grupo-filtros-ventas {
+        gap: 1rem;
+    }
+    
+    .contenedor-filtros-ventas {
+        gap: 1rem;
+    }
+    
+    .select-filtro-ventas {
+        min-width: 150px;
+        padding: 0.8rem 1rem;
+        font-size: 0.95rem;
+    }
+}
+
+/* Ajustes específicos para 1440px exacto */
+@media (min-width: 1430px) and (max-width: 1460px) {
+    /* Para 1440px exacto, optimizamos aún más */
+    
+    .tarjeta-bienvenida-ventas .col-md-6:first-child {
+        flex: 0 0 30%; /* Un poco menos espacio para texto */
+        max-width: 30%;
+    }
+    
+    .tarjeta-bienvenida-ventas .col-md-6:last-child {
+        flex: 0 0 70%; /* Un poco más espacio para métricas */
+        max-width: 70%;
+    }
+    
+    /* Aprovechamos el espacio extra para hacer las cards un poco más grandes */
+    .metricas-grid-ventas {
+        gap: 1.6rem; /* Un poco más de espacio entre cards */
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.6rem; /* Un poco más de padding */
+    }
+    
+    /* Los tamaños de texto e iconos se mantienen ORIGINALES para buena legibilidad */
+}
+
+/* Para pantallas entre 1440px y 1600px */
+@media (min-width: 1460px) and (max-width: 1600px) {
+    /* Aprovechamos el espacio extra progresivamente */
+    
+    .tarjeta-bienvenida-ventas .col-md-6:first-child {
+        flex: 0 0 32%;
+        max-width: 32%;
+    }
+    
+    .tarjeta-bienvenida-ventas .col-md-6:last-child {
+        flex: 0 0 68%;
+        max-width: 68%;
+    }
+    
+    .metricas-grid-ventas {
+        gap: 1.7rem;
+    }
+    
+    .metrica-card-ventas {
+        padding: 1.7rem;
+    }
+}
+
+/* Transición suave de 1400px a 1440px */
+@media (min-width: 1400px) and (max-width: 1430px) {
+    .tarjeta-bienvenida-ventas .col-md-6:first-child {
+        flex: 0 0 38%;
+        max-width: 38%;
+    }
+    
+    .tarjeta-bienvenida-ventas .col-md-6:last-child {
+        flex: 0 0 62%;
+        max-width: 62%;
+    }
+}
 </style>
+
 {% endblock %}
 
 {% block content %}

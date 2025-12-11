@@ -745,18 +745,10 @@ body {
     transform: translateY(-4px);
 }
 
-/* ==================== RESPONSIVE ==================== */
-@media (max-width: 1200px) {
-    :root {
-        --sidebar-width: 240px;
-    }
-    
-    .contenedor-pagina {
-        padding: var(--spacing-lg);
-    }
-}
+/* ==================== RESPONSIVE MEJORADO ==================== */
 
-@media (max-width: 992px) {
+/* Para laptops (1024px a 1200px) */
+@media (max-width: 1200px) {
     :root {
         --sidebar-width: 0;
     }
@@ -764,7 +756,15 @@ body {
     .barra-lateral {
         transform: translateX(-100%);
         width: 280px;
+        position: fixed;
+        z-index: 1020;
+        top: var(--header-height);
+        left: 0;
+        height: calc(100vh - var(--header-height) - var(--footer-height));
         box-shadow: none;
+        transition: transform var(--transition-base);
+        overflow-y: auto;
+        background: var(--white);
     }
     
     .barra-lateral.mostrar {
@@ -774,19 +774,12 @@ body {
     
     .contenido-principal {
         margin-left: 0;
+        width: 100%;
     }
     
-    .encabezado-centro {
-        display: none;
-    }
-    
-    .nombre-usuario {
-        display: none;
-    }
-    
-    /* Botón hamburguesa para móvil */
+    /* Botón hamburguesa para laptop */
     .boton-menu-movil {
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         width: 44px;
@@ -797,13 +790,87 @@ body {
         color: var(--white);
         cursor: pointer;
         transition: all var(--transition-base);
+        margin-right: var(--spacing-sm);
     }
     
     .boton-menu-movil:hover {
         background: rgba(95, 133, 219, 0.3);
+        transform: scale(1.05);
+    }
+    
+    .boton-menu-movil i {
+        font-size: 1.25rem;
+    }
+    
+    .encabezado-centro {
+        flex: 1;
+        min-width: 0;
+        padding: 0 var(--spacing-md);
+    }
+    
+    .nombre-negocio {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.95rem;
+        padding: var(--spacing-xs) var(--spacing-md);
+    }
+    
+    .nombre-usuario {
+        display: none;
+    }
+    
+    .contenedor-pagina {
+        padding: var(--spacing-lg);
+    }
+    
+    /* Overlay para fondo oscuro cuando el menú está abierto */
+    .overlay-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1015;
+        opacity: 0;
+        visibility: hidden;
+        transition: all var(--transition-base);
+    }
+    
+    .overlay-sidebar.mostrar {
+        opacity: 1;
+        visibility: visible;
     }
 }
 
+/* Para tablets (768px a 1024px) */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .barra-lateral {
+        width: 260px;
+    }
+    
+    .encabezado-principal {
+        padding: 0 var(--spacing-md);
+    }
+    
+    .encabezado-centro {
+        padding: 0 var(--spacing-sm);
+    }
+    
+    .nombre-negocio {
+        max-width: 250px;
+        font-size: 0.9rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+    
+    .contenedor-pagina {
+        padding: var(--spacing-md);
+    }
+}
+
+/* Para dispositivos móviles (hasta 768px) - Mantén tu código existente */
 @media (max-width: 768px) {
     :root {
         --header-height: 60px;
@@ -828,8 +895,18 @@ body {
         height: 40px;
         font-size: 1.25rem;
     }
+    
+    .boton-menu-movil {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .barra-lateral {
+        width: 260px;
+    }
 }
 
+/* Para dispositivos muy pequeños (hasta 576px) */
 @media (max-width: 576px) {
     :root {
         --spacing-xl: 1rem;
@@ -860,6 +937,16 @@ body {
     
     .encabezado-derecha {
         gap: var(--spacing-sm);
+    }
+    
+    .boton-menu-movil {
+        width: 36px;
+        height: 36px;
+        margin-right: var(--spacing-xs);
+    }
+    
+    .barra-lateral {
+        width: 240px;
     }
 }
 
